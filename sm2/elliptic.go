@@ -73,7 +73,9 @@ func Unmarshal(curve Curve, data []byte) (x, y *big.Int) {
 		x3.Sub(x3, threeX)
 		x3.Add(x3, curve.Params().B)
 		x3.Mod(x3, p)
-		y = new(big.Int).ModSqrt(x3, p)
+		if y = new(big.Int).ModSqrt(x3, p); y == nil {
+			return nil, nil
+		}
 		switch data[0] {
 		case 0x2: // should be even
 			if y.Bit(0) != 0 {
@@ -108,17 +110,18 @@ func Unmarshal(curve Curve, data []byte) (x, y *big.Int) {
 }
 
 var initonce sync.Once
-var p256Params *CurveParams
+var sm2Params *CurveParams
 
 func initAll() {
-	p256Params = &CurveParams{Name: "SM2"}
-	p256Params.P, _ = new(big.Int).SetString("FFFFFFFEFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF00000000FFFFFFFFFFFFFFFF", 16)
-	p256Params.N, _ = new(big.Int).SetString("FFFFFFFEFFFFFFFFFFFFFFFFFFFFFFFF7203DF6B21C6052B53BBF40939D54123", 16)
-	p256Params.B, _ = new(big.Int).SetString("28E9FA9E9D9F5E344D5A9E4BCF6509A7F39789F515AB8F92DDBCBD414D940E93", 16)
-	p256Params.Gx, _ = new(big.Int).SetString("32C4AE2C1F1981195F9904466A39C9948FE30BBFF2660BE1715A4589334C74C7", 16)
-	p256Params.Gy, _ = new(big.Int).SetString("BC3736A2F4F6779C59BDCEE36B692153D0A9877CC62A474002DF32E52139F0A0", 16)
-	p256Params.BitSize = 256
+	sm2Params = &CurveParams{Name: "SM2"}
+	sm2Params.P, _ = new(big.Int).SetString("FFFFFFFEFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF00000000FFFFFFFFFFFFFFFF", 16)
+	sm2Params.N, _ = new(big.Int).SetString("FFFFFFFEFFFFFFFFFFFFFFFFFFFFFFFF7203DF6B21C6052B53BBF40939D54123", 16)
+	sm2Params.B, _ = new(big.Int).SetString("28E9FA9E9D9F5E344D5A9E4BCF6509A7F39789F515AB8F92DDBCBD414D940E93", 16)
+	sm2Params.Gx, _ = new(big.Int).SetString("32C4AE2C1F1981195F9904466A39C9948FE30BBFF2660BE1715A4589334C74C7", 16)
+	sm2Params.Gy, _ = new(big.Int).SetString("BC3736A2F4F6779C59BDCEE36B692153D0A9877CC62A474002DF32E52139F0A0", 16)
+	sm2Params.BitSize = 256
 	initSM2()
+	initSM2go()
 }
 
 // SM2 returns a Curve which implements sm2
@@ -129,10 +132,15 @@ func SM2() Curve {
 	return pSM2
 }
 
+func SM2go() Curve {
+	initonce.Do(initAll)
+	return sm2g
+}
+
 // P256 returns a Curve which implements sm2 via elliptic package
 //
 // The cryptographic operations do not use constant-time algorithms.
 func P256() Curve {
 	initonce.Do(initAll)
-	return p256Params
+	return sm2Params
 }

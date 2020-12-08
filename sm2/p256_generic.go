@@ -12,5 +12,5 @@ var (
 
 func initP256Arch() {
 	// Use pure Go implementation.
-	pSM2 = p256Curve{p256Params}
+	pSM2 = p256Curve{sm2Params}
 }

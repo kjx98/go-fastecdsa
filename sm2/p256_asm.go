@@ -37,7 +37,7 @@ var (
 
 func initSM2() {
 	// See FIPS 186-3, section D.2.3
-	pSM2.CurveParams = p256Params
+	pSM2.CurveParams = sm2Params
 }
 
 func (curve p256Curve) Params() *CurveParams {

@@ -35,6 +35,15 @@ type invertible interface {
 	Inverse(k *big.Int) *big.Int
 }
 
+type jacobianIntf interface {
+	// affineFromJacobian reverses the Jacobian transform
+	AffineFromJacobian(x, y, z *big.Int) (xOut, yOut *big.Int)
+	// addJacobian takes two points in Jacobian coordinates
+	AddJacobian(x1, y1, z1, x2, y2, z2 *big.Int) (*big.Int, *big.Int, *big.Int)
+	// doubleJacobian takes a point in Jacobian coordinates
+	DoubleJacobian(x, y, z *big.Int) (*big.Int, *big.Int, *big.Int)
+}
+
 // combinedMult implements fast multiplication S1*g + S2*p (g - generator, p - arbitrary point)
 type combinedMult interface {
 	CombinedMult(bigX, bigY *big.Int, baseScalar, scalar []byte) (x, y *big.Int)
@@ -256,14 +265,16 @@ func Verify(pub *PublicKey, hash []byte, r, s *big.Int) bool {
 	u2.Mod(u2, N)
 
 	// Check if implements S1*g + S2*p
-	var x, y *big.Int
+	var x, y, z *big.Int
 	if opt, ok := c.(combinedMult); ok {
 		x, y = opt.CombinedMult(pub.X, pub.Y, u1.Bytes(), u2.Bytes())
-	} else if bShamirs {
+	} else if opt, ok := c.(jacobianIntf); ok {
 		// doShamirsTrick
 		Gx := c.Params().Gx
 		Gy := c.Params().Gy
-		sumX, sumY := c.Add(Gx, Gy, pub.X, pub.Y)
+		gz := new(big.Int).SetInt64(1)
+		pz := new(big.Int).SetInt64(1)
+		sumX, sumY, sumZ := opt.AddJacobian(Gx, Gy, gz, pub.X, pub.Y, pz)
 
 		u1Bits := u1.BitLen()
 		u2Bits := u2.BitLen()
@@ -278,22 +289,23 @@ func Verify(pub *PublicKey, hash []byte, r, s *big.Int) bool {
 		}
 
 		if u1.Bit(l) != 0 && u2.Bit(l) != 0 {
-			x, y = sumX, sumY
+			x, y, z = sumX, sumY, sumZ
 		} else if u1.Bit(l) != 0 {
-			x, y = Gx, Gy
+			x, y, z = Gx, Gy, gz
 		} else if u2.Bit(l) != 0 {
-			x, y = pub.X, pub.Y
+			x, y, z = pub.X, pub.Y, pz
 		}
 		for l = l - 1; l >= 0; l-- {
-			x, y = c.Double(x, y)
+			x, y, z = opt.DoubleJacobian(x, y, z)
 			if u1.Bit(l) != 0 && u2.Bit(l) != 0 {
-				x, y = c.Add(x, y, sumX, sumY)
+				x, y, z = opt.AddJacobian(x, y, z, sumX, sumY, sumZ)
 			} else if u1.Bit(l) != 0 {
-				x, y = c.Add(x, y, Gx, Gy)
+				x, y, z = opt.AddJacobian(x, y, z, Gx, Gy, gz)
 			} else if u2.Bit(l) != 0 {
-				x, y = c.Add(x, y, pub.X, pub.Y)
+				x, y, z = opt.AddJacobian(x, y, z, pub.X, pub.Y, pz)
 			}
 		}
+		x, y = opt.AffineFromJacobian(x, y, z)
 	} else {
 		x1, y1 := c.ScalarBaseMult(u1.Bytes())
 		x2, y2 := c.ScalarMult(pub.X, pub.Y, u2.Bytes())

@@ -40,8 +40,8 @@ func p256GetScalar(out *[32]byte, in []byte) {
 	n := new(big.Int).SetBytes(in)
 	var scalarBytes []byte
 
-	if n.Cmp(p256Params.N) >= 0 {
-		n.Mod(n, p256Params.N)
+	if n.Cmp(sm2Params.N) >= 0 {
+		n.Mod(n, sm2Params.N)
 		scalarBytes = n.Bytes()
 	} else {
 		scalarBytes = in
@@ -1136,7 +1136,7 @@ func p256ScalarMult(xOut, yOut, zOut, x, y *[p256Limbs]uint32, scalar *[32]uint8
 // p256FromBig sets out = R*in.
 func p256FromBig(out *[p256Limbs]uint32, in *big.Int) {
 	tmp := new(big.Int).Lsh(in, 257)
-	tmp.Mod(tmp, p256Params.P)
+	tmp.Mod(tmp, sm2Params.P)
 
 	for i := 0; i < p256Limbs; i++ {
 		if bits := tmp.Bits(); len(bits) > 0 {
@@ -1176,6 +1176,6 @@ func p256ToBig(in *[p256Limbs]uint32) *big.Int {
 	}
 
 	result.Mul(result, p256RInverse)
-	result.Mod(result, p256Params.P)
+	result.Mod(result, sm2Params.P)
 	return result
 }

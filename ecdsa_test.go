@@ -31,6 +31,7 @@ func testKeyGeneration(t *testing.T, c elliptic.Curve, tag string) {
 	if !c.IsOnCurve(priv.PublicKey.X, priv.PublicKey.Y) {
 		t.Errorf("%s: public key invalid: %v", tag, err)
 	}
+	t.Logf("%s curve X: %s, Y: %s", tag, priv.PublicKey.X, priv.PublicKey.Y)
 }
 
 func TestKeyGeneration(t *testing.T) {
@@ -41,6 +42,7 @@ func TestKeyGeneration(t *testing.T) {
 	testKeyGeneration(t, elliptic.P256(), "p256")
 	testKeyGeneration(t, elliptic.P384(), "p384")
 	testKeyGeneration(t, sm2.P256(), "sm2")
+	testKeyGeneration(t, sm2.SM2go(), "sm2go")
 	//testKeyGeneration(t, sm2.SM2(), "sm2asm")
 }
 
@@ -93,6 +95,22 @@ func BenchmarkVerifyP256(b *testing.B) {
 func BenchmarkVerifySM2(b *testing.B) {
 	b.ResetTimer()
 	p256 := sm2.P256()
+	hashed := []byte("testing")
+	priv, _ := GenerateKey(p256, rand.Reader)
+	r, s, _ := Sign(rand.Reader, priv, hashed)
+
+	b.ReportAllocs()
+	b.ResetTimer()
+	b.RunParallel(func(pb *testing.PB) {
+		for pb.Next() {
+			Verify(&priv.PublicKey, hashed, r, s)
+		}
+	})
+}
+
+func BenchmarkVerifySM2go(b *testing.B) {
+	b.ResetTimer()
+	p256 := sm2.SM2go()
 	hashed := []byte("testing")
 	priv, _ := GenerateKey(p256, rand.Reader)
 	r, s, _ := Sign(rand.Reader, priv, hashed)
