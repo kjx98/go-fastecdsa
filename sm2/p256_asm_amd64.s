@@ -26,19 +26,19 @@
 
 DATA p256const0<>+0x00(SB)/8, $0x00000000ffffffff
 DATA p256const1<>+0x00(SB)/8, $0xffffffff00000001
-DATA p256ordK0<>+0x00(SB)/8, $0xccd1c8aaee00bc4f
-DATA p256ord<>+0x00(SB)/8, $0x53bbf40939d54123
-DATA p256ord<>+0x08(SB)/8, $0x7203df6b21c6052b
-DATA p256ord<>+0x10(SB)/8, $0xffffffffffffffff
-DATA p256ord<>+0x18(SB)/8, $0xfffffffeffffffff
+DATA sm2ordK0<>+0x00(SB)/8, $0xccd1c8aaee00bc4f
+DATA sm2ord<>+0x00(SB)/8, $0x53bbf40939d54123
+DATA sm2ord<>+0x08(SB)/8, $0x7203df6b21c6052b
+DATA sm2ord<>+0x10(SB)/8, $0xffffffffffffffff
+DATA sm2ord<>+0x18(SB)/8, $0xfffffffeffffffff
 DATA p256one<>+0x00(SB)/8, $0x0000000000000001
 DATA p256one<>+0x08(SB)/8, $0xffffffff00000000
 DATA p256one<>+0x10(SB)/8, $0xffffffffffffffff
 DATA p256one<>+0x18(SB)/8, $0x00000000fffffffe
 GLOBL p256const0<>(SB), 8, $8
 GLOBL p256const1<>(SB), 8, $8
-GLOBL p256ordK0<>(SB), 8, $8
-GLOBL p256ord<>(SB), 8, $32
+GLOBL sm2ordK0<>(SB), 8, $8
+GLOBL sm2ord<>(SB), 8, $32
 GLOBL p256one<>(SB), 8, $32
 
 /* ---------------------------------------*/
@@ -773,16 +773,16 @@ TEXT ·p256OrdMul(SB),NOSPLIT,$0
 	XORQ acc5, acc5
 	// First reduction step
 	MOVQ acc0, AX
-	MULQ p256ordK0<>(SB)
+	MULQ sm2ordK0<>(SB)
 	MOVQ AX, t0
 
-	MOVQ p256ord<>+0x00(SB), AX
+	MOVQ sm2ord<>+0x00(SB), AX
 	MULQ t0
 	ADDQ AX, acc0
 	ADCQ $0, DX
 	MOVQ DX, t1
 
-	MOVQ p256ord<>+0x08(SB), AX
+	MOVQ sm2ord<>+0x08(SB), AX
 	MULQ t0
 	ADDQ t1, acc1
 	ADCQ $0, DX
@@ -790,7 +790,7 @@ TEXT ·p256OrdMul(SB),NOSPLIT,$0
 	ADCQ $0, DX
 	MOVQ DX, t1
 
-	MOVQ p256ord<>+0x10(SB), AX
+	MOVQ sm2ord<>+0x10(SB), AX
 	MULQ t0
 	ADDQ t1, acc2
 	ADCQ $0, DX
@@ -798,7 +798,7 @@ TEXT ·p256OrdMul(SB),NOSPLIT,$0
 	ADCQ $0, DX
 	MOVQ DX, t1
 
-	MOVQ p256ord<>+0x18(SB), AX
+	MOVQ sm2ord<>+0x18(SB), AX
 	MULQ t0
 	ADDQ t1, acc3
 	ADCQ $0, DX
@@ -839,16 +839,16 @@ TEXT ·p256OrdMul(SB),NOSPLIT,$0
 	ADCQ $0, acc0
 	// Second reduction step
 	MOVQ acc1, AX
-	MULQ p256ordK0<>(SB)
+	MULQ sm2ordK0<>(SB)
 	MOVQ AX, t0
 
-	MOVQ p256ord<>+0x00(SB), AX
+	MOVQ sm2ord<>+0x00(SB), AX
 	MULQ t0
 	ADDQ AX, acc1
 	ADCQ $0, DX
 	MOVQ DX, t1
 
-	MOVQ p256ord<>+0x08(SB), AX
+	MOVQ sm2ord<>+0x08(SB), AX
 	MULQ t0
 	ADDQ t1, acc2
 	ADCQ $0, DX
@@ -856,7 +856,7 @@ TEXT ·p256OrdMul(SB),NOSPLIT,$0
 	ADCQ $0, DX
 	MOVQ DX, t1
 
-	MOVQ p256ord<>+0x10(SB), AX
+	MOVQ sm2ord<>+0x10(SB), AX
 	MULQ t0
 	ADDQ t1, acc3
 	ADCQ $0, DX
@@ -864,7 +864,7 @@ TEXT ·p256OrdMul(SB),NOSPLIT,$0
 	ADCQ $0, DX
 	MOVQ DX, t1
 
-	MOVQ p256ord<>+0x18(SB), AX
+	MOVQ sm2ord<>+0x18(SB), AX
 	MULQ t0
 	ADDQ t1, acc4
 	ADCQ $0, DX
@@ -905,16 +905,16 @@ TEXT ·p256OrdMul(SB),NOSPLIT,$0
 	ADCQ $0, acc1
 	// Third reduction step
 	MOVQ acc2, AX
-	MULQ p256ordK0<>(SB)
+	MULQ sm2ordK0<>(SB)
 	MOVQ AX, t0
 
-	MOVQ p256ord<>+0x00(SB), AX
+	MOVQ sm2ord<>+0x00(SB), AX
 	MULQ t0
 	ADDQ AX, acc2
 	ADCQ $0, DX
 	MOVQ DX, t1
 
-	MOVQ p256ord<>+0x08(SB), AX
+	MOVQ sm2ord<>+0x08(SB), AX
 	MULQ t0
 	ADDQ t1, acc3
 	ADCQ $0, DX
@@ -922,7 +922,7 @@ TEXT ·p256OrdMul(SB),NOSPLIT,$0
 	ADCQ $0, DX
 	MOVQ DX, t1
 
-	MOVQ p256ord<>+0x10(SB), AX
+	MOVQ sm2ord<>+0x10(SB), AX
 	MULQ t0
 	ADDQ t1, acc4
 	ADCQ $0, DX
@@ -930,7 +930,7 @@ TEXT ·p256OrdMul(SB),NOSPLIT,$0
 	ADCQ $0, DX
 	MOVQ DX, t1
 
-	MOVQ p256ord<>+0x18(SB), AX
+	MOVQ sm2ord<>+0x18(SB), AX
 	MULQ t0
 	ADDQ t1, acc5
 	ADCQ $0, DX
@@ -971,16 +971,16 @@ TEXT ·p256OrdMul(SB),NOSPLIT,$0
 	ADCQ $0, acc2
 	// Last reduction step
 	MOVQ acc3, AX
-	MULQ p256ordK0<>(SB)
+	MULQ sm2ordK0<>(SB)
 	MOVQ AX, t0
 
-	MOVQ p256ord<>+0x00(SB), AX
+	MOVQ sm2ord<>+0x00(SB), AX
 	MULQ t0
 	ADDQ AX, acc3
 	ADCQ $0, DX
 	MOVQ DX, t1
 
-	MOVQ p256ord<>+0x08(SB), AX
+	MOVQ sm2ord<>+0x08(SB), AX
 	MULQ t0
 	ADDQ t1, acc4
 	ADCQ $0, DX
@@ -988,7 +988,7 @@ TEXT ·p256OrdMul(SB),NOSPLIT,$0
 	ADCQ $0, DX
 	MOVQ DX, t1
 
-	MOVQ p256ord<>+0x10(SB), AX
+	MOVQ sm2ord<>+0x10(SB), AX
 	MULQ t0
 	ADDQ t1, acc5
 	ADCQ $0, DX
@@ -996,7 +996,7 @@ TEXT ·p256OrdMul(SB),NOSPLIT,$0
 	ADCQ $0, DX
 	MOVQ DX, t1
 
-	MOVQ p256ord<>+0x18(SB), AX
+	MOVQ sm2ord<>+0x18(SB), AX
 	MULQ t0
 	ADDQ t1, acc0
 	ADCQ $0, DX
@@ -1009,10 +1009,10 @@ TEXT ·p256OrdMul(SB),NOSPLIT,$0
 	MOVQ acc0, t0
 	MOVQ acc1, t1
 	// Subtract p256
-	SUBQ p256ord<>+0x00(SB), acc4
-	SBBQ p256ord<>+0x08(SB) ,acc5
-	SBBQ p256ord<>+0x10(SB), acc0
-	SBBQ p256ord<>+0x18(SB), acc1
+	SUBQ sm2ord<>+0x00(SB), acc4
+	SBBQ sm2ord<>+0x08(SB) ,acc5
+	SBBQ sm2ord<>+0x10(SB), acc0
+	SBBQ sm2ord<>+0x18(SB), acc1
 	SBBQ $0, acc2
 
 	CMOVQCS x_ptr, acc4
@@ -1115,16 +1115,16 @@ ordSqrLoop:
 	MOVQ t1, x_ptr
 	// First reduction step
 	MOVQ acc0, AX
-	MULQ p256ordK0<>(SB)
+	MULQ sm2ordK0<>(SB)
 	MOVQ AX, t0
 
-	MOVQ p256ord<>+0x00(SB), AX
+	MOVQ sm2ord<>+0x00(SB), AX
 	MULQ t0
 	ADDQ AX, acc0
 	ADCQ $0, DX
 	MOVQ DX, t1
 
-	MOVQ p256ord<>+0x08(SB), AX
+	MOVQ sm2ord<>+0x08(SB), AX
 	MULQ t0
 	ADDQ t1, acc1
 	ADCQ $0, DX
@@ -1148,16 +1148,16 @@ ordSqrLoop:
 	SBBQ DX, acc0
 	// Second reduction step
 	MOVQ acc1, AX
-	MULQ p256ordK0<>(SB)
+	MULQ sm2ordK0<>(SB)
 	MOVQ AX, t0
 
-	MOVQ p256ord<>+0x00(SB), AX
+	MOVQ sm2ord<>+0x00(SB), AX
 	MULQ t0
 	ADDQ AX, acc1
 	ADCQ $0, DX
 	MOVQ DX, t1
 
-	MOVQ p256ord<>+0x08(SB), AX
+	MOVQ sm2ord<>+0x08(SB), AX
 	MULQ t0
 	ADDQ t1, acc2
 	ADCQ $0, DX
@@ -1181,16 +1181,16 @@ ordSqrLoop:
 	SBBQ DX, acc1
 	// Third reduction step
 	MOVQ acc2, AX
-	MULQ p256ordK0<>(SB)
+	MULQ sm2ordK0<>(SB)
 	MOVQ AX, t0
 
-	MOVQ p256ord<>+0x00(SB), AX
+	MOVQ sm2ord<>+0x00(SB), AX
 	MULQ t0
 	ADDQ AX, acc2
 	ADCQ $0, DX
 	MOVQ DX, t1
 
-	MOVQ p256ord<>+0x08(SB), AX
+	MOVQ sm2ord<>+0x08(SB), AX
 	MULQ t0
 	ADDQ t1, acc3
 	ADCQ $0, DX
@@ -1214,16 +1214,16 @@ ordSqrLoop:
 	SBBQ DX, acc2
 	// Last reduction step
 	MOVQ acc3, AX
-	MULQ p256ordK0<>(SB)
+	MULQ sm2ordK0<>(SB)
 	MOVQ AX, t0
 
-	MOVQ p256ord<>+0x00(SB), AX
+	MOVQ sm2ord<>+0x00(SB), AX
 	MULQ t0
 	ADDQ AX, acc3
 	ADCQ $0, DX
 	MOVQ DX, t1
 
-	MOVQ p256ord<>+0x08(SB), AX
+	MOVQ sm2ord<>+0x08(SB), AX
 	MULQ t0
 	ADDQ t1, acc0
 	ADCQ $0, DX
@@ -1260,10 +1260,10 @@ ordSqrLoop:
 	MOVQ acc2, y_ptr
 	MOVQ acc3, t1
 	// Subtract p256
-	SUBQ p256ord<>+0x00(SB), acc0
-	SBBQ p256ord<>+0x08(SB) ,acc1
-	SBBQ p256ord<>+0x10(SB), acc2
-	SBBQ p256ord<>+0x18(SB), acc3
+	SUBQ sm2ord<>+0x00(SB), acc0
+	SBBQ sm2ord<>+0x08(SB) ,acc1
+	SBBQ sm2ord<>+0x10(SB), acc2
+	SBBQ sm2ord<>+0x18(SB), acc3
 	SBBQ $0, t0
 
 	CMOVQCS acc4, acc0

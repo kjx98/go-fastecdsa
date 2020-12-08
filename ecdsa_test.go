@@ -13,6 +13,7 @@ import (
 	"crypto/sha256"
 	"crypto/sha512"
 	"encoding/hex"
+	"gitee.com/jkuang/go-fastecdsa/sm2"
 	"hash"
 	"io"
 	"math/big"
@@ -28,7 +29,7 @@ func testKeyGeneration(t *testing.T, c elliptic.Curve, tag string) {
 		return
 	}
 	if !c.IsOnCurve(priv.PublicKey.X, priv.PublicKey.Y) {
-		t.Errorf("%s: public key invalid: %s", tag, err)
+		t.Errorf("%s: public key invalid: %v", tag, err)
 	}
 }
 
@@ -39,7 +40,8 @@ func TestKeyGeneration(t *testing.T) {
 	}
 	testKeyGeneration(t, elliptic.P256(), "p256")
 	testKeyGeneration(t, elliptic.P384(), "p384")
-	testKeyGeneration(t, elliptic.P521(), "p521")
+	testKeyGeneration(t, sm2.P256(), "sm2")
+	//testKeyGeneration(t, sm2.SM2(), "sm2asm")
 }
 
 func BenchmarkSignP256(b *testing.B) {
@@ -57,11 +59,11 @@ func BenchmarkSignP256(b *testing.B) {
 	})
 }
 
-func BenchmarkSignP384(b *testing.B) {
+func BenchmarkSignSM2(b *testing.B) {
 	b.ResetTimer()
-	p384 := elliptic.P384()
+	p256 := sm2.P256()
 	hashed := []byte("testing")
-	priv, _ := GenerateKey(p384, rand.Reader)
+	priv, _ := GenerateKey(p256, rand.Reader)
 
 	b.ReportAllocs()
 	b.ResetTimer()
@@ -88,11 +90,11 @@ func BenchmarkVerifyP256(b *testing.B) {
 	})
 }
 
-func BenchmarkVerifyP384(b *testing.B) {
+func BenchmarkVerifySM2(b *testing.B) {
 	b.ResetTimer()
-	p384 := elliptic.P384()
+	p256 := sm2.P256()
 	hashed := []byte("testing")
-	priv, _ := GenerateKey(p384, rand.Reader)
+	priv, _ := GenerateKey(p256, rand.Reader)
 	r, s, _ := Sign(rand.Reader, priv, hashed)
 
 	b.ReportAllocs()

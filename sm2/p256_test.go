@@ -2,6 +2,8 @@ package sm2
 
 import (
 	"crypto/elliptic"
+	"crypto/rand"
+	"gitee.com/jkuang/go-fastecdsa"
 	"math/big"
 	"testing"
 )
@@ -44,4 +46,36 @@ func TestRRbySM2(t *testing.T) {
 	Rinv.Mod(Rinv, p)
 	Rinv.ModInverse(Rinv, p)
 	t.Log("RInverse of sm2 is ", Rinv.Text(16))
+}
+
+func BenchmarkInverse(b *testing.B) {
+	b.ResetTimer()
+	priv, _ := fastecdsa.GenerateKey(P256(), rand.Reader)
+	p := P256().Params().P
+	res := new(big.Int)
+
+	b.ReportAllocs()
+	b.ResetTimer()
+	b.RunParallel(func(pb *testing.PB) {
+		for pb.Next() {
+			_ = res.ModInverse(priv.PublicKey.X, p)
+		}
+	})
+}
+
+func BenchmarkMul(b *testing.B) {
+	b.ResetTimer()
+	p256 := elliptic.P256()
+	priv, _ := fastecdsa.GenerateKey(p256, rand.Reader)
+	p := p256.Params().P
+	res := new(big.Int)
+
+	b.ReportAllocs()
+	b.ResetTimer()
+	b.RunParallel(func(pb *testing.PB) {
+		for pb.Next() {
+			_ = res.Mul(priv.PublicKey.X, priv.PublicKey.Y)
+			_ = res.Mod(priv.PublicKey.X, p)
+		}
+	})
 }
