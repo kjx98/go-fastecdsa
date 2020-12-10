@@ -26,7 +26,8 @@ func init() {
 func TestRRbyP256(t *testing.T) {
 	n256 := new(big.Int).SetUint64(1)
 	n256.Lsh(n256, 256)
-	n := elliptic.P256().Params().N
+	cParams := elliptic.P256().Params()
+	n := cParams.N
 	R := new(big.Int).Mod(n256, n)
 	RR := new(big.Int).Mul(R, R)
 	RR.Mod(RR, n)
@@ -35,7 +36,7 @@ func TestRRbyP256(t *testing.T) {
 	ww = n.Bits()
 	t.Logf("N(order) is %x %x %x %x", ww[0], ww[1], ww[2], ww[3])
 
-	p := elliptic.P256().Params().P
+	p := cParams.P
 	r := new(big.Int).Mod(n256, p)
 	rr := new(big.Int).Mul(r, r)
 	rr.Mod(rr, p)
@@ -65,13 +66,20 @@ func TestRRbyP256(t *testing.T) {
 		t.Logf("N0: %x", N0.Bits()[0])
 	}
 	ww = p.Bits()
-	t.Logf("P: %x %x %x %x", ww[0], ww[1], ww[2], ww[3])
+	t.Logf("P: %X %X %X %X", ww[0], ww[1], ww[2], ww[3])
+	ww = cParams.B.Bits()
+	t.Logf("B: %X %X %X %X", ww[0], ww[1], ww[2], ww[3])
+	ww = cParams.Gx.Bits()
+	t.Logf("Gx: %X %X %X %X", ww[0], ww[1], ww[2], ww[3])
+	ww = cParams.Gy.Bits()
+	t.Logf("Gy: %X %X %X %X", ww[0], ww[1], ww[2], ww[3])
 }
 
 func TestRRbySM2(t *testing.T) {
 	n256 := new(big.Int).SetUint64(1)
 	n256.Lsh(n256, 256)
-	n := P256().Params().N
+	cParams := P256().Params()
+	n := cParams.N
 	R := new(big.Int).Mod(n256, n)
 	RR := new(big.Int).Mul(R, R)
 	RR.Mod(RR, n)
@@ -80,7 +88,7 @@ func TestRRbySM2(t *testing.T) {
 	ww = n.Bits()
 	t.Logf("N(order) is %x %x %x %x", ww[0], ww[1], ww[2], ww[3])
 
-	p := P256().Params().P
+	p := cParams.P
 	r := new(big.Int).Mod(n256, p)
 	rr := new(big.Int).Mul(r, r)
 	rr.Mod(rr, p)
@@ -110,7 +118,13 @@ func TestRRbySM2(t *testing.T) {
 		t.Logf("N0: %x", N0.Bits()[0])
 	}
 	ww = p.Bits()
-	t.Logf("P: %x %x %x %x", ww[0], ww[1], ww[2], ww[3])
+	t.Logf("P: %X %X %X %X", ww[0], ww[1], ww[2], ww[3])
+	ww = cParams.B.Bits()
+	t.Logf("B: %X %X %X %X", ww[0], ww[1], ww[2], ww[3])
+	ww = cParams.Gx.Bits()
+	t.Logf("Gx: %X %X %X %X", ww[0], ww[1], ww[2], ww[3])
+	ww = cParams.Gy.Bits()
+	t.Logf("Gy: %X %X %X %X", ww[0], ww[1], ww[2], ww[3])
 }
 
 func TestSM2AsmGo(t *testing.T) {

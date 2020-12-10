@@ -25,14 +25,17 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#include <sys/types.h>
 #include <endian.h>
 #include <errno.h>
-#include <stdlib.h>
 #include <sys/random.h>
 
 #include "ecc.h"
 #include "ecc_curve_defs.h"
+
+/* Allocate SIZE bytes of memory.  */
+extern void *malloc (size_t __size);
+/* Free a block allocated by `malloc', `realloc' or `calloc'.  */
+extern void free (void *__ptr);
 
 #ifndef	ECC_CURVE_NIST_P256
 /* Curves IDs */
@@ -41,14 +44,14 @@
 #define ECC_CURVE_SM2		0x0003
 #endif
 
-#define	max(x, y) ((x>y)?x:y)
+#define	max(x, y) ({ typeof(x) _x = x; typeof(y) _y = y; (_x>_y)?_x:_y; })
 
 typedef struct {
 	u64 m_low;
 	u64 m_high;
 } uint128_t;
 
-static inline const struct ecc_curve *ecc_get_curve(unsigned int curve_id)
+static inline const struct ecc_curve *ecc_get_curve(uint curve_id)
 {
 	switch (curve_id) {
 	/* In FIPS mode only allow P256 and higher */
@@ -64,7 +67,7 @@ static inline const struct ecc_curve *ecc_get_curve(unsigned int curve_id)
 }
 
 #ifdef	ommit
-static u64 *ecc_alloc_digits_space(unsigned int ndigits)
+static u64 *ecc_alloc_digits_space(uint ndigits)
 {
 	size_t len = ndigits * sizeof(u64);
 
@@ -80,7 +83,7 @@ static void ecc_free_digits_space(u64 *space)
 }
 #endif
 
-struct ecc_point *ecc_alloc_point(unsigned int ndigits)
+static struct ecc_point *ecc_alloc_point(uint ndigits)
 {
 	struct ecc_point *p = malloc(sizeof(*p));
 
@@ -116,18 +119,18 @@ static void ecc_free_point(struct ecc_point *p)
 	free(p);
 }
 
-static void vli_clear(u64 *vli, unsigned int ndigits)
+static void vli_clear(u64 *vli, uint ndigits)
 {
-	int i;
+	uint i;
 
 	for (i = 0; i < ndigits; i++)
 		vli[i] = 0;
 }
 
 /* Returns true if vli == 0, false otherwise. */
-bool vli_is_zero(const u64 *vli, unsigned int ndigits)
+bool vli_is_zero(const u64 *vli, uint ndigits)
 {
-	int i;
+	uint i;
 
 	for (i = 0; i < ndigits; i++) {
 		if (vli[i])
@@ -138,18 +141,18 @@ bool vli_is_zero(const u64 *vli, unsigned int ndigits)
 }
 
 /* Returns nonzero if bit bit of vli is set. */
-static u64 vli_test_bit(const u64 *vli, unsigned int bit)
+static inline u64 vli_test_bit(const u64 *vli, uint bit)
 {
 	return (vli[bit / 64] & ((u64)1 << (bit % 64)));
 }
 
-static bool vli_is_negative(const u64 *vli, unsigned int ndigits)
+static bool inline vli_is_negative(const u64 *vli, uint ndigits)
 {
 	return vli_test_bit(vli, ndigits * 64 - 1);
 }
 
 /* Counts the number of 64-bit "digits" in vli. */
-static unsigned int vli_num_digits(const u64 *vli, unsigned int ndigits)
+static uint inline vli_num_digits(const u64 *vli, uint ndigits)
 {
 	int i;
 
@@ -163,9 +166,9 @@ static unsigned int vli_num_digits(const u64 *vli, unsigned int ndigits)
 }
 
 /* Counts the number of bits required for vli. */
-static unsigned int vli_num_bits(const u64 *vli, unsigned int ndigits)
+static uint vli_num_bits(const u64 *vli, uint ndigits)
 {
-	unsigned int i, num_digits;
+	uint i, num_digits;
 	u64 digit;
 
 	num_digits = vli_num_digits(vli, ndigits);
@@ -180,7 +183,7 @@ static unsigned int vli_num_bits(const u64 *vli, unsigned int ndigits)
 }
 
 /* Set dest from unaligned bit string src. */
-void vli_from_be64(u64 *dest, const void *src, unsigned int ndigits)
+void vli_from_be64(u64 *dest, const void *src, uint ndigits)
 {
 	int i;
 	const u64 *from = src;
@@ -189,9 +192,9 @@ void vli_from_be64(u64 *dest, const void *src, unsigned int ndigits)
 		dest[i] = be64toh(from[ndigits - 1 - i]);
 }
 
-void vli_from_le64(u64 *dest, const void *src, unsigned int ndigits)
+void vli_from_le64(u64 *dest, const void *src, uint ndigits)
 {
-	int i;
+	uint i;
 	const u64 *from = src;
 
 	for (i = 0; i < ndigits; i++)
@@ -201,7 +204,7 @@ void vli_from_le64(u64 *dest, const void *src, unsigned int ndigits)
 /* Sets dest = src. */
 static void vli_set(u64 *dest, const u64 *src, unsigned int ndigits)
 {
-	int i;
+	uint i;
 
 	for (i = 0; i < ndigits; i++)
 		dest[i] = src[i];
@@ -806,6 +809,10 @@ static bool vli_mmod_fast(u64 *result, u64 *product,
 		vli_mmod_barrett(result, product, curve_prime, ndigits);
 		return true;
 	}
+	if ((curve_prime[1] >> 32) == 0) {
+		// is SM2
+		return false;
+	}
 
 	switch (ndigits) {
 	case 3:
@@ -1250,8 +1257,7 @@ void ecc_point_mult_shamir(const struct ecc_point *result,
 	points[2] = q;
 	points[3] = &sum;
 
-	num_bits = max(vli_num_bits(u1, ndigits),
-		       vli_num_bits(u2, ndigits));
+	num_bits = max(vli_num_bits(u1, ndigits), vli_num_bits(u2, ndigits));
 	i = num_bits - 1;
 	idx = (!!vli_test_bit(u1, i)) | ((!!vli_test_bit(u2, i)) << 1);
 	point = points[idx];

@@ -56,12 +56,12 @@ typedef __uint8_t u8;
 struct ecc_point {
 	u64 x[ECC_MAX_DIGITS];
 	u64 y[ECC_MAX_DIGITS];
-	unsigned int ndigits;
+	uint ndigits;
 };
 
 #define ECC_POINT_INIT(x, y, ndigits)	(struct ecc_point) { x, y, ndigits }
 
-struct ecc_point *ecc_alloc_point(unsigned int ndigits);
+//static struct ecc_point *ecc_alloc_point(unsigned int ndigits);
 
 /**
  * struct ecc_curve - definition of elliptic curve
@@ -204,7 +204,7 @@ u64 vli_sub(u64 *result, const u64 *left, const u64 *right,
  * @src:		source array of u64 BE values
  * @ndigits:		length of both vli and array
  */
-void vli_from_be64(u64 *dest, const void *src, unsigned int ndigits);
+void vli_from_be64(u64 *dest, const void *src, uint ndigits);
 
 /**
  * vli_from_le64() - Load vli from little-endian u64 array
@@ -213,7 +213,7 @@ void vli_from_be64(u64 *dest, const void *src, unsigned int ndigits);
  * @src:		source array of u64 LE values
  * @ndigits:		length of both vli and array
  */
-void vli_from_le64(u64 *dest, const void *src, unsigned int ndigits);
+void vli_from_le64(u64 *dest, const void *src, uint ndigits);
 
 /**
  * vli_mod_inv() - Modular inversion
