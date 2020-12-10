@@ -31,7 +31,8 @@ func testKeyGeneration(t *testing.T, c elliptic.Curve, tag string) {
 	if !c.IsOnCurve(priv.PublicKey.X, priv.PublicKey.Y) {
 		t.Errorf("%s: public key invalid: %v", tag, err)
 	}
-	t.Logf("%s curve X: %s, Y: %s", tag, priv.PublicKey.X, priv.PublicKey.Y)
+	//t.Logf("%s priv D: %s", tag, priv.D)
+	//t.Logf("%s curve X: %s, Y: %s", tag, priv.PublicKey.X, priv.PublicKey.Y)
 }
 
 func TestKeyGeneration(t *testing.T) {

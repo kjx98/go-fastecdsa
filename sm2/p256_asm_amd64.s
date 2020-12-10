@@ -26,15 +26,15 @@
 
 DATA p256const0<>+0x00(SB)/8, $0x00000000ffffffff
 DATA p256const1<>+0x00(SB)/8, $0xffffffff00000001
-DATA sm2ordK0<>+0x00(SB)/8, $0xccd1c8aaee00bc4f
+DATA sm2ordK0<>+0x00(SB)/8, $0x327f9e8872350975
 DATA sm2ord<>+0x00(SB)/8, $0x53bbf40939d54123
 DATA sm2ord<>+0x08(SB)/8, $0x7203df6b21c6052b
 DATA sm2ord<>+0x10(SB)/8, $0xffffffffffffffff
 DATA sm2ord<>+0x18(SB)/8, $0xfffffffeffffffff
 DATA p256one<>+0x00(SB)/8, $0x0000000000000001
-DATA p256one<>+0x08(SB)/8, $0xffffffff00000000
-DATA p256one<>+0x10(SB)/8, $0xffffffffffffffff
-DATA p256one<>+0x18(SB)/8, $0x00000000fffffffe
+DATA p256one<>+0x08(SB)/8, $0x00000000ffffffff
+DATA p256one<>+0x10(SB)/8, $0x0000000000000000
+DATA p256one<>+0x18(SB)/8, $0x0000000100000000
 GLOBL p256const0<>(SB), 8, $8
 GLOBL p256const1<>(SB), 8, $8
 GLOBL sm2ordK0<>(SB), 8, $8
