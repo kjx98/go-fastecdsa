@@ -29,11 +29,12 @@
 #include <endian.h>
 #include <errno.h>
 #include <stdlib.h>
+#include <sys/random.h>
 
 #include "ecc.h"
 #include "ecc_curve_defs.h"
 
-#ifndef	ECC_CURVE_NIST_P192
+#ifndef	ECC_CURVE_NIST_P256
 /* Curves IDs */
 #define ECC_CURVE_NIST_P192	0x0001
 #define ECC_CURVE_NIST_P256	0x0002
@@ -62,6 +63,7 @@ static inline const struct ecc_curve *ecc_get_curve(unsigned int curve_id)
 	}
 }
 
+#ifdef	ommit
 static u64 *ecc_alloc_digits_space(unsigned int ndigits)
 {
 	size_t len = ndigits * sizeof(u64);
@@ -76,6 +78,7 @@ static void ecc_free_digits_space(u64 *space)
 {
 	free(space);
 }
+#endif
 
 struct ecc_point *ecc_alloc_point(unsigned int ndigits)
 {
@@ -83,19 +86,22 @@ struct ecc_point *ecc_alloc_point(unsigned int ndigits)
 
 	if (!p)
 		return NULL;
+#ifdef	ommit
 	p->x = ecc_alloc_digits_space(ndigits);
 	if (!p->x) goto err_alloc_x;
 	p->y = ecc_alloc_digits_space(ndigits);
 	if (!p->y) goto err_alloc_y;
-
+#endif
 	p->ndigits = ndigits;
 
 	return p;
+#ifdef	ommit
 err_alloc_y:
 	ecc_free_digits_space(p->x);
 err_alloc_x:
 	free(p);
 	return NULL;
+#endif
 }
 
 static void ecc_free_point(struct ecc_point *p)
@@ -103,8 +109,10 @@ static void ecc_free_point(struct ecc_point *p)
 	if (!p)
 		return;
 
+#ifdef	ommit
 	free(p->x);
 	free(p->y);
+#endif
 	free(p);
 }
 
@@ -1207,14 +1215,14 @@ static void ecc_point_add(const struct ecc_point *result,
 	u64 py[ECC_MAX_DIGITS];
 	unsigned int ndigits = curve->g.ndigits;
 
-	vli_set(result->x, q->x, ndigits);
-	vli_set(result->y, q->y, ndigits);
+	vli_set((u64 *)result->x, (u64 *)q->x, ndigits);
+	vli_set((u64 *)result->y, (u64 *)q->y, ndigits);
 	vli_mod_sub(z, result->x, p->x, curve->p, ndigits);
 	vli_set(px, p->x, ndigits);
 	vli_set(py, p->y, ndigits);
-	xycz_add(px, py, result->x, result->y, curve->p, ndigits);
+	xycz_add(px, py, (u64 *)result->x, (u64 *)result->y, curve->p, ndigits);
 	vli_mod_inv(z, z, curve->p, ndigits);
-	apply_z(result->x, result->y, z, curve->p, ndigits);
+	apply_z((u64 *)result->x, (u64 *)result->y, z, curve->p, ndigits);
 }
 
 /* Computes R = u1P + u2Q mod p using Shamir's trick.
@@ -1226,12 +1234,11 @@ void ecc_point_mult_shamir(const struct ecc_point *result,
 			   const struct ecc_curve *curve)
 {
 	u64 z[ECC_MAX_DIGITS];
-	u64 sump[2][ECC_MAX_DIGITS];
-	u64 *rx = result->x;
-	u64 *ry = result->y;
+	u64 *rx = (u64 *)result->x;
+	u64 *ry = (u64 *)result->y;
 	unsigned int ndigits = curve->g.ndigits;
 	unsigned int num_bits;
-	struct ecc_point sum = ECC_POINT_INIT(sump[0], sump[1], ndigits);
+	struct ecc_point sum = ECC_POINT_INIT({}, {}, ndigits);
 	const struct ecc_point *points[4];
 	const struct ecc_point *point;
 	unsigned int idx;
@@ -1357,12 +1364,8 @@ int ecc_gen_privkey(unsigned int curve_id, unsigned int ndigits, u64 *privkey)
 	 * This condition is met by the default RNG because it selects a favored
 	 * DRBG with a security strength of 256.
 	 */
-	// should change rng
-	//if (crypto_get_default_rng())
-		//return -EFAULT;
 
-	//err = crypto_rng_get_bytes(crypto_default_rng, (u8 *)priv, nbytes);
-	//crypto_put_default_rng();
+	err = getrandom(priv, nbytes, 0);
 	if (err)
 		return err;
 
@@ -1462,8 +1465,11 @@ int crypto_ecdh_shared_secret(unsigned int curve_id, unsigned int ndigits,
 
 	nbytes = ndigits << ECC_DIGITS_TO_BYTES_SHIFT;
 
-	// TODO: rng
-	//get_random_bytes(rand_z, nbytes);
+	// TODO: rng, should check return for error
+	if (getrandom(rand_z, nbytes, 0) < 0) {
+		ret = -ENOMEM;
+		goto out;
+	}
 
 	pk = ecc_alloc_point(ndigits);
 	if (!pk) {

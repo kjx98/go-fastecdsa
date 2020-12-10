@@ -54,9 +54,9 @@ typedef __uint8_t u8;
  * @ndigits:	Length of vlis in u64 qwords.
  */
 struct ecc_point {
-	u64 *x;
-	u64 *y;
-	u8 ndigits;
+	u64 x[ECC_MAX_DIGITS];
+	u64 y[ECC_MAX_DIGITS];
+	unsigned int ndigits;
 };
 
 #define ECC_POINT_INIT(x, y, ndigits)	(struct ecc_point) { x, y, ndigits }
