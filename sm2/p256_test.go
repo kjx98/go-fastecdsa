@@ -78,6 +78,7 @@ func TestRRbyP256(t *testing.T) {
 func TestRRbySM2(t *testing.T) {
 	n256 := new(big.Int).SetUint64(1)
 	n256.Lsh(n256, 256)
+	n512 := new(big.Int).Mul(n256, n256)
 	cParams := P256().Params()
 	n := cParams.N
 	R := new(big.Int).Mod(n256, n)
@@ -89,6 +90,9 @@ func TestRRbySM2(t *testing.T) {
 	t.Logf("N(order) is %x %x %x %x", ww[0], ww[1], ww[2], ww[3])
 
 	p := cParams.P
+	mu := new(big.Int).Div(n512, p)
+	ww = mu.Bits()
+	t.Logf("mu: %x %x %x %x %x", ww[0], ww[1], ww[2], ww[3], ww[4])
 	r := new(big.Int).Mod(n256, p)
 	rr := new(big.Int).Mul(r, r)
 	rr.Mod(rr, p)

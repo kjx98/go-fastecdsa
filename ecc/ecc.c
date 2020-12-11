@@ -27,7 +27,9 @@
 
 #include <endian.h>
 #include <errno.h>
+#ifdef	WITH_SYS_RANDOM
 #include <sys/random.h>
+#endif
 
 #include "ecc.h"
 #include "ecc_curve_defs.h"
@@ -66,60 +68,26 @@ static inline const struct ecc_curve *ecc_get_curve(uint curve_id)
 	}
 }
 
-#ifdef	ommit
-static u64 *ecc_alloc_digits_space(uint ndigits)
-{
-	size_t len = ndigits * sizeof(u64);
-
-	if (!len)
-		return NULL;
-
-	return malloc(len);
-}
-
-static void ecc_free_digits_space(u64 *space)
-{
-	free(space);
-}
-#endif
-
-static struct ecc_point *ecc_alloc_point(uint ndigits)
+static inline struct ecc_point *ecc_alloc_point(uint ndigits)
 {
 	struct ecc_point *p = malloc(sizeof(*p));
 
 	if (!p)
 		return NULL;
-#ifdef	ommit
-	p->x = ecc_alloc_digits_space(ndigits);
-	if (!p->x) goto err_alloc_x;
-	p->y = ecc_alloc_digits_space(ndigits);
-	if (!p->y) goto err_alloc_y;
-#endif
-	p->ndigits = ndigits;
+	//p->ndigits = ndigits;
 
 	return p;
-#ifdef	ommit
-err_alloc_y:
-	ecc_free_digits_space(p->x);
-err_alloc_x:
-	free(p);
-	return NULL;
-#endif
 }
 
-static void ecc_free_point(struct ecc_point *p)
+static inline void ecc_free_point(struct ecc_point *p)
 {
 	if (!p)
 		return;
 
-#ifdef	ommit
-	free(p->x);
-	free(p->y);
-#endif
 	free(p);
 }
 
-static void vli_clear(u64 *vli, uint ndigits)
+static inline void vli_clear(u64 *vli, uint ndigits)
 {
 	uint i;
 
@@ -166,7 +134,7 @@ static uint inline vli_num_digits(const u64 *vli, uint ndigits)
 }
 
 /* Counts the number of bits required for vli. */
-static uint vli_num_bits(const u64 *vli, uint ndigits)
+static uint inline vli_num_bits(const u64 *vli, uint ndigits)
 {
 	uint i, num_digits;
 	u64 digit;
@@ -176,8 +144,12 @@ static uint vli_num_bits(const u64 *vli, uint ndigits)
 		return 0;
 
 	digit = vli[num_digits - 1];
+#ifdef	ommit
 	for (i = 0; digit; i++)
 		digit >>= 1;
+#else
+	i = 64 - __builtin_clz(digit);
+#endif
 
 	return ((num_digits - 1) * 64 + i);
 }
@@ -202,7 +174,7 @@ void vli_from_le64(u64 *dest, const void *src, uint ndigits)
 }
 
 /* Sets dest = src. */
-static void vli_set(u64 *dest, const u64 *src, unsigned int ndigits)
+static inline void vli_set(u64 *dest, const u64 *src, unsigned int ndigits)
 {
 	uint i;
 
@@ -810,8 +782,9 @@ static bool vli_mmod_fast(u64 *result, u64 *product,
 		return true;
 	}
 	if ((curve_prime[1] >> 32) == 0) {
-		// is SM2
-		return false;
+		// is SM2, curve_prime MUST following with mu
+		vli_mmod_barrett(result, product, curve_prime, ndigits);
+		return true;
 	}
 
 	switch (ndigits) {
@@ -842,7 +815,7 @@ void vli_mod_mult_slow(u64 *result, const u64 *left, const u64 *right,
 }
 
 /* Computes result = (left * right) % curve_prime. */
-static void vli_mod_mult_fast(u64 *result, const u64 *left, const u64 *right,
+void vli_mod_mult_fast(u64 *result, const u64 *left, const u64 *right,
 			      const u64 *curve_prime, unsigned int ndigits)
 {
 	u64 product[2 * ECC_MAX_DIGITS];
@@ -943,10 +916,10 @@ void vli_mod_inv(u64 *result, const u64 *input, const u64 *mod,
 /* ------ Point operations ------ */
 
 /* Returns true if p_point is the point at infinity, false otherwise. */
-static bool ecc_point_is_zero(const struct ecc_point *point)
+static bool ecc_point_is_zero(const struct ecc_point *point, uint ndigits)
 {
-	return (vli_is_zero(point->x, point->ndigits) &&
-		vli_is_zero(point->y, point->ndigits));
+	return (vli_is_zero(point->x, ndigits) &&
+		vli_is_zero(point->y, ndigits));
 }
 
 /* Point multiplication algorithm using Montgomery's ladder with co-Z
@@ -1041,10 +1014,10 @@ static void xycz_initial_double(u64 *x1, u64 *y1, u64 *x2, u64 *y2,
 	vli_clear(z, ndigits);
 	z[0] = 1;
 
-	if (p_initial_z)
+	if (p_initial_z) {
 		vli_set(z, p_initial_z, ndigits);
-
-	apply_z(x1, y1, z, curve_prime, ndigits);
+		apply_z(x1, y1, z, curve_prime, ndigits);
+	}
 
 	ecc_point_double_jacobian(x1, y1, z, curve_prime, ndigits);
 
@@ -1196,7 +1169,7 @@ static void ecc_point_mult(struct ecc_point *result,
 	vli_mod_mult_fast(z, z, point->x, curve_prime, ndigits);
 
 	/* 1 / (xP * Yb * (X1 - X0)) */
-	vli_mod_inv(z, z, curve_prime, point->ndigits);
+	vli_mod_inv(z, z, curve_prime, ndigits);
 
 	/* yP / (xP * Yb * (X1 - X0)) */
 	vli_mod_mult_fast(z, z, point->y, curve_prime, ndigits);
@@ -1220,7 +1193,8 @@ static void ecc_point_add(const struct ecc_point *result,
 	u64 z[ECC_MAX_DIGITS];
 	u64 px[ECC_MAX_DIGITS];
 	u64 py[ECC_MAX_DIGITS];
-	unsigned int ndigits = curve->g.ndigits;
+	//unsigned int ndigits = curve->g.ndigits;
+	unsigned int ndigits = curve->ndigits;
 
 	vli_set((u64 *)result->x, (u64 *)q->x, ndigits);
 	vli_set((u64 *)result->y, (u64 *)q->y, ndigits);
@@ -1243,9 +1217,9 @@ void ecc_point_mult_shamir(const struct ecc_point *result,
 	u64 z[ECC_MAX_DIGITS];
 	u64 *rx = (u64 *)result->x;
 	u64 *ry = (u64 *)result->y;
-	unsigned int ndigits = curve->g.ndigits;
+	unsigned int ndigits = curve->ndigits; //curve->g.ndigits;
 	unsigned int num_bits;
-	struct ecc_point sum = ECC_POINT_INIT({}, {}, ndigits);
+	struct ecc_point sum;//  = ECC_POINT_INIT({}, {}, ndigits);
 	const struct ecc_point *points[4];
 	const struct ecc_point *point;
 	unsigned int idx;
@@ -1307,7 +1281,7 @@ static int __ecc_is_key_valid(const struct ecc_curve *curve,
 	if (!private_key)
 		return -EINVAL;
 
-	if (curve->g.ndigits != ndigits)
+	if (curve->ndigits != ndigits)
 		return -EINVAL;
 
 	/* Make sure the private key is in the range [2, n-3]. */
@@ -1371,9 +1345,11 @@ int ecc_gen_privkey(unsigned int curve_id, unsigned int ndigits, u64 *privkey)
 	 * DRBG with a security strength of 256.
 	 */
 
+#ifdef	WITH_SYS_RANDOM
 	err = getrandom(priv, nbytes, 0);
 	if (err)
 		return err;
+#endif
 
 	/* Make sure the private key is in the valid range. */
 	if (__ecc_is_key_valid(curve, priv, ndigits))
@@ -1406,7 +1382,7 @@ int ecc_make_pub_key(unsigned int curve_id, unsigned int ndigits,
 	}
 
 	ecc_point_mult(pk, &curve->g, priv, NULL, curve, ndigits);
-	if (ecc_point_is_zero(pk)) {
+	if (ecc_point_is_zero(pk, ndigits)) {
 		ret = -EAGAIN;
 		goto err_free_point;
 	}
@@ -1425,28 +1401,31 @@ int ecc_is_pubkey_valid_partial(const struct ecc_curve *curve,
 				struct ecc_point *pk)
 {
 	u64 yy[ECC_MAX_DIGITS], xxx[ECC_MAX_DIGITS], w[ECC_MAX_DIGITS];
+	uint	ndigits = curve->ndigits;
 
+#ifdef	ommit
 	if ((pk->ndigits != curve->g.ndigits))
 		return -EINVAL;
+#endif
 
 	/* Check 1: Verify key is not the zero point. */
-	if (ecc_point_is_zero(pk))
+	if (ecc_point_is_zero(pk, ndigits))
 		return -EINVAL;
 
 	/* Check 2: Verify key is in the range [1, p-1]. */
-	if (vli_cmp(curve->p, pk->x, pk->ndigits) != 1)
+	if (vli_cmp(curve->p, pk->x, ndigits) != 1)
 		return -EINVAL;
-	if (vli_cmp(curve->p, pk->y, pk->ndigits) != 1)
+	if (vli_cmp(curve->p, pk->y, ndigits) != 1)
 		return -EINVAL;
 
 	/* Check 3: Verify that y^2 == (x^3 + a·x + b) mod p */
-	vli_mod_square_fast(yy, pk->y, curve->p, pk->ndigits); /* y^2 */
-	vli_mod_square_fast(xxx, pk->x, curve->p, pk->ndigits); /* x^2 */
-	vli_mod_mult_fast(xxx, xxx, pk->x, curve->p, pk->ndigits); /* x^3 */
-	vli_mod_mult_fast(w, curve->a, pk->x, curve->p, pk->ndigits); /* a·x */
-	vli_mod_add(w, w, curve->b, curve->p, pk->ndigits); /* a·x + b */
-	vli_mod_add(w, w, xxx, curve->p, pk->ndigits); /* x^3 + a·x + b */
-	if (vli_cmp(yy, w, pk->ndigits) != 0) /* Equation */
+	vli_mod_square_fast(yy, pk->y, curve->p, ndigits); /* y^2 */
+	vli_mod_square_fast(xxx, pk->x, curve->p, ndigits); /* x^2 */
+	vli_mod_mult_fast(xxx, xxx, pk->x, curve->p, ndigits); /* x^3 */
+	vli_mod_mult_fast(w, curve->a, pk->x, curve->p, ndigits); /* a·x */
+	vli_mod_add(w, w, curve->b, curve->p, ndigits); /* a·x + b */
+	vli_mod_add(w, w, xxx, curve->p, ndigits); /* x^3 + a·x + b */
+	if (vli_cmp(yy, w, ndigits) != 0) /* Equation */
 		return -EINVAL;
 
 	return 0;
@@ -1471,11 +1450,13 @@ int crypto_ecdh_shared_secret(unsigned int curve_id, unsigned int ndigits,
 
 	nbytes = ndigits << ECC_DIGITS_TO_BYTES_SHIFT;
 
+#ifdef	WITH_SYS_RANDOM
 	// TODO: rng, should check return for error
 	if (getrandom(rand_z, nbytes, 0) < 0) {
 		ret = -ENOMEM;
 		goto out;
 	}
+#endif
 
 	pk = ecc_alloc_point(ndigits);
 	if (!pk) {
@@ -1501,7 +1482,7 @@ int crypto_ecdh_shared_secret(unsigned int curve_id, unsigned int ndigits,
 
 	ecc_swap_digits(product->x, secret, ndigits);
 
-	if (ecc_point_is_zero(product))
+	if (ecc_point_is_zero(product, ndigits))
 		ret = -EFAULT;
 
 	ecc_free_point(product);

@@ -18,8 +18,8 @@ static struct ecc_curve nist_p192 = {
 			0x188DA80EB03090F6ull },
 		.y = { 0x73F977A11E794811ull, 0x631011ED6B24CDD5ull,
 			0x07192B95FFC8DA78ull },
-		.ndigits = 3,
 	},
+	.ndigits = 3,
 	.p = nist_p192_p,
 	.n = nist_p192_n,
 	.a = nist_p192_a,
@@ -42,8 +42,8 @@ static struct ecc_curve nist_p256 = {
 			0xF8BCE6E563A440F2ull, 0x6B17D1F2E12C4247ull },
 		.y = { 0xCBB6406837BF51F5ull, 0x2BCE33576B315ECEull,
 			0x8EE7EB4A7C0F9E16ull, 0x4FE342E2FE1A7F9Bull },
-		.ndigits = 4,
 	},
+	.ndigits = 4,
 	.p = nist_p256_p,
 	.n = nist_p256_n,
 	.a = nist_p256_a,
@@ -51,8 +51,10 @@ static struct ecc_curve nist_p256 = {
 };
 
 /* GM/T 0003.5-2012 SM2: a = p - 3 */
+/* prime following mu for Barrett's reduction */
 static u64 sm2_p256_p[] = { 0xFFFFFFFFFFFFFFFFull, 0xffffffff00000000ull,
-				0xffffffffffffffffull, 0xfffffffeffffffffull };
+				0xffffffffffffffffull, 0xfffffffeffffffffull,
+				8589934595, 8589934594, 4294967297, 4294967297, 1};
 static u64 sm2_p256_n[] = { 0x53bbf40939d54123ull, 0x7203df6b21c6052bull,
 				0xFFFFFFFFFFFFFFFFull, 0xfffffffeffffffffull };
 static u64 sm2_p256_a[] = { 0xFFFFFFFFFFFFFFFCull, 0xffffffff00000000ull,
@@ -66,8 +68,8 @@ static struct ecc_curve sm2_p256 = {
 			0x5F9904466A39C994ull, 0x32C4AE2C1F198119ull },
 		.y = { 0x2DF32E52139F0A0ull, 0xD0A9877CC62A4740ull,
 			0x59BDCEE36B692153ull, 0xBC3736A2F4F6779Cull },
-		.ndigits = 4,
 	},
+	.ndigits = 4,
 	.p = sm2_p256_p,
 	.n = sm2_p256_n,
 	.a = sm2_p256_a,

@@ -8,7 +8,6 @@ package ecc
 /*
 static struct ecc_point *setEC_point(struct ecc_point *pt, u_int64_t *x, u_int64_t *y) {
 	if (pt == NULL) return NULL;
-	pt->ndigits = 4;
 	pt->x[0] = x[0]; pt->x[1] = x[1]; pt->x[2] = x[2]; pt->x[3] = x[3];
 	pt->y[0] = y[0]; pt->y[1] = y[1]; pt->y[2] = y[2]; pt->y[3] = y[3];
 	return pt;

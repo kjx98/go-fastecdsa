@@ -56,10 +56,10 @@ typedef __uint8_t u8;
 struct ecc_point {
 	u64 x[ECC_MAX_DIGITS];
 	u64 y[ECC_MAX_DIGITS];
-	uint ndigits;
+	//uint ndigits;
 };
 
-#define ECC_POINT_INIT(x, y, ndigits)	(struct ecc_point) { x, y, ndigits }
+//#define ECC_POINT_INIT(x, y, ndigits)	(struct ecc_point) { x, y, ndigits }
 
 //static struct ecc_point *ecc_alloc_point(unsigned int ndigits);
 
@@ -79,6 +79,7 @@ struct ecc_point {
 struct ecc_curve {
 	char *name;
 	struct ecc_point g;
+	uint ndigits;
 	u64 *p;
 	u64 *n;
 	u64 *a;
@@ -239,6 +240,10 @@ void vli_mod_inv(u64 *result, const u64 *input, const u64 *mod,
  */
 void vli_mod_mult_slow(u64 *result, const u64 *left, const u64 *right,
 		       const u64 *mod, unsigned int ndigits);
+/* Computes result = (left * right) % curve_prime. */
+// SM2 use barret reduction
+void vli_mod_mult_fast(u64 *result, const u64 *left, const u64 *right,
+			      const u64 *curve_prime, unsigned int ndigits);
 
 /**
  * ecc_point_mult_shamir() - Add two points multiplied by scalars
