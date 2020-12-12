@@ -16,7 +16,7 @@ static struct ecc_point *setEC_point(struct ecc_point *pt, u_int64_t *x, u_int64
 import "C"
 
 import (
-	//"math/big"
+	"math/big"
 	"unsafe"
 )
 
@@ -43,14 +43,25 @@ func vliModInv(input, mod []byte) (result []uint64) {
 }
 
 // Montgomery multiplication modulo P256
-func vliModMult(left, right, mod []byte) (result []uint64) {
-	var res [4]uint64
+func vliModMult(left, right, mod []byte) (result *big.Int) {
+	var res [4]big.Word
 	lf := vliFromBE64(left)
 	rt := vliFromBE64(right)
 	modP := vliFromBE64(mod)
-	C.vli_mod_mult_slow((*C.u64)(&res[0]), (*C.u64)(&lf[0]),
+	C.vli_mod_mult_slow((*C.u64)(unsafe.Pointer(&res[0])), (*C.u64)(&lf[0]),
 		(*C.u64)(&rt[0]), (*C.u64)(&modP[0]), 4)
-	result = res[:]
+	result = new(big.Int).SetBits(res[:])
+	return
+}
+
+func vliModMultBarrett(left, right []byte, mod []big.Word) (result *big.Int) {
+	var res [4]big.Word
+	lf := vliFromBE64(left)
+	rt := vliFromBE64(right)
+	//modP := vliFromBE64(mod)
+	C.vli_mod_mult_fast((*C.u64)((unsafe.Pointer)(&res[0])), (*C.u64)(&lf[0]),
+		(*C.u64)(&rt[0]), (*C.u64)((unsafe.Pointer)(&mod[0])), 4)
+	result = new(big.Int).SetBits(res[:])
 	return
 }
 

@@ -18,27 +18,29 @@ func init() {
 	y2, _ = new(big.Int).SetString("37446874645719659508108418738243030372422533994743756508347851178597805285404", 16)
 }
 
-/*
-func TestRRbySM2(t *testing.T) {
-	n256 := new(big.Int).SetUint64(1)
-	n256.Lsh(n256, 256)
-	n := P256().Params().N
-	R := new(big.Int).Mod(n256, n)
-	RR := new(big.Int).Mul(R, R)
-	RR.Mod(RR, n)
-	ww := RR.Bits()
-	t.Logf("RR of sm2 is %x %x %x %x", ww[0], ww[1], ww[2], ww[3])
-	ww = n.Bits()
-	t.Logf("N(order) is %x %x %x %x", ww[0], ww[1], ww[2], ww[3])
-
-	p := P256().Params().P
-	Rinv := new(big.Int).SetUint64(1)
-	Rinv.Lsh(Rinv, 257)
-	Rinv.Mod(Rinv, p)
-	Rinv.ModInverse(Rinv, p)
-	t.Log("RInverse of sm2 is ", Rinv.Text(16))
+func TestEccMMod(t *testing.T) {
+	p := sm2.P256().Params().P
+	xy := new(big.Int).Mul(x1, y1)
+	xyMod := new(big.Int).Mod(xy, p)
+	bMod := vliModMult(x1.Bytes(), y1.Bytes(), p.Bytes())
+	if bMod.Cmp(xyMod) != 0 {
+		t.Log("big.MulMod diff vliModMult")
+		t.Fail()
+	}
+	pb := make([]big.Word, 9)
+	copy(pb, p.Bits())
+	mu := new(big.Int).SetUint64(1)
+	mu.Lsh(mu, 512)
+	mu.Div(mu, p)
+	copy(pb[4:], mu.Bits())
+	t.Logf("P0: %x, P3: %x, Mu0: %x, Mu3: %x", pb[0], pb[3], pb[4], pb[7])
+	bMod = vliModMultBarrett(x1.Bytes(), y1.Bytes(), pb)
+	if bMod.Cmp(xyMod) != 0 {
+		t.Logf("big.mulmod diff barrett mulmod:\n%s vs\n%s\n",
+			xyMod.Text(16), bMod.Text(16))
+		t.Fail()
+	}
 }
-*/
 
 func BenchmarkInverse(b *testing.B) {
 	b.ResetTimer()

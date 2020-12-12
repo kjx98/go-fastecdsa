@@ -14,6 +14,7 @@ package sm2
 // reverse the transform than to operate in affine coordinates.
 
 import (
+	"log"
 	"math/big"
 )
 
@@ -21,13 +22,169 @@ import (
 // a generic, non-constant time implementation of Curve.
 type sm2Curve struct {
 	*CurveParams
+	mu *big.Int
+	k0 uint64
+	rr *big.Int
 }
 
 var sm2g sm2Curve
+var sm2Base *big.Int
+var montOne *big.Int
 
 func initSM2go() {
 	// Use pure Go implementation.
 	sm2g.CurveParams = sm2Params
+	sm2g.k0 = 1 //0x327f9e8872350975
+	n512 := new(big.Int).SetUint64(1)
+	sm2Base = new(big.Int).Lsh(n512, 256)
+	n512.Lsh(n512, 512)
+	sm2g.mu = new(big.Int).Div(n512, sm2g.P)
+	//rrBits := []big.Word{0x901192af7c114f20, 0x3464504ade6fa2fa,
+	//0x620fc84c3affe0d4, 0x1eb5e412a22b3d3b}
+	rrBits := []big.Word{0x200000003, 0x2ffffffff, 0x100000001, 0x400000002}
+	sm2g.rr = new(big.Int).SetBits(rrBits)
+	rrBits = []big.Word{0x00000001, 0xffffffff, 0x00000000, 0x0000000100000000}
+	//montOne = new(big.Int).SetBits(rrBits)
+	montOne = new(big.Int).SetUint64(1)
+	rr := new(big.Int).Mul(sm2g.mu, sm2g.P)
+	if rr.Cmp(n512) >= 0 {
+		panic("mu large not floor")
+	}
+	rem := new(big.Int).Sub(n512, rr)
+	if rem.Cmp(sm2g.P) >= 0 {
+		panic("mu small not floor")
+	}
+}
+
+func (curve sm2Curve) GetMu() *big.Int {
+	return curve.mu
+}
+
+func modT320(x *big.Int) *big.Int {
+	ww := x.Bits()
+	if ll := len(ww); ll < 5 {
+		return x
+	} else {
+		return new(big.Int).SetBits(ww[:5])
+	}
+}
+
+func (curve sm2Curve) BarrettMod(prod *big.Int) *big.Int {
+	qBits := prod.Bits()
+	if len(qBits) < 5 {
+		if prod.Cmp(curve.P) >= 0 {
+			return new(big.Int).Sub(prod, curve.P)
+		}
+		return prod
+	}
+	q := new(big.Int).SetBits(qBits[3:])
+	q.Mul(q, curve.mu)
+	qBits = q.Bits()
+	q = q.SetBits(qBits[5:])
+	q3 := new(big.Int).Mul(q, curve.P)
+	r1 := modT320(prod)
+	r2 := modT320(q3)
+	rr := new(big.Int).Sub(prod, q3)
+	log.Printf("rr : %d %s", len(rr.Text(16)), rr.Text(16))
+	r1T := r1.Text(16)
+	r2T := r2.Text(16)
+	log.Printf("r1 vs r2: %d vs %d\n%s\n%s", len(r1T), len(r2T), r1T, r2T)
+	if r1.Cmp(r2) < 0 {
+		r1.Add(r1, sm2Base)
+	}
+	r := r1.Sub(r1, r2)
+	if r.Cmp(curve.P) >= 0 {
+		r.Sub(r, curve.P)
+		//log.Printf("r : %s", r.Text(16))
+	}
+	return r
+}
+
+func (curve sm2Curve) montK0() uint64 {
+	t := uint64(1)
+	N := uint64(curve.N.Bits()[0])
+	for i := 1; i < 4; i++ {
+		t = t * t * N
+	}
+	return -t
+}
+
+//go:noinline
+func getWordAt(x *big.Int, i int) big.Word {
+	xx := x.Bits()
+	if len(xx) <= i || i < 0 {
+		return big.Word(0)
+	}
+	return xx[i]
+}
+
+func (curve sm2Curve) montRed(t *big.Int) *big.Int {
+	/*
+		rb := t.Bits()
+		r := new(big.Int).SetBits(rb)
+		if len(rb) < 4 {
+			return r
+		}
+		for i := uint(0); i < 4; i++ {
+			u := uint64(rb[i]) * curve.k0 // only uint64, same as mod 2^64
+			s := new(big.Int).SetUint64(u)
+			if i > 0 {
+				s.Lsh(s, 64*i)
+			}
+			s.Mul(s, curve.N)
+			r.Add(r, s)
+		}
+		r.Rsh(r, 256)
+		if r.Cmp(curve.N) >= 0 {
+			r.Sub(r, curve.N)
+		}
+		return r
+	*/
+	r := new(big.Int)
+	yy := t.Bits()
+	for i := 0; i < 4; i++ {
+		r0 := getWordAt(r, 0)
+		u := uint64(r0+yy[i]) * curve.k0 // uint64 same as modula 2^64
+		s := new(big.Int).SetUint64(u)
+		s.Mul(s, curve.N)
+		t := new(big.Int).SetUint64(uint64(yy[i]))
+		t.Add(t, s)
+		r.Add(r, t)
+		r.Rsh(r, 64)
+	}
+	if r.Cmp(curve.N) >= 0 {
+		r.Sub(r, curve.N)
+	}
+	return r
+}
+
+func (curve sm2Curve) montMul(x, y *big.Int) *big.Int {
+	r := new(big.Int)
+	xx := x.Bits()
+	yy := y.Bits()
+	for i := 0; i < 4; i++ {
+		r0 := getWordAt(r, 0)
+		u := uint64(r0+yy[i]*xx[0]) * curve.k0 // uint64 same as modula 2^64
+		s := new(big.Int).SetUint64(u)
+		s.Mul(s, curve.N)
+		t := new(big.Int).SetUint64(uint64(yy[i]))
+		t.Mul(t, x)
+		t.Add(t, s)
+		r.Add(r, t)
+		r.Rsh(r, 64)
+	}
+	if r.Cmp(curve.N) >= 0 {
+		r.Sub(r, curve.N)
+	}
+	return r
+}
+
+func (curve sm2Curve) montModMul(x, y *big.Int) *big.Int {
+	xp := curve.montMul(x, curve.rr)
+	yp := curve.montMul(y, curve.rr)
+	res := curve.montMul(xp, yp)
+	//return curve.montRed(res)
+	return curve.montMul(montOne, res)
 }
 
 func (curve sm2Curve) IsOnCurve(x, y *big.Int) bool {

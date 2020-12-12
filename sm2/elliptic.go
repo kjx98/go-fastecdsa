@@ -111,6 +111,7 @@ func Unmarshal(curve Curve, data []byte) (x, y *big.Int) {
 
 var initonce sync.Once
 var sm2Params *CurveParams
+var secp256k1Params *CurveParams
 
 func initAll() {
 	sm2Params = &CurveParams{Name: "SM2"}
@@ -120,6 +121,13 @@ func initAll() {
 	sm2Params.Gx, _ = new(big.Int).SetString("32C4AE2C1F1981195F9904466A39C9948FE30BBFF2660BE1715A4589334C74C7", 16)
 	sm2Params.Gy, _ = new(big.Int).SetString("BC3736A2F4F6779C59BDCEE36B692153D0A9877CC62A474002DF32E52139F0A0", 16)
 	sm2Params.BitSize = 256
+	secp256k1Params = &CurveParams{Name: "BC"}
+	secp256k1Params.P, _ = new(big.Int).SetString("FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFEFFFFFC2F", 16)
+	secp256k1Params.N, _ = new(big.Int).SetString("FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFEBAAEDCE6AF48A03BBFD25E8CD0364141", 16)
+	secp256k1Params.B, _ = new(big.Int).SetString("07", 16)
+	secp256k1Params.Gx, _ = new(big.Int).SetString("79BE667EF9DCBBAC55A06295CE870B07029BFCDB2DCE28D959F2815B16F81798", 16)
+	secp256k1Params.Gy, _ = new(big.Int).SetString("483ada7726a3c4655da4fbfc0e1108a8fd17b448a68554199c47d08ffb10d4b8", 16)
+	secp256k1Params.BitSize = 256
 	initSM2()
 	initSM2go()
 }
@@ -143,4 +151,9 @@ func SM2go() Curve {
 func P256() Curve {
 	initonce.Do(initAll)
 	return sm2Params
+}
+
+func BTC() Curve {
+	initonce.Do(initAll)
+	return secp256k1Params
 }

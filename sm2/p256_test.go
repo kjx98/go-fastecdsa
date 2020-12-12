@@ -76,8 +76,17 @@ func TestRRbyP256(t *testing.T) {
 }
 
 func TestRRbySM2(t *testing.T) {
-	n256 := new(big.Int).SetUint64(1)
-	n256.Lsh(n256, 256)
+	one := new(big.Int).SetUint64(1)
+	n96 := new(big.Int).Lsh(one, 96)
+	n64 := new(big.Int).Lsh(one, 64)
+	//n128 := new(big.Int).Lsh(one, 128)
+	n224 := new(big.Int).Lsh(one, 224)
+	n256 := new(big.Int).Lsh(one, 256)
+	smPP := new(big.Int).Sub(n256, n224)
+	//smPP.Sub(smPP, n128)
+	smPP.Sub(smPP, n96)
+	smPP.Add(smPP, n64)
+	smPP.Sub(smPP, one)
 	n512 := new(big.Int).Mul(n256, n256)
 	cParams := P256().Params()
 	n := cParams.N
@@ -121,6 +130,21 @@ func TestRRbySM2(t *testing.T) {
 		}
 		t.Logf("N0: %x", N0.Bits()[0])
 	}
+	K0.Lsh(K0, 192)
+	N0 = N0.ModInverse(p, K0)
+	if N0 == nil {
+		t.Log("Ca'nt calc N0")
+	} else {
+		if N0.Cmp(K0) >= 0 {
+			t.Log("SHOULD NEVER OCCUR")
+			N0 = N0.Mod(K0, N0)
+		} else {
+			N0 = N0.Sub(K0, N0)
+		}
+		t.Logf("new N0: %x, mont K0: %x", N0.Bits()[0], sm2g.montK0())
+	}
+	ww = smPP.Bits()
+	t.Logf("sm2 mP: %X %X %X %X", ww[0], ww[1], ww[2], ww[3])
 	ww = p.Bits()
 	t.Logf("P: %X %X %X %X", ww[0], ww[1], ww[2], ww[3])
 	ww = cParams.B.Bits()
@@ -146,6 +170,38 @@ func TestSM2AsmGo(t *testing.T) {
 	}
 	if ay.Cmp(gy) != 0 {
 		t.Log("mult Y diff")
+		t.Fail()
+	}
+}
+
+func TestMontMulMod(t *testing.T) {
+	SM2go()
+	c := sm2g
+	prod := new(big.Int).Mul(x1, y1)
+	m1 := new(big.Int).Mod(prod, c.N)
+	m2 := c.montModMul(x1, y1)
+	if m1.Cmp(m2) != 0 {
+		t.Logf("m1 diff m2:\n%s vs\n%s", m1.Text(16), m2.Text(16))
+		t.Fail()
+	}
+}
+
+func TestBarrettMod(t *testing.T) {
+	SM2go()
+	c := sm2g
+	mu := c.GetMu()
+	if mu == nil {
+		t.Log("Can't get mu")
+		t.Fail()
+	} else {
+		ww := mu.Bits()
+		t.Logf("SM2 mu: %x %x %x %x %x", ww[0], ww[1], ww[2], ww[3], ww[4])
+	}
+	prod := new(big.Int).Mul(x1, y1)
+	m1 := new(big.Int).Mod(prod, c.P)
+	m2 := c.BarrettMod(prod)
+	if m1.Cmp(m2) != 0 {
+		t.Logf("m1 diff m2:\n%s vs\n%s", m1.Text(16), m2.Text(16))
 		t.Fail()
 	}
 }
