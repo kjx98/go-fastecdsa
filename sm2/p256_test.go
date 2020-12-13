@@ -15,12 +15,12 @@ var (
 )
 
 func init() {
-	x1, _ = new(big.Int).SetString("12504736780261570232047283225790923734936736733904083456330261180763076903173", 16)
-	y1, _ = new(big.Int).SetString("81307578426096630754000956949482484966368962694792140728234975018259774469569", 16)
-	x2, _ = new(big.Int).SetString("48121564271922987841895377752074498583012355812029682461364979458450873405695", 16)
-	y2, _ = new(big.Int).SetString("37446874645719659508108418738243030372422533994743756508347851178597805285404", 16)
-	d1, _ = new(big.Int).SetString("44284103725881469857708921760250942555493926042739521955667532690943419533349", 16)
-	d2, _ = new(big.Int).SetString("30959114451459308172620308816717028819652930302076989559150120900216006593354", 16)
+	x1, _ = new(big.Int).SetString("afe524a88091d6daf7f9188477f6086a3c3c6c2f18c0e55b68e8ded5dbec39ca", 16)
+	y1, _ = new(big.Int).SetString("8d837895a7dc179ef176066831aad5c2af60d71184a4ca536f18b74046a55994", 16)
+	x2, _ = new(big.Int).SetString("684446fbee5167ef8baaa8adfa83e4606c0a05bb2f2c9125ca9ad478f1770dad", 16)
+	y2, _ = new(big.Int).SetString("c7337843bdb886bff9965b00c6d87aff04f8d6bfa6a6846c0f28e513642bf309", 16)
+	d1, _ = new(big.Int).SetString("44960d13c3ae7889e7fdfc0c48f4ac1da4e68fd3a5be28ad3f53eddad6d9c892", 16)
+	d2, _ = new(big.Int).SetString("b68c5c25852521c647d7d0eddd09494949602ebaa885202a5573bb6ec8c5d96f", 16)
 }
 
 func TestRRbyP256(t *testing.T) {
@@ -174,6 +174,7 @@ func TestSM2AsmGo(t *testing.T) {
 	}
 }
 
+/*
 func TestMontMulMod(t *testing.T) {
 	SM2go()
 	c := sm2g
@@ -185,6 +186,7 @@ func TestMontMulMod(t *testing.T) {
 		t.Fail()
 	}
 }
+*/
 
 func TestBarrettMod(t *testing.T) {
 	SM2go()
@@ -201,8 +203,19 @@ func TestBarrettMod(t *testing.T) {
 	m1 := new(big.Int).Mod(prod, c.P)
 	m2 := c.BarrettMod(prod)
 	if m1.Cmp(m2) != 0 {
-		t.Logf("m1 diff m2:\n%s vs\n%s", m1.Text(16), m2.Text(16))
+		t.Logf("step1 m1 diff m2:\n%s vs\n%s", m1.Text(16), m2.Text(16))
 		t.Fail()
+	} else {
+		t.Log("BarrettMod ok")
+	}
+	prod = new(big.Int).Mul(x2, y2)
+	m1 = new(big.Int).Mod(prod, c.P)
+	m2 = c.BarrettMod(prod)
+	if m1.Cmp(m2) != 0 {
+		t.Logf("step2 m1 diff m2:\n%s vs\n%s", m1.Text(16), m2.Text(16))
+		t.Fail()
+	} else {
+		t.Log("BarrettMod ok")
 	}
 }
 
@@ -223,14 +236,27 @@ func BenchmarkInverse(b *testing.B) {
 
 func BenchmarkMul(b *testing.B) {
 	b.ResetTimer()
-	//p := P256().Params().P
+	p := P256().Params().P
 	res := new(big.Int)
 
 	b.ReportAllocs()
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
 		_ = res.Mul(x1, x2)
-		//_ = res.Mod(res, p)
+		_ = res.Mod(res, p)
+	}
+}
+
+func BenchmarkMulBarrettMod(b *testing.B) {
+	b.ResetTimer()
+	c := sm2g
+	res := new(big.Int)
+
+	b.ReportAllocs()
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		_ = res.Mul(x1, x2)
+		_ = c.BarrettMod(res)
 	}
 }
 

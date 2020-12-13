@@ -54,7 +54,7 @@ static struct ecc_curve nist_p256 = {
 /* prime following mu for Barrett's reduction */
 static u64 sm2_p256_p[] = { 0xFFFFFFFFFFFFFFFFull, 0xffffffff00000000ull,
 				0xffffffffffffffffull, 0xfffffffeffffffffull,
-				8589934595, 8589934594, 4294967297, 4294967297, 1};
+				0x200000003, 0x200000002, 0x100000001, 0x100000001, 1};
 static u64 sm2_p256_n[] = { 0x53bbf40939d54123ull, 0x7203df6b21c6052bull,
 				0xFFFFFFFFFFFFFFFFull, 0xfffffffeffffffffull };
 static u64 sm2_p256_a[] = { 0xFFFFFFFFFFFFFFFCull, 0xffffffff00000000ull,

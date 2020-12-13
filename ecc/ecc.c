@@ -148,7 +148,7 @@ static uint inline vli_num_bits(const u64 *vli, uint ndigits)
 	for (i = 0; digit; i++)
 		digit >>= 1;
 #else
-	i = 64 - __builtin_clz(digit);
+	i = 64 - __builtin_clzl(digit);
 #endif
 
 	return ((num_digits - 1) * 64 + i);
@@ -626,7 +626,7 @@ static void vli_mmod_slow(u64 *result, u64 *product, const u64 *mod,
  * R. Brent, P. Zimmermann. Modern Computer Arithmetic. 2010.
  * 2.4.1 Barrett's algorithm. Algorithm 2.5.
  */
-static void vli_mmod_barrett(u64 *result, u64 *product, const u64 *mod,
+void vli_mmod_barrett(u64 *result, u64 *product, const u64 *mod,
 			     unsigned int ndigits)
 {
 	u64 q[ECC_MAX_DIGITS * 2];

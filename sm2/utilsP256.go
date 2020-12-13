@@ -18,8 +18,8 @@ import (
 	"math/big"
 )
 
-const  (
-	maxBits =  256
+const (
+	maxBits  = 256
 	maxWords = 4
 )
 
@@ -28,34 +28,37 @@ var (
 )
 
 // CalcMu   mu = b^2k / p
-func  CalcMu(p *big.Int)  *big.Int {
+func CalcMu(p *big.Int) *big.Int {
 	n2k := new(big.Int).SetUint64(1)
 	n2k.Lsh(n2k, maxBits*2)
 	res := new(big.Int).Div(n2k, p)
 	return res
 }
 
-//go: noinline
-func fastDivBaseExp(x *big.Int, nExp int)  *big.Int {
-	var res	big.Int
+func fastDivBaseExp(x *big.Int, nExp int) *big.Int {
+	var res big.Int
 	qb := x.Bits()
-	if  len(qb) < nExp { return x }
+	if len(qb) < nExp {
+		return x
+	}
 	res.SetBits(qb[nExp:])
 	return &res
 }
 
 func BarrettDiv(prod, mu *big.Int) (r *big.Int) {
-	var qq	big.Int
+	var qq big.Int
 	q1 := fastDivBaseExp(prod, maxWords-1)
 	qq.Mul(q1, mu)
 	r = fastDivBaseExp(&qq, maxWords+1)
 	return
 }
 
-func DiffInt(x, y *big.Int)  (delta int64, err error) {
-	var	dd	big.Int
+func DiffInt(x, y *big.Int) (delta int64, err error) {
+	var dd big.Int
 	dd.Sub(x, y)
-	if len(dd.Bits()) > 1 { return 0, errTooLarge }
+	if len(dd.Bits()) > 1 {
+		return 0, errTooLarge
+	}
 	delta = dd.Int64()
 	return
 }

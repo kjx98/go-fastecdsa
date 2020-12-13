@@ -14,7 +14,7 @@ package sm2
 // reverse the transform than to operate in affine coordinates.
 
 import (
-	"log"
+	//"log"
 	"math/big"
 )
 
@@ -60,15 +60,6 @@ func (curve sm2Curve) GetMu() *big.Int {
 	return curve.mu
 }
 
-func modT320(x *big.Int) *big.Int {
-	ww := x.Bits()
-	if ll := len(ww); ll < 5 {
-		return x
-	} else {
-		return new(big.Int).SetBits(ww[:5])
-	}
-}
-
 func (curve sm2Curve) BarrettMod(prod *big.Int) *big.Int {
 	qBits := prod.Bits()
 	if len(qBits) < 5 {
@@ -77,27 +68,28 @@ func (curve sm2Curve) BarrettMod(prod *big.Int) *big.Int {
 		}
 		return prod
 	}
-	q := new(big.Int).SetBits(qBits[3:])
-	q.Mul(q, curve.mu)
-	qBits = q.Bits()
-	q = q.SetBits(qBits[5:])
+	q := BarrettDiv(prod, curve.mu)
 	q3 := new(big.Int).Mul(q, curve.P)
-	r1 := modT320(prod)
-	r2 := modT320(q3)
 	rr := new(big.Int).Sub(prod, q3)
-	log.Printf("rr : %d %s", len(rr.Text(16)), rr.Text(16))
-	r1T := r1.Text(16)
-	r2T := r2.Text(16)
-	log.Printf("r1 vs r2: %d vs %d\n%s\n%s", len(r1T), len(r2T), r1T, r2T)
-	if r1.Cmp(r2) < 0 {
-		r1.Add(r1, sm2Base)
-	}
-	r := r1.Sub(r1, r2)
-	if r.Cmp(curve.P) >= 0 {
-		r.Sub(r, curve.P)
+	/*
+		qBits = rr.Bits()
+		if ql := len(qBits); ql > maxWords {
+			q = BarrettDiv(rr, curve.mu)
+			qq := new(big.Int).Mul(q, curve.P)
+			rr.Sub(rr, qq)
+			log.Printf("redo BarrettDiv w/ prodLen: %d, qLen: %d",
+				len(prod.Bits()), ql)
+		}
+		if rr.Cmp(curve.P) > 0 {
+			rem := new(big.Int).Div(rr, curve.P)
+			log.Printf("rr diff : %s", rem.Text(10))
+		}
+	*/
+	if rr.Cmp(curve.P) >= 0 {
+		rr.Sub(rr, curve.P)
 		//log.Printf("r : %s", r.Text(16))
 	}
-	return r
+	return rr
 }
 
 func (curve sm2Curve) montK0() uint64 {
@@ -109,7 +101,7 @@ func (curve sm2Curve) montK0() uint64 {
 	return -t
 }
 
-//go:noinline
+//go: noinline
 func getWordAt(x *big.Int, i int) big.Word {
 	xx := x.Bits()
 	if len(xx) <= i || i < 0 {
