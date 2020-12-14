@@ -323,8 +323,7 @@ static uint128_t mul_64_64(u64 left, u64 right)
 {
 	uint128_t result;
 #if defined(__SIZEOF_INT128__)
-	unsigned __int128 *m = (u128 *)&result;
-	*m = (unsigned __int128)left * right;
+	*((u128 *)&result) = (unsigned __int128)left * right;
 
 	//result.m_low  = m;
 	//result.m_high = m >> 64;
@@ -654,6 +653,7 @@ void vli_mmod_barrett(u64 *result, u64 *product, const u64 *mod,
 #else
 	// add remain * mod
 	vli_set(r, q+ndigits, ndigits);
+	vli_clear(q+1, ndigits);
 	vli_umult(q, mu, product[ndigits-1], ndigits);
 	vli_add(result, r, q+1, ndigits);
 	vli_mult(r, mu, result, ndigits);
@@ -680,6 +680,8 @@ void vli_div_barrett(u64 *result, u64 *product, const u64 *mu,
 		vli_add(q + ndigits, q + ndigits, product + ndigits, ndigits);
 	vli_set(r, q+ndigits, ndigits);
 	vli_umult(q, mu, product[ndigits-1], ndigits);
+	if (mu[ndigits])
+		vli_uadd(q + ndigits, q + ndigits, product[ndigits-1], ndigits);
 	vli_add(result, r, q+1, ndigits);
 }
 

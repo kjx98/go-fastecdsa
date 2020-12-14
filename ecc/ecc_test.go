@@ -42,6 +42,39 @@ func TestEccMMod(t *testing.T) {
 	}
 }
 
+func TestBarrettDiv(t *testing.T) {
+	cParams := sm2.P256().Params()
+	prod := new(big.Int).Mul(x1, y1)
+	p := cParams.P
+	mu := new(big.Int).SetUint64(1)
+	mu.Lsh(mu, 512)
+	mu.Div(mu, p)
+	ww := mu.Bits()
+	t.Logf("mu: %x %x %x %x %x", ww[0], ww[1], ww[2], ww[3], ww[4])
+	q := vliBarrettDiv(prod, ww)
+	qe := new(big.Int).Div(prod, p)
+	if dd, err := sm2.DiffInt(qe, q); err != nil {
+		t.Log("Diff error", err)
+		t.Logf("qe vs q: \n%s\n%s", qe.Text(16), q.Text(16))
+		t.Fail()
+	} else if dd < 0 {
+		t.Log("delta prod/p, q < 0, delta: ", dd)
+		t.Fail()
+	} else if dd > 2 {
+		t.Log("delta > 2, delta: ", dd)
+		t.Fail()
+	}
+	prod = prod.Mul(x2, y2)
+	q = vliBarrettDiv(prod, ww)
+	qe = qe.Div(prod, p)
+	if dd, err := sm2.DiffInt(qe, q); err != nil {
+		t.Log("Diff error", err)
+		t.Fail()
+	} else if dd < 0 || dd > 2 {
+		t.Log("delta prod/p, q < 0 or > 2, delta: ", dd)
+		t.Fail()
+	}
+}
 func BenchmarkInverse(b *testing.B) {
 	b.ResetTimer()
 	p := sm2.P256().Params().P.Bytes()

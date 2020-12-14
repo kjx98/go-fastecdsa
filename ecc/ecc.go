@@ -61,7 +61,17 @@ func vliModMultBarrett(left, right []byte, mod []big.Word) (result *big.Int) {
 	//modP := vliFromBE64(mod)
 	C.vli_mod_mult_fast((*C.u64)((unsafe.Pointer)(&res[0])), (*C.u64)(&lf[0]),
 		(*C.u64)(&rt[0]), (*C.u64)((unsafe.Pointer)(&mod[0])), 4)
-	result = new(big.Int).SetBits(res[:])
+	result = new(big.Int).SetBits(res[:4])
+	return
+}
+
+func vliBarrettDiv(prod *big.Int, mu []big.Word) (result *big.Int) {
+	var res [8]big.Word
+	prd := vliFromBE64(prod.Bytes())
+	//modP := vliFromBE64(mod)
+	C.vli_div_barrett((*C.u64)((unsafe.Pointer)(&res[0])), (*C.u64)(&prd[0]),
+		(*C.u64)((unsafe.Pointer)(&mu[0])), 4)
+	result = new(big.Int).SetBits(res[:4])
 	return
 }
 
