@@ -39,11 +39,9 @@ func initSM2go() {
 	sm2Base = new(big.Int).Lsh(n512, 256)
 	n512.Lsh(n512, 512)
 	sm2g.mu = new(big.Int).Div(n512, sm2g.P)
-	//rrBits := []big.Word{0x901192af7c114f20, 0x3464504ade6fa2fa,
-	//0x620fc84c3affe0d4, 0x1eb5e412a22b3d3b}
 	rrBits := []big.Word{0x200000003, 0x2ffffffff, 0x100000001, 0x400000002}
 	sm2g.rr = new(big.Int).SetBits(rrBits)
-	rrBits = []big.Word{0x00000001, 0xffffffff, 0x00000000, 0x0000000100000000}
+	//rrBits = []big.Word{0x00000001, 0xffffffff, 0x00000000, 0x100000000}
 	//montOne = new(big.Int).SetBits(rrBits)
 	montOne = new(big.Int).SetUint64(1)
 	rr := new(big.Int).Mul(sm2g.mu, sm2g.P)
@@ -71,20 +69,6 @@ func (curve sm2Curve) BarrettMod(prod *big.Int) *big.Int {
 	q := BarrettDiv(prod, curve.mu)
 	q3 := new(big.Int).Mul(q, curve.P)
 	rr := new(big.Int).Sub(prod, q3)
-	/*
-		qBits = rr.Bits()
-		if ql := len(qBits); ql > maxWords {
-			q = BarrettDiv(rr, curve.mu)
-			qq := new(big.Int).Mul(q, curve.P)
-			rr.Sub(rr, qq)
-			log.Printf("redo BarrettDiv w/ prodLen: %d, qLen: %d",
-				len(prod.Bits()), ql)
-		}
-		if rr.Cmp(curve.P) > 0 {
-			rem := new(big.Int).Div(rr, curve.P)
-			log.Printf("rr diff : %s", rem.Text(10))
-		}
-	*/
 	if rr.Cmp(curve.P) >= 0 {
 		rr.Sub(rr, curve.P)
 		//log.Printf("r : %s", r.Text(16))
@@ -94,7 +78,7 @@ func (curve sm2Curve) BarrettMod(prod *big.Int) *big.Int {
 
 func (curve sm2Curve) montK0() uint64 {
 	t := uint64(1)
-	N := uint64(curve.N.Bits()[0])
+	N := uint64(curve.P.Bits()[0])
 	for i := 1; i < 4; i++ {
 		t = t * t * N
 	}
@@ -111,41 +95,20 @@ func getWordAt(x *big.Int, i int) big.Word {
 }
 
 func (curve sm2Curve) montRed(t *big.Int) *big.Int {
-	/*
-		rb := t.Bits()
-		r := new(big.Int).SetBits(rb)
-		if len(rb) < 4 {
-			return r
-		}
-		for i := uint(0); i < 4; i++ {
-			u := uint64(rb[i]) * curve.k0 // only uint64, same as mod 2^64
-			s := new(big.Int).SetUint64(u)
-			if i > 0 {
-				s.Lsh(s, 64*i)
-			}
-			s.Mul(s, curve.N)
-			r.Add(r, s)
-		}
-		r.Rsh(r, 256)
-		if r.Cmp(curve.N) >= 0 {
-			r.Sub(r, curve.N)
-		}
-		return r
-	*/
 	r := new(big.Int)
 	yy := t.Bits()
 	for i := 0; i < 4; i++ {
 		r0 := getWordAt(r, 0)
 		u := uint64(r0+yy[i]) * curve.k0 // uint64 same as modula 2^64
 		s := new(big.Int).SetUint64(u)
-		s.Mul(s, curve.N)
+		s.Mul(s, curve.P)
 		t := new(big.Int).SetUint64(uint64(yy[i]))
 		t.Add(t, s)
 		r.Add(r, t)
 		r.Rsh(r, 64)
 	}
-	if r.Cmp(curve.N) >= 0 {
-		r.Sub(r, curve.N)
+	if r.Cmp(curve.P) >= 0 {
+		r.Sub(r, curve.P)
 	}
 	return r
 }
@@ -154,19 +117,20 @@ func (curve sm2Curve) montMul(x, y *big.Int) *big.Int {
 	r := new(big.Int)
 	xx := x.Bits()
 	yy := y.Bits()
+	var s1, s2, t1, t2 big.Int
 	for i := 0; i < 4; i++ {
 		r0 := getWordAt(r, 0)
 		u := uint64(r0+yy[i]*xx[0]) * curve.k0 // uint64 same as modula 2^64
-		s := new(big.Int).SetUint64(u)
-		s.Mul(s, curve.N)
-		t := new(big.Int).SetUint64(uint64(yy[i]))
-		t.Mul(t, x)
-		t.Add(t, s)
-		r.Add(r, t)
+		s1.SetUint64(u)
+		s2.Mul(&s1, curve.P)
+		t1.SetUint64(uint64(yy[i]))
+		t2.Mul(&t1, x)
+		t2.Add(&t2, &s2)
+		r.Add(r, &t2)
 		r.Rsh(r, 64)
 	}
-	if r.Cmp(curve.N) >= 0 {
-		r.Sub(r, curve.N)
+	if r.Cmp(curve.P) >= 0 {
+		r.Sub(r, curve.P)
 	}
 	return r
 }

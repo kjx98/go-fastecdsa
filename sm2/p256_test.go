@@ -174,19 +174,24 @@ func TestSM2AsmGo(t *testing.T) {
 	}
 }
 
-/*
 func TestMontMulMod(t *testing.T) {
 	SM2go()
 	c := sm2g
 	prod := new(big.Int).Mul(x1, y1)
-	m1 := new(big.Int).Mod(prod, c.N)
+	m1 := new(big.Int).Mod(prod, c.P)
 	m2 := c.montModMul(x1, y1)
 	if m1.Cmp(m2) != 0 {
-		t.Logf("m1 diff m2:\n%s vs\n%s", m1.Text(16), m2.Text(16))
+		t.Logf("MontMulMod step 1 diff:\n%s vs\n%s", m1.Text(16), m2.Text(16))
+		t.Fail()
+	}
+	prod = new(big.Int).Mul(x2, y2)
+	m1 = new(big.Int).Mod(prod, c.P)
+	m2 = c.montModMul(x2, y2)
+	if m1.Cmp(m2) != 0 {
+		t.Logf("MontMulMod step2 diff:\n%s vs\n%s", m1.Text(16), m2.Text(16))
 		t.Fail()
 	}
 }
-*/
 
 func TestBarrettMod(t *testing.T) {
 	SM2go()
@@ -242,7 +247,7 @@ func BenchmarkMul(b *testing.B) {
 	b.ReportAllocs()
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
-		_ = res.Mul(x1, x2)
+		_ = res.Mul(x1, y1)
 		_ = res.Mod(res, p)
 	}
 }
@@ -255,8 +260,19 @@ func BenchmarkMulBarrettMod(b *testing.B) {
 	b.ReportAllocs()
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
-		_ = res.Mul(x1, x2)
+		_ = res.Mul(x1, y1)
 		_ = c.BarrettMod(res)
+	}
+}
+
+func BenchmarkModMulMont(b *testing.B) {
+	b.ResetTimer()
+	c := sm2g
+
+	b.ReportAllocs()
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		_ = c.montModMul(x1, y1)
 	}
 }
 
