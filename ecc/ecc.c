@@ -53,12 +53,18 @@ typedef struct {
 	u64 m_high;
 } uint128_t;
 
+#if defined(__SIZEOF_INT128__)
+typedef	unsigned __int128	u128;
+#endif
+
 static inline const struct ecc_curve *ecc_get_curve(uint curve_id)
 {
 	switch (curve_id) {
 	/* In FIPS mode only allow P256 and higher */
-	case ECC_CURVE_NIST_P192:
-		return &nist_p192;
+#ifdef	ommit
+	case ECC_CURVE_SECP256K1:
+		return &secp_256k1;
+#endif
 	case ECC_CURVE_NIST_P256:
 		return &nist_p256;
 	case ECC_CURVE_SM2:
@@ -317,10 +323,11 @@ static uint128_t mul_64_64(u64 left, u64 right)
 {
 	uint128_t result;
 #if defined(__SIZEOF_INT128__)
-	unsigned __int128 m = (unsigned __int128)left * right;
+	unsigned __int128 *m = (u128 *)&result;
+	*m = (unsigned __int128)left * right;
 
-	result.m_low  = m;
-	result.m_high = m >> 64;
+	//result.m_low  = m;
+	//result.m_high = m >> 64;
 #else
 	u64 a0 = left & 0xffffffffull;
 	u64 a1 = left >> 32;
@@ -347,10 +354,16 @@ static uint128_t mul_64_64(u64 left, u64 right)
 static uint128_t add_128_128(uint128_t a, uint128_t b)
 {
 	uint128_t result;
+#if defined(__SIZEOF_INT128__)
+	u128	*m=(u128 *)&result;
+	u128	*sa=(u128 *)&a;
+	u128	*sb=(u128 *)&b;
+	*m = *sa + *sb;
+#else
 
 	result.m_low = a.m_low + b.m_low;
 	result.m_high = a.m_high + b.m_high + (result.m_low < a.m_low);
-
+#endif
 	return result;
 }
 
@@ -391,7 +404,7 @@ static void vli_mult(u64 *result, const u64 *left, const u64 *right,
 }
 
 /* Compute product = left * right, for a small right value. */
-static void vli_umult(u64 *result, const u64 *left, u32 right,
+static void vli_umult(u64 *result, const u64 *left, u64 right,
 		      unsigned int ndigits)
 {
 	uint128_t r01 = { 0 };
@@ -636,7 +649,15 @@ void vli_mmod_barrett(u64 *result, u64 *product, const u64 *mod,
 	vli_mult(q, product + ndigits, mu, ndigits);
 	if (mu[ndigits])
 		vli_add(q + ndigits, q + ndigits, product + ndigits, ndigits);
+#ifdef	ommit
 	vli_mult(r, mod, q + ndigits, ndigits);
+#else
+	// add remain * mod
+	vli_set(r, q+ndigits, ndigits);
+	vli_umult(q, mu, product[ndigits-1], ndigits);
+	vli_add(result, r, q+1, ndigits);
+	vli_mult(r, mu, result, ndigits);
+#endif
 	vli_sub(r, product, r, ndigits * 2);
 	while (!vli_is_zero(r + ndigits, ndigits) ||
 	       vli_cmp(r, mod, ndigits) != -1) {
@@ -646,6 +667,20 @@ void vli_mmod_barrett(u64 *result, u64 *product, const u64 *mod,
 		vli_usub(r + ndigits, r + ndigits, carry, ndigits);
 	}
 	vli_set(result, r, ndigits);
+}
+
+void vli_div_barrett(u64 *result, u64 *product, const u64 *mu,
+			     unsigned int ndigits)
+{
+	u64 q[ECC_MAX_DIGITS * 2];
+	u64 r[ECC_MAX_DIGITS * 2];
+
+	vli_mult(q, product + ndigits, mu, ndigits);
+	if (mu[ndigits])
+		vli_add(q + ndigits, q + ndigits, product + ndigits, ndigits);
+	vli_set(r, q+ndigits, ndigits);
+	vli_umult(q, mu, product[ndigits-1], ndigits);
+	vli_add(result, r, q+1, ndigits);
 }
 
 /* Computes p_result = p_product % curve_p.
@@ -1321,6 +1356,7 @@ int ecc_is_key_valid(unsigned int curve_id, unsigned int ndigits,
  * This method generates a private key uniformly distributed in the range
  * [1, n-1].
  */
+#ifdef	WITH_SYS_RANDOM
 int ecc_gen_privkey(unsigned int curve_id, unsigned int ndigits, u64 *privkey)
 {
 	const struct ecc_curve *curve = ecc_get_curve(curve_id);
@@ -1359,6 +1395,7 @@ int ecc_gen_privkey(unsigned int curve_id, unsigned int ndigits, u64 *privkey)
 
 	return 0;
 }
+#endif
 
 int ecc_make_pub_key(unsigned int curve_id, unsigned int ndigits,
 		     const u64 *private_key, u64 *public_key)
@@ -1431,6 +1468,7 @@ int ecc_is_pubkey_valid_partial(const struct ecc_curve *curve,
 	return 0;
 }
 
+#ifdef	WITH_SYS_RANDOM
 int crypto_ecdh_shared_secret(unsigned int curve_id, unsigned int ndigits,
 			      const u64 *private_key, const u64 *public_key,
 			      u64 *secret)
@@ -1491,3 +1529,4 @@ err_alloc_product:
 out:
 	return ret;
 }
+#endif

@@ -37,6 +37,20 @@ typedef __uint8_t u8;
 #define	NULL	0
 #endif
 
+#ifdef	__GNUC__
+# define unlikely(cond)	__builtin_expect ((cond), 0)
+# define likely(cond)	__builtin_expect (!!(cond), 1)
+#define forceinline __inline__ __attribute__((always_inline))
+#else
+# define unlikely(cond)	(cond)
+# define likely(cond)	(cond)
+#ifdef _MSC_VER
+#define forceinline __forceinline
+#else
+#define forceinline
+#endif
+#endif
+
 #ifndef	ARRAY_SIZE
 #define ARRAY_SIZE(arr) (sizeof(arr) / sizeof((arr)[0]))
 #endif
@@ -56,12 +70,8 @@ typedef __uint8_t u8;
 struct ecc_point {
 	u64 x[ECC_MAX_DIGITS];
 	u64 y[ECC_MAX_DIGITS];
-	//uint ndigits;
 };
 
-//#define ECC_POINT_INIT(x, y, ndigits)	(struct ecc_point) { x, y, ndigits }
-
-//static struct ecc_point *ecc_alloc_point(unsigned int ndigits);
 
 /**
  * struct ecc_curve - definition of elliptic curve
@@ -237,6 +247,8 @@ void vli_mod_inv(u64 *result, const u64 *input, const u64 *mod,
  * 2.4.1 Barrett's algorithm. Algorithm 2.5.
  */
 void vli_mmod_barrett(u64 *result, u64 *product, const u64 *mod,
+			     unsigned int ndigits);
+void vli_div_barrett(u64 *result, u64 *product, const u64 *mod,
 			     unsigned int ndigits);
 
 /**

@@ -2,7 +2,7 @@
 
 package ecc
 
-// #cgo CFLAGS: -O2
+// #cgo CFLAGS: -O2 -Wpedantic -Wall -std=gnu11
 // #include <sys/types.h>
 // #include "ecc.h"
 /*
@@ -55,7 +55,7 @@ func vliModMult(left, right, mod []byte) (result *big.Int) {
 }
 
 func vliModMultBarrett(left, right []byte, mod []big.Word) (result *big.Int) {
-	var res [4]big.Word
+	var res [8]big.Word
 	lf := vliFromBE64(left)
 	rt := vliFromBE64(right)
 	//modP := vliFromBE64(mod)
