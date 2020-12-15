@@ -24,26 +24,22 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
-#ifndef _CRYPTO_ECC_H
-#define _CRYPTO_ECC_H
+#pragma once
+#ifndef __ECC_H__
+#define __ECC_H__
 
-#include <sys/types.h>
-#include <stdbool.h>
-#ifndef	__cplusplus
-typedef	__uint32_t u32;
-typedef	__uint64_t u64;
-typedef __uint64_t be64;
-typedef __uint8_t u8;
-#endif
-
-#ifndef	ARRAY_SIZE
-#define ARRAY_SIZE(arr) (sizeof(arr) / sizeof((arr)[0]))
-#endif
+#include "cdefs.h"
 
 /* One digit is u64 qword. */
 #define ECC_MAX_DIGITS             (512 / 64)
 
-#define ECC_DIGITS_TO_BYTES_SHIFT 3
+#ifndef	ECC_CURVE_NIST_P256
+/* Curves IDs */
+#define ECC_CURVE_NIST_P192	0x0001
+#define ECC_CURVE_NIST_P256	0x0002
+#define ECC_CURVE_SM2		0x0003
+#define	ECC_CURVE_SECP256K1	0x0004
+#endif
 
 #ifdef	__cplusplus
 extern "C" {
@@ -79,6 +75,7 @@ struct ecc_curve {
 	const char *name;
 	struct ecc_point g;
 	uint ndigits;
+	bool use_barrett;
 	u64 *p;
 	u64 *n;
 	u64 *a;
@@ -281,4 +278,4 @@ void ecc_point_mult_shamir(const struct ecc_point *result,
 }
 #endif
 
-#endif
+#endif	//	__ECC_H__

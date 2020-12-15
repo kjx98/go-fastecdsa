@@ -1,7 +1,7 @@
 package sm2
 
 import (
-	"crypto/elliptic"
+	//"crypto/elliptic"
 	"crypto/rand"
 	"gitee.com/jkuang/go-fastecdsa"
 	"math/big"
@@ -26,7 +26,8 @@ func init() {
 func TestRRbyP256(t *testing.T) {
 	n256 := new(big.Int).SetUint64(1)
 	n256.Lsh(n256, 256)
-	cParams := elliptic.P256().Params()
+	//cParams := elliptic.P256().Params()
+	cParams := BTC().Params()
 	n := cParams.N
 	R := new(big.Int).Mod(n256, n)
 	RR := new(big.Int).Mul(R, R)
@@ -41,7 +42,7 @@ func TestRRbyP256(t *testing.T) {
 	rr := new(big.Int).Mul(r, r)
 	rr.Mod(rr, p)
 	ww = rr.Bits()
-	t.Logf("rr is %x %x %x %x", ww[0], ww[1], ww[2], ww[3])
+	//t.Logf("rr is %x %x %x %x", ww[0], ww[1], ww[2], ww[3])
 	Rinv := new(big.Int).SetUint64(1)
 	Rinv.Lsh(Rinv, 257)
 	Rinv.Mod(Rinv, p)
@@ -67,8 +68,8 @@ func TestRRbyP256(t *testing.T) {
 	}
 	ww = p.Bits()
 	t.Logf("P: %X %X %X %X", ww[0], ww[1], ww[2], ww[3])
-	ww = cParams.B.Bits()
-	t.Logf("B: %X %X %X %X", ww[0], ww[1], ww[2], ww[3])
+	//ww = cParams.B.Bits()
+	//t.Logf("B: %X %X %X %X", ww[0], ww[1], ww[2], ww[3])
 	ww = cParams.Gx.Bits()
 	t.Logf("Gx: %X %X %X %X", ww[0], ww[1], ww[2], ww[3])
 	ww = cParams.Gy.Bits()

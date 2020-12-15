@@ -1,7 +1,9 @@
 /* SPDX-License-Identifier: GPL-2.0 */
+#pragma once
 #ifndef _CRYTO_ECC_CURVE_DEFS_H
 #define _CRYTO_ECC_CURVE_DEFS_H
 
+#ifdef	ommit
 /* NIST P-192: a = p - 3 */
 static u64 nist_p192_p[] = { 0xFFFFFFFFFFFFFFFFull, 0xFFFFFFFFFFFFFFFEull,
 				0xFFFFFFFFFFFFFFFFull };
@@ -25,6 +27,7 @@ static struct ecc_curve nist_p192 = {
 	.a = nist_p192_a,
 	.b = nist_p192_b
 };
+#endif
 
 /* NIST P-256: a = p - 3 */
 static u64 nist_p256_p[] = { 0xFFFFFFFFFFFFFFFFull, 0x00000000FFFFFFFFull,
@@ -70,10 +73,32 @@ static struct ecc_curve sm2_p256 = {
 			0x59BDCEE36B692153ull, 0xBC3736A2F4F6779Cull },
 	},
 	.ndigits = 4,
+	.use_barrett = true,
 	.p = sm2_p256_p,
 	.n = sm2_p256_n,
 	.a = sm2_p256_a,
 	.b = sm2_p256_b
+};
+
+static u64 secp256k1_p[] = { 0xFFFFFFFEFFFFFC2Full, 0xFFFFFFFFFFFFFFFFull,
+				0xffffffffffffffffull, 0xFFFFFFFFFFFFFFFFull };
+static u64 secp256k1_n[] = { 0xbfd25e8cd0364141ull, 0xbaaedce6af48a03bull,
+				0xFFFFFFFFFFFFFFFEull, 0xffffffffffffffffull };
+static u64 secp256k1_a[] = { 0, 0, 0, 0 };
+static u64 secp256k1_b[] = { 0x7, 0, 0, 0};
+static struct ecc_curve secp256k1 = {
+	.name = "secp256k1",
+	.g = {
+		.x = { 0x59F2815B16F81798ull, 0x29BFCDB2DCE28D9ull,
+			0x55A06295CE870B07ull, 0x79BE667EF9DCBBACull },
+		.y = { 0x9C47D08FFB10D4B8ull, 0xFD17B448A6855419ull,
+			0x5DA4FBFC0E1108A8ull, 0x483ADA7726A3C465ull },
+	},
+	.ndigits = 4,
+	.p = secp256k1_p,
+	.n = secp256k1_n,
+	.a = secp256k1_a,
+	.b = secp256k1_b
 };
 
 #endif

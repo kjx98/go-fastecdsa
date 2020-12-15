@@ -24,30 +24,18 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 #pragma once
-#ifndef __VLI_H__
-#define __VLI_H__
+#ifndef __VLI_HPP__
+#define __VLI_HPP__
 
 #include <stdint.h>
 #include <stdbool.h>
+#include <endian.h>
 #include <cassert>
 #include <type_traits>
-#include <endian.h>
-typedef	__uint32_t u32;
-typedef	__uint64_t u64;
-typedef __uint64_t be64;
-typedef __uint8_t u8;
-typedef	unsigned int	uint;
+#include "cdefs.h"
 
 #if	__cplusplus < 201103L
 # error "C++ std MUST at least c++11"
-#endif
-
-#ifdef	__GNUC__
-# define unlikely(cond)	__builtin_expect ((cond), 0)
-# define likely(cond)	__builtin_expect (!!(cond), 1)
-#define forceinline __inline__ __attribute__((always_inline))
-#else
-# error "MUST compiled by gcc/clang"
 #endif
 
 #ifndef	ARRAY_SIZE
@@ -62,10 +50,10 @@ T max(const T a, const T b) noexcept {
 
 
 template<uint ndigits> forceinline
+__attribute__((optimize("unroll-loops")))
 static void vli_clear(u64 *vli)
 {
 	uint i;
-#pragma unroll 4
 	for (i = 0; i < ndigits; i++)
 	vli[i] = 0;
 }
@@ -78,14 +66,26 @@ static void vli_clear(u64 *vli)
  */
 /* Returns true if vli == 0, false otherwise. */
 template<uint ndigits> forceinline
+__attribute__((optimize("unroll-loops")))
 static bool vli_is_zero(const u64 *vli)
 {
 	uint i;
-#pragma unroll 4
+//#pragma unroll 4
 	for (i = 0; i < ndigits; i++) {
 		if (vli[i]) return false;
 	}
 	return true;
+}
+
+/* Sets dest = src. */
+template<uint ndigits> forceinline
+__attribute__((optimize("unroll-loops")))
+static void vli_set(u64 *dest, const u64 *src)
+{
+	uint i;
+
+	for (i = 0; i < ndigits; i++)
+		dest[i] = src[i];
 }
 
 /**
@@ -99,15 +99,97 @@ static bool vli_is_zero(const u64 *vli)
  * 0 if @left == @right, 1 if @left > @right.
  */
 template<uint ndigits> forceinline
+__attribute__((optimize("unroll-loops")))
 int vli_cmp(const u64 *left, const u64 *right)
 {
 	int i;
-#pragma unroll 4
+//#pragma unroll 4
 	for (i = ndigits - 1; i >= 0; i--) {
 		if (left[i] > right[i]) return 1;
 		else if (left[i] < right[i]) return -1;
 	}
 	return 0;
+}
+
+/* Computes result = in << c, returning carry. Can modify in place
+ * (if result == in). 0 < shift < 64.
+ */
+template<uint ndigits> forceinline
+__attribute__((optimize("unroll-loops")))
+static u64 vli_lshift(u64 *result, const u64 *in, unsigned int shift)
+{
+	u64 carry = 0;
+	int i;
+
+	for (i = 0; i < ndigits; i++) {
+		u64 temp = in[i];
+
+		result[i] = (temp << shift) | carry;
+		carry = temp >> (64 - shift);
+	}
+
+	return carry;
+}
+
+/* Computes vli = vli >> 1. */
+template<uint ndigits> forceinline
+__attribute__((optimize("unroll-loops")))
+static void vli_rshift1(u64 *vli)
+{
+	u64 *end = vli;
+	u64 carry = 0;
+
+	vli += ndigits;
+
+	while (vli-- > end) {
+		u64 temp = *vli;
+		*vli = (temp >> 1) | carry;
+		carry = temp << 63;
+	}
+}
+
+/* Computes result = left + right, returning carry. Can modify in place. */
+template<uint ndigits> forceinline
+__attribute__((optimize("unroll-loops")))
+static u64 vli_add(u64 *result, const u64 *left, const u64 *right)
+{
+	u64 carry = 0;
+	int i;
+
+	for (i = 0; i < ndigits; i++) {
+		u64 sum;
+
+		sum = left[i] + right[i] + carry;
+		if (sum != left[i])
+			carry = (sum < left[i]);
+
+		result[i] = sum;
+	}
+
+	return carry;
+}
+
+/* Computes result = left + right, returning carry. Can modify in place. */
+template<uint ndigits> forceinline
+__attribute__((optimize("unroll-loops")))
+static u64 vli_uadd(u64 *result, const u64 *left, u64 right)
+{
+	u64 carry = right;
+	int i;
+
+	for (i = 0; i < ndigits; i++) {
+		u64 sum;
+
+		sum = left[i] + carry;
+		if (sum != left[i])
+			carry = (sum < left[i]);
+		else
+			carry = !!carry;
+
+		result[i] = sum;
+	}
+
+	return carry;
 }
 
 /**
@@ -123,12 +205,13 @@ int vli_cmp(const u64 *left, const u64 *right)
  * Return: carry bit.
  */
 template<uint ndigits> forceinline
-u64 vli_sub(u64 *result, const u64 *left, const u64 *right)
+__attribute__((optimize("unroll-loops")))
+static u64 vli_sub(u64 *result, const u64 *left, const u64 *right)
 {
 	u64 borrow = 0;
 	int i;
 
-#pragma unroll 4
+//#pragma unroll 4
 	for (i = 0; i < ndigits; i++) {
 		u64 diff;
 		diff = left[i] - right[i] - borrow;
@@ -139,6 +222,60 @@ u64 vli_sub(u64 *result, const u64 *left, const u64 *right)
 	return borrow;
 }
 
+/* Computes result = left - right, returning borrow. Can modify in place. */
+template<uint ndigits> forceinline
+__attribute__((optimize("unroll-loops")))
+static u64 vli_usub(u64 *result, const u64 *left, u64 right)
+{
+	u64 borrow = right;
+	int i;
+
+	for (i = 0; i < ndigits; i++) {
+		u64 diff;
+
+		diff = left[i] - borrow;
+		if (diff != left[i])
+			borrow = (diff > left[i]);
+
+		result[i] = diff;
+	}
+
+	return borrow;
+}
+
+/* Counts the number of 64-bit "digits" in vli. */
+template<uint ndigits> forceinline
+__attribute__((optimize("unroll-loops")))
+static uint vli_num_digits(const u64 *vli)
+{
+	int i;
+
+	/* Search from the end until we find a non-zero digit.
+	 * We do it in reverse because we expect that most digits will
+	 * be nonzero.
+	 */
+	for (i = ndigits - 1; i >= 0 && vli[i] == 0; i--);
+
+	return (i + 1);
+}
+
+/* Counts the number of bits required for vli. */
+template<uint ndigits> forceinline
+__attribute__((optimize("unroll-loops")))
+static uint vli_num_bits(const u64 *vli)
+{
+	uint i, num_digits;
+	u64 digit;
+
+	num_digits = vli_num_digits<ndigits>(vli);
+	if (num_digits == 0) return 0;
+
+	digit = vli[num_digits - 1];
+	i = 64 - __builtin_clzl(digit);
+
+	return ((num_digits - 1) * 64 + i);
+}
+
 /**
  * vli_from_be64() - Load vli from big-endian u64 array
  *
@@ -147,11 +284,12 @@ u64 vli_sub(u64 *result, const u64 *left, const u64 *right)
  * @ndigits:		length of both vli and array
  */
 template<uint ndigits> forceinline
+__attribute__((optimize("unroll-loops")))
 void vli_from_be64(u64 *dest, const void *src)
 {
 	int i;
 	const u64 *from = src;
-#pragma unroll 4
+//#pragma unroll 4
 	for (i = 0; i < ndigits; i++)
 		dest[i] = be64toh(from[ndigits - 1 - i]);
 }
@@ -164,13 +302,14 @@ void vli_from_be64(u64 *dest, const void *src)
  * @ndigits:		length of both vli and array
  */
 template<uint ndigits> forceinline
+__attribute__((optimize("unroll-loops")))
 void vli_from_le64(u64 *dest, const void *src)
 {
 	int i;
 	const u64 *from = src;
-#pragma unroll 4
+//#pragma unroll 4
 	for (i = 0; i < ndigits; i++)
 		dest[i] = le64toh(from[ndigits - 1 - i]);
 }
 
-#endif
+#endif	//	__VLI_HPP__

@@ -48,32 +48,23 @@ extern void free (void *__ptr);
 }
 #endif
 
-#ifndef	ECC_CURVE_NIST_P256
-/* Curves IDs */
-#define ECC_CURVE_NIST_P192	0x0001
-#define ECC_CURVE_NIST_P256	0x0002
-#define ECC_CURVE_SM2		0x0003
-#endif
+#define ECC_DIGITS_TO_BYTES_SHIFT 3
 
-#define	max(x, y) ({ typeof(x) _x = x; typeof(y) _y = y; (_x>_y)?_x:_y; })
-
-typedef struct {
+struct alignas(16) uint128_t {
 	u64 m_low;
 	u64 m_high;
-} uint128_t;
+};
 
 #if defined(__SIZEOF_INT128__)
-typedef	unsigned __int128	u128;
+typedef	__uint128_t		u128;
 #endif
 
 static inline const struct ecc_curve *ecc_get_curve(uint curve_id)
 {
 	switch (curve_id) {
 	/* In FIPS mode only allow P256 and higher */
-#ifdef	ommit
 	case ECC_CURVE_SECP256K1:
-		return &secp_256k1;
-#endif
+		return &secp256k1;
 	case ECC_CURVE_NIST_P256:
 		return &nist_p256;
 	case ECC_CURVE_SM2:
@@ -114,7 +105,7 @@ static inline void vli_clear(u64 *vli, uint ndigits)
 bool vli_is_zero(const u64 *vli, uint ndigits)
 {
 	uint i;
-#pragma unroll 4
+//#pragma unroll 4
 	for (i = 0; i < ndigits; i++) {
 		if (vli[i])
 			return false;
@@ -167,7 +158,7 @@ static uint inline vli_num_bits(const u64 *vli, uint ndigits)
 /* Set dest from unaligned bit string src. */
 void vli_from_be64(u64 *dest, const void *src, uint ndigits)
 {
-	int i;
+	uint i;
 	const u64 *from = (u64 *)src;
 
 	for (i = 0; i < ndigits; i++)
@@ -214,7 +205,7 @@ static u64 vli_lshift(u64 *result, const u64 *in, unsigned int shift,
 		      unsigned int ndigits)
 {
 	u64 carry = 0;
-	int i;
+	uint i;
 
 	for (i = 0; i < ndigits; i++) {
 		u64 temp = in[i];
@@ -246,7 +237,7 @@ static u64 vli_add(u64 *result, const u64 *left, const u64 *right,
 		   unsigned int ndigits)
 {
 	u64 carry = 0;
-	int i;
+	uint i;
 
 	for (i = 0; i < ndigits; i++) {
 		u64 sum;
@@ -266,7 +257,7 @@ static u64 vli_uadd(u64 *result, const u64 *left, u64 right,
 		    unsigned int ndigits)
 {
 	u64 carry = right;
-	int i;
+	uint i;
 
 	for (i = 0; i < ndigits; i++) {
 		u64 sum;
@@ -288,7 +279,7 @@ u64 vli_sub(u64 *result, const u64 *left, const u64 *right,
 		   unsigned int ndigits)
 {
 	u64 borrow = 0;
-	int i;
+	uint i;
 
 	for (i = 0; i < ndigits; i++) {
 		u64 diff;
@@ -308,7 +299,7 @@ static u64 vli_usub(u64 *result, const u64 *left, u64 right,
 	     unsigned int ndigits)
 {
 	u64 borrow = right;
-	int i;
+	uint i;
 
 	for (i = 0; i < ndigits; i++) {
 		u64 diff;
@@ -323,11 +314,11 @@ static u64 vli_usub(u64 *result, const u64 *left, u64 right,
 	return borrow;
 }
 
-static uint128_t mul_64_64(u64 left, u64 right)
+static forceinline uint128_t mul_64_64(u64 left, u64 right)
 {
 	uint128_t result;
 #if defined(__SIZEOF_INT128__)
-	*((u128 *)&result) = (unsigned __int128)left * right;
+	*((u128 *)&result) = (__uint128_t)left * right;
 
 	//result.m_low  = m;
 	//result.m_high = m >> 64;
@@ -354,7 +345,7 @@ static uint128_t mul_64_64(u64 left, u64 right)
 	return result;
 }
 
-static uint128_t add_128_128(uint128_t a, uint128_t b)
+static forceinline uint128_t add_128_128(uint128_t a, uint128_t b)
 {
 	uint128_t result;
 #if defined(__SIZEOF_INT128__)
@@ -432,7 +423,7 @@ static void vli_square(u64 *result, const u64 *left, unsigned int ndigits)
 {
 	uint128_t r01 = { 0, 0 };
 	u64 r2 = 0;
-	int i, k;
+	uint i, k;
 
 	for (k = 0; k < ndigits * 2 - 1; k++) {
 		unsigned int min;
@@ -1310,7 +1301,7 @@ static inline void ecc_swap_digits(const u64 *in, u64 *out,
 				   unsigned int ndigits)
 {
 	const be64 *src = (be64 *)in;
-	int i;
+	uint i;
 
 	for (i = 0; i < ndigits; i++)
 		out[i] = be64toh(src[ndigits - 1 - i]);
@@ -1342,7 +1333,7 @@ static int __ecc_is_key_valid(const struct ecc_curve *curve,
 int ecc_is_key_valid(unsigned int curve_id, unsigned int ndigits,
 		     const u64 *private_key, unsigned int private_key_len)
 {
-	int nbytes;
+	uint nbytes;
 	const struct ecc_curve *curve = ecc_get_curve(curve_id);
 
 	nbytes = ndigits << ECC_DIGITS_TO_BYTES_SHIFT;
