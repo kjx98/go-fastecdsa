@@ -3,7 +3,6 @@
 package ecc
 
 // #cgo CXXFLAGS: -O2 -Wpedantic -Wall -std=c++11
-// #include "vli.hpp"
 // #include "ecc.h"
 /*
 static struct ecc_point *setEC_point(struct ecc_point *pt, u_int64_t *x, u_int64_t *y) {
@@ -42,7 +41,7 @@ func vliModInv(input, modB []byte) (result []big.Word) {
 	return
 }
 
-func vliMult(left, right *big.Int)  []big.Word {
+func vliMult(left, right *big.Int) []big.Word {
 	var res [8]big.Word
 	lf := vliFromBE64(left.Bytes())
 	rt := vliFromBE64(right.Bytes())
@@ -55,7 +54,7 @@ func vliModMult(left, right, mdU []big.Word) (result *big.Int) {
 	var res [4]big.Word
 	var prod [8]big.Word
 	var lf, rt [4]big.Word
-	var mod [9]big.Word	 // should be 9, 4 word for mod, 5 word for mu
+	var mod [9]big.Word // should be 9, 4 word for mod, 5 word for mu
 	copy(lf[:], left)
 	copy(rt[:], right)
 	copy(mod[:], mdU)

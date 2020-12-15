@@ -37,10 +37,16 @@
 #pragma GCC optimize ("unroll-loops")
 #pragma GCC pop_options
 
+#ifdef	__cplusplus
+extern "C" {
+#endif
 /* Allocate SIZE bytes of memory.  */
 extern void *malloc (size_t __size);
 /* Free a block allocated by `malloc', `realloc' or `calloc'.  */
 extern void free (void *__ptr);
+#ifdef	__cplusplus
+}
+#endif
 
 #ifndef	ECC_CURVE_NIST_P256
 /* Curves IDs */
@@ -73,7 +79,7 @@ static inline const struct ecc_curve *ecc_get_curve(uint curve_id)
 	case ECC_CURVE_SM2:
 		return &sm2_p256;
 	default:
-		return NULL;
+		return nullptr;
 	}
 }
 
@@ -82,7 +88,7 @@ static inline struct ecc_point *ecc_alloc_point(uint ndigits)
 	struct ecc_point *p = (struct ecc_point *)malloc(sizeof(*p));
 
 	if (!p)
-		return NULL;
+		return nullptr;
 	//p->ndigits = ndigits;
 
 	return p;
@@ -1264,12 +1270,12 @@ void ecc_point_mult_shamir(const struct ecc_point *result,
 	int i;
 
 	ecc_point_add(&sum, p, q, curve);
-	points[0] = NULL;
+	points[0] = nullptr;
 	points[1] = p;
 	points[2] = q;
 	points[3] = &sum;
 
-	num_bits = max(vli_num_bits(u1, ndigits), vli_num_bits(u2, ndigits));
+	num_bits = max<uint>(vli_num_bits(u1, ndigits), vli_num_bits(u2, ndigits));
 	i = num_bits - 1;
 	idx = (!!vli_test_bit(u1, i)) | ((!!vli_test_bit(u2, i)) << 1);
 	point = points[idx];
@@ -1421,7 +1427,7 @@ int ecc_make_pub_key(unsigned int curve_id, unsigned int ndigits,
 		goto out;
 	}
 
-	ecc_point_mult(pk, &curve->g, priv, NULL, curve, ndigits);
+	ecc_point_mult(pk, &curve->g, priv, nullptr, curve, ndigits);
 	if (ecc_point_is_zero(pk, ndigits)) {
 		ret = -EAGAIN;
 		goto err_free_point;

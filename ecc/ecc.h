@@ -35,9 +35,6 @@ typedef	__uint64_t u64;
 typedef __uint64_t be64;
 typedef __uint8_t u8;
 #endif
-#ifndef	NULL
-#define	NULL	0
-#endif
 
 #ifndef	ARRAY_SIZE
 #define ARRAY_SIZE(arr) (sizeof(arr) / sizeof((arr)[0]))
@@ -47,6 +44,10 @@ typedef __uint8_t u8;
 #define ECC_MAX_DIGITS             (512 / 64)
 
 #define ECC_DIGITS_TO_BYTES_SHIFT 3
+
+#ifdef	__cplusplus
+extern "C" {
+#endif
 
 /**
  * struct ecc_point - elliptic curve point in affine coordinates
@@ -276,4 +277,8 @@ void ecc_point_mult_shamir(const struct ecc_point *result,
 			   const u64 *x, const struct ecc_point *p,
 			   const u64 *y, const struct ecc_point *q,
 			   const struct ecc_curve *curve);
+#ifdef	__cplusplus
+}
+#endif
+
 #endif
