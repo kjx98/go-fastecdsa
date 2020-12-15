@@ -33,51 +33,65 @@ func vliSub(left, right []uint64) (result []uint64, borrow bool) {
 }
 
 // Montgomery inverse modulo P256
-func vliModInv(input, mod []byte) (result []uint64) {
-	var res [4]uint64
+func vliModInv(input, modB []byte) (result []big.Word) {
+	var res [4]big.Word
 	in := vliFromBE64(input)
-	modP := vliFromBE64(mod)
-	C.vli_mod_inv((*C.u64)(&res[0]), (*C.u64)(&in[0]), (*C.u64)(&modP[0]), 4)
+	mod := vliFromBE64(modB)
+	C.vli_mod_inv((*C.u64)(unsafe.Pointer(&res[0])), &in[0], &mod[0], 4)
 	result = res[:]
 	return
 }
 
 // Montgomery multiplication modulo P256
-func vliModMult(left, right, mod []byte) (result *big.Int) {
+func vliModMult(left, right, modU []big.Word) (result *big.Int) {
 	var res [4]big.Word
-	lf := vliFromBE64(left)
-	rt := vliFromBE64(right)
-	modP := vliFromBE64(mod)
-	C.vli_mod_mult_slow((*C.u64)(unsafe.Pointer(&res[0])), (*C.u64)(&lf[0]),
-		(*C.u64)(&rt[0]), (*C.u64)(&modP[0]), 4)
+	var lf, rt [4]C.u64
+	var mod [4]big.Word
+	for i, d := range left {
+		lf[i] = C.u64(d)
+	}
+	for i, d := range right {
+		rt[i] = C.u64(d)
+	}
+	copy(mod[:], modU)
+	C.vli_mod_mult_slow((*C.u64)(unsafe.Pointer(&res[0])), &lf[0],
+		&rt[0], (*C.u64)(unsafe.Pointer(&mod[0])), 4)
 	result = new(big.Int).SetBits(res[:])
 	return
 }
 
-func vliModMultBarrett(left, right []byte, mod []big.Word) (result *big.Int) {
-	var res [8]big.Word
-	lf := vliFromBE64(left)
-	rt := vliFromBE64(right)
-	//modP := vliFromBE64(mod)
-	C.vli_mod_mult_fast((*C.u64)((unsafe.Pointer)(&res[0])), (*C.u64)(&lf[0]),
-		(*C.u64)(&rt[0]), (*C.u64)((unsafe.Pointer)(&mod[0])), 4)
+func vliModMultBarrett(left, right *big.Int, mdU []big.Word) (result *big.Int) {
+	var res [4]big.Word
+	prod := new(big.Int).Mul(left, right)
+	var prd [8]big.Word
+	var mod [9]big.Word // should be 9, 4 word for mod, 5 word for mu
+	copy(prd[:], prod.Bits())
+	copy(mod[:], mdU)
+	C.vli_mmod_barrett((*C.u64)((unsafe.Pointer)(&res[0])),
+		(*C.u64)(unsafe.Pointer(&prd[0])),
+		(*C.u64)(unsafe.Pointer(&mod[0])), 4)
 	result = new(big.Int).SetBits(res[:4])
 	return
 }
 
-func vliBarrettDiv(prod *big.Int, mu []big.Word) (result *big.Int) {
+func vliBarrettDiv(prod *big.Int, muB []big.Word) (result *big.Int) {
 	var res [8]big.Word
-	prd := vliFromBE64(prod.Bytes())
-	//modP := vliFromBE64(mod)
-	C.vli_div_barrett((*C.u64)((unsafe.Pointer)(&res[0])), (*C.u64)(&prd[0]),
-		(*C.u64)((unsafe.Pointer)(&mu[0])), 4)
+	var prd [8]big.Word
+	var mu [5]big.Word // should be 9, 4 word for mod, 5 word for mu
+	copy(prd[:], prod.Bits())
+	copy(mu[:], muB)
+	C.vli_div_barrett((*C.u64)((unsafe.Pointer)(&res[0])),
+		(*C.u64)(unsafe.Pointer(&prd[0])),
+		(*C.u64)(unsafe.Pointer(&mu[0])), 4)
 	result = new(big.Int).SetBits(res[:4])
 	return
 }
 
-func vliFromBE64(src []byte) (dest []uint64) {
-	var res [4]uint64
-	C.vli_from_be64((*C.u64)(&res[0]), unsafe.Pointer(&src[0]), 4)
+func vliFromBE64(src []byte) (dest []C.u64) {
+	var res [4]C.u64
+	var ss [32]byte
+	copy(ss[:], src) // process 32 bytes
+	C.vli_from_be64(&res[0], unsafe.Pointer(&ss[0]), 4)
 	dest = res[:]
 	return
 }

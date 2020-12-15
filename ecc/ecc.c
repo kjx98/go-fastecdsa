@@ -653,10 +653,12 @@ void vli_mmod_barrett(u64 *result, u64 *product, const u64 *mod,
 #else
 	// add remain * mod
 	vli_set(r, q+ndigits, ndigits);
-	vli_clear(q+1, ndigits);
+	q[2*ndigits] = 0;
 	vli_umult(q, mu, product[ndigits-1], ndigits);
-	vli_add(result, r, q+1, ndigits);
-	vli_mult(r, mu, result, ndigits);
+	if (mu[ndigits])
+		vli_uadd(q + ndigits, q + ndigits, product[ndigits-1], ndigits);
+	vli_add(result, r, q+ndigits+1, ndigits);
+	vli_mult(r, mod, result, ndigits);
 #endif
 	vli_sub(r, product, r, ndigits * 2);
 	while (!vli_is_zero(r + ndigits, ndigits) ||
@@ -679,10 +681,11 @@ void vli_div_barrett(u64 *result, u64 *product, const u64 *mu,
 	if (mu[ndigits])
 		vli_add(q + ndigits, q + ndigits, product + ndigits, ndigits);
 	vli_set(r, q+ndigits, ndigits);
+	q[2*ndigits] = 0;
 	vli_umult(q, mu, product[ndigits-1], ndigits);
 	if (mu[ndigits])
 		vli_uadd(q + ndigits, q + ndigits, product[ndigits-1], ndigits);
-	vli_add(result, r, q+1, ndigits);
+	vli_add(result, r, q+ndigits+1, ndigits);
 }
 
 /* Computes p_result = p_product % curve_p.
