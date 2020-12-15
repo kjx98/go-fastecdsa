@@ -25,14 +25,17 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#include <endian.h>
 #include <errno.h>
 #ifdef	WITH_SYS_RANDOM
 #include <sys/random.h>
 #endif
-
+#include "vli.hpp"
 #include "ecc.h"
 #include "ecc_curve_defs.h"
+
+#pragma GCC push_options
+#pragma GCC optimize ("unroll-loops")
+#pragma GCC pop_options
 
 /* Allocate SIZE bytes of memory.  */
 extern void *malloc (size_t __size);
@@ -76,7 +79,7 @@ static inline const struct ecc_curve *ecc_get_curve(uint curve_id)
 
 static inline struct ecc_point *ecc_alloc_point(uint ndigits)
 {
-	struct ecc_point *p = malloc(sizeof(*p));
+	struct ecc_point *p = (struct ecc_point *)malloc(sizeof(*p));
 
 	if (!p)
 		return NULL;
@@ -93,10 +96,10 @@ static inline void ecc_free_point(struct ecc_point *p)
 	free(p);
 }
 
+__attribute__((optimize("unroll-loops")))
 static inline void vli_clear(u64 *vli, uint ndigits)
 {
 	uint i;
-
 	for (i = 0; i < ndigits; i++)
 		vli[i] = 0;
 }
@@ -105,7 +108,7 @@ static inline void vli_clear(u64 *vli, uint ndigits)
 bool vli_is_zero(const u64 *vli, uint ndigits)
 {
 	uint i;
-
+#pragma unroll 4
 	for (i = 0; i < ndigits; i++) {
 		if (vli[i])
 			return false;
@@ -150,12 +153,7 @@ static uint inline vli_num_bits(const u64 *vli, uint ndigits)
 		return 0;
 
 	digit = vli[num_digits - 1];
-#ifdef	ommit
-	for (i = 0; digit; i++)
-		digit >>= 1;
-#else
 	i = 64 - __builtin_clzl(digit);
-#endif
 
 	return ((num_digits - 1) * 64 + i);
 }
@@ -164,7 +162,7 @@ static uint inline vli_num_bits(const u64 *vli, uint ndigits)
 void vli_from_be64(u64 *dest, const void *src, uint ndigits)
 {
 	int i;
-	const u64 *from = src;
+	const u64 *from = (u64 *)src;
 
 	for (i = 0; i < ndigits; i++)
 		dest[i] = be64toh(from[ndigits - 1 - i]);
@@ -173,7 +171,7 @@ void vli_from_be64(u64 *dest, const void *src, uint ndigits)
 void vli_from_le64(u64 *dest, const void *src, uint ndigits)
 {
 	uint i;
-	const u64 *from = src;
+	const u64 *from = (u64 *)src;
 
 	for (i = 0; i < ndigits; i++)
 		dest[i] = le64toh(from[i]);
@@ -366,7 +364,7 @@ static uint128_t add_128_128(uint128_t a, uint128_t b)
 	return result;
 }
 
-static void vli_mult(u64 *result, const u64 *left, const u64 *right,
+void vli_mult(u64 *result, const u64 *left, const u64 *right,
 		     unsigned int ndigits)
 {
 	uint128_t r01 = { 0, 0 };

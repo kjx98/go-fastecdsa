@@ -29,26 +29,14 @@
 
 #include <sys/types.h>
 #include <stdbool.h>
+#ifndef	__cplusplus
 typedef	__uint32_t u32;
 typedef	__uint64_t u64;
 typedef __uint64_t be64;
 typedef __uint8_t u8;
+#endif
 #ifndef	NULL
 #define	NULL	0
-#endif
-
-#ifdef	__GNUC__
-# define unlikely(cond)	__builtin_expect ((cond), 0)
-# define likely(cond)	__builtin_expect (!!(cond), 1)
-#define forceinline __inline__ __attribute__((always_inline))
-#else
-# define unlikely(cond)	(cond)
-# define likely(cond)	(cond)
-#ifdef _MSC_VER
-#define forceinline __forceinline
-#else
-#define forceinline
-#endif
 #endif
 
 #ifndef	ARRAY_SIZE
@@ -87,7 +75,7 @@ struct ecc_point {
  * @b:		Curve parameter b.
  */
 struct ecc_curve {
-	char *name;
+	const char *name;
 	struct ecc_point g;
 	uint ndigits;
 	u64 *p;
@@ -236,6 +224,8 @@ void vli_from_le64(u64 *dest, const void *src, uint ndigits);
  */
 void vli_mod_inv(u64 *result, const u64 *input, const u64 *mod,
 		 unsigned int ndigits);
+void vli_mult(u64 *result, const u64 *left, const u64 *right,
+		     unsigned int ndigits);
 
 /* Computes result = product % mod using Barrett's reduction with precomputed
  * value mu appended to the mod after ndigits, mu = (2^{2w} / mod) and have

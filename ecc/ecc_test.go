@@ -31,7 +31,13 @@ func TestEccMMod(t *testing.T) {
 	t.Logf("P0: %x, P3: %x, Mu0: %x, Mu3: %x", pb[0], pb[3], pb[4], pb[7])
 	bMod := vliModMultBarrett(x1, y1, pb)
 	if bMod.Cmp(xyMod) != 0 {
-		t.Logf("big.mulmod diff barrett mulmod:\n%s vs\n%s\n",
+		t.Logf("big.mulmod diff barrett ModMultBarrett:\n%s vs\n%s\n",
+			xyMod.Text(16), bMod.Text(16))
+		t.Fail()
+	}
+	bMod = vliModMult(x1.Bits(), y1.Bits(), pb)
+	if bMod.Cmp(xyMod) != 0 {
+		t.Logf("big.mulmod diff vliModMult:\n%s vs\n%s\n",
 			xyMod.Text(16), bMod.Text(16))
 		t.Fail()
 	}
@@ -85,7 +91,26 @@ func BenchmarkInverse(b *testing.B) {
 	})
 }
 
-func BenchmarkMul(b *testing.B) {
+func BenchmarkModMul(b *testing.B) {
+	b.ResetTimer()
+	p := sm2.P256().Params().P
+	pb := make([]big.Word, 9)
+	copy(pb, p.Bits())
+	mu := new(big.Int).SetUint64(1)
+	mu.Lsh(mu, 512)
+	mu.Div(mu, p)
+	copy(pb[4:], mu.Bits())
+	x1B := x1.Bits()
+	y1B := y1.Bits()
+
+	b.ReportAllocs()
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		_ = vliModMult(x1B, y1B, pb)
+	}
+}
+
+func BenchmarkModMulBarrett(b *testing.B) {
 	b.ResetTimer()
 	p := sm2.P256().Params().P
 	pb := make([]big.Word, 9)

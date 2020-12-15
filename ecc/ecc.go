@@ -2,8 +2,8 @@
 
 package ecc
 
-// #cgo CFLAGS: -O2 -Wpedantic -Wall -std=gnu11
-// #include <sys/types.h>
+// #cgo CXXFLAGS: -O2 -Wpedantic -Wall -std=c++11
+// #include "vli.hpp"
 // #include "ecc.h"
 /*
 static struct ecc_point *setEC_point(struct ecc_point *pt, u_int64_t *x, u_int64_t *y) {
@@ -42,21 +42,30 @@ func vliModInv(input, modB []byte) (result []big.Word) {
 	return
 }
 
+func vliMult(left, right *big.Int)  []big.Word {
+	var res [8]big.Word
+	lf := vliFromBE64(left.Bytes())
+	rt := vliFromBE64(right.Bytes())
+	C.vli_mult((*C.u64)(unsafe.Pointer(&res[0])), &lf[0], &rt[0], 4)
+	return res[:]
+}
+
 // Montgomery multiplication modulo P256
-func vliModMult(left, right, modU []big.Word) (result *big.Int) {
+func vliModMult(left, right, mdU []big.Word) (result *big.Int) {
 	var res [4]big.Word
-	var lf, rt [4]C.u64
-	var mod [4]big.Word
-	for i, d := range left {
-		lf[i] = C.u64(d)
-	}
-	for i, d := range right {
-		rt[i] = C.u64(d)
-	}
-	copy(mod[:], modU)
-	C.vli_mod_mult_slow((*C.u64)(unsafe.Pointer(&res[0])), &lf[0],
-		&rt[0], (*C.u64)(unsafe.Pointer(&mod[0])), 4)
-	result = new(big.Int).SetBits(res[:])
+	var prod [8]big.Word
+	var lf, rt [4]big.Word
+	var mod [9]big.Word	 // should be 9, 4 word for mod, 5 word for mu
+	copy(lf[:], left)
+	copy(rt[:], right)
+	copy(mod[:], mdU)
+	C.vli_mult((*C.u64)(unsafe.Pointer(&prod[0])),
+		(*C.u64)(unsafe.Pointer(&lf[0])),
+		(*C.u64)(unsafe.Pointer(&rt[0])), 4)
+	C.vli_mmod_barrett((*C.u64)((unsafe.Pointer)(&res[0])),
+		(*C.u64)(unsafe.Pointer(&prod[0])),
+		(*C.u64)(unsafe.Pointer(&mod[0])), 4)
+	result = new(big.Int).SetBits(res[:4])
 	return
 }
 
