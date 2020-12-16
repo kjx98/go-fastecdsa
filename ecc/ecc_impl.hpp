@@ -63,4 +63,245 @@ struct ecc_curve {
 	const bool use_barrett = false;
 };
 
+/*
+ * Computes result = product % mod
+ * for special form moduli: p = 2^k-c, for small c (note the minus sign)
+ *
+ * References:
+ * R. Crandall, C. Pomerance. Prime Numbers: A Computational Perspective.
+ * 9 Fast Algorithms for Large-Integer Arithmetic. 9.2.3 Moduli of special form
+ * Algorithm 9.2.13 (Fast mod operation for special-form moduli).
+ */
+template<uint ndigits> forceinline
+__attribute__((optimize("unroll-loops")))
+static void
+vli_mmod_special(u64 *result, const u64 *product, const u64 *mod) noexcept
+{
+	u64 c = -mod[0];
+	u64 t[ECC_MAX_DIGITS * 2];
+	u64 r[ECC_MAX_DIGITS * 2];
+
+	vli_set<ndigits * 2>(r, product);
+	while (!vli_is_zero<ndigits>(r + ndigits)) {
+		vli_umult<ndigits>(t, r + ndigits, c);
+		vli_clear<ndigits>(r + ndigits);
+		vli_add<ndigits * 2>(r, r, t);
+	}
+	vli_set<ndigits>(t, mod);
+	vli_clear<ndigits>(t + ndigits);
+	while (vli_cmp<ndigits * 2>(r, t) >= 0)
+		vli_sub<ndigits * 2>(r, r, t);
+	vli_set<ndigits>(result, r);
+}
+
+/*
+ * Computes result = product % mod
+ * for special form moduli: p = 2^{k-1}+c, for small c (note the plus sign)
+ * where k-1 does not fit into qword boundary by -1 bit (such as 255).
+
+ * References (loosely based on):
+ * A. Menezes, P. van Oorschot, S. Vanstone. Handbook of Applied Cryptography.
+ * 14.3.4 Reduction methods for moduli of special form. Algorithm 14.47.
+ * URL: http://cacr.uwaterloo.ca/hac/about/chap14.pdf
+ *
+ * H. Cohen, G. Frey, R. Avanzi, C. Doche, T. Lange, K. Nguyen, F. Vercauteren.
+ * Handbook of Elliptic and Hyperelliptic Curve Cryptography.
+ * Algorithm 10.25 Fast reduction for special form moduli
+ */
+template<uint ndigits> forceinline
+__attribute__((optimize("unroll-loops")))
+static void
+vli_mmod_special2(u64 *result, const u64 *product, const u64 *mod) noexcept
+{
+	u64 c2 = mod[0] * 2;
+	u64 q[ECC_MAX_DIGITS];
+	u64 r[ECC_MAX_DIGITS * 2];
+	u64 m[ECC_MAX_DIGITS * 2]; /* expanded mod */
+	int carry; /* last bit that doesn't fit into q */
+	int i;
+
+	vli_set<ndigits>(m, mod);
+	vli_clear<ndigits>(m + ndigits);
+
+	vli_set<ndigits>(r, product);
+	/* q and carry are top bits */
+	vli_set<ndigits>(q, product + ndigits);
+	vli_clear<ndigits>(r + ndigits);
+	carry = vli_is_negative<ndigits>(r);
+	if (carry)
+		r[ndigits - 1] &= (1ull << 63) - 1;
+	for (i = 1; carry || !vli_is_zero<ndigits>(q); i++) {
+		u64 qc[ECC_MAX_DIGITS * 2];
+
+		vli_umult<ndigits>(qc, q, c2);
+		if (carry)
+			vli_uadd<ndigits*2>(qc, qc, mod[0]);
+		vli_set<ndigits>(q, qc + ndigits);
+		vli_clear<ndigits>(qc + ndigits);
+		carry = vli_is_negative<ndigits>(qc);
+		if (carry)
+			qc[ndigits - 1] &= (1ull << 63) - 1;
+		if (i & 1)
+			vli_sub<ndigits*2>(r, r, qc);
+		else
+			vli_add<ndigits*2>(r, r, qc);
+	}
+	while (vli_is_negative<ndigits*2>(r))
+		vli_add<ndigits*2>(r, r, m);
+	while (vli_cmp<ndigits*2>(r, m) >= 0)
+		vli_sub<ndigits*2>(r, r, m);
+
+	vli_set<ndigits>(result, r);
+}
+
+/* Computes result = product % mod using Barrett's reduction with precomputed
+ * value mu appended to the mod after ndigits, mu = (2^{2w} / mod) and have
+ * length ndigits + 1, where mu * (2^w - 1) should not overflow ndigits
+ * boundary.
+ *
+ * Reference:
+ * R. Brent, P. Zimmermann. Modern Computer Arithmetic. 2010.
+ * 2.4.1 Barrett's algorithm. Algorithm 2.5.
+ */
+template<uint ndigits> forceinline
+__attribute__((optimize("unroll-loops")))
+void vli_mmod_barrett(u64 *result, u64 *product, const u64 *mod) noexcept
+{
+	u64 q[ECC_MAX_DIGITS * 2 +2];
+	u64 r[ECC_MAX_DIGITS * 2];
+	const u64 *mu = mod + ndigits;
+
+	vli_mult<ndigits>(q, product + ndigits, mu);
+	if (mu[ndigits])
+		vli_add<ndigits>(q + ndigits, q + ndigits, product + ndigits);
+	// add remain * mod
+	vli_set<ndigits>(r, q+ndigits);
+	q[2*ndigits] = 0;
+	vli_umult<ndigits>(q, mu, product[ndigits-1]);
+	if (mu[ndigits])
+		vli_uadd<ndigits>(q + ndigits, q + ndigits, product[ndigits-1]);
+	vli_add<ndigits>(result, r, q+ndigits+1);
+	vli_mult<ndigits>(r, mod, result);
+	vli_sub<ndigits*2>(r, product, r);
+	while (!vli_is_zero<ndigits>(r + ndigits) ||
+	       vli_cmp<ndigits>(r, mod) != -1) {
+		u64 carry;
+
+		carry = vli_sub<ndigits>(r, r, mod);
+		vli_usub<ndigits>(r + ndigits, r + ndigits, carry);
+	}
+	vli_set<ndigits>(result, r);
+}
+
+template<uint ndigits> forceinline
+__attribute__((optimize("unroll-loops")))
+void vli_div_barrett(u64 *result, u64 *product, const u64 *mu) noexcept
+{
+	u64 q[ECC_MAX_DIGITS * 2 +2];
+	u64 r[ECC_MAX_DIGITS * 2];
+
+	vli_mult<ndigits>(q, product + ndigits, mu);
+	if (mu[ndigits])
+		vli_add<ndigits>(q + ndigits, q + ndigits, product + ndigits);
+	vli_set<ndigits>(r, q+ndigits);
+	q[2*ndigits] = 0;
+	vli_umult<ndigits>(q, mu, product[ndigits-1]);
+	if (mu[ndigits])
+		vli_uadd<ndigits>(q + ndigits, q + ndigits, product[ndigits-1]);
+	vli_add<ndigits>(result, r, q+ndigits+1);
+}
+
+static bool vli_mmod_fast(u64 *result, u64 *product,const u64 *curve_prime, unsigned int ndigits);
+/* Computes result = left^2 % curve_prime. */
+template<uint ndigits> forceinline
+__attribute__((optimize("unroll-loops")))
+static void vli_mod_square_fast(u64 *result, const u64 *left,
+				const u64 *curve_prime) noexcept
+{
+	u64 product[2 * ECC_MAX_DIGITS];
+
+	vli_square<ndigits>(product, left);
+	vli_mmod_fast(result, product, curve_prime, ndigits);
+}
+
+#define EVEN(vli) (!(vli[0] & 1))
+/* Computes result = (1 / p_input) % mod. All VLIs are the same size.
+ * See "From Euclid's GCD to Montgomery Multiplication to the Great Divide"
+ * https://labs.oracle.com/techrep/2001/smli_tr-2001-95.pdf
+ */
+template<uint ndigits> forceinline
+__attribute__((optimize("unroll-loops")))
+void vli_mod_inv(u64 *result, const u64 *input, const u64 *mod) noexcept
+{
+	u64 a[ECC_MAX_DIGITS], b[ECC_MAX_DIGITS];
+	u64 u[ECC_MAX_DIGITS], v[ECC_MAX_DIGITS];
+	u64 carry;
+	int cmp_result;
+
+	if (vli_is_zero<ndigits>(input)) {
+		vli_clear<ndigits>(result);
+		return;
+	}
+
+	vli_set<ndigits>(a, input);
+	vli_set<ndigits>(b, mod);
+	vli_clear<ndigits>(u);
+	u[0] = 1;
+	vli_clear<ndigits>(v);
+
+	while ((cmp_result = vli_cmp<ndigits>(a, b)) != 0) {
+		carry = 0;
+
+		if (EVEN(a)) {
+			vli_rshift1<ndigits>(a);
+
+			if (!EVEN(u))
+				carry = vli_add<ndigits>(u, u, mod);
+
+			vli_rshift1<ndigits>(u);
+			if (carry)
+				u[ndigits - 1] |= 0x8000000000000000ull;
+		} else if (EVEN(b)) {
+			vli_rshift1<ndigits>(b);
+
+			if (!EVEN(v))
+				carry = vli_add<ndigits>(v, v, mod);
+
+			vli_rshift1<ndigits>(v);
+			if (carry)
+				v[ndigits - 1] |= 0x8000000000000000ull;
+		} else if (cmp_result > 0) {
+			vli_sub<ndigits>(a, a, b);
+			vli_rshift1<ndigits>(a);
+
+			if (vli_cmp<ndigits>(u, v) < 0)
+				vli_add<ndigits>(u, u, mod);
+
+			vli_sub<ndigits>(u, u, v);
+			if (!EVEN(u))
+				carry = vli_add<ndigits>(u, u, mod);
+
+			vli_rshift1<ndigits>(u);
+			if (carry)
+				u[ndigits - 1] |= 0x8000000000000000ull;
+		} else {
+			vli_sub<ndigits>(b, b, a);
+			vli_rshift1<ndigits>(b);
+
+			if (vli_cmp<ndigits>(v, u) < 0)
+				vli_add<ndigits>(v, v, mod);
+
+			vli_sub<ndigits>(v, v, u);
+			if (!EVEN(v))
+				carry = vli_add<ndigits>(v, v, mod);
+
+			vli_rshift1<ndigits>(v);
+			if (carry)
+				v[ndigits - 1] |= 0x8000000000000000ull;
+		}
+	}
+
+	vli_set<ndigits>(result, u);
+}
+
 #endif	//	__ECC_IMPL_H__
