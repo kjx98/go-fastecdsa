@@ -31,35 +31,64 @@
 #endif
 #include "vli.hpp"
 #include "ecc.h"
+#include "ecc_impl.hpp"
 #include "ecc_curve_defs.h"
 
 #pragma GCC push_options
 #pragma GCC optimize ("unroll-loops")
 #pragma GCC pop_options
 
-#ifdef	__cplusplus
-extern "C" {
-#endif
-/* Allocate SIZE bytes of memory.  */
-extern void *malloc (size_t __size);
-/* Free a block allocated by `malloc', `realloc' or `calloc'.  */
-extern void free (void *__ptr);
-#ifdef	__cplusplus
-}
-#endif
-
 #define ECC_DIGITS_TO_BYTES_SHIFT 3
 
-struct alignas(16) uint128_t {
-	u64 m_low;
-	u64 m_high;
+class alignas(16) uint128_t {
+public:
+#if defined(__SIZEOF_INT128__)
+	uint128_t(const __uint128_t vd=0) {
+		_data = vd;
+	}
+#else
+	uint128_t() : _low(0), _high(0) {};
+#endif
+	uint128_t(const u64 vl, const u64 vh) {
+#if defined(__SIZEOF_INT128__)
+		_data = (((__uint128_t)vh) << 64) | vl;
+#else
+		_low = vl;
+		_high = vh;
+#endif
+	}
+	uint128_t(const uint128_t &) = default;
+#if defined(__SIZEOF_INT128__)
+	const __uint128_t data() const { return _data; }
+#endif
+	u64 m_low() const {
+#if defined(__SIZEOF_INT128__)
+		return (u64)_data;
+#else
+		return _low;
+#endif
+	}
+	u64 m_high() const {
+#if defined(__SIZEOF_INT128__)
+		return (u64)(_data >> 64);
+#else
+		return _high;
+#endif
+	}
+private:
+#if defined(__SIZEOF_INT128__)
+	__uint128_t	_data;
+#else
+	u64	_low;
+	u64	_high;
+#endif
 };
 
 #if defined(__SIZEOF_INT128__)
 typedef	__uint128_t		u128;
 #endif
 
-static inline const struct ecc_curve *ecc_get_curve(uint curve_id)
+static inline const ecc_curve *ecc_get_curve(uint curve_id)
 {
 	switch (curve_id) {
 	/* In FIPS mode only allow P256 and higher */
@@ -72,25 +101,6 @@ static inline const struct ecc_curve *ecc_get_curve(uint curve_id)
 	default:
 		return nullptr;
 	}
-}
-
-static inline struct ecc_point *ecc_alloc_point(uint ndigits)
-{
-	struct ecc_point *p = (struct ecc_point *)malloc(sizeof(*p));
-
-	if (!p)
-		return nullptr;
-	//p->ndigits = ndigits;
-
-	return p;
-}
-
-static inline void ecc_free_point(struct ecc_point *p)
-{
-	if (!p)
-		return;
-
-	free(p);
 }
 
 __attribute__((optimize("unroll-loops")))
@@ -316,12 +326,8 @@ static u64 vli_usub(u64 *result, const u64 *left, u64 right,
 
 static forceinline uint128_t mul_64_64(u64 left, u64 right)
 {
-	uint128_t result;
 #if defined(__SIZEOF_INT128__)
-	*((u128 *)&result) = (__uint128_t)left * right;
-
-	//result.m_low  = m;
-	//result.m_high = m >> 64;
+	uint128_t result( (__uint128_t)left * right );
 #else
 	u64 a0 = left & 0xffffffffull;
 	u64 a1 = left >> 32;
@@ -339,24 +345,21 @@ static forceinline uint128_t mul_64_64(u64 left, u64 right)
 	if (m2 < m1)
 		m3 += 0x100000000ull;
 
-	result.m_low = (m0 & 0xffffffffull) | (m2 << 32);
-	result.m_high = m3 + (m2 >> 32);
+	u64 m_low = (m0 & 0xffffffffull) | (m2 << 32);
+	u64 m_high = m3 + (m2 >> 32);
+	uint128_t	result(m_low, m_high);
 #endif
 	return result;
 }
 
 static forceinline uint128_t add_128_128(uint128_t a, uint128_t b)
 {
-	uint128_t result;
 #if defined(__SIZEOF_INT128__)
-	u128	*m=(u128 *)&result;
-	u128	*sa=(u128 *)&a;
-	u128	*sb=(u128 *)&b;
-	*m = *sa + *sb;
+	uint128_t result(a.data() + b.data());
 #else
-
-	result.m_low = a.m_low + b.m_low;
-	result.m_high = a.m_high + b.m_high + (result.m_low < a.m_low);
+	u64 m_low = a.m_low + b.m_low;
+	u64 m_high = a.m_high + b.m_high + (result.m_low < a.m_low);
+	uint128_t result(m_low, m_high);
 #endif
 	return result;
 }
@@ -364,7 +367,7 @@ static forceinline uint128_t add_128_128(uint128_t a, uint128_t b)
 void vli_mult(u64 *result, const u64 *left, const u64 *right,
 		     unsigned int ndigits)
 {
-	uint128_t r01 = { 0, 0 };
+	uint128_t r01( 0, 0 );
 	u64 r2 = 0;
 	unsigned int i, k;
 
@@ -385,16 +388,17 @@ void vli_mult(u64 *result, const u64 *left, const u64 *right,
 			product = mul_64_64(left[i], right[k - i]);
 
 			r01 = add_128_128(r01, product);
-			r2 += (r01.m_high < product.m_high);
+			r2 += (r01.m_high() < product.m_high());
 		}
 
-		result[k] = r01.m_low;
-		r01.m_low = r01.m_high;
-		r01.m_high = r2;
+		result[k] = r01.m_low();
+		r01 = uint128_t(r01.m_high(), r2);
+		//r01.m_low = r01.m_high;
+		//r01.m_high = r2;
 		r2 = 0;
 	}
 
-	result[ndigits * 2 - 1] = r01.m_low;
+	result[ndigits * 2 - 1] = r01.m_low();
 }
 
 /* Compute product = left * right, for a small right value. */
@@ -410,18 +414,19 @@ static void vli_umult(u64 *result, const u64 *left, u64 right,
 		product = mul_64_64(left[k], right);
 		r01 = add_128_128(r01, product);
 		/* no carry */
-		result[k] = r01.m_low;
-		r01.m_low = r01.m_high;
-		r01.m_high = 0;
+		result[k] = r01.m_low();
+		r01 = uint128_t(r01.m_high(), 0);
+		//r01.m_low = r01.m_high;
+		//r01.m_high = 0;
 	}
-	result[k] = r01.m_low;
+	result[k] = r01.m_low();
 	for (++k; k < ndigits * 2; k++)
 		result[k] = 0;
 }
 
 static void vli_square(u64 *result, const u64 *left, unsigned int ndigits)
 {
-	uint128_t r01 = { 0, 0 };
+	uint128_t r01( 0, 0 );
 	u64 r2 = 0;
 	uint i, k;
 
@@ -439,23 +444,28 @@ static void vli_square(u64 *result, const u64 *left, unsigned int ndigits)
 			product = mul_64_64(left[i], left[k - i]);
 
 			if (i < k - i) {
-				r2 += product.m_high >> 63;
+				r2 += product.m_high() >> 63;
+#ifdef	ommit
 				product.m_high = (product.m_high << 1) |
 						 (product.m_low >> 63);
 				product.m_low <<= 1;
+#endif
+				u64 _high = (product.m_high() << 1) | (product.m_low() >> 63);
+				product = uint128_t(product.m_low() << 1, _high);
 			}
 
 			r01 = add_128_128(r01, product);
-			r2 += (r01.m_high < product.m_high);
+			r2 += (r01.m_high() < product.m_high());
 		}
 
-		result[k] = r01.m_low;
-		r01.m_low = r01.m_high;
-		r01.m_high = r2;
+		result[k] = r01.m_low();
+		//r01.m_low = r01.m_high;
+		//r01.m_high = r2;
+		r01 = uint128_t(r01.m_high(), r2);
 		r2 = 0;
 	}
 
-	result[ndigits * 2 - 1] = r01.m_low;
+	result[ndigits * 2 - 1] = r01.m_low();
 }
 
 /* Computes result = (left + right) % mod.
@@ -951,10 +961,10 @@ void vli_mod_inv(u64 *result, const u64 *input, const u64 *mod,
 /* ------ Point operations ------ */
 
 /* Returns true if p_point is the point at infinity, false otherwise. */
-static bool ecc_point_is_zero(const struct ecc_point *point, uint ndigits)
+static bool ecc_point_is_zero(const u64 *p_x, const u64 *p_y, uint ndigits)
 {
-	return (vli_is_zero(point->x, ndigits) &&
-		vli_is_zero(point->y, ndigits));
+	return (vli_is_zero(p_x, ndigits) &&
+		vli_is_zero(p_y, ndigits));
 }
 
 /* Point multiplication algorithm using Montgomery's ladder with co-Z
@@ -963,7 +973,7 @@ static bool ecc_point_is_zero(const struct ecc_point *point, uint ndigits)
 
 /* Double in place */
 static void ecc_point_double_jacobian(u64 *x1, u64 *y1, u64 *z1,
-				      u64 *curve_prime, unsigned int ndigits)
+				      const u64 *curve_prime, unsigned int ndigits)
 {
 	/* t1 = x, t2 = y, t3 = z */
 	u64 t4[ECC_MAX_DIGITS];
@@ -1025,7 +1035,7 @@ static void ecc_point_double_jacobian(u64 *x1, u64 *y1, u64 *z1,
 }
 
 /* Modify (x1, y1) => (x1 * z^2, y1 * z^3) */
-static void apply_z(u64 *x1, u64 *y1, u64 *z, u64 *curve_prime,
+static void apply_z(u64 *x1, u64 *y1, u64 *z, const u64 *curve_prime,
 		    unsigned int ndigits)
 {
 	u64 t1[ECC_MAX_DIGITS];
@@ -1038,7 +1048,7 @@ static void apply_z(u64 *x1, u64 *y1, u64 *z, u64 *curve_prime,
 
 /* P = (x1, y1) => 2P, (x2, y2) => P' */
 static void xycz_initial_double(u64 *x1, u64 *y1, u64 *x2, u64 *y2,
-				u64 *p_initial_z, u64 *curve_prime,
+				u64 *p_initial_z, const u64 *curve_prime,
 				unsigned int ndigits)
 {
 	u64 z[ECC_MAX_DIGITS];
@@ -1063,7 +1073,7 @@ static void xycz_initial_double(u64 *x1, u64 *y1, u64 *x2, u64 *y2,
  * Output P' = (x1', y1', Z3), P + Q = (x3, y3, Z3)
  * or P => P', Q => P + Q
  */
-static void xycz_add(u64 *x1, u64 *y1, u64 *x2, u64 *y2, u64 *curve_prime,
+static void xycz_add(u64 *x1, u64 *y1, u64 *x2, u64 *y2, const u64 *curve_prime,
 		     unsigned int ndigits)
 {
 	/* t1 = X1, t2 = Y1, t3 = X2, t4 = Y2 */
@@ -1104,8 +1114,8 @@ static void xycz_add(u64 *x1, u64 *y1, u64 *x2, u64 *y2, u64 *curve_prime,
  * Output P + Q = (x3, y3, Z3), P - Q = (x3', y3', Z3)
  * or P => P - Q, Q => P + Q
  */
-static void xycz_add_c(u64 *x1, u64 *y1, u64 *x2, u64 *y2, u64 *curve_prime,
-		       unsigned int ndigits)
+static void xycz_add_c(u64 *x1, u64 *y1, u64 *x2, u64 *y2,
+				const u64 *curve_prime, unsigned int ndigits)
 {
 	/* t1 = X1, t2 = Y1, t3 = X2, t4 = Y2 */
 	u64 t5[ECC_MAX_DIGITS];
@@ -1157,8 +1167,8 @@ static void xycz_add_c(u64 *x1, u64 *y1, u64 *x2, u64 *y2, u64 *curve_prime,
 	vli_set(x1, t7, ndigits);
 }
 
-static void ecc_point_mult(struct ecc_point *result,
-			   const struct ecc_point *point, const u64 *scalar,
+static void ecc_point_mult(u64 *result_x, u64 *result_y,
+			   const u64 *point_x, const u64 *point_y, const u64 *scalar,
 			   u64 *initial_z, const struct ecc_curve *curve,
 			   unsigned int ndigits)
 {
@@ -1167,7 +1177,7 @@ static void ecc_point_mult(struct ecc_point *result,
 	u64 ry[2][ECC_MAX_DIGITS];
 	u64 z[ECC_MAX_DIGITS];
 	u64 sk[2][ECC_MAX_DIGITS];
-	u64 *curve_prime = curve->p;
+	const u64 *curve_prime = curve->p;
 	int i, nb;
 	int num_bits;
 	int carry;
@@ -1177,8 +1187,8 @@ static void ecc_point_mult(struct ecc_point *result,
 	scalar = sk[!carry];
 	num_bits = sizeof(u64) * ndigits * 8 + 1;
 
-	vli_set(rx[1], point->x, ndigits);
-	vli_set(ry[1], point->y, ndigits);
+	vli_set(rx[1], point_x, ndigits);
+	vli_set(ry[1], point_y, ndigits);
 
 	xycz_initial_double(rx[1], ry[1], rx[0], ry[0], initial_z, curve_prime,
 			    ndigits);
@@ -1201,13 +1211,13 @@ static void ecc_point_mult(struct ecc_point *result,
 	/* Yb * (X1 - X0) */
 	vli_mod_mult_fast(z, z, ry[1 - nb], curve_prime, ndigits);
 	/* xP * Yb * (X1 - X0) */
-	vli_mod_mult_fast(z, z, point->x, curve_prime, ndigits);
+	vli_mod_mult_fast(z, z, point_x, curve_prime, ndigits);
 
 	/* 1 / (xP * Yb * (X1 - X0)) */
 	vli_mod_inv(z, z, curve_prime, ndigits);
 
 	/* yP / (xP * Yb * (X1 - X0)) */
-	vli_mod_mult_fast(z, z, point->y, curve_prime, ndigits);
+	vli_mod_mult_fast(z, z, point_y, curve_prime, ndigits);
 	/* Xb * yP / (xP * Yb * (X1 - X0)) */
 	vli_mod_mult_fast(z, z, rx[1 - nb], curve_prime, ndigits);
 	/* End 1/Z calculation */
@@ -1216,42 +1226,42 @@ static void ecc_point_mult(struct ecc_point *result,
 
 	apply_z(rx[0], ry[0], z, curve_prime, ndigits);
 
-	vli_set(result->x, rx[0], ndigits);
-	vli_set(result->y, ry[0], ndigits);
+	vli_set(result_x, rx[0], ndigits);
+	vli_set(result_y, ry[0], ndigits);
 }
 
 /* Computes R = P + Q mod p */
-static void ecc_point_add(const struct ecc_point *result,
-		   const struct ecc_point *p, const struct ecc_point *q,
+static void ecc_point_add(u64 *result_x, u64 *result_y,
+		   const u64 *p_x, const u64 *p_y, const u64 *q_x, const u64 *q_y,
 		   const struct ecc_curve *curve)
 {
 	u64 z[ECC_MAX_DIGITS];
 	u64 px[ECC_MAX_DIGITS];
 	u64 py[ECC_MAX_DIGITS];
-	//unsigned int ndigits = curve->g.ndigits;
 	unsigned int ndigits = curve->ndigits;
 
-	vli_set((u64 *)result->x, (u64 *)q->x, ndigits);
-	vli_set((u64 *)result->y, (u64 *)q->y, ndigits);
-	vli_mod_sub(z, result->x, p->x, curve->p, ndigits);
-	vli_set(px, p->x, ndigits);
-	vli_set(py, p->y, ndigits);
-	xycz_add(px, py, (u64 *)result->x, (u64 *)result->y, curve->p, ndigits);
+	vli_set((u64 *)result_x, (u64 *)q_x, ndigits);
+	vli_set((u64 *)result_y, (u64 *)q_y, ndigits);
+	vli_mod_sub(z, result_x, p_x, curve->p, ndigits);
+	vli_set(px, p_x, ndigits);
+	vli_set(py, p_y, ndigits);
+	xycz_add(px, py, result_x, result_y, curve->p, ndigits);
 	vli_mod_inv(z, z, curve->p, ndigits);
-	apply_z((u64 *)result->x, (u64 *)result->y, z, curve->p, ndigits);
+	apply_z(result_x, result_y, z, curve->p, ndigits);
 }
 
+#ifdef	ommit
 /* Computes R = u1P + u2Q mod p using Shamir's trick.
  * Based on: Kenneth MacKay's micro-ecc (2014).
  */
-void ecc_point_mult_shamir(const struct ecc_point *result,
-			   const u64 *u1, const struct ecc_point *p,
-			   const u64 *u2, const struct ecc_point *q,
+void ecc_point_mult_shamir(const u64 *result_x, const u64 *result_y,
+			   const u64 *u1, const u64 *p_x, const u64 *p_y,
+			   const u64 *u2, const u64 *q_x, const u64 *q_y,
 			   const struct ecc_curve *curve)
 {
 	u64 z[ECC_MAX_DIGITS];
-	u64 *rx = (u64 *)result->x;
-	u64 *ry = (u64 *)result->y;
+	u64 *rx = (u64 *)result_x;
+	u64 *ry = (u64 *)result_y;
 	unsigned int ndigits = curve->ndigits; //curve->g.ndigits;
 	unsigned int num_bits;
 	struct ecc_point sum;//  = ECC_POINT_INIT({}, {}, ndigits);
@@ -1296,6 +1306,7 @@ void ecc_point_mult_shamir(const struct ecc_point *result,
 	vli_mod_inv(z, z, curve->p, ndigits);
 	apply_z(rx, ry, z, curve->p, ndigits);
 }
+#endif
 
 static inline void ecc_swap_digits(const u64 *in, u64 *out,
 				   unsigned int ndigits)
@@ -1359,7 +1370,7 @@ int ecc_is_key_valid(unsigned int curve_id, unsigned int ndigits,
 #ifdef	WITH_SYS_RANDOM
 int ecc_gen_privkey(unsigned int curve_id, unsigned int ndigits, u64 *privkey)
 {
-	const struct ecc_curve *curve = ecc_get_curve(curve_id);
+	const ecc_curve *curve = ecc_get_curve(curve_id);
 	u64 priv[ECC_MAX_DIGITS];
 	unsigned int nbytes = ndigits << ECC_DIGITS_TO_BYTES_SHIFT;
 	unsigned int nbits = vli_num_bits(curve->n, ndigits);
@@ -1401,65 +1412,54 @@ int ecc_make_pub_key(unsigned int curve_id, unsigned int ndigits,
 		     const u64 *private_key, u64 *public_key)
 {
 	int ret = 0;
-	struct ecc_point *pk;
+	u64	pk_x[ECC_MAX_DIGITS];
+	u64	pk_y[ECC_MAX_DIGITS];
 	u64 priv[ECC_MAX_DIGITS];
-	const struct ecc_curve *curve = ecc_get_curve(curve_id);
+	const ecc_curve *curve = ecc_get_curve(curve_id);
 
 	if (!private_key || !curve || ndigits > ARRAY_SIZE(priv)) {
 		ret = -EINVAL;
-		goto out;
+		return ret;
 	}
 
 	ecc_swap_digits(private_key, priv, ndigits);
 
-	pk = ecc_alloc_point(ndigits);
-	if (!pk) {
-		ret = -ENOMEM;
-		goto out;
-	}
-
-	ecc_point_mult(pk, &curve->g, priv, nullptr, curve, ndigits);
-	if (ecc_point_is_zero(pk, ndigits)) {
+	ecc_point_mult(pk_x, pk_y, curve->gx, curve->gy, priv, nullptr, curve, ndigits);
+	if (ecc_point_is_zero(pk_x, pk_y, ndigits)) {
 		ret = -EAGAIN;
-		goto err_free_point;
+		return ret;
 	}
 
-	ecc_swap_digits(pk->x, public_key, ndigits);
-	ecc_swap_digits(pk->y, &public_key[ndigits], ndigits);
+	ecc_swap_digits(pk_x, public_key, ndigits);
+	ecc_swap_digits(pk_y, &public_key[ndigits], ndigits);
 
-err_free_point:
-	ecc_free_point(pk);
-out:
 	return ret;
 }
 
 /* SP800-56A section 5.6.2.3.4 partial verification: ephemeral keys only */
-int ecc_is_pubkey_valid_partial(const struct ecc_curve *curve,
-				struct ecc_point *pk)
+int ecc_is_pubkey_valid_partial(const uint curve_id,
+				const u64 *pk_x, const u64 *pk_y)
 {
+	const ecc_curve *curve = ecc_get_curve(curve_id);
 	u64 yy[ECC_MAX_DIGITS], xxx[ECC_MAX_DIGITS], w[ECC_MAX_DIGITS];
 	uint	ndigits = curve->ndigits;
 
-#ifdef	ommit
-	if ((pk->ndigits != curve->g.ndigits))
-		return -EINVAL;
-#endif
-
+	if (curve == nullptr) return -EINVAL;
 	/* Check 1: Verify key is not the zero point. */
-	if (ecc_point_is_zero(pk, ndigits))
+	if (ecc_point_is_zero(pk_x, pk_y, ndigits))
 		return -EINVAL;
 
 	/* Check 2: Verify key is in the range [1, p-1]. */
-	if (vli_cmp(curve->p, pk->x, ndigits) != 1)
+	if (vli_cmp(curve->p, pk_x, ndigits) != 1)
 		return -EINVAL;
-	if (vli_cmp(curve->p, pk->y, ndigits) != 1)
+	if (vli_cmp(curve->p, pk_y, ndigits) != 1)
 		return -EINVAL;
 
 	/* Check 3: Verify that y^2 == (x^3 + a·x + b) mod p */
-	vli_mod_square_fast(yy, pk->y, curve->p, ndigits); /* y^2 */
-	vli_mod_square_fast(xxx, pk->x, curve->p, ndigits); /* x^2 */
-	vli_mod_mult_fast(xxx, xxx, pk->x, curve->p, ndigits); /* x^3 */
-	vli_mod_mult_fast(w, curve->a, pk->x, curve->p, ndigits); /* a·x */
+	vli_mod_square_fast(yy, pk_y, curve->p, ndigits); /* y^2 */
+	vli_mod_square_fast(xxx, pk_x, curve->p, ndigits); /* x^2 */
+	vli_mod_mult_fast(xxx, xxx, pk_x, curve->p, ndigits); /* x^3 */
+	vli_mod_mult_fast(w, curve->a, pk_x, curve->p, ndigits); /* a·x */
 	vli_mod_add(w, w, curve->b, curve->p, ndigits); /* a·x + b */
 	vli_mod_add(w, w, xxx, curve->p, ndigits); /* x^3 + a·x + b */
 	if (vli_cmp(yy, w, ndigits) != 0) /* Equation */

@@ -2,16 +2,8 @@
 
 package ecc
 
-// #cgo CXXFLAGS: -O2 -Wpedantic -Wall -std=gnu++2a
+// #cgo CXXFLAGS: -O2 -Wpedantic -Wall -std=gnu++11
 // #include "ecc.h"
-/*
-static struct ecc_point *setEC_point(struct ecc_point *pt, u64 *x, u64 *y) {
-	if (pt == NULL) return NULL;
-	pt->x[0] = x[0]; pt->x[1] = x[1]; pt->x[2] = x[2]; pt->x[3] = x[3];
-	pt->y[0] = y[0]; pt->y[1] = y[1]; pt->y[2] = y[2]; pt->y[3] = y[3];
-	return pt;
-}
-*/
 import "C"
 
 import (

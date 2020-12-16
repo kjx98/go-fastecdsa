@@ -31,7 +31,6 @@
 #include "cdefs.h"
 
 /* One digit is u64 qword. */
-#define ECC_MAX_DIGITS             (512 / 64)
 
 #ifndef	ECC_CURVE_NIST_P256
 /* Curves IDs */
@@ -46,43 +45,6 @@ extern "C" {
 #endif
 
 /**
- * struct ecc_point - elliptic curve point in affine coordinates
- *
- * @x:		X coordinate in vli form.
- * @y:		Y coordinate in vli form.
- * @ndigits:	Length of vlis in u64 qwords.
- */
-struct ecc_point {
-	u64 x[ECC_MAX_DIGITS];
-	u64 y[ECC_MAX_DIGITS];
-};
-
-
-/**
- * struct ecc_curve - definition of elliptic curve
- *
- * @name:	Short name of the curve.
- * @g:		Generator point of the curve.
- * @p:		Prime number, if Barrett's reduction is used for this curve
- *		pre-calculated value 'mu' is appended to the @p after ndigits.
- *		Use of Barrett's reduction is heuristically determined in
- *		vli_mmod_fast().
- * @n:		Order of the curve group.
- * @a:		Curve parameter a.
- * @b:		Curve parameter b.
- */
-struct ecc_curve {
-	const char *name;
-	struct ecc_point g;
-	uint ndigits;
-	bool use_barrett;
-	u64 *p;
-	u64 *n;
-	u64 *a;
-	u64 *b;
-};
-
-/**
  * ecc_is_key_valid() - Validate a given ECDH private key
  *
  * @curve_id:		id representing the curve to use
@@ -92,7 +54,7 @@ struct ecc_curve {
  *
  * Returns 0 if the key is acceptable, a negative value otherwise
  */
-int ecc_is_key_valid(unsigned int curve_id, unsigned int ndigits,
+int ecc_is_key_valid(uint curve_id, unsigned int ndigits,
 		     const u64 *private_key, unsigned int private_key_len);
 
 /**
@@ -107,7 +69,7 @@ int ecc_is_key_valid(unsigned int curve_id, unsigned int ndigits,
  * Returns 0 if the private key was generated successfully, a negative value
  * if an error occurred.
  */
-int ecc_gen_privkey(unsigned int curve_id, unsigned int ndigits, u64 *privkey);
+int ecc_gen_privkey(uint curve_id, unsigned int ndigits, u64 *privkey);
 
 /**
  * ecc_make_pub_key() - Compute an ECC public key
@@ -156,8 +118,8 @@ int crypto_ecdh_shared_secret(unsigned int curve_id, unsigned int ndigits,
  *
  * Return: 0 if validation is successful, -EINVAL if validation is failed.
  */
-int ecc_is_pubkey_valid_partial(const struct ecc_curve *curve,
-				struct ecc_point *pk);
+int ecc_is_pubkey_valid_partial(const uint curve_id,
+				const u64 *px, const u64 *py);
 
 /**
  * vli_is_zero() - Determine is vli is zero
@@ -270,10 +232,10 @@ void vli_mod_mult_fast(u64 *result, const u64 *left, const u64 *right,
  * Returns result = x * p + x * q over the curve.
  * This works faster than two multiplications and addition.
  */
-void ecc_point_mult_shamir(const struct ecc_point *result,
-			   const u64 *x, const struct ecc_point *p,
-			   const u64 *y, const struct ecc_point *q,
-			   const struct ecc_curve *curve);
+void ecc_point_mult_shamir(const u64 *result_x, const u64 *result_y,
+			   const u64 *x, const u64 *px, const u64 *py,
+			   const u64 *y, const u64 *qx, const u64 *qy,
+			   const uint curve_id);
 #ifdef	__cplusplus
 }
 #endif
