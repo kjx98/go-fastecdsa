@@ -9,7 +9,7 @@ import (
 var (
 	x1, y1 *big.Int
 	x2, y2 *big.Int
-	rr	[]uint64
+	rr     []uint64
 )
 
 func init() {
@@ -51,7 +51,33 @@ func TestEccMulModMont(t *testing.T) {
 	xyMod := new(big.Int).Mod(xy, p)
 	bMod := vliModMultMont(x1.Bits(), y1.Bits(), p.Bits(), rr, 1)
 	if bMod.Cmp(xyMod) != 0 {
-		t.Logf("big.mulmod diff barrett ModMultBarrett:\n%s vs\n%s\n",
+		t.Logf("step1 big.mulmod diff ModMultMont:\n%s vs\n%s\n",
+			xyMod.Text(16), bMod.Text(16))
+		t.Fail()
+	}
+	xy = new(big.Int).Mul(x2, y2)
+	xyMod = new(big.Int).Mod(xy, p)
+	bMod = vliModMultMont(x2.Bits(), y2.Bits(), p.Bits(), rr, 1)
+	if bMod.Cmp(xyMod) != 0 {
+		t.Logf("step2 big.mulmod diff ModMultMont:\n%s vs\n%s\n",
+			xyMod.Text(16), bMod.Text(16))
+		t.Fail()
+	}
+}
+
+func TestExpModMont(t *testing.T) {
+	p := sm2.P256().Params().P
+	xyMod := new(big.Int).Exp(x1, y1, p)
+	bMod := vliExpModMont(x1.Bits(), y1.Bits(), p.Bits(), rr, 1)
+	if bMod.Cmp(xyMod) != 0 {
+		t.Logf("step1 big.mulmod diff ModMultMont:\n%s vs\n%s\n",
+			xyMod.Text(16), bMod.Text(16))
+		t.Fail()
+	}
+	xyMod = new(big.Int).Exp(x2, y2, p)
+	bMod = vliExpModMont(x2.Bits(), y2.Bits(), p.Bits(), rr, 1)
+	if bMod.Cmp(xyMod) != 0 {
+		t.Logf("step2 big.mulmod diff ModMultMont:\n%s vs\n%s\n",
 			xyMod.Text(16), bMod.Text(16))
 		t.Fail()
 	}
@@ -62,31 +88,37 @@ func TestEccInverse(t *testing.T) {
 	two := big.NewInt(2)
 	nMinus2 := new(big.Int).Sub(p, two)
 	eInv := new(big.Int).Exp(x1, nMinus2, p)
+	mInv := vliExpModMont(x1.Bits(), nMinus2.Bits(), p.Bits(), rr, 1)
 	inv := new(big.Int).ModInverse(x1, p)
 	if inv.Cmp(eInv) != 0 {
 		t.Logf("vliModInv diff: ModInverse vs fermatInverse\n%s\n%s",
-				inv.Text(16), eInv.Text(16))
+			inv.Text(16), eInv.Text(16))
+		t.Fail()
+	}
+	if inv.Cmp(mInv) != 0 {
+		t.Logf("vliMontInv diff: ModInverse vs fermatInverse\n%s\n%s",
+			inv.Text(16), mInv.Text(16))
 		t.Fail()
 	}
 	ww := vliModInv(x1.Bytes(), p.Bytes())
 	cInv := new(big.Int).SetBits(ww)
 	if cInv.Cmp(inv) != 0 {
 		t.Logf("vliModInv diff: ModInverse vs vliModInv\n%s\n%s",
-				inv.Text(16), cInv.Text(16))
+			inv.Text(16), cInv.Text(16))
 		t.Fail()
 	}
 	eInv = new(big.Int).Exp(x2, nMinus2, p)
 	inv = new(big.Int).ModInverse(x2, p)
 	if inv.Cmp(eInv) != 0 {
 		t.Logf("vliModInv diff: ModInverse vs fermatInverse\n%s\n%s",
-				inv.Text(16), eInv.Text(16))
+			inv.Text(16), eInv.Text(16))
 		t.Fail()
 	}
 	ww = vliModInv(x2.Bytes(), p.Bytes())
 	cInv = new(big.Int).SetBits(ww)
 	if cInv.Cmp(inv) != 0 {
 		t.Logf("vliModInv diff: ModInverse vs vliModInv\n%s\n%s",
-				inv.Text(16), cInv.Text(16))
+			inv.Text(16), cInv.Text(16))
 		t.Fail()
 	}
 }
@@ -173,6 +205,28 @@ func BenchmarkModMulBarrett(b *testing.B) {
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
 		_ = vliModMultBarrett(x1, y1, pb)
+	}
+}
+
+func BenchmarkModMulMont(b *testing.B) {
+	b.ResetTimer()
+	p := sm2.P256().Params().P
+
+	b.ReportAllocs()
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		_ = vliModMultMont(x1.Bits(), y1.Bits(), p.Bits(), rr, 1)
+	}
+}
+
+func BenchmarkExpModMont(b *testing.B) {
+	b.ResetTimer()
+	p := sm2.P256().Params().P
+
+	b.ReportAllocs()
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		_ = vliExpModMont(x1.Bits(), y1.Bits(), p.Bits(), rr, 1)
 	}
 }
 

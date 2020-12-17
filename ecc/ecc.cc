@@ -55,604 +55,6 @@ static inline const ecc_curve *ecc_get_curve(uint curve_id)
 	}
 }
 
-#ifdef	ommit
-__attribute__((optimize("unroll-loops")))
-static inline void vli_clear(u64 *vli, uint ndigits)
-{
-	uint i;
-	for (i = 0; i < ndigits; i++)
-		vli[i] = 0;
-}
-
-/* Returns true if vli == 0, false otherwise. */
-bool vli_is_zero(const u64 *vli, uint ndigits)
-{
-	uint i;
-//#pragma unroll 4
-	for (i = 0; i < ndigits; i++) {
-		if (vli[i])
-			return false;
-	}
-
-	return true;
-}
-
-static bool inline vli_is_negative(const u64 *vli, uint ndigits)
-{
-	return vli_test_bit(vli, ndigits * 64 - 1);
-}
-
-/* Counts the number of 64-bit "digits" in vli. */
-static uint inline vli_num_digits(const u64 *vli, uint ndigits)
-{
-	int i;
-
-	/* Search from the end until we find a non-zero digit.
-	 * We do it in reverse because we expect that most digits will
-	 * be nonzero.
-	 */
-	for (i = ndigits - 1; i >= 0 && vli[i] == 0; i--);
-
-	return (i + 1);
-}
-
-/* Counts the number of bits required for vli. */
-static uint inline vli_num_bits(const u64 *vli, uint ndigits)
-{
-	uint i, num_digits;
-	u64 digit;
-
-	num_digits = vli_num_digits(vli, ndigits);
-	if (num_digits == 0)
-		return 0;
-
-	digit = vli[num_digits - 1];
-	i = 64 - __builtin_clzl(digit);
-
-	return ((num_digits - 1) * 64 + i);
-}
-
-/* Set dest from unaligned bit string src. */
-void vli_from_be64(u64 *dest, const void *src, uint ndigits)
-{
-	uint i;
-	const u64 *from = (u64 *)src;
-
-	for (i = 0; i < ndigits; i++)
-		dest[i] = be64toh(from[ndigits - 1 - i]);
-}
-
-void vli_from_le64(u64 *dest, const void *src, uint ndigits)
-{
-	uint i;
-	const u64 *from = (u64 *)src;
-
-	for (i = 0; i < ndigits; i++)
-		dest[i] = le64toh(from[i]);
-}
-
-/* Sets dest = src. */
-static inline void vli_set(u64 *dest, const u64 *src, unsigned int ndigits)
-{
-	uint i;
-
-	for (i = 0; i < ndigits; i++)
-		dest[i] = src[i];
-}
-
-/* Returns sign of left - right. */
-int vli_cmp(const u64 *left, const u64 *right, unsigned int ndigits)
-{
-	int i;
-
-	for (i = ndigits - 1; i >= 0; i--) {
-		if (left[i] > right[i])
-			return 1;
-		else if (left[i] < right[i])
-			return -1;
-	}
-
-	return 0;
-}
-
-/* Computes result = in << c, returning carry. Can modify in place
- * (if result == in). 0 < shift < 64.
- */
-static u64 vli_lshift(u64 *result, const u64 *in, unsigned int shift,
-		      unsigned int ndigits)
-{
-	u64 carry = 0;
-	uint i;
-
-	for (i = 0; i < ndigits; i++) {
-		u64 temp = in[i];
-
-		result[i] = (temp << shift) | carry;
-		carry = temp >> (64 - shift);
-	}
-
-	return carry;
-}
-
-/* Computes vli = vli >> 1. */
-static void vli_rshift1(u64 *vli, unsigned int ndigits)
-{
-	u64 *end = vli;
-	u64 carry = 0;
-
-	vli += ndigits;
-
-	while (vli-- > end) {
-		u64 temp = *vli;
-		*vli = (temp >> 1) | carry;
-		carry = temp << 63;
-	}
-}
-
-/* Computes result = left + right, returning carry. Can modify in place. */
-static u64 vli_add(u64 *result, const u64 *left, const u64 *right,
-		   unsigned int ndigits)
-{
-	u64 carry = 0;
-	uint i;
-
-	for (i = 0; i < ndigits; i++) {
-		u64 sum;
-
-		sum = left[i] + right[i] + carry;
-		if (sum != left[i])
-			carry = (sum < left[i]);
-
-		result[i] = sum;
-	}
-
-	return carry;
-}
-
-/* Computes result = left + right, returning carry. Can modify in place. */
-static u64 vli_uadd(u64 *result, const u64 *left, u64 right,
-		    unsigned int ndigits)
-{
-	u64 carry = right;
-	uint i;
-
-	for (i = 0; i < ndigits; i++) {
-		u64 sum;
-
-		sum = left[i] + carry;
-		if (sum != left[i])
-			carry = (sum < left[i]);
-		else
-			carry = !!carry;
-
-		result[i] = sum;
-	}
-
-	return carry;
-}
-
-/* Computes result = left - right, returning borrow. Can modify in place. */
-u64 vli_sub(u64 *result, const u64 *left, const u64 *right,
-		   unsigned int ndigits)
-{
-	u64 borrow = 0;
-	uint i;
-
-	for (i = 0; i < ndigits; i++) {
-		u64 diff;
-
-		diff = left[i] - right[i] - borrow;
-		if (diff != left[i])
-			borrow = (diff > left[i]);
-
-		result[i] = diff;
-	}
-
-	return borrow;
-}
-
-/* Computes result = left - right, returning borrow. Can modify in place. */
-static u64 vli_usub(u64 *result, const u64 *left, u64 right,
-	     unsigned int ndigits)
-{
-	u64 borrow = right;
-	uint i;
-
-	for (i = 0; i < ndigits; i++) {
-		u64 diff;
-
-		diff = left[i] - borrow;
-		if (diff != left[i])
-			borrow = (diff > left[i]);
-
-		result[i] = diff;
-	}
-
-	return borrow;
-}
-
-static forceinline uint128_t mul_64_64(u64 left, u64 right)
-{
-#if defined(__SIZEOF_INT128__)
-	uint128_t result( (__uint128_t)left * right );
-#else
-	u64 a0 = left & 0xffffffffull;
-	u64 a1 = left >> 32;
-	u64 b0 = right & 0xffffffffull;
-	u64 b1 = right >> 32;
-	u64 m0 = a0 * b0;
-	u64 m1 = a0 * b1;
-	u64 m2 = a1 * b0;
-	u64 m3 = a1 * b1;
-
-	m2 += (m0 >> 32);
-	m2 += m1;
-
-	/* Overflow */
-	if (m2 < m1)
-		m3 += 0x100000000ull;
-
-	u64 m_low = (m0 & 0xffffffffull) | (m2 << 32);
-	u64 m_high = m3 + (m2 >> 32);
-	uint128_t	result(m_low, m_high);
-#endif
-	return result;
-}
-
-static forceinline uint128_t add_128_128(uint128_t a, uint128_t b)
-{
-#if defined(__SIZEOF_INT128__)
-	uint128_t result(a.data() + b.data());
-#else
-	u64 m_low = a.m_low + b.m_low;
-	u64 m_high = a.m_high + b.m_high + (result.m_low < a.m_low);
-	uint128_t result(m_low, m_high);
-#endif
-	return result;
-}
-
-void vli_mult(u64 *result, const u64 *left, const u64 *right,
-		     unsigned int ndigits)
-{
-	uint128_t r01( 0, 0 );
-	u64 r2 = 0;
-	unsigned int i, k;
-
-	/* Compute each digit of result in sequence, maintaining the
-	 * carries.
-	 */
-	for (k = 0; k < ndigits * 2 - 1; k++) {
-		unsigned int min;
-
-		if (k < ndigits)
-			min = 0;
-		else
-			min = (k + 1) - ndigits;
-
-		for (i = min; i <= k && i < ndigits; i++) {
-			uint128_t product;
-
-			//product = mul_64_64(left[i], right[k - i]);
-			product.mul_64_64(left[i], right[k - i]);
-
-			//r01 = add_128_128(r01, product);
-			r01 += product;
-			r2 += (r01.m_high() < product.m_high());
-		}
-
-		result[k] = r01.m_low();
-		r01 = uint128_t(r01.m_high(), r2);
-		//r01.m_low = r01.m_high;
-		//r01.m_high = r2;
-		r2 = 0;
-	}
-
-	result[ndigits * 2 - 1] = r01.m_low();
-}
-
-/* Compute product = left * right, for a small right value. */
-static void vli_umult(u64 *result, const u64 *left, u64 right,
-		      unsigned int ndigits)
-{
-	uint128_t r01( 0, 0 );
-	unsigned int k;
-
-	for (k = 0; k < ndigits; k++) {
-		uint128_t product;
-
-		//product = mul_64_64(left[k], right);
-		product.mul_64_64(left[k], right);
-		//r01 = add_128_128(r01, product);
-		r01 += product;
-		/* no carry */
-		result[k] = r01.m_low();
-		r01 = uint128_t(r01.m_high(), 0);
-		//r01.m_low = r01.m_high;
-		//r01.m_high = 0;
-	}
-	result[k] = r01.m_low();
-	for (++k; k < ndigits * 2; k++)
-		result[k] = 0;
-}
-
-static void vli_square(u64 *result, const u64 *left, unsigned int ndigits)
-{
-	uint128_t r01( 0, 0 );
-	u64 r2 = 0;
-	uint i, k;
-
-	for (k = 0; k < ndigits * 2 - 1; k++) {
-		unsigned int min;
-
-		if (k < ndigits)
-			min = 0;
-		else
-			min = (k + 1) - ndigits;
-
-		for (i = min; i <= k && i <= k - i; i++) {
-			uint128_t product;
-
-			//product = mul_64_64(left[i], left[k - i]);
-			product.mul_64_64(left[i], left[k - i]);
-
-			if (i < k - i) {
-				r2 += product.m_high() >> 63;
-#ifdef	ommit
-				product.m_high = (product.m_high << 1) |
-						 (product.m_low >> 63);
-				product.m_low <<= 1;
-#endif
-				u64 _high = (product.m_high() << 1) | (product.m_low() >> 63);
-				u64 _low = product.m_low() << 1;
-				product = uint128_t(_low, _high);
-			}
-
-			//r01 = add_128_128(r01, product);
-			r01 += product;
-			r2 += (r01.m_high() < product.m_high());
-		}
-
-		result[k] = r01.m_low();
-		//r01.m_low = r01.m_high;
-		//r01.m_high = r2;
-		r01 = uint128_t(r01.m_high(), r2);
-		r2 = 0;
-	}
-
-	result[ndigits * 2 - 1] = r01.m_low();
-}
-
-/* Computes result = (left + right) % mod.
- * Assumes that left < mod and right < mod, result != mod.
- */
-static void vli_mod_add(u64 *result, const u64 *left, const u64 *right,
-			const u64 *mod, unsigned int ndigits)
-{
-	u64 carry;
-
-	carry = vli_add(result, left, right, ndigits);
-
-	/* result > mod (result = mod + remainder), so subtract mod to
-	 * get remainder.
-	 */
-	if (carry || vli_cmp(result, mod, ndigits) >= 0)
-		vli_sub(result, result, mod, ndigits);
-}
-
-/* Computes result = (left - right) % mod.
- * Assumes that left < mod and right < mod, result != mod.
- */
-static void vli_mod_sub(u64 *result, const u64 *left, const u64 *right,
-			const u64 *mod, unsigned int ndigits)
-{
-	u64 borrow = vli_sub(result, left, right, ndigits);
-
-	/* In this case, p_result == -diff == (max int) - diff.
-	 * Since -x % d == d - x, we can get the correct result from
-	 * result + mod (with overflow).
-	 */
-	if (borrow)
-		vli_add(result, result, mod, ndigits);
-}
-
-/*
- * Computes result = product % mod
- * for special form moduli: p = 2^k-c, for small c (note the minus sign)
- *
- * References:
- * R. Crandall, C. Pomerance. Prime Numbers: A Computational Perspective.
- * 9 Fast Algorithms for Large-Integer Arithmetic. 9.2.3 Moduli of special form
- * Algorithm 9.2.13 (Fast mod operation for special-form moduli).
- */
-static void vli_mmod_special(u64 *result, const u64 *product,
-			      const u64 *mod, unsigned int ndigits)
-{
-	u64 c = -mod[0];
-	u64 t[ECC_MAX_DIGITS * 2];
-	u64 r[ECC_MAX_DIGITS * 2];
-
-	vli_set(r, product, ndigits * 2);
-	while (!vli_is_zero(r + ndigits, ndigits)) {
-		vli_umult(t, r + ndigits, c, ndigits);
-		vli_clear(r + ndigits, ndigits);
-		vli_add(r, r, t, ndigits * 2);
-	}
-	vli_set(t, mod, ndigits);
-	vli_clear(t + ndigits, ndigits);
-	while (vli_cmp(r, t, ndigits * 2) >= 0)
-		vli_sub(r, r, t, ndigits * 2);
-	vli_set(result, r, ndigits);
-}
-
-/*
- * Computes result = product % mod
- * for special form moduli: p = 2^{k-1}+c, for small c (note the plus sign)
- * where k-1 does not fit into qword boundary by -1 bit (such as 255).
-
- * References (loosely based on):
- * A. Menezes, P. van Oorschot, S. Vanstone. Handbook of Applied Cryptography.
- * 14.3.4 Reduction methods for moduli of special form. Algorithm 14.47.
- * URL: http://cacr.uwaterloo.ca/hac/about/chap14.pdf
- *
- * H. Cohen, G. Frey, R. Avanzi, C. Doche, T. Lange, K. Nguyen, F. Vercauteren.
- * Handbook of Elliptic and Hyperelliptic Curve Cryptography.
- * Algorithm 10.25 Fast reduction for special form moduli
- */
-static void vli_mmod_special2(u64 *result, const u64 *product,
-			       const u64 *mod, unsigned int ndigits)
-{
-	u64 c2 = mod[0] * 2;
-	u64 q[ECC_MAX_DIGITS];
-	u64 r[ECC_MAX_DIGITS * 2];
-	u64 m[ECC_MAX_DIGITS * 2]; /* expanded mod */
-	int carry; /* last bit that doesn't fit into q */
-	int i;
-
-	vli_set(m, mod, ndigits);
-	vli_clear(m + ndigits, ndigits);
-
-	vli_set(r, product, ndigits);
-	/* q and carry are top bits */
-	vli_set(q, product + ndigits, ndigits);
-	vli_clear(r + ndigits, ndigits);
-	carry = vli_is_negative(r, ndigits);
-	if (carry)
-		r[ndigits - 1] &= (1ull << 63) - 1;
-	for (i = 1; carry || !vli_is_zero(q, ndigits); i++) {
-		u64 qc[ECC_MAX_DIGITS * 2];
-
-		vli_umult(qc, q, c2, ndigits);
-		if (carry)
-			vli_uadd(qc, qc, mod[0], ndigits * 2);
-		vli_set(q, qc + ndigits, ndigits);
-		vli_clear(qc + ndigits, ndigits);
-		carry = vli_is_negative(qc, ndigits);
-		if (carry)
-			qc[ndigits - 1] &= (1ull << 63) - 1;
-		if (i & 1)
-			vli_sub(r, r, qc, ndigits * 2);
-		else
-			vli_add(r, r, qc, ndigits * 2);
-	}
-	while (vli_is_negative(r, ndigits * 2))
-		vli_add(r, r, m, ndigits * 2);
-	while (vli_cmp(r, m, ndigits * 2) >= 0)
-		vli_sub(r, r, m, ndigits * 2);
-
-	vli_set(result, r, ndigits);
-}
-
-/*
- * Computes result = product % mod, where product is 2N words long.
- * Reference: Ken MacKay's micro-ecc.
- * Currently only designed to work for curve_p or curve_n.
- */
-static void vli_mmod_slow(u64 *result, u64 *product, const u64 *mod,
-			  unsigned int ndigits)
-{
-	u64 mod_m[2 * ECC_MAX_DIGITS];
-	u64 tmp[2 * ECC_MAX_DIGITS];
-	u64 *v[2] = { tmp, product };
-	u64 carry = 0;
-	unsigned int i;
-	/* Shift mod so its highest set bit is at the maximum position. */
-	int shift = (ndigits * 2 * 64) - vli_num_bits(mod, ndigits);
-	int word_shift = shift / 64;
-	int bit_shift = shift % 64;
-
-	vli_clear(mod_m, word_shift);
-	if (bit_shift > 0) {
-		for (i = 0; i < ndigits; ++i) {
-			mod_m[word_shift + i] = (mod[i] << bit_shift) | carry;
-			carry = mod[i] >> (64 - bit_shift);
-		}
-	} else
-		vli_set(mod_m + word_shift, mod, ndigits);
-
-	for (i = 1; shift >= 0; --shift) {
-		u64 borrow = 0;
-		unsigned int j;
-
-		for (j = 0; j < ndigits * 2; ++j) {
-			u64 diff = v[i][j] - mod_m[j] - borrow;
-
-			if (diff != v[i][j])
-				borrow = (diff > v[i][j]);
-			v[1 - i][j] = diff;
-		}
-		i = !(i ^ borrow); /* Swap the index if there was no borrow */
-		vli_rshift1(mod_m, ndigits);
-		mod_m[ndigits - 1] |= mod_m[ndigits] << (64 - 1);
-		vli_rshift1(mod_m + ndigits, ndigits);
-	}
-	vli_set(result, v[i], ndigits);
-}
-#endif
-
-/* Computes result = product % mod using Barrett's reduction with precomputed
- * value mu appended to the mod after ndigits, mu = (2^{2w} / mod) and have
- * length ndigits + 1, where mu * (2^w - 1) should not overflow ndigits
- * boundary.
- *
- * Reference:
- * R. Brent, P. Zimmermann. Modern Computer Arithmetic. 2010.
- * 2.4.1 Barrett's algorithm. Algorithm 2.5.
- */
-void vli_mmod_barrett(u64 *result, u64 *product, const u64 *mod,
-			     unsigned int ndigits)
-{
-	vli_mmod_barrett<4>(result, product, mod);
-#ifdef	ommit
-	u64 q[ECC_MAX_DIGITS * 2];
-	u64 r[ECC_MAX_DIGITS * 2];
-	const u64 *mu = mod + ndigits;
-
-	vli_mult(q, product + ndigits, mu, ndigits);
-	if (mu[ndigits])
-		vli_add(q + ndigits, q + ndigits, product + ndigits, ndigits);
-#ifdef	ommit
-	vli_mult(r, mod, q + ndigits, ndigits);
-#else
-	// add remain * mod
-	vli_set(r, q+ndigits, ndigits);
-	q[2*ndigits] = 0;
-	vli_umult(q, mu, product[ndigits-1], ndigits);
-	if (mu[ndigits])
-		vli_uadd(q + ndigits, q + ndigits, product[ndigits-1], ndigits);
-	vli_add(result, r, q+ndigits+1, ndigits);
-	vli_mult(r, mod, result, ndigits);
-#endif
-	vli_sub(r, product, r, ndigits * 2);
-	while (!vli_is_zero(r + ndigits, ndigits) ||
-	       vli_cmp(r, mod, ndigits) != -1) {
-		u64 carry;
-
-		carry = vli_sub(r, r, mod, ndigits);
-		vli_usub(r + ndigits, r + ndigits, carry, ndigits);
-	}
-	vli_set(result, r, ndigits);
-#endif
-}
-
-void vli_div_barrett(u64 *result, u64 *product, const u64 *mu,
-			     unsigned int ndigits)
-{
-	vli_div_barrett<4>(result, product, mu);
-#ifdef	ommit
-	u64 q[ECC_MAX_DIGITS * 2];
-	u64 r[ECC_MAX_DIGITS * 2];
-
-	vli_mult(q, product + ndigits, mu, ndigits);
-	if (mu[ndigits])
-		vli_add(q + ndigits, q + ndigits, product + ndigits, ndigits);
-	vli_set(r, q+ndigits, ndigits);
-	q[2*ndigits] = 0;
-	vli_umult(q, mu, product[ndigits-1], ndigits);
-	if (mu[ndigits])
-		vli_uadd(q + ndigits, q + ndigits, product[ndigits-1], ndigits);
-	vli_add(result, r, q+ndigits+1, ndigits);
-#endif
-}
 
 /* Computes p_result = p_product % curve_p.
  * See algorithm 5 and 6 from
@@ -847,116 +249,17 @@ void vli_mod_mult_fast(u64 *result, const u64 *left, const u64 *right,
 	vli_mmod_fast(result, product, curve_prime, ndigits);
 }
 
-#ifdef	ommit
-/* Computes result = left^2 % curve_prime. */
-static void vli_mod_square_fast(u64 *result, const u64 *left,
-				const u64 *curve_prime, unsigned int ndigits)
-{
-	u64 product[2 * ECC_MAX_DIGITS];
 
-	vli_square(product, left, ndigits);
-	vli_mmod_fast(result, product, curve_prime, ndigits);
-}
-
-#define EVEN(vli) (!(vli[0] & 1))
-/* Computes result = (1 / p_input) % mod. All VLIs are the same size.
- * See "From Euclid's GCD to Montgomery Multiplication to the Great Divide"
- * https://labs.oracle.com/techrep/2001/smli_tr-2001-95.pdf
- */
-void vli_mod_inv(u64 *result, const u64 *input, const u64 *mod,
-			unsigned int ndigits)
-{
-	u64 a[ECC_MAX_DIGITS], b[ECC_MAX_DIGITS];
-	u64 u[ECC_MAX_DIGITS], v[ECC_MAX_DIGITS];
-	u64 carry;
-	int cmp_result;
-
-	if (vli_is_zero(input, ndigits)) {
-		vli_clear(result, ndigits);
-		return;
-	}
-
-	vli_set(a, input, ndigits);
-	vli_set(b, mod, ndigits);
-	vli_clear(u, ndigits);
-	u[0] = 1;
-	vli_clear(v, ndigits);
-
-	while ((cmp_result = vli_cmp(a, b, ndigits)) != 0) {
-		carry = 0;
-
-		if (EVEN(a)) {
-			vli_rshift1(a, ndigits);
-
-			if (!EVEN(u))
-				carry = vli_add(u, u, mod, ndigits);
-
-			vli_rshift1(u, ndigits);
-			if (carry)
-				u[ndigits - 1] |= 0x8000000000000000ull;
-		} else if (EVEN(b)) {
-			vli_rshift1(b, ndigits);
-
-			if (!EVEN(v))
-				carry = vli_add(v, v, mod, ndigits);
-
-			vli_rshift1(v, ndigits);
-			if (carry)
-				v[ndigits - 1] |= 0x8000000000000000ull;
-		} else if (cmp_result > 0) {
-			vli_sub(a, a, b, ndigits);
-			vli_rshift1(a, ndigits);
-
-			if (vli_cmp(u, v, ndigits) < 0)
-				vli_add(u, u, mod, ndigits);
-
-			vli_sub(u, u, v, ndigits);
-			if (!EVEN(u))
-				carry = vli_add(u, u, mod, ndigits);
-
-			vli_rshift1(u, ndigits);
-			if (carry)
-				u[ndigits - 1] |= 0x8000000000000000ull;
-		} else {
-			vli_sub(b, b, a, ndigits);
-			vli_rshift1(b, ndigits);
-
-			if (vli_cmp(v, u, ndigits) < 0)
-				vli_add(v, v, mod, ndigits);
-
-			vli_sub(v, v, u, ndigits);
-			if (!EVEN(v))
-				carry = vli_add(v, v, mod, ndigits);
-
-			vli_rshift1(v, ndigits);
-			if (carry)
-				v[ndigits - 1] |= 0x8000000000000000ull;
-		}
-	}
-
-	vli_set(result, u, ndigits);
-}
-#endif
-
-void vli_mod_inv(u64 *result, const u64 *input, const u64 *mod,
-			unsigned int ndigits)
+void vli_mod_inv(u64 *result, const u64 *input, const u64 *mod, unsigned int ndigits)
 {
 	vli_mod_inv<4>(result, input, mod);
 }
 
-void vli_mult(u64 *result, const u64 *left, const u64 *right,
-		     unsigned int ndigits)
+void vli_mult(u64 *result, const u64 *left, const u64 *right, unsigned int ndigits)
 {
 	vli_mult<4>(result, left, right);
 }
 
-#ifdef	ommit
-u64 vli_sub(u64 *result, const u64 *left, const u64 *right,
-	    unsigned int ndigits)
-{
-	return vli_sub<4>(result, left, right);
-}
-#endif
 
 void vli_from_be64(u64 *dest, const void *src, uint ndigits)
 {
@@ -1245,6 +548,8 @@ static void ecc_point_mult(u64 *result_x, u64 *result_y,
 }
 
 /* Computes R = P + Q mod p */
+template<uint ndigits> forceinline
+__attribute__((optimize("unroll-loops")))
 static void ecc_point_add(u64 *result_x, u64 *result_y,
 		   const u64 *p_x, const u64 *p_y, const u64 *q_x, const u64 *q_y,
 		   const struct ecc_curve *curve)
@@ -1252,63 +557,40 @@ static void ecc_point_add(u64 *result_x, u64 *result_y,
 	u64 z[ECC_MAX_DIGITS];
 	u64 px[ECC_MAX_DIGITS];
 	u64 py[ECC_MAX_DIGITS];
-	unsigned int ndigits = curve->ndigits;
 
-	if (ndigits != 4) return;	// NOOOO
-	vli_set<4>((u64 *)result_x, (u64 *)q_x);
-	vli_set<4>((u64 *)result_y, (u64 *)q_y);
-	vli_mod_sub<4>(z, result_x, p_x, curve->p);
-	vli_set<4>(px, p_x);
-	vli_set<4>(py, p_y);
-	xycz_add<4>(px, py, result_x, result_y, curve->p);
-	vli_mod_inv<4>(z, z, curve->p);
-	apply_z<4>(result_x, result_y, z, curve->p);
+	if (ndigits != curve->ndigits) return;	// NOOOO
+	vli_set<ndigits>((u64 *)result_x, (u64 *)q_x);
+	vli_set<ndigits>((u64 *)result_y, (u64 *)q_y);
+	vli_mod_sub<ndigits>(z, result_x, p_x, curve->p);
+	vli_set<ndigits>(px, p_x);
+	vli_set<ndigits>(py, p_y);
+	xycz_add<ndigits>(px, py, result_x, result_y, curve->p);
+	vli_mod_inv<ndigits>(z, z, curve->p);
+	apply_z<ndigits>(result_x, result_y, z, curve->p);
 }
 
-template<uint ndigits> forceinline
-__attribute__((optimize("unroll-loops")))
-static void mont_reduction(u64 *result, const u64 *yy, const u64 *prime,
-			const u64 k0) noexcept
+/* Computes result = product % mod using Barrett's reduction with precomputed
+ * value mu appended to the mod after ndigits, mu = (2^{2w} / mod) and have
+ * length ndigits + 1, where mu * (2^w - 1) should not overflow ndigits
+ * boundary.
+ *
+ * Reference:
+ * R. Brent, P. Zimmermann. Modern Computer Arithmetic. 2010.
+ * 2.4.1 Barrett's algorithm. Algorithm 2.5.
+ */
+void vli_mmod_barrett(u64 *result, u64 *product, const u64 *mod,
+			     unsigned int ndigits)
 {
-	u64	t[ECC_MAX_DIGITS * 2];
-	u64	s[ECC_MAX_DIGITS * 2];
-	u64	r[ECC_MAX_DIGITS * 2];
-	vli_clear<ndigits * 2>(r);
-	for (uint i=0; i < ndigits; i++) {
-		u64	u = (r[0] + yy[i]) * k0;
-		vli_umult<ndigits>(s, prime, u);
-		vli_uadd<ndigits>(t, s, yy[i]);
-		vli_add<ndigits * 2>(r, r, s);
-		vli_rshift1w<ndigits * 2>(r);	
-	}
-	if (r[ndigits] !=0 || vli_cmp<ndigits>(r, prime) >= 0) {
-		vli_sub<ndigits>(result, r, prime);
-	} else vli_set<ndigits>(result, r);
+	vli_mmod_barrett<4>(result, product, mod);
 }
 
-template<uint ndigits> forceinline
-__attribute__((optimize("unroll-loops")))
-static void mont_mult(u64 *result, const u64 *x, const u64 *y, const u64 *prime,
-				const u64 k0) noexcept
+void vli_div_barrett(u64 *result, u64 *product, const u64 *mu,
+			     unsigned int ndigits)
 {
-	u64	t[ECC_MAX_DIGITS * 2];
-	u64	s[ECC_MAX_DIGITS * 2];
-	u64	r[ECC_MAX_DIGITS * 2];
-	vli_clear<ndigits * 2>(r);
-	for (uint i=0; i < ndigits;i++) {
-		u64	u = (r[0] + y[i]*x[0]) * k0;
-		vli_umult<ndigits>(s, prime, u);
-		vli_umult<ndigits>(t, x, y[i]);
-		vli_add<ndigits * 2>(r, r, s);
-		vli_add<ndigits * 2>(r, r, t);
-		vli_rshift1w<ndigits * 2>(r);	
-	}
-	if (r[ndigits] != 0 || vli_cmp<ndigits>(r, prime) >= 0) {
-		vli_sub<ndigits>(result, r, prime);
-	} else vli_set<ndigits>(result, r);
+	vli_div_barrett<4>(result, product, mu);
 }
 
-static u64 montOne[]={1, 0, 0, 0};
+//static u64 montOne[]={1, 0, 0, 0};
 void mont_MulMod(u64 *result, const u64 *x, const u64 *y, const u64 *prime,
 				const u64 *rr, const u64 k0)
 {
@@ -1318,11 +600,27 @@ void mont_MulMod(u64 *result, const u64 *x, const u64 *y, const u64 *prime,
 	mont_mult<4>(xp, x, rr, prime, k0);
 	mont_mult<4>(yp, y, rr, prime, k0);
 	mont_mult<4>(r, xp, yp, prime, k0);
-	mont_mult<4>(result, montOne, r, prime, k0);
-	//mont_reduction<4>(result, r, prime, k0);
+	//mont_mult<4>(result, montOne, r, prime, k0);
+	mont_reduction<4>(result, r, prime, k0);
 }
 
-#ifdef	ommit
+void mont_ExpMod(u64 *result, const u64 *x, const u64 *y, const u64 *prime,
+				const u64 *rr, const u64 k0)
+{
+	u64	xp[ECC_MAX_DIGITS];
+	u64	t[ECC_MAX_DIGITS];
+	int	num_bits = vli_num_bits<4>(y);
+	mont_mult<4>(xp, x, rr, prime, k0);
+	mont_reduction<4>(t, rr, prime, k0);
+	for (int i = num_bits - 1;i >= 0; i--) {
+		mont_mult<4>(t, t, t, prime, k0);
+		if (vli_test_bit(y, i)) mont_mult<4>(t, t, xp, prime, k0);
+	}
+	//mont_mult<4>(result, montOne, t, prime, k0);
+	mont_reduction<4>(result, t, prime, k0);
+}
+
+#ifdef	WITH_SHAMIR
 /* Computes R = u1P + u2Q mod p using Shamir's trick.
  * Based on: Kenneth MacKay's micro-ecc (2014).
  */
@@ -1380,8 +678,8 @@ void ecc_point_mult_shamir(const u64 *result_x, const u64 *result_y,
 }
 #endif
 
-static inline void ecc_swap_digits(const u64 *in, u64 *out,
-				   unsigned int ndigits)
+forceinline __attribute__((optimize("unroll-loops")))
+static void ecc_swap_digits(const u64 *in, u64 *out, uint ndigits)
 {
 	const be64 *src = (be64 *)in;
 	uint i;

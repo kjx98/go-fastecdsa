@@ -178,7 +178,7 @@ template<uint ndigits> forceinline
 __attribute__((optimize("unroll-loops")))
 static bool vli_uadd(u64 *result, const u64 *left, u64 right) noexcept
 {
-#ifdef	ommit
+#ifdef	NO_INT128
 	u64 carry = right;
 	uint i;
 	for (i = 0; i < ndigits; i++) {
@@ -239,7 +239,7 @@ template<uint ndigits> forceinline
 __attribute__((optimize("unroll-loops")))
 static bool vli_usub(u64 *result, const u64 *left, u64 right) noexcept
 {
-#ifdef	ommit
+#ifdef	NO_INT128
 	u64 borrow = right;
 	uint i;
 	for (i = 0; i < ndigits; i++) {
@@ -262,10 +262,13 @@ static bool vli_usub(u64 *result, const u64 *left, u64 right) noexcept
 }
 
 template<uint ndigits> forceinline
-__attribute__((optimize("unroll-loops")))
 static bool vli_is_negative(const u64 *vli)  noexcept
 {
 	return vli_test_bit(vli, ndigits * 64 - 1);
+}
+
+forceinline static bool vli_is_even(u64 *vli) noexcept {
+	return (vli[0] & 1) == 0;
 }
 
 /* Counts the number of 64-bit "digits" in vli. */
@@ -505,11 +508,6 @@ static void vli_square(u64 *result, const u64 *left) noexcept
 
 			if (i < k - i) {
 				r2 += product.m_high() >> 63;
-#ifdef	ommit
-				product.m_high = (product.m_high << 1) |
-						 (product.m_low >> 63);
-				product.m_low <<= 1;
-#endif
 				u64 _high = (product.m_high() << 1) | (product.m_low() >> 63);
 				u64 _low = product.m_low() << 1;
 				product = uint128_t(_low, _high);

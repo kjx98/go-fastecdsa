@@ -163,6 +163,8 @@ void vli_mmod_barrett(u64 *result, u64 *product, const u64 *mod, uint ndigits);
 void vli_div_barrett(u64 *result, u64 *product, const u64 *mod, uint ndigits);
 void mont_MulMod(u64 *result, const u64 *x, const u64 *y, const u64 *prime,
 				const u64 *rr, const u64 k0);
+void mont_ExpMod(u64 *result, const u64 *x, const u64 *y, const u64 *prime,
+				const u64 *rr, const u64 k0);
 
 /**
  * vli_mod_mult_slow() - Modular multiplication

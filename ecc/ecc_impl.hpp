@@ -215,6 +215,48 @@ void vli_div_barrett(u64 *result, u64 *product, const u64 *mu) noexcept
 	vli_add<ndigits>(result, r, q+ndigits+1);
 }
 
+template<uint ndigits> forceinline
+__attribute__((optimize("unroll-loops")))
+static void mont_reduction(u64 *result, const u64 *y, const u64 *prime,
+			const u64 k0) noexcept
+{
+	u64	s[ECC_MAX_DIGITS * 2];
+	u64	r[ECC_MAX_DIGITS * 2];
+	vli_clear<ndigits * 2>(r);
+	for (uint i=0; i < ndigits; i++) {
+		u64	u = (r[0] + y[i]) * k0;
+		vli_umult<ndigits>(s, prime, u);
+		vli_uadd<ndigits * 2>(r, r, y[i]);
+		vli_add<ndigits * 2>(r, r, s);
+		vli_rshift1w<ndigits + 2>(r);	
+	}
+	if (r[ndigits] !=0 || vli_cmp<ndigits>(r, prime) >= 0) {
+		vli_sub<ndigits>(result, r, prime);
+	} else vli_set<ndigits>(result, r);
+}
+
+template<uint ndigits> forceinline
+__attribute__((optimize("unroll-loops")))
+static void mont_mult(u64 *result, const u64 *x, const u64 *y, const u64 *prime,
+				const u64 k0) noexcept
+{
+	u64	t[ECC_MAX_DIGITS * 2];
+	u64	s[ECC_MAX_DIGITS * 2];
+	u64	r[ECC_MAX_DIGITS * 2];
+	vli_clear<ndigits * 2>(r);
+	for (uint i=0; i < ndigits;i++) {
+		u64	u = (r[0] + y[i]*x[0]) * k0;
+		vli_umult<ndigits>(s, prime, u);
+		vli_umult<ndigits>(t, x, y[i]);
+		vli_add<ndigits * 2>(r, r, s);
+		vli_add<ndigits * 2>(r, r, t);
+		vli_rshift1w<ndigits + 2>(r);	
+	}
+	if (r[ndigits] != 0 || vli_cmp<ndigits>(r, prime) >= 0) {
+		vli_sub<ndigits>(result, r, prime);
+	} else vli_set<ndigits>(result, r);
+}
+
 static bool vli_mmod_fast(u64 *result, u64 *product,const u64 *curve_prime, unsigned int ndigits);
 /* Computes result = left^2 % curve_prime. */
 template<uint ndigits> forceinline
@@ -228,9 +270,6 @@ static void vli_mod_square_fast(u64 *result, const u64 *left,
 	vli_mmod_fast(result, product, curve_prime, ndigits);
 }
 
-forceinline static bool vli_is_even(u64 *vli) noexcept {
-	return (vli[0] & 1) == 0;
-}
 
 /* Computes result = (1 / p_input) % mod. All VLIs are the same size.
  * See "From Euclid's GCD to Montgomery Multiplication to the Great Divide"

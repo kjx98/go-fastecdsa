@@ -78,6 +78,16 @@ func vliModMultMont(x, y, mod []big.Word, rr []uint64, k0 uint64) (res *big.Int)
 	return
 }
 
+func vliExpModMont(x, y, mod []big.Word, rr []uint64, k0 uint64) (res *big.Int) {
+	var r [4]big.Word
+	C.mont_ExpMod((*C.u64)(unsafe.Pointer(&r[0])),
+		(*C.u64)(unsafe.Pointer(&x[0])), (*C.u64)(unsafe.Pointer(&y[0])),
+		(*C.u64)(unsafe.Pointer(&mod[0])), (*C.u64)(unsafe.Pointer(&rr[0])),
+		C.u64(k0))
+	res = new(big.Int).SetBits(r[:4])
+	return
+}
+
 func vliFromBE64(src []byte) (dest []C.u64) {
 	var res [4]C.u64
 	var ss [32]byte
