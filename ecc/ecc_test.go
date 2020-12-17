@@ -9,6 +9,7 @@ import (
 var (
 	x1, y1 *big.Int
 	x2, y2 *big.Int
+	rr	[]uint64
 )
 
 func init() {
@@ -16,6 +17,7 @@ func init() {
 	y1, _ = new(big.Int).SetString("81307578426096630754000956949482484966368962694792140728234975018259774469569", 10)
 	x2, _ = new(big.Int).SetString("48121564271922987841895377752074498583012355812029682461364979458450873405695", 10)
 	y2, _ = new(big.Int).SetString("37446874645719659508108418738243030372422533994743756508347851178597805285404", 10)
+	rr = []uint64{0x200000003, 0x2ffffffff, 0x100000001, 0x400000002}
 }
 
 func TestEccMMod(t *testing.T) {
@@ -43,14 +45,49 @@ func TestEccMMod(t *testing.T) {
 	}
 }
 
+func TestEccMulModMont(t *testing.T) {
+	p := sm2.P256().Params().P
+	xy := new(big.Int).Mul(x1, y1)
+	xyMod := new(big.Int).Mod(xy, p)
+	bMod := vliModMultMont(x1.Bits(), y1.Bits(), p.Bits(), rr, 1)
+	if bMod.Cmp(xyMod) != 0 {
+		t.Logf("big.mulmod diff barrett ModMultBarrett:\n%s vs\n%s\n",
+			xyMod.Text(16), bMod.Text(16))
+		t.Fail()
+	}
+}
+
 func TestEccInverse(t *testing.T) {
 	p := sm2.P256().Params().P
+	two := big.NewInt(2)
+	nMinus2 := new(big.Int).Sub(p, two)
+	eInv := new(big.Int).Exp(x1, nMinus2, p)
 	inv := new(big.Int).ModInverse(x1, p)
+	if inv.Cmp(eInv) != 0 {
+		t.Logf("vliModInv diff: ModInverse vs fermatInverse\n%s\n%s",
+				inv.Text(16), eInv.Text(16))
+		t.Fail()
+	}
 	ww := vliModInv(x1.Bytes(), p.Bytes())
 	cInv := new(big.Int).SetBits(ww)
 	if cInv.Cmp(inv) != 0 {
 		t.Logf("vliModInv diff: ModInverse vs vliModInv\n%s\n%s",
 				inv.Text(16), cInv.Text(16))
+		t.Fail()
+	}
+	eInv = new(big.Int).Exp(x2, nMinus2, p)
+	inv = new(big.Int).ModInverse(x2, p)
+	if inv.Cmp(eInv) != 0 {
+		t.Logf("vliModInv diff: ModInverse vs fermatInverse\n%s\n%s",
+				inv.Text(16), eInv.Text(16))
+		t.Fail()
+	}
+	ww = vliModInv(x2.Bytes(), p.Bytes())
+	cInv = new(big.Int).SetBits(ww)
+	if cInv.Cmp(inv) != 0 {
+		t.Logf("vliModInv diff: ModInverse vs vliModInv\n%s\n%s",
+				inv.Text(16), cInv.Text(16))
+		t.Fail()
 	}
 }
 

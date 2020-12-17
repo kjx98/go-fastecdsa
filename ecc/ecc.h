@@ -122,41 +122,6 @@ int ecc_is_pubkey_valid_partial(const uint curve_id,
 				const u64 *px, const u64 *py);
 
 /**
- * vli_is_zero() - Determine is vli is zero
- *
- * @vli:		vli to check.
- * @ndigits:		length of the @vli
- */
-bool vli_is_zero(const u64 *vli, unsigned int ndigits);
-
-/**
- * vli_cmp() - compare left and right vlis
- *
- * @left:		vli
- * @right:		vli
- * @ndigits:		length of both vlis
- *
- * Returns sign of @left - @right, i.e. -1 if @left < @right,
- * 0 if @left == @right, 1 if @left > @right.
- */
-int vli_cmp(const u64 *left, const u64 *right, unsigned int ndigits);
-
-/**
- * vli_sub() - Subtracts right from left
- *
- * @result:		where to write result
- * @left:		vli
- * @right		vli
- * @ndigits:		length of all vlis
- *
- * Note: can modify in-place.
- *
- * Return: carry bit.
- */
-u64 vli_sub(u64 *result, const u64 *left, const u64 *right,
-	    unsigned int ndigits);
-
-/**
  * vli_from_be64() - Load vli from big-endian u64 array
  *
  * @dest:		destination vli
@@ -182,10 +147,8 @@ void vli_from_le64(u64 *dest, const void *src, uint ndigits);
  * @mod:		modulus
  * @ndigits:		length of all vlis
  */
-void vli_mod_inv(u64 *result, const u64 *input, const u64 *mod,
-		 unsigned int ndigits);
-void vli_mult(u64 *result, const u64 *left, const u64 *right,
-		     unsigned int ndigits);
+void vli_mod_inv(u64 *result, const u64 *input, const u64 *mod, uint ndigits);
+void vli_mult(u64 *result, const u64 *left, const u64 *right, uint ndigits);
 
 /* Computes result = product % mod using Barrett's reduction with precomputed
  * value mu appended to the mod after ndigits, mu = (2^{2w} / mod) and have
@@ -196,10 +159,10 @@ void vli_mult(u64 *result, const u64 *left, const u64 *right,
  * R. Brent, P. Zimmermann. Modern Computer Arithmetic. 2010.
  * 2.4.1 Barrett's algorithm. Algorithm 2.5.
  */
-void vli_mmod_barrett(u64 *result, u64 *product, const u64 *mod,
-			     unsigned int ndigits);
-void vli_div_barrett(u64 *result, u64 *product, const u64 *mod,
-			     unsigned int ndigits);
+void vli_mmod_barrett(u64 *result, u64 *product, const u64 *mod, uint ndigits);
+void vli_div_barrett(u64 *result, u64 *product, const u64 *mod, uint ndigits);
+void mont_MulMod(u64 *result, const u64 *x, const u64 *y, const u64 *prime,
+				const u64 *rr, const u64 k0);
 
 /**
  * vli_mod_mult_slow() - Modular multiplication

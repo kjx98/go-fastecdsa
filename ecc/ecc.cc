@@ -76,9 +76,7 @@ bool vli_is_zero(const u64 *vli, uint ndigits)
 
 	return true;
 }
-#endif
 
-#ifdef	ommit
 static bool inline vli_is_negative(const u64 *vli, uint ndigits)
 {
 	return vli_test_bit(vli, ndigits * 64 - 1);
@@ -952,11 +950,13 @@ void vli_mult(u64 *result, const u64 *left, const u64 *right,
 	vli_mult<4>(result, left, right);
 }
 
+#ifdef	ommit
 u64 vli_sub(u64 *result, const u64 *left, const u64 *right,
 	    unsigned int ndigits)
 {
 	return vli_sub<4>(result, left, right);
 }
+#endif
 
 void vli_from_be64(u64 *dest, const void *src, uint ndigits)
 {
@@ -1265,58 +1265,61 @@ static void ecc_point_add(u64 *result_x, u64 *result_y,
 	apply_z<4>(result_x, result_y, z, curve->p);
 }
 
-static void mont_reduction(u64 *result, const u64 *prod, const u64 *prime,
+template<uint ndigits> forceinline
+__attribute__((optimize("unroll-loops")))
+static void mont_reduction(u64 *result, const u64 *yy, const u64 *prime,
 			const u64 k0) noexcept
 {
 	u64	t[ECC_MAX_DIGITS * 2];
 	u64	s[ECC_MAX_DIGITS * 2];
 	u64	r[ECC_MAX_DIGITS * 2];
-	vli_clear<8>(r);
-	for (uint i=0; i<4; i++) {
-		u64	u = (r[0] + prod[i]) * k0;
-		vli_umult<4>(s, prime, u);
-		vli_uadd<8>(t, s, prod[i]);
-		vli_add<8>(r, r, t);
-		vli_rshift1w<8>(r);
+	vli_clear<ndigits * 2>(r);
+	for (uint i=0; i < ndigits; i++) {
+		u64	u = (r[0] + yy[i]) * k0;
+		vli_umult<ndigits>(s, prime, u);
+		vli_uadd<ndigits>(t, s, yy[i]);
+		vli_add<ndigits * 2>(r, r, s);
+		vli_rshift1w<ndigits * 2>(r);	
 	}
-	if (!vli_is_zero<4>(r+4) || vli_cmp<4>(r, prime) >= 0) {
-		vli_sub<4>(r, r, prime);
-	}
-	vli_set<4>(result, r);
+	if (r[ndigits] !=0 || vli_cmp<ndigits>(r, prime) >= 0) {
+		vli_sub<ndigits>(result, r, prime);
+	} else vli_set<ndigits>(result, r);
 }
 
-
+template<uint ndigits> forceinline
+__attribute__((optimize("unroll-loops")))
 static void mont_mult(u64 *result, const u64 *x, const u64 *y, const u64 *prime,
 				const u64 k0) noexcept
 {
 	u64	t[ECC_MAX_DIGITS * 2];
 	u64	s[ECC_MAX_DIGITS * 2];
 	u64	r[ECC_MAX_DIGITS * 2];
-	vli_clear<8>(r);
-	for (uint i=0; i<4;i++) {
+	vli_clear<ndigits * 2>(r);
+	for (uint i=0; i < ndigits;i++) {
 		u64	u = (r[0] + y[i]*x[0]) * k0;
-		vli_umult<4>(s, prime, u);
-		vli_umult<4>(t, x, y[i]);
-		vli_add<8>(t, t, s);
-		vli_add<8>(r, r, t);
-		vli_rshift1w<8>(r);	
+		vli_umult<ndigits>(s, prime, u);
+		vli_umult<ndigits>(t, x, y[i]);
+		vli_add<ndigits * 2>(r, r, s);
+		vli_add<ndigits * 2>(r, r, t);
+		vli_rshift1w<ndigits * 2>(r);	
 	}
-	if (!vli_is_zero<4>(r+4) || vli_cmp<4>(r, prime) >= 0) {
-		vli_sub<4>(r, r, prime);
-	}
-	vli_set<4>(result, r);
+	if (r[ndigits] != 0 || vli_cmp<ndigits>(r, prime) >= 0) {
+		vli_sub<ndigits>(result, r, prime);
+	} else vli_set<ndigits>(result, r);
 }
 
+static u64 montOne[]={1, 0, 0, 0};
 void mont_MulMod(u64 *result, const u64 *x, const u64 *y, const u64 *prime,
-				const u64 *rr, const u64 k0) noexcept
+				const u64 *rr, const u64 k0)
 {
 	u64	xp[ECC_MAX_DIGITS];
 	u64	yp[ECC_MAX_DIGITS];
 	u64	r[ECC_MAX_DIGITS];
-	mont_mult(xp, x, rr, prime, k0);
-	mont_mult(yp, y, rr, prime, k0);
-	mont_mult(r, xp, yp, prime, k0);
-	mont_reduction(result, r, prime, k0);
+	mont_mult<4>(xp, x, rr, prime, k0);
+	mont_mult<4>(yp, y, rr, prime, k0);
+	mont_mult<4>(r, xp, yp, prime, k0);
+	mont_mult<4>(result, montOne, r, prime, k0);
+	//mont_reduction<4>(result, r, prime, k0);
 }
 
 #ifdef	ommit
