@@ -13,11 +13,10 @@ import (
 
 // Functions implemented in ecc_asm_*64.s
 // Montgomery inverse modulo P256
-func vliModInv(input, modB []byte) (result []big.Word) {
+func vliModInv(in, mod []big.Word) (result []big.Word) {
 	var res [4]big.Word
-	in := vliFromBE64(input)
-	mod := vliFromBE64(modB)
-	C.vli_mod_inv((*C.u64)(unsafe.Pointer(&res[0])), &in[0], &mod[0], 4)
+	C.vli_mod_inv((*C.u64)(unsafe.Pointer(&res[0])),
+		(*C.u64)(unsafe.Pointer(&in[0])), (*C.u64)(unsafe.Pointer(&mod[0])))
 	result = res[:]
 	return
 }
@@ -33,10 +32,10 @@ func vliModMult(left, right, mdU []big.Word) (result *big.Int) {
 	copy(mod[:], mdU)
 	C.vli_mult((*C.u64)(unsafe.Pointer(&prod[0])),
 		(*C.u64)(unsafe.Pointer(&lf[0])),
-		(*C.u64)(unsafe.Pointer(&rt[0])), 4)
+		(*C.u64)(unsafe.Pointer(&rt[0])))
 	C.vli_mmod_barrett((*C.u64)((unsafe.Pointer)(&res[0])),
 		(*C.u64)(unsafe.Pointer(&prod[0])),
-		(*C.u64)(unsafe.Pointer(&mod[0])), 4)
+		(*C.u64)(unsafe.Pointer(&mod[0])))
 	result = new(big.Int).SetBits(res[:4])
 	return
 }
@@ -50,7 +49,7 @@ func vliModMultBarrett(left, right *big.Int, mdU []big.Word) (result *big.Int) {
 	copy(mod[:], mdU)
 	C.vli_mmod_barrett((*C.u64)((unsafe.Pointer)(&res[0])),
 		(*C.u64)(unsafe.Pointer(&prd[0])),
-		(*C.u64)(unsafe.Pointer(&mod[0])), 4)
+		(*C.u64)(unsafe.Pointer(&mod[0])))
 	result = new(big.Int).SetBits(res[:4])
 	return
 }
@@ -63,7 +62,7 @@ func vliBarrettDiv(prod *big.Int, muB []big.Word) (result *big.Int) {
 	copy(mu[:], muB)
 	C.vli_div_barrett((*C.u64)(unsafe.Pointer(&res[0])),
 		(*C.u64)(unsafe.Pointer(&prd[0])),
-		(*C.u64)(unsafe.Pointer(&mu[0])), 4)
+		(*C.u64)(unsafe.Pointer(&mu[0])))
 	result = new(big.Int).SetBits(res[:4])
 	return
 }
@@ -88,6 +87,7 @@ func vliExpModMont(x, y, mod []big.Word, rr []uint64, k0 uint64) (res *big.Int) 
 	return
 }
 
+/*
 func vliFromBE64(src []byte) (dest []C.u64) {
 	var res [4]C.u64
 	var ss [32]byte
@@ -96,3 +96,4 @@ func vliFromBE64(src []byte) (dest []C.u64) {
 	dest = res[:]
 	return
 }
+*/

@@ -250,12 +250,12 @@ void vli_mod_mult_fast(u64 *result, const u64 *left, const u64 *right,
 }
 
 
-void vli_mod_inv(u64 *result, const u64 *input, const u64 *mod, unsigned int ndigits)
+void vli_mod_inv(u64 *result, const u64 *input, const u64 *mod)
 {
 	vli_mod_inv<4>(result, input, mod);
 }
 
-void vli_mult(u64 *result, const u64 *left, const u64 *right, unsigned int ndigits)
+void vli_mult(u64 *result, const u64 *left, const u64 *right)
 {
 	vli_mult<4>(result, left, right);
 }
@@ -578,14 +578,12 @@ static void ecc_point_add(u64 *result_x, u64 *result_y,
  * R. Brent, P. Zimmermann. Modern Computer Arithmetic. 2010.
  * 2.4.1 Barrett's algorithm. Algorithm 2.5.
  */
-void vli_mmod_barrett(u64 *result, u64 *product, const u64 *mod,
-			     unsigned int ndigits)
+void vli_mmod_barrett(u64 *result, u64 *product, const u64 *mod)
 {
 	vli_mmod_barrett<4>(result, product, mod);
 }
 
-void vli_div_barrett(u64 *result, u64 *product, const u64 *mu,
-			     unsigned int ndigits)
+void vli_div_barrett(u64 *result, u64 *product, const u64 *mu)
 {
 	vli_div_barrett<4>(result, product, mu);
 }
@@ -713,6 +711,7 @@ static int __ecc_is_key_valid(const struct ecc_curve *curve,
 	return 0;
 }
 
+#ifdef	WITH_ECCKEY
 int ecc_is_key_valid(unsigned int curve_id, unsigned int ndigits,
 		     const u64 *private_key, unsigned int private_key_len)
 {
@@ -838,6 +837,7 @@ int ecc_is_pubkey_valid_partial(const uint curve_id,
 
 	return 0;
 }
+#endif
 
 #ifdef	WITH_SYS_RANDOM
 int crypto_ecdh_shared_secret(unsigned int curve_id, unsigned int ndigits,

@@ -100,7 +100,7 @@ func TestEccInverse(t *testing.T) {
 			inv.Text(16), mInv.Text(16))
 		t.Fail()
 	}
-	ww := vliModInv(x1.Bytes(), p.Bytes())
+	ww := vliModInv(x1.Bits(), p.Bits())
 	cInv := new(big.Int).SetBits(ww)
 	if cInv.Cmp(inv) != 0 {
 		t.Logf("vliModInv diff: ModInverse vs vliModInv\n%s\n%s",
@@ -114,7 +114,7 @@ func TestEccInverse(t *testing.T) {
 			inv.Text(16), eInv.Text(16))
 		t.Fail()
 	}
-	ww = vliModInv(x2.Bytes(), p.Bytes())
+	ww = vliModInv(x2.Bits(), p.Bits())
 	cInv = new(big.Int).SetBits(ww)
 	if cInv.Cmp(inv) != 0 {
 		t.Logf("vliModInv diff: ModInverse vs vliModInv\n%s\n%s",
@@ -161,13 +161,13 @@ func TestBarrettDiv(t *testing.T) {
 
 func BenchmarkInverse(b *testing.B) {
 	b.ResetTimer()
-	p := sm2.P256().Params().P.Bytes()
+	p := sm2.P256().Params().P.Bits()
 
 	b.ReportAllocs()
 	b.ResetTimer()
 	b.RunParallel(func(pb *testing.PB) {
 		for pb.Next() {
-			_ = vliModInv(x1.Bytes(), p)
+			_ = vliModInv(x1.Bits(), p)
 		}
 	})
 }

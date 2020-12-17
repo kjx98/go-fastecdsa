@@ -147,8 +147,8 @@ void vli_from_le64(u64 *dest, const void *src, uint ndigits);
  * @mod:		modulus
  * @ndigits:		length of all vlis
  */
-void vli_mod_inv(u64 *result, const u64 *input, const u64 *mod, uint ndigits);
-void vli_mult(u64 *result, const u64 *left, const u64 *right, uint ndigits);
+void vli_mod_inv(u64 *result, const u64 *input, const u64 *mod);
+void vli_mult(u64 *result, const u64 *left, const u64 *right);
 
 /* Computes result = product % mod using Barrett's reduction with precomputed
  * value mu appended to the mod after ndigits, mu = (2^{2w} / mod) and have
@@ -159,8 +159,8 @@ void vli_mult(u64 *result, const u64 *left, const u64 *right, uint ndigits);
  * R. Brent, P. Zimmermann. Modern Computer Arithmetic. 2010.
  * 2.4.1 Barrett's algorithm. Algorithm 2.5.
  */
-void vli_mmod_barrett(u64 *result, u64 *product, const u64 *mod, uint ndigits);
-void vli_div_barrett(u64 *result, u64 *product, const u64 *mod, uint ndigits);
+void vli_mmod_barrett(u64 *result, u64 *product, const u64 *mod);
+void vli_div_barrett(u64 *result, u64 *product, const u64 *mod);
 void mont_MulMod(u64 *result, const u64 *x, const u64 *y, const u64 *prime,
 				const u64 *rr, const u64 k0);
 void mont_ExpMod(u64 *result, const u64 *x, const u64 *y, const u64 *prime,
