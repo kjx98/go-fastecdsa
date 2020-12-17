@@ -79,7 +79,6 @@ func TestBarrettDiv(t *testing.T) {
 	}
 }
 
-/*
 func BenchmarkInverse(b *testing.B) {
 	b.ResetTimer()
 	p := sm2.P256().Params().P.Bytes()
@@ -92,7 +91,6 @@ func BenchmarkInverse(b *testing.B) {
 		}
 	})
 }
-*/
 
 func BenchmarkModMul(b *testing.B) {
 	b.ResetTimer()

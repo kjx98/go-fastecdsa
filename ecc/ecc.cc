@@ -1265,6 +1265,60 @@ static void ecc_point_add(u64 *result_x, u64 *result_y,
 	apply_z<4>(result_x, result_y, z, curve->p);
 }
 
+static void mont_reduction(u64 *result, const u64 *prod, const u64 *prime,
+			const u64 k0) noexcept
+{
+	u64	t[ECC_MAX_DIGITS * 2];
+	u64	s[ECC_MAX_DIGITS * 2];
+	u64	r[ECC_MAX_DIGITS * 2];
+	vli_clear<8>(r);
+	for (uint i=0; i<4; i++) {
+		u64	u = (r[0] + prod[i]) * k0;
+		//vli_umult<4>(s, prime, u);
+		vli_uadd<8>(t, s, prod[i]);
+		vli_add<8>(r, r, t);
+		//vli_rshift1w<8>(r);
+	}
+	if (!vli_is_zero<4>(r+4) || vli_cmp<4>(r, prime) >= 0) {
+		vli_sub<4>(r, r, prime);
+	}
+	vli_set<4>(result, r);
+}
+
+
+static void mont_mult(u64 *result, const u64 *x, const u64 *y, const u64 *prime,
+				const u64 k0) noexcept
+{
+	u64	t[ECC_MAX_DIGITS * 2];
+	u64	s[ECC_MAX_DIGITS * 2];
+	u64	r[ECC_MAX_DIGITS * 2];
+	vli_clear<8>(r);
+	for (uint i=0; i<4;i++) {
+		u64	u = (r[0] + y[i]*x[0]) * k0;
+		//vli_umult<4>(s, prime, u);
+		//vli_umult<4>(t, x, y[i]);
+		vli_add<8>(t, t, s);
+		vli_add<8>(r, r, t);
+		//vli_rshift1w<8>(r);	
+	}
+	if (!vli_is_zero<4>(r+4) || vli_cmp<4>(r, prime) >= 0) {
+		vli_sub<4>(r, r, prime);
+	}
+	vli_set<4>(result, r);
+}
+
+void mont_MulMod(u64 *result, const u64 *x, const u64 *y, const u64 *prime,
+				const u64 *rr, const u64 k0) noexcept
+{
+	u64	xp[ECC_MAX_DIGITS];
+	u64	yp[ECC_MAX_DIGITS];
+	u64	r[ECC_MAX_DIGITS];
+	mont_mult(xp, x, rr, prime, k0);
+	mont_mult(yp, y, rr, prime, k0);
+	mont_mult(r, xp, yp, prime, k0);
+	mont_reduction(result, r, prime, k0);
+}
+
 #ifdef	ommit
 /* Computes R = u1P + u2Q mod p using Shamir's trick.
  * Based on: Kenneth MacKay's micro-ecc (2014).
