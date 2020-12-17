@@ -69,8 +69,7 @@ template<uint ndigits> forceinline
 __attribute__((optimize("unroll-loops")))
 static bool vli_is_zero(const u64 *vli) noexcept
 {
-	uint i;
-	for (i = 0; i < ndigits; i++) {
+	for (uint i = 0; i < ndigits; i++) {
 		if (vli[i]) return false;
 	}
 	return true;
@@ -81,13 +80,12 @@ template<uint ndigits> forceinline
 __attribute__((optimize("unroll-loops")))
 static void vli_set(u64 *dest, const u64 *src) noexcept
 {
-	uint i;
-	for (i = 0; i < ndigits; i++)
+	for (uint i = 0; i < ndigits; i++)
 		dest[i] = src[i];
 }
 
 /* Returns nonzero if bit bit of vli is set. */
-static forceinline u64 vli_test_bit(const u64 *vli, uint bit)
+static forceinline bool vli_test_bit(const u64 *vli, uint bit)
 {
 	return (vli[bit / 64] & ((u64)1 << (bit % 64)));
 }
@@ -104,10 +102,9 @@ static forceinline u64 vli_test_bit(const u64 *vli, uint bit)
  */
 template<uint ndigits> forceinline
 __attribute__((optimize("unroll-loops")))
-int vli_cmp(const u64 *left, const u64 *right) noexcept
+static int vli_cmp(const u64 *left, const u64 *right) noexcept
 {
-	int i;
-	for (i = ndigits - 1; i >= 0; i--) {
+	for (int i = ndigits - 1; i >= 0; i--) {
 		if (left[i] > right[i]) return 1;
 		else if (left[i] < right[i]) return -1;
 	}
@@ -122,8 +119,7 @@ __attribute__((optimize("unroll-loops")))
 static u64 vli_lshift(u64 *result, const u64 *in, unsigned int shift) noexcept
 {
 	u64 carry = 0;
-	uint i;
-	for (i = 0; i < ndigits; i++) {
+	for (uint i = 0; i < ndigits; i++) {
 		u64 temp = in[i];
 		result[i] = (temp << shift) | carry;
 		carry = temp >> (64 - shift);
@@ -158,15 +154,20 @@ static void vli_rshift1w(u64 *vli) noexcept
 /* Computes result = left + right, returning carry. Can modify in place. */
 template<uint ndigits> forceinline
 __attribute__((optimize("unroll-loops")))
-static u64 vli_add(u64 *result, const u64 *left, const u64 *right) noexcept
+static bool vli_add(u64 *result, const u64 *left, const u64 *right) noexcept
 {
-	u64 carry = 0;
-	uint i;
-	for (i = 0; i < ndigits; i++) {
+	bool carry = false;
+	for (uint i = 0; i < ndigits; i++) {
 		u64 sum;
+		auto c_carry = __builtin_uaddl_overflow(left[i], right[i], &sum);
+		if (unlikely(carry)) {
+			carry = c_carry | __builtin_uaddl_overflow(sum, 1, &sum);
+		} else carry = c_carry;
+		/*
 		sum = left[i] + right[i] + carry;
 		if (sum != left[i])
 			carry = (sum < left[i]);
+		*/
 		result[i] = sum;
 	}
 	return carry;
@@ -175,8 +176,9 @@ static u64 vli_add(u64 *result, const u64 *left, const u64 *right) noexcept
 /* Computes result = left + right, returning carry. Can modify in place. */
 template<uint ndigits> forceinline
 __attribute__((optimize("unroll-loops")))
-static u64 vli_uadd(u64 *result, const u64 *left, u64 right) noexcept
+static bool vli_uadd(u64 *result, const u64 *left, u64 right) noexcept
 {
+#ifdef	ommit
 	u64 carry = right;
 	uint i;
 	for (i = 0; i < ndigits; i++) {
@@ -188,7 +190,16 @@ static u64 vli_uadd(u64 *result, const u64 *left, u64 right) noexcept
 			carry = !!carry;
 		result[i] = sum;
 	}
+	return carry != 0;
+#else
+	auto carry = __builtin_uaddl_overflow(left[0], right, result);
+	for (uint i = 1; i < ndigits; i++) {
+		if (unlikely(carry)) {
+			carry = __builtin_uaddl_overflow(result[i], 1, result+i);
+		} else break;
+	}
 	return carry;
+#endif
 }
 
 /**
@@ -205,14 +216,19 @@ static u64 vli_uadd(u64 *result, const u64 *left, u64 right) noexcept
  */
 template<uint ndigits> forceinline
 __attribute__((optimize("unroll-loops")))
-static u64 vli_sub(u64 *result, const u64 *left, const u64 *right) noexcept
+static bool vli_sub(u64 *result, const u64 *left, const u64 *right) noexcept
 {
-	u64 borrow = 0;
-	uint i;
-	for (i = 0; i < ndigits; i++) {
+	bool borrow = false;
+	for (uint i = 0; i < ndigits; i++) {
 		u64 diff;
+		auto c_borrow = __builtin_usubl_overflow(left[i], right[i], &diff);
+		if (unlikely(borrow)) {
+			borrow = c_borrow | __builtin_usubl_overflow(diff, 1, &diff);
+		} else borrow = c_borrow;
+		/*
 		diff = left[i] - right[i] - borrow;
 		if (diff != left[i]) borrow = (diff > left[i]);
+		*/
 		result[i] = diff;
 	}
 	return borrow;
@@ -221,8 +237,9 @@ static u64 vli_sub(u64 *result, const u64 *left, const u64 *right) noexcept
 /* Computes result = left - right, returning borrow. Can modify in place. */
 template<uint ndigits> forceinline
 __attribute__((optimize("unroll-loops")))
-static u64 vli_usub(u64 *result, const u64 *left, u64 right) noexcept
+static bool vli_usub(u64 *result, const u64 *left, u64 right) noexcept
 {
+#ifdef	ommit
 	u64 borrow = right;
 	uint i;
 	for (i = 0; i < ndigits; i++) {
@@ -232,7 +249,16 @@ static u64 vli_usub(u64 *result, const u64 *left, u64 right) noexcept
 			borrow = (diff > left[i]);
 		result[i] = diff;
 	}
+	return borrow != 0;
+#else
+	auto borrow = __builtin_usubl_overflow(left[0], right, result);
+	for (uint i = 1; i < ndigits; i++) {
+		if (unlikely(borrow)) {
+			borrow = __builtin_usubl_overflow(result[i], 1, result+i);
+		} else break;
+	}
 	return borrow;
+#endif
 }
 
 template<uint ndigits> forceinline
@@ -247,11 +273,11 @@ template<uint ndigits> forceinline
 __attribute__((optimize("unroll-loops")))
 static uint vli_num_digits(const u64 *vli) noexcept
 {
-	int i;
 	/* Search from the end until we find a non-zero digit.
 	 * We do it in reverse because we expect that most digits will
 	 * be nonzero.
 	 */
+	int i;
 	for (i = ndigits - 1; i >= 0 && vli[i] == 0; i--);
 	return (i + 1);
 }
@@ -261,12 +287,10 @@ template<uint ndigits> forceinline
 __attribute__((optimize("unroll-loops")))
 static uint vli_num_bits(const u64 *vli) noexcept
 {
-	uint i, num_digits;
-	u64 digit;
-	num_digits = vli_num_digits<ndigits>(vli);
+	// uint i, num_digits;
+	auto num_digits = vli_num_digits<ndigits>(vli);
 	if (num_digits == 0) return 0;
-	digit = vli[num_digits - 1];
-	i = 64 - __builtin_clzl(digit);
+	auto i = 64 - __builtin_clzl(vli[num_digits - 1]);
 	return ((num_digits - 1) * 64 + i);
 }
 
@@ -279,11 +303,10 @@ static uint vli_num_bits(const u64 *vli) noexcept
  */
 template<uint ndigits> forceinline
 __attribute__((optimize("unroll-loops")))
-void vli_from_be64(u64 *dest, const void *src) noexcept
+static void vli_from_be64(u64 *dest, const void *src) noexcept
 {
-	uint i;
 	const u64 *from = (const u64 *)src;
-	for (i = 0; i < ndigits; i++)
+	for (uint i = 0; i < ndigits; i++)
 		dest[i] = be64toh(from[ndigits - 1 - i]);
 }
 
@@ -296,11 +319,10 @@ void vli_from_be64(u64 *dest, const void *src) noexcept
  */
 template<uint ndigits> forceinline
 __attribute__((optimize("unroll-loops")))
-void vli_from_le64(u64 *dest, const void *src) noexcept
+static void vli_from_le64(u64 *dest, const void *src) noexcept
 {
-	int i;
 	const u64 *from = src;
-	for (i = 0; i < ndigits; i++)
+	for (uint i = 0; i < ndigits; i++)
 		dest[i] = le64toh(from[ndigits - 1 - i]);
 }
 
@@ -355,8 +377,8 @@ public:
 #if defined(__SIZEOF_INT128__)
 		_data += b._data;
 #else
-		_low += b._low;
-		_high += b._high + (_low < b._low);
+		if (__builtin_uaddl_overflow(_low, b._low, &_low)) _high++;
+		_high += b._high;
 #endif
 		return *this;
 	}
@@ -397,7 +419,7 @@ private:
 
 template<uint ndigits> forceinline
 __attribute__((optimize("unroll-loops")))
-void vli_mult(u64 *result, const u64 *left, const u64 *right) noexcept
+static void vli_mult(u64 *result, const u64 *left, const u64 *right) noexcept
 {
 	uint128_t r01( 0, 0 );
 	u64 r2 = 0;
@@ -454,8 +476,8 @@ static void vli_umult(u64 *result, const u64 *left, u64 right) noexcept
 		//r01.m_low = r01.m_high;
 		//r01.m_high = 0;
 	}
-	result[k] = r01.m_low();
-	for (++k; k < ndigits * 2; k++)
+	result[ndigits] = r01.m_low();
+	for (k = ndigits+1; k < ndigits * 2; k++)
 		result[k] = 0;
 }
 
@@ -516,9 +538,7 @@ __attribute__((optimize("unroll-loops")))
 static void vli_mod_add(u64 *result, const u64 *left, const u64 *right,
 			const u64 *mod) noexcept
 {
-	u64 carry;
-
-	carry = vli_add<ndigits>(result, left, right);
+	auto carry = vli_add<ndigits>(result, left, right);
 
 	/* result > mod (result = mod + remainder), so subtract mod to
 	 * get remainder.
@@ -535,7 +555,7 @@ __attribute__((optimize("unroll-loops")))
 static void vli_mod_sub(u64 *result, const u64 *left, const u64 *right,
 			const u64 *mod) noexcept
 {
-	u64 borrow = vli_sub<ndigits>(result, left, right);
+	auto borrow = vli_sub<ndigits>(result, left, right);
 
 	/* In this case, p_result == -diff == (max int) - diff.
 	 * Since -x % d == d - x, we can get the correct result from

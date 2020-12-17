@@ -117,7 +117,7 @@ vli_mmod_special2(u64 *result, const u64 *product, const u64 *mod) noexcept
 	u64 q[ECC_MAX_DIGITS];
 	u64 r[ECC_MAX_DIGITS * 2];
 	u64 m[ECC_MAX_DIGITS * 2]; /* expanded mod */
-	int carry; /* last bit that doesn't fit into q */
+	bool carry; /* last bit that doesn't fit into q */
 	int i;
 
 	vli_set<ndigits>(m, mod);
@@ -183,12 +183,16 @@ void vli_mmod_barrett(u64 *result, u64 *product, const u64 *mod) noexcept
 	vli_add<ndigits>(result, r, q+ndigits+1);
 	vli_mult<ndigits>(r, mod, result);
 	vli_sub<ndigits*2>(r, product, r);
+	/*
 	while (!vli_is_zero<ndigits>(r + ndigits) ||
 	       vli_cmp<ndigits>(r, mod) != -1) {
-		u64 carry;
-
-		carry = vli_sub<ndigits>(r, r, mod);
-		vli_usub<ndigits>(r + ndigits, r + ndigits, carry);
+		auto carry = vli_sub<ndigits>(r, r, mod);
+		if (carry) vli_usub<ndigits>(r + ndigits, r + ndigits, 1);
+	}
+	*/
+	if (!vli_is_zero<ndigits>(r + ndigits) ||
+	       vli_cmp<ndigits>(r, mod) >= 0) {
+		vli_sub<ndigits>(r, r, mod);
 	}
 	vli_set<ndigits>(result, r);
 }
@@ -224,7 +228,10 @@ static void vli_mod_square_fast(u64 *result, const u64 *left,
 	vli_mmod_fast(result, product, curve_prime, ndigits);
 }
 
-#define EVEN(vli) (!(vli[0] & 1))
+forceinline static bool vli_is_even(u64 *vli) noexcept {
+	return (vli[0] & 1) == 0;
+}
+
 /* Computes result = (1 / p_input) % mod. All VLIs are the same size.
  * See "From Euclid's GCD to Montgomery Multiplication to the Great Divide"
  * https://labs.oracle.com/techrep/2001/smli_tr-2001-95.pdf
@@ -235,7 +242,6 @@ void vli_mod_inv(u64 *result, const u64 *input, const u64 *mod) noexcept
 {
 	u64 a[ECC_MAX_DIGITS], b[ECC_MAX_DIGITS];
 	u64 u[ECC_MAX_DIGITS], v[ECC_MAX_DIGITS];
-	u64 carry;
 	int cmp_result;
 
 	if (vli_is_zero<ndigits>(input)) {
@@ -250,21 +256,21 @@ void vli_mod_inv(u64 *result, const u64 *input, const u64 *mod) noexcept
 	vli_clear<ndigits>(v);
 
 	while ((cmp_result = vli_cmp<ndigits>(a, b)) != 0) {
-		carry = 0;
+		bool carry = false;
 
-		if (EVEN(a)) {
+		if (vli_is_even(a)) {
 			vli_rshift1<ndigits>(a);
 
-			if (!EVEN(u))
+			if (!vli_is_even(u))
 				carry = vli_add<ndigits>(u, u, mod);
 
 			vli_rshift1<ndigits>(u);
 			if (carry)
 				u[ndigits - 1] |= 0x8000000000000000ull;
-		} else if (EVEN(b)) {
+		} else if (vli_is_even(b)) {
 			vli_rshift1<ndigits>(b);
 
-			if (!EVEN(v))
+			if (!vli_is_even(v))
 				carry = vli_add<ndigits>(v, v, mod);
 
 			vli_rshift1<ndigits>(v);
@@ -278,7 +284,7 @@ void vli_mod_inv(u64 *result, const u64 *input, const u64 *mod) noexcept
 				vli_add<ndigits>(u, u, mod);
 
 			vli_sub<ndigits>(u, u, v);
-			if (!EVEN(u))
+			if (!vli_is_even(u))
 				carry = vli_add<ndigits>(u, u, mod);
 
 			vli_rshift1<ndigits>(u);
@@ -292,7 +298,7 @@ void vli_mod_inv(u64 *result, const u64 *input, const u64 *mod) noexcept
 				vli_add<ndigits>(v, v, mod);
 
 			vli_sub<ndigits>(v, v, u);
-			if (!EVEN(v))
+			if (!vli_is_even(v))
 				carry = vli_add<ndigits>(v, v, mod);
 
 			vli_rshift1<ndigits>(v);

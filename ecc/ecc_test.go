@@ -43,6 +43,17 @@ func TestEccMMod(t *testing.T) {
 	}
 }
 
+func TestEccInverse(t *testing.T) {
+	p := sm2.P256().Params().P
+	inv := new(big.Int).ModInverse(x1, p)
+	ww := vliModInv(x1.Bytes(), p.Bytes())
+	cInv := new(big.Int).SetBits(ww)
+	if cInv.Cmp(inv) != 0 {
+		t.Logf("vliModInv diff: ModInverse vs vliModInv\n%s\n%s",
+				inv.Text(16), cInv.Text(16))
+	}
+}
+
 func TestBarrettDiv(t *testing.T) {
 	cParams := sm2.P256().Params()
 	prod := new(big.Int).Mul(x1, y1)

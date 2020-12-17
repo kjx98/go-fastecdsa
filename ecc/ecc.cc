@@ -1274,10 +1274,10 @@ static void mont_reduction(u64 *result, const u64 *prod, const u64 *prime,
 	vli_clear<8>(r);
 	for (uint i=0; i<4; i++) {
 		u64	u = (r[0] + prod[i]) * k0;
-		//vli_umult<4>(s, prime, u);
+		vli_umult<4>(s, prime, u);
 		vli_uadd<8>(t, s, prod[i]);
 		vli_add<8>(r, r, t);
-		//vli_rshift1w<8>(r);
+		vli_rshift1w<8>(r);
 	}
 	if (!vli_is_zero<4>(r+4) || vli_cmp<4>(r, prime) >= 0) {
 		vli_sub<4>(r, r, prime);
@@ -1295,11 +1295,11 @@ static void mont_mult(u64 *result, const u64 *x, const u64 *y, const u64 *prime,
 	vli_clear<8>(r);
 	for (uint i=0; i<4;i++) {
 		u64	u = (r[0] + y[i]*x[0]) * k0;
-		//vli_umult<4>(s, prime, u);
-		//vli_umult<4>(t, x, y[i]);
+		vli_umult<4>(s, prime, u);
+		vli_umult<4>(t, x, y[i]);
 		vli_add<8>(t, t, s);
 		vli_add<8>(r, r, t);
-		//vli_rshift1w<8>(r);	
+		vli_rshift1w<8>(r);	
 	}
 	if (!vli_is_zero<4>(r+4) || vli_cmp<4>(r, prime) >= 0) {
 		vli_sub<4>(r, r, prime);
