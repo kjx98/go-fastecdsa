@@ -166,7 +166,7 @@ static void vli_mmod_fast_256(u64 *result, const u64 *product,
  * Note that curve_primes are distinguished just by heuristic check and
  * not by complete conformance check.
  */
-static bool vli_mmod_fast(u64 *result, u64 *product,
+static forceinline bool vli_mmod_fast(u64 *result, u64 *product,
 			  const u64 *curve_prime, unsigned int ndigits)
 {
 	u64 tmp[2 * ECC_MAX_DIGITS];
@@ -261,10 +261,12 @@ void vli_mult(u64 *result, const u64 *left, const u64 *right)
 }
 
 
+#ifdef	ommit
 void vli_from_be64(u64 *dest, const void *src, uint ndigits)
 {
 	vli_from_be64<4>(dest, src);
 }
+#endif
 
 /* ------ Point operations ------ */
 

@@ -16,95 +16,109 @@ package ecc
 
 import (
 	"math/big"
-	"sync"
+	"unsafe"
 )
 
 // Functions implemented in ecc_asm_*64.s
 // multiplication modulo p
 //go:noescape
-func vli_mod_mult_fast(res, in1, in2, p []uint64, ndigits uint)
+func _vli_mod_mult_fast(res, in1, in2, p unsafe.Pointer, ndigits uint)
 
 // Functions implemented in ecc_asm_*64.s
 // multiplication
 //go:noescape
-func vli_mult(res, in1, in2 []uint64)
+func _vli_mult(res, in1, in2 unsafe.Pointer)
 
 // Functions implemented in ecc_asm_*64.s
 // in inverse mod prime p
 //go:noescape
-func vli_mod_inv(res, in, p []uint64)
+func _vli_mod_inv(res, in, p unsafe.Pointer)
 
 // Function mod prime with barrett reduction
 // mod MUST be prime following with mu
 //go:noescape
-func vli_mmod_barrett(res, prod, mod []uint64)
+func _vli_mmod_barrett(res, prod, mod unsafe.Pointer)
 
 // Function calc div quo with barrett reduction
 //go:noescape
-func vli_div_barrett(res, prod, mu []uint64)
+func _vli_div_barrett(res, prod, mu unsafe.Pointer)
 
 // Functions implemented in ecc_asm_*64.s
 // multiplication modulo p
 //go:noescape
-func mont_MulMod(res, in1, in2, p, rr []uint64, k0 uint64)
+func _mont_MulMod(res, in1, in2, p, rr unsafe.Pointer, k0 uint64)
 
 // Function implemented in ecc_asm_*86.s
 // Exp modulo prime p
 //go:noescape
-func mont_ExpMod(res, in1, in2, p, rr []uint64, k0 uint64)
+func _mont_ExpMod(res, in1, in2, p, rr unsafe.Pointer, k0 uint64)
 
-/*
-// Montgomery square modulo P256, repeated n times (n >= 1)
-//go:noescape
-func p256Sqr(res, in []uint64, n int)
+// Functions implemented in ecc_asm_*64.s
+// Montgomery inverse modulo prime mod
+func vliModInv(in, mod []big.Word) (result []big.Word) {
+	var res [4]big.Word
+	_vli_mod_inv(unsafe.Pointer(&res[0]), unsafe.Pointer(&in[0]),
+		unsafe.Pointer(&mod[0]))
+	result = res[:]
+	return
+}
 
-// Montgomery multiplication by 1
-//go:noescape
-func p256FromMont(res, in []uint64)
+// Montgomery multiplication modulo sm2
+func vliModMult(left, right, mdU []big.Word) (result *big.Int) {
+	var res [4]big.Word
+	var prod [8]big.Word
+	var lf, rt [4]big.Word
+	var mod [9]big.Word // should be 9, 4 word for mod, 5 word for mu
+	copy(lf[:], left)
+	copy(rt[:], right)
+	copy(mod[:], mdU)
+	_vli_mult(unsafe.Pointer(&prod[0]), unsafe.Pointer(&lf[0]),
+		unsafe.Pointer(&rt[0]))
+	_vli_mmod_barrett(unsafe.Pointer(&res[0]), unsafe.Pointer(&prod[0]),
+		unsafe.Pointer(&mod[0]))
+	result = new(big.Int).SetBits(res[:4])
+	return
+}
 
-// iff cond == 1  val <- -val
-//go:noescape
-func p256NegCond(val []uint64, cond int)
+func vliModMultBarrett(left, right *big.Int, mdU []big.Word) (result *big.Int) {
+	var res [4]big.Word
+	prod := new(big.Int).Mul(left, right)
+	var prd [8]big.Word
+	var mod [9]big.Word // should be 9, 4 word for mod, 5 word for mu
+	copy(prd[:], prod.Bits())
+	copy(mod[:], mdU)
+	_vli_mmod_barrett(unsafe.Pointer(&res[0]), unsafe.Pointer(&prd[0]),
+		unsafe.Pointer(&mod[0]))
+	result = new(big.Int).SetBits(res[:4])
+	return
+}
 
-// if cond == 0 res <- b; else res <- a
-//go:noescape
-func p256MovCond(res, a, b []uint64, cond int)
+func vliBarrettDiv(prod *big.Int, muB []big.Word) (result *big.Int) {
+	var res [8]big.Word
+	var prd [8]big.Word
+	var mu [5]big.Word // should be 9, 4 word for mod, 5 word for mu
+	copy(prd[:], prod.Bits())
+	copy(mu[:], muB)
+	_vli_div_barrett(unsafe.Pointer(&res[0]), unsafe.Pointer(&prd[0]),
+		unsafe.Pointer(&mu[0]))
+	result = new(big.Int).SetBits(res[:4])
+	return
+}
 
-// Endianness swap
-//go:noescape
-func p256BigToLittle(res []uint64, in []byte)
+func vliModMultMont(x, y, mod []big.Word, rr []uint64, k0 uint64) (res *big.Int) {
+	var r [4]big.Word
+	_mont_MulMod(unsafe.Pointer(&r[0]), unsafe.Pointer(&x[0]),
+		unsafe.Pointer(&y[0]), unsafe.Pointer(&mod[0]), unsafe.Pointer(&rr[0]),
+		k0)
+	res = new(big.Int).SetBits(r[:4])
+	return
+}
 
-//go:noescape
-func p256LittleToBig(res []byte, in []uint64)
-
-// Constant time table access
-//go:noescape
-func p256Select(point, table []uint64, idx int)
-
-//go:noescape
-func p256SelectBase(point, table []uint64, idx int)
-
-// Montgomery multiplication modulo Ord(G)
-//go:noescape
-func p256OrdMul(res, in1, in2 []uint64)
-
-// Montgomery square modulo Ord(G), repeated n times
-//go:noescape
-func p256OrdSqr(res, in []uint64, n int)
-
-// Point add with in2 being affine point
-// If sign == 1 -> in2 = -in2
-// If sel == 0 -> res = in1
-// if zero == 0 -> res = in2
-//go:noescape
-func p256PointAddAffineAsm(res, in1, in2 []uint64, sign, sel, zero int)
-
-// Point add. Returns one if the two input points were equal and zero
-// otherwise. (Note that, due to the way that the equations work out, some
-// representations of ∞ are considered equal to everything by this function.)
-//go:noescape
-func p256PointAddAsm(res, in1, in2 []uint64) int
-// Point double
-//go:noescape
-func p256PointDoubleAsm(res, in []uint64)
-*/
+func vliExpModMont(x, y, mod []big.Word, rr []uint64, k0 uint64) (res *big.Int) {
+	var r [4]big.Word
+	_mont_ExpMod(unsafe.Pointer(&r[0]), unsafe.Pointer(&x[0]),
+		unsafe.Pointer(&y[0]), unsafe.Pointer(&mod[0]),
+		unsafe.Pointer(&rr[0]), k0)
+	res = new(big.Int).SetBits(r[:4])
+	return
+}
