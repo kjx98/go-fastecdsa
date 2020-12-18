@@ -45,7 +45,7 @@ func TestEccMMod(t *testing.T) {
 	}
 }
 
-func TestEccMulModMont(t *testing.T) {
+func TestMontMultMod(t *testing.T) {
 	p := sm2.P256().Params().P
 	xy := new(big.Int).Mul(x1, y1)
 	xyMod := new(big.Int).Mod(xy, p)
@@ -65,7 +65,7 @@ func TestEccMulModMont(t *testing.T) {
 	}
 }
 
-func TestExpModMont(t *testing.T) {
+func TestMontExpMod(t *testing.T) {
 	p := sm2.P256().Params().P
 	xyMod := new(big.Int).Exp(x1, y1, p)
 	bMod := vliExpModMont(x1.Bits(), y1.Bits(), p.Bits(), rr, 1)
@@ -191,7 +191,7 @@ func BenchmarkModMul(b *testing.B) {
 	}
 }
 
-func BenchmarkModMulBarrett(b *testing.B) {
+func BenchmarkBarrettModMul(b *testing.B) {
 	b.ResetTimer()
 	p := sm2.P256().Params().P
 	pb := make([]big.Word, 9)
@@ -208,7 +208,7 @@ func BenchmarkModMulBarrett(b *testing.B) {
 	}
 }
 
-func BenchmarkModMulMont(b *testing.B) {
+func BenchmarkMontMultMod(b *testing.B) {
 	b.ResetTimer()
 	p := sm2.P256().Params().P
 
@@ -219,7 +219,7 @@ func BenchmarkModMulMont(b *testing.B) {
 	}
 }
 
-func BenchmarkExpModMont(b *testing.B) {
+func BenchmarkMontExpMod(b *testing.B) {
 	b.ResetTimer()
 	p := sm2.P256().Params().P
 
