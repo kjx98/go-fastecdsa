@@ -37,12 +37,12 @@ typedef __uint8_t u8;
 typedef	unsigned int	uint;
 
 
-#ifdef	__GNUC__
+#if	__GNUC__ > 6
 # define unlikely(cond)	__builtin_expect ((cond), 0)
 # define likely(cond)	__builtin_expect (!!(cond), 1)
 #define forceinline __inline__ __attribute__((always_inline))
 #else
-# error "MUST compiled by gcc/clang"
+# error "MUST compiled by gcc/clang, gcc 7 or above"
 #endif
 
 #ifndef	ARRAY_SIZE
