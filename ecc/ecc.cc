@@ -38,9 +38,8 @@
 #pragma GCC optimize ("unroll-loops")
 #pragma GCC pop_options
 
-#define ECC_DIGITS_TO_BYTES_SHIFT 3
 
-static inline const ecc_curve *ecc_get_curve(uint curve_id)
+static forceinline const ecc_curve *ecc_get_curve(uint curve_id)
 {
 	switch (curve_id) {
 	/* In FIPS mode only allow P256 and higher */
@@ -60,7 +59,7 @@ static inline const ecc_curve *ecc_get_curve(uint curve_id)
  * See algorithm 5 and 6 from
  * http://www.isys.uni-klu.ac.at/PDF/2001-0126-MT.pdf
  */
-static void vli_mmod_fast_192(u64 *result, const u64 *product,
+static void forceinline vli_mmod_fast_192(u64 *result, const u64 *product,
 			      const u64 *curve_prime, u64 *tmp)
 {
 	int carry;
@@ -86,7 +85,7 @@ static void vli_mmod_fast_192(u64 *result, const u64 *product,
 /* Computes result = product % curve_prime
  * from http://www.nsa.gov/ia/_files/nist-routines.pdf
  */
-static void vli_mmod_fast_256(u64 *result, const u64 *product,
+static void forceinline vli_mmod_fast_256(u64 *result, const u64 *product,
 			      const u64 *curve_prime, u64 *tmp)
 {
 	int carry;
@@ -192,9 +191,6 @@ static forceinline bool vli_mmod_fast(u64 *result, u64 *product,
 		case 4:
 			vli_mmod_barrett<4>(result, product, curve_prime);
 			break;
-		case 8:
-			vli_mmod_barrett<8>(result, product, curve_prime);
-			break;
 		default:
 			return false;
 		}
@@ -216,11 +212,24 @@ static forceinline bool vli_mmod_fast(u64 *result, u64 *product,
 	return true;
 }
 
+/* Computes result = left^2 % curve_prime. */
+template<uint ndigits> forceinline
+__attribute__((optimize("unroll-loops")))
+static void vli_mod_square_fast(u64 *result, const u64 *left,
+				const u64 *curve_prime) noexcept
+{
+	u64 product[2 * ECC_MAX_DIGITS];
+
+	vli_square<ndigits>(product, left);
+	vli_mmod_fast(result, product, curve_prime, ndigits);
+}
+
 /* Computes result = (left * right) % mod.
  * Assumes that mod is big enough curve order.
  */
 #ifdef	ommit
-void vli_mod_mult_slow(u64 *result, const u64 *left, const u64 *right,
+void forceinline
+vli_mod_mult_slow(u64 *result, const u64 *left, const u64 *right,
 		       const u64 *mod, unsigned int ndigits)
 {
 	u64 product[ECC_MAX_DIGITS * 2];
@@ -590,36 +599,6 @@ void vli_div_barrett(u64 *result, u64 *product, const u64 *mu)
 	vli_div_barrett<4>(result, product, mu);
 }
 
-//static u64 montOne[]={1, 0, 0, 0};
-void mont_MulMod(u64 *result, const u64 *x, const u64 *y, const u64 *prime,
-				const u64 *rr, const u64 k0)
-{
-	u64	xp[ECC_MAX_DIGITS];
-	u64	yp[ECC_MAX_DIGITS];
-	u64	r[ECC_MAX_DIGITS];
-	mont_mult<4>(xp, x, rr, prime, k0);
-	mont_mult<4>(yp, y, rr, prime, k0);
-	mont_mult<4>(r, xp, yp, prime, k0);
-	//mont_mult<4>(result, montOne, r, prime, k0);
-	mont_reduction<4>(result, r, prime, k0);
-}
-
-void mont_ExpMod(u64 *result, const u64 *x, const u64 *y, const u64 *prime,
-				const u64 *rr, const u64 k0)
-{
-	u64	xp[ECC_MAX_DIGITS];
-	u64	t[ECC_MAX_DIGITS];
-	int	num_bits = vli_num_bits<4>(y);
-	mont_mult<4>(xp, x, rr, prime, k0);
-	mont_reduction<4>(t, rr, prime, k0);
-	for (int i = num_bits - 1;i >= 0; i--) {
-		mont_mult<4>(t, t, t, prime, k0);
-		if (vli_test_bit(y, i)) mont_mult<4>(t, t, xp, prime, k0);
-	}
-	//mont_mult<4>(result, montOne, t, prime, k0);
-	mont_reduction<4>(result, t, prime, k0);
-}
-
 #ifdef	WITH_SHAMIR
 /* Computes R = u1P + u2Q mod p using Shamir's trick.
  * Based on: Kenneth MacKay's micro-ecc (2014).
@@ -713,6 +692,7 @@ static int __ecc_is_key_valid(const struct ecc_curve *curve,
 	return 0;
 }
 
+
 #ifdef	WITH_ECCKEY
 int ecc_is_key_valid(unsigned int curve_id, unsigned int ndigits,
 		     const u64 *private_key, unsigned int private_key_len)
@@ -720,7 +700,7 @@ int ecc_is_key_valid(unsigned int curve_id, unsigned int ndigits,
 	uint nbytes;
 	const struct ecc_curve *curve = ecc_get_curve(curve_id);
 
-	nbytes = ndigits << ECC_DIGITS_TO_BYTES_SHIFT;
+	nbytes = vli_bytes(ndigit);
 
 	if (private_key_len != nbytes || ndigits != 4)
 		return -EINVAL;
@@ -745,7 +725,7 @@ int ecc_gen_privkey(unsigned int curve_id, unsigned int ndigits, u64 *privkey)
 {
 	const ecc_curve *curve = ecc_get_curve(curve_id);
 	u64 priv[ECC_MAX_DIGITS];
-	unsigned int nbytes = ndigits << ECC_DIGITS_TO_BYTES_SHIFT;
+	unsigned int nbytes = vli_bytes(ndigits);
 	unsigned int nbits = vli_num_bits(curve->n, ndigits);
 	int err;
 
@@ -790,7 +770,8 @@ int ecc_make_pub_key(unsigned int curve_id, unsigned int ndigits,
 	u64 priv[ECC_MAX_DIGITS];
 	const ecc_curve *curve = ecc_get_curve(curve_id);
 
-	if (!private_key || !curve || ndigits > ARRAY_SIZE(priv)) {
+	if (!private_key || !curve || curve->ndigits != ndigits
+	|| ndigits > ARRAY_SIZE(priv)) {
 		ret = -EINVAL;
 		return ret;
 	}
@@ -859,7 +840,7 @@ int crypto_ecdh_shared_secret(unsigned int curve_id, unsigned int ndigits,
 		goto out;
 	}
 
-	nbytes = ndigits << ECC_DIGITS_TO_BYTES_SHIFT;
+	nbytes = vli_bytes(ndigits);
 
 #ifdef	WITH_SYS_RANDOM
 	// TODO: rng, should check return for error

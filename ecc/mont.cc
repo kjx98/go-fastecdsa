@@ -1,6 +1,5 @@
 /*
  * Copyright(c) 2020 Jesse Kuang  <jkuang@21cn.com>
- * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are
@@ -23,30 +22,43 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
-#pragma once
-#ifndef __CDEFS_H__
-#define __CDEFS_H__
 
-#include <stdint.h>
-#include <stdbool.h>
-#include <sys/types.h>
-typedef	__uint32_t u32;
-typedef	__uint64_t u64;
-typedef __uint64_t be64;
-typedef __uint8_t u8;
-typedef	unsigned int	uint;
+#include <errno.h>
+#include "vli.hpp"
+#include "ecc.h"
+#include "ecc_impl.hpp"
+
+#pragma GCC push_options
+#pragma GCC optimize ("unroll-loops")
+#pragma GCC pop_options
 
 
-#if	__GNUC__ > 6 || __clang_major__ > 6
-# define unlikely(cond)	__builtin_expect ((cond), 0)
-# define likely(cond)	__builtin_expect (!!(cond), 1)
-#define forceinline __inline__ __attribute__((always_inline))
-#else
-# error "MUST compiled by gcc/clang, gcc 7 or above"
-#endif
+//static u64 montOne[]={1, 0, 0, 0};
+void mont_MulMod(u64 *result, const u64 *x, const u64 *y, const u64 *prime,
+				const u64 *rr, const u64 k0)
+{
+	u64	xp[ECC_MAX_DIGITS];
+	u64	yp[ECC_MAX_DIGITS];
+	u64	r[ECC_MAX_DIGITS];
+	mont_mult<4>(xp, x, rr, prime, k0);
+	mont_mult<4>(yp, y, rr, prime, k0);
+	mont_mult<4>(r, xp, yp, prime, k0);
+	//mont_mult<4>(result, montOne, r, prime, k0);
+	mont_reduction<4>(result, r, prime, k0);
+}
 
-#ifndef	ARRAY_SIZE
-#define ARRAY_SIZE(arr) (sizeof(arr) / sizeof((arr)[0]))
-#endif
-
-#endif	//	__CDEFS_H__
+void mont_ExpMod(u64 *result, const u64 *x, const u64 *y, const u64 *prime,
+				const u64 *rr, const u64 k0)
+{
+	u64	xp[ECC_MAX_DIGITS];
+	u64	t[ECC_MAX_DIGITS];
+	int	num_bits = vli_num_bits<4>(y);
+	mont_mult<4>(xp, x, rr, prime, k0);
+	mont_reduction<4>(t, rr, prime, k0);
+	for (int i = num_bits - 1;i >= 0; i--) {
+		mont_mult<4>(t, t, t, prime, k0);
+		if (vli_test_bit(y, i)) mont_mult<4>(t, t, xp, prime, k0);
+	}
+	//mont_mult<4>(result, montOne, t, prime, k0);
+	mont_reduction<4>(result, t, prime, k0);
+}

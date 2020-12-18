@@ -38,12 +38,9 @@
 # error "C++ std MUST at least c++11"
 #endif
 
-#ifndef	ARRAY_SIZE
-#define ARRAY_SIZE(arr) (sizeof(arr) / sizeof((arr)[0]))
-#endif
 
 template<typename T> forceinline
-T max(const T a, const T b) noexcept {
+static T max(const T a, const T b) noexcept {
 	static_assert(std::is_integral<T>::value, "Integral required.");
 	return (a>b)?a:b;
 }
@@ -114,9 +111,9 @@ static int vli_cmp(const u64 *left, const u64 *right) noexcept
 /* Computes result = in << c, returning carry. Can modify in place
  * (if result == in). 0 < shift < 64.
  */
-template<uint ndigits> forceinline
+template<uint ndigits> forceinline static
 __attribute__((optimize("unroll-loops")))
-static u64 vli_lshift(u64 *result, const u64 *in, unsigned int shift) noexcept
+u64 vli_lshift(u64 *result, const u64 *in, unsigned int shift) noexcept
 {
 	u64 carry = 0;
 	for (uint i = 0; i < ndigits; i++) {
@@ -152,9 +149,9 @@ static void vli_rshift1w(u64 *vli) noexcept
 }
 
 /* Computes result = left + right, returning carry. Can modify in place. */
-template<uint ndigits> forceinline
+template<uint ndigits> forceinline static
 __attribute__((optimize("unroll-loops")))
-static bool vli_add(u64 *result, const u64 *left, const u64 *right) noexcept
+bool vli_add(u64 *result, const u64 *left, const u64 *right) noexcept
 {
 	bool carry = false;
 	for (uint i = 0; i < ndigits; i++) {
@@ -214,9 +211,9 @@ static bool vli_uadd(u64 *result, const u64 *left, u64 right) noexcept
  *
  * Return: carry bit.
  */
-template<uint ndigits> forceinline
+template<uint ndigits> forceinline static
 __attribute__((optimize("unroll-loops")))
-static bool vli_sub(u64 *result, const u64 *left, const u64 *right) noexcept
+bool vli_sub(u64 *result, const u64 *left, const u64 *right) noexcept
 {
 	bool borrow = false;
 	for (uint i = 0; i < ndigits; i++) {
@@ -297,6 +294,11 @@ static uint vli_num_bits(const u64 *vli) noexcept
 	return ((num_digits - 1) * 64 + i);
 }
 
+#define ECC_DIGITS_TO_BYTES_SHIFT 3
+forceinline static uint vli_bytes(uint ndigits) {
+	return ndigits << ECC_DIGITS_TO_BYTES_SHIFT;
+}
+
 /**
  * vli_from_be64() - Load vli from big-endian u64 array
  *
@@ -324,7 +326,7 @@ template<uint ndigits> forceinline
 __attribute__((optimize("unroll-loops")))
 static void vli_from_le64(u64 *dest, const void *src) noexcept
 {
-	const u64 *from = src;
+	const u64 *from = (const u64 *)src;
 	for (uint i = 0; i < ndigits; i++)
 		dest[i] = le64toh(from[ndigits - 1 - i]);
 }
@@ -420,9 +422,9 @@ private:
 #endif
 };
 
-template<uint ndigits> forceinline
+template<uint ndigits> forceinline static
 __attribute__((optimize("unroll-loops")))
-static void vli_mult(u64 *result, const u64 *left, const u64 *right) noexcept
+void vli_mult(u64 *result, const u64 *left, const u64 *right) noexcept
 {
 	uint128_t r01( 0, 0 );
 	u64 r2 = 0;
@@ -466,6 +468,24 @@ static void vli_umult(u64 *result, const u64 *left, u64 right) noexcept
 	uint128_t r01( 0, 0 );
 	unsigned int k;
 
+#ifdef	OPT_UMULT
+	switch (right) {
+	case 0:
+		vli_clear<ndigits *2>(result);
+		return;
+	case 1:
+		vli_clear<ndigits>(result +ndigits);
+		vli_set<ndigits>(result, left);
+		return;
+	case 0xffffffffffffffffULL:
+		vli_clear<ndigits>(result);
+		vli_set<ndigits>(result+ndigits, left);
+		if (vli_sub<ndigits>(result, result, left)) {
+			vli_usub<ndigits>(result +ndigits, result +ndigits, 1);
+		}
+		return;
+	}
+#endif
 	for (k = 0; k < ndigits; k++) {
 		uint128_t product;
 

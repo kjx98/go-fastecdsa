@@ -31,7 +31,7 @@
 #include "cdefs.h"
 
 /* One digit is u64 qword. */
-#define ECC_MAX_DIGITS             (512 / 64)
+#define ECC_MAX_DIGITS             (256 / 64)
 
 /**
  * struct ecc_curve - definition of elliptic curve
@@ -59,6 +59,10 @@ struct ecc_curve {
 	const u64 *n;
 	const u64 *a;
 	const u64 *b;
+	const u64 *rr_pi = nullptr;
+	const u64 *rr_n = nullptr;
+	const u64 k0_p = 0;
+	const u64 k0_n = 0;
 	const uint ndigits = 4;
 	const bool use_barrett = false;
 };
@@ -163,9 +167,9 @@ vli_mmod_special2(u64 *result, const u64 *product, const u64 *mod) noexcept
  * R. Brent, P. Zimmermann. Modern Computer Arithmetic. 2010.
  * 2.4.1 Barrett's algorithm. Algorithm 2.5.
  */
-template<uint ndigits> forceinline
-__attribute__((optimize("unroll-loops")))
-void vli_mmod_barrett(u64 *result, u64 *product, const u64 *mod) noexcept
+template<uint ndigits> static void
+forceinline __attribute__((optimize("unroll-loops")))
+vli_mmod_barrett(u64 *result, u64 *product, const u64 *mod) noexcept
 {
 	u64 q[ECC_MAX_DIGITS * 2 +2];
 	u64 r[ECC_MAX_DIGITS * 2];
@@ -199,7 +203,7 @@ void vli_mmod_barrett(u64 *result, u64 *product, const u64 *mod) noexcept
 
 template<uint ndigits> forceinline
 __attribute__((optimize("unroll-loops")))
-void vli_div_barrett(u64 *result, u64 *product, const u64 *mu) noexcept
+static void vli_div_barrett(u64 *result, u64 *product, const u64 *mu) noexcept
 {
 	u64 q[ECC_MAX_DIGITS * 2 +2];
 	u64 r[ECC_MAX_DIGITS * 2];
@@ -257,19 +261,6 @@ static void mont_mult(u64 *result, const u64 *x, const u64 *y, const u64 *prime,
 	} else vli_set<ndigits>(result, r);
 }
 
-static bool vli_mmod_fast(u64 *result, u64 *product,const u64 *curve_prime, unsigned int ndigits);
-/* Computes result = left^2 % curve_prime. */
-template<uint ndigits> forceinline
-__attribute__((optimize("unroll-loops")))
-static void vli_mod_square_fast(u64 *result, const u64 *left,
-				const u64 *curve_prime) noexcept
-{
-	u64 product[2 * ECC_MAX_DIGITS];
-
-	vli_square<ndigits>(product, left);
-	vli_mmod_fast(result, product, curve_prime, ndigits);
-}
-
 
 /* Computes result = (1 / p_input) % mod. All VLIs are the same size.
  * See "From Euclid's GCD to Montgomery Multiplication to the Great Divide"
@@ -277,7 +268,7 @@ static void vli_mod_square_fast(u64 *result, const u64 *left,
  */
 template<uint ndigits> forceinline
 __attribute__((optimize("unroll-loops")))
-void vli_mod_inv(u64 *result, const u64 *input, const u64 *mod) noexcept
+static void vli_mod_inv(u64 *result, const u64 *input, const u64 *mod) noexcept
 {
 	u64 a[ECC_MAX_DIGITS], b[ECC_MAX_DIGITS];
 	u64 u[ECC_MAX_DIGITS], v[ECC_MAX_DIGITS];
