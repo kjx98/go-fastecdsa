@@ -157,7 +157,7 @@ func TestRRbySM2(t *testing.T) {
 	smPP.Add(smPP, n64)
 	smPP.Sub(smPP, one)
 	n512 := new(big.Int).Mul(n256, n256)
-	cParams := P256().Params()
+	cParams := sm2g.Params()
 	n := cParams.N
 	R := new(big.Int).Mod(n256, n)
 	RR := new(big.Int).Mul(R, R)
@@ -212,10 +212,20 @@ func TestRRbySM2(t *testing.T) {
 		}
 		t.Logf("new N0: %x, mont K0: %x", N0.Bits()[0], sm2g.montK0())
 	}
+	polyP := sm2g.multP(1)
+	if polyP.Cmp(p) != 0 {
+		ww = polyP.Bits()
+		t.Logf("P256 polyP diff P: %X %X %X %X", ww[0], ww[1], ww[2], ww[3])
+		t.Fail()
+	} else {
+		t.Log("polynomial Prime OK")
+	}
 	if smPP.Cmp(p) != 0 {
 		ww = smPP.Bits()
 		t.Logf("sm2 polyP diff P: %X %X %X %X", ww[0], ww[1], ww[2], ww[3])
 		t.Fail()
+	} else {
+		t.Log("Lsh simu polynomial Prime OK")
 	}
 	ww = p.Bits()
 	t.Logf("P: %X %X %X %X", ww[0], ww[1], ww[2], ww[3])
