@@ -219,6 +219,45 @@ static void vli_div_barrett(u64 *result, u64 *product, const u64 *mu) noexcept
 	vli_add<ndigits>(result, r, q+ndigits+1);
 }
 
+
+// SM2 prime optimize
+// p is 2^256 - 2^224 - 2^96 + 2^64 -1
+forceinline __attribute__((optimize("unroll-loops")))
+static void mont_multP(u64 *result, const u64 *p, const u64 u) noexcept
+{
+	u64	r[ECC_MAX_DIGITS+2];
+	vli_clear<4>(result + 4);
+	switch (u) {
+	case 0:
+		vli_clear<4>(result);
+		return;
+	case 1:
+		vli_set<4>(result, p);
+		return;
+	case 0xffffffffffffffffULL:
+		vli_clear<4>(r);
+		vli_sub<4>(result, r, p);
+		vli_usub<4>(result+4, p, 1);
+		return;
+	}
+	u64 t[ECC_MAX_DIGITS];
+	vli_clear<8>(r);
+	r[4] = u;
+	vli_clear<8>(t);
+	t[3] = u;	// ^192
+	vli_lshift<4>(t, t, 32);	// ^224
+	vli_sub<8>(result, r, t);	// ^256 - ^224
+	t[1] = t[3];
+	t[2] = t[4];
+	t[3] = 0;
+	t[4] = 0;
+	vli_sub<8>(result, result, t);	// ^256 - ^224 - ^96
+	vli_clear<4>(t);
+	t[1] = u;
+	vli_usub<4>(t, t, u);	// ^64 -1
+	vli_add<8>(result, result, t);
+}
+
 template<uint ndigits> forceinline
 __attribute__((optimize("unroll-loops")))
 static void mont_reduction(u64 *result, const u64 *y, const u64 *prime,

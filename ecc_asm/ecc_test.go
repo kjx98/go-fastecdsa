@@ -20,6 +20,7 @@ func init() {
 	rr = []uint64{0x200000003, 0x2ffffffff, 0x100000001, 0x400000002}
 }
 
+/*
 func TestEccMMod(t *testing.T) {
 	p := sm2.P256().Params().P
 	xy := new(big.Int).Mul(x1, y1)
@@ -44,8 +45,9 @@ func TestEccMMod(t *testing.T) {
 		t.Fail()
 	}
 }
+*/
 
-func TestEccMulModMont(t *testing.T) {
+func TestMontMultMod(t *testing.T) {
 	p := sm2.P256().Params().P
 	xy := new(big.Int).Mul(x1, y1)
 	xyMod := new(big.Int).Mod(xy, p)
@@ -65,7 +67,7 @@ func TestEccMulModMont(t *testing.T) {
 	}
 }
 
-func TestExpModMont(t *testing.T) {
+func TestMontExpMod(t *testing.T) {
 	p := sm2.P256().Params().P
 	xyMod := new(big.Int).Exp(x1, y1, p)
 	bMod := vliExpModMont(x1.Bits(), y1.Bits(), p.Bits(), rr, 1)
@@ -83,6 +85,7 @@ func TestExpModMont(t *testing.T) {
 	}
 }
 
+/*
 func TestEccInverse(t *testing.T) {
 	p := sm2.P256().Params().P
 	two := big.NewInt(2)
@@ -207,8 +210,9 @@ func BenchmarkModMulBarrett(b *testing.B) {
 		_ = vliModMultBarrett(x1, y1, pb)
 	}
 }
+*/
 
-func BenchmarkModMulMont(b *testing.B) {
+func BenchmarkMontModMul(b *testing.B) {
 	b.ResetTimer()
 	p := sm2.P256().Params().P
 
@@ -219,7 +223,7 @@ func BenchmarkModMulMont(b *testing.B) {
 	}
 }
 
-func BenchmarkExpModMont(b *testing.B) {
+func BenchmarkMontExpMod(b *testing.B) {
 	b.ResetTimer()
 	p := sm2.P256().Params().P
 
