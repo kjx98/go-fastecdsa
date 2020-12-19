@@ -1,7 +1,7 @@
 package sm2
 
 import (
-	//"crypto/elliptic"
+	"crypto/elliptic"
 	"crypto/rand"
 	"gitee.com/jkuang/go-fastecdsa"
 	"math/big"
@@ -12,6 +12,8 @@ var (
 	x1, y1 *big.Int
 	x2, y2 *big.Int
 	d1, d2 *big.Int
+	one    *big.Int
+	n256   *big.Int
 )
 
 func init() {
@@ -21,23 +23,35 @@ func init() {
 	y2, _ = new(big.Int).SetString("c7337843bdb886bff9965b00c6d87aff04f8d6bfa6a6846c0f28e513642bf309", 16)
 	d1, _ = new(big.Int).SetString("44960d13c3ae7889e7fdfc0c48f4ac1da4e68fd3a5be28ad3f53eddad6d9c892", 16)
 	d2, _ = new(big.Int).SetString("b68c5c25852521c647d7d0eddd09494949602ebaa885202a5573bb6ec8c5d96f", 16)
+	one = new(big.Int).SetUint64(1)
+	n256 = new(big.Int).Lsh(one, 256)
 }
 
 func TestRRbyP256(t *testing.T) {
-	n256 := new(big.Int).SetUint64(1)
-	n256.Lsh(n256, 256)
-	//cParams := elliptic.P256().Params()
-	cParams := BTC().Params()
+	cParams := elliptic.P256().Params()
 	n := cParams.N
 	R := new(big.Int).Mod(n256, n)
 	RR := new(big.Int).Mul(R, R)
 	RR.Mod(RR, n)
 	ww := RR.Bits()
-	t.Logf("RR is %x %x %x %x", ww[0], ww[1], ww[2], ww[3])
+	t.Logf("NIST P256 RR is %X %X %X %X", ww[0], ww[1], ww[2], ww[3])
 	ww = n.Bits()
-	t.Logf("N(order) is %x %x %x %x", ww[0], ww[1], ww[2], ww[3])
+	t.Logf("N(order) is %X %X %X %X", ww[0], ww[1], ww[2], ww[3])
 
 	p := cParams.P
+	// verify Prime poly
+	n96 := new(big.Int).Lsh(one, 96)
+	n224 := new(big.Int).Lsh(one, 224)
+	n192 := new(big.Int).Lsh(one, 192)
+	polyP := new(big.Int).Sub(n256, n224)
+	polyP.Add(polyP, n192)
+	polyP.Add(polyP, n96)
+	polyP.Sub(polyP, one)
+	if polyP.Cmp(p) != 0 {
+		ww = polyP.Bits()
+		t.Logf("P256 polyP diff P: %X %X %X %X", ww[0], ww[1], ww[2], ww[3])
+		t.Fail()
+	}
 	r := new(big.Int).Mod(n256, p)
 	rr := new(big.Int).Mul(r, r)
 	rr.Mod(rr, p)
@@ -68,8 +82,64 @@ func TestRRbyP256(t *testing.T) {
 	}
 	ww = p.Bits()
 	t.Logf("P: %X %X %X %X", ww[0], ww[1], ww[2], ww[3])
-	//ww = cParams.B.Bits()
-	//t.Logf("B: %X %X %X %X", ww[0], ww[1], ww[2], ww[3])
+	ww = cParams.B.Bits()
+	t.Logf("B: %X %X %X %X", ww[0], ww[1], ww[2], ww[3])
+	ww = cParams.Gx.Bits()
+	t.Logf("Gx: %X %X %X %X", ww[0], ww[1], ww[2], ww[3])
+	ww = cParams.Gy.Bits()
+	t.Logf("Gy: %X %X %X %X", ww[0], ww[1], ww[2], ww[3])
+}
+
+func TestRRbyBTC(t *testing.T) {
+	cParams := BTC().Params()
+	n := cParams.N
+	R := new(big.Int).Mod(n256, n)
+	RR := new(big.Int).Mul(R, R)
+	RR.Mod(RR, n)
+	ww := RR.Bits()
+	t.Logf("BTC RR is %X %X %X %X", ww[0], ww[1], ww[2], ww[3])
+	ww = n.Bits()
+	t.Logf("N(order) is %X %X %X %X", ww[0], ww[1], ww[2], ww[3])
+
+	p := cParams.P
+	// verify Prime poly
+	btcPC := big.NewInt(0x1000003d1)
+	polyP := new(big.Int).Sub(n256, btcPC)
+	if polyP.Cmp(p) != 0 {
+		ww = polyP.Bits()
+		t.Logf("BTC polyP diff P: %X %X %X %X", ww[0], ww[1], ww[2], ww[3])
+		t.Fail()
+	}
+	r := new(big.Int).Mod(n256, p)
+	rr := new(big.Int).Mul(r, r)
+	rr.Mod(rr, p)
+	ww = rr.Bits()
+	//t.Logf("rr is %x %x %x %x", ww[0], ww[1], ww[2], ww[3])
+	Rinv := new(big.Int).SetUint64(1)
+	Rinv.Lsh(Rinv, 257)
+	Rinv.Mod(Rinv, p)
+	Rinv.ModInverse(Rinv, p)
+	t.Log("RInverse is ", Rinv.Text(16))
+	K0 := new(big.Int).SetUint64(0xccd1c8aaee00bc4f)
+	N0 := new(big.Int).Mul(K0, n)
+	ww = N0.Bits()
+	t.Logf("K0: %s, n*K0: %x %x %x %x", K0.Text(16), ww[0], ww[1], ww[2], ww[3])
+	K0.SetUint64(1)
+	K0.Lsh(K0, 64)
+	N0 = N0.ModInverse(n, K0)
+	if N0 == nil {
+		t.Log("Ca'nt calc N0")
+	} else {
+		if N0.Cmp(K0) >= 0 {
+			t.Log("SHOULD NEVER OCCUR")
+			N0 = N0.Mod(K0, N0)
+		} else {
+			N0 = N0.Sub(K0, N0)
+		}
+		t.Logf("N0: %x", N0.Bits()[0])
+	}
+	ww = p.Bits()
+	t.Logf("P: %X %X %X %X", ww[0], ww[1], ww[2], ww[3])
 	ww = cParams.Gx.Bits()
 	t.Logf("Gx: %X %X %X %X", ww[0], ww[1], ww[2], ww[3])
 	ww = cParams.Gy.Bits()
@@ -77,12 +147,10 @@ func TestRRbyP256(t *testing.T) {
 }
 
 func TestRRbySM2(t *testing.T) {
-	one := new(big.Int).SetUint64(1)
 	n96 := new(big.Int).Lsh(one, 96)
 	n64 := new(big.Int).Lsh(one, 64)
 	//n128 := new(big.Int).Lsh(one, 128)
 	n224 := new(big.Int).Lsh(one, 224)
-	n256 := new(big.Int).Lsh(one, 256)
 	smPP := new(big.Int).Sub(n256, n224)
 	//smPP.Sub(smPP, n128)
 	smPP.Sub(smPP, n96)
@@ -95,19 +163,19 @@ func TestRRbySM2(t *testing.T) {
 	RR := new(big.Int).Mul(R, R)
 	RR.Mod(RR, n)
 	ww := RR.Bits()
-	t.Logf("RR of sm2 is %x %x %x %x", ww[0], ww[1], ww[2], ww[3])
+	t.Logf("RR of sm2 is %X %X %X %X", ww[0], ww[1], ww[2], ww[3])
 	ww = n.Bits()
-	t.Logf("N(order) is %x %x %x %x", ww[0], ww[1], ww[2], ww[3])
+	t.Logf("N(order) is %X %X %X %X", ww[0], ww[1], ww[2], ww[3])
 
 	p := cParams.P
 	mu := new(big.Int).Div(n512, p)
 	ww = mu.Bits()
-	t.Logf("mu: %x %x %x %x %x", ww[0], ww[1], ww[2], ww[3], ww[4])
+	t.Logf("mu: %X %X %X %X %X", ww[0], ww[1], ww[2], ww[3], ww[4])
 	r := new(big.Int).Mod(n256, p)
 	rr := new(big.Int).Mul(r, r)
 	rr.Mod(rr, p)
 	ww = rr.Bits()
-	t.Logf("rr is %x %x %x %x", ww[0], ww[1], ww[2], ww[3])
+	t.Logf("rr is %X %X %X %X", ww[0], ww[1], ww[2], ww[3])
 	Rinv := new(big.Int).SetUint64(1)
 	Rinv.Lsh(Rinv, 257)
 	Rinv.Mod(Rinv, p)
@@ -116,7 +184,7 @@ func TestRRbySM2(t *testing.T) {
 	K0 := new(big.Int).SetUint64(0x327f9e8872350975)
 	N0 := new(big.Int).Mul(K0, n)
 	ww = N0.Bits()
-	t.Logf("K0: %s, n*K0: %x %x %x %x", K0.Text(16), ww[0], ww[1], ww[2], ww[3])
+	t.Logf("K0: %s, n*K0: %X %X %X %X", K0.Text(16), ww[0], ww[1], ww[2], ww[3])
 	K0.SetUint64(1)
 	K0.Lsh(K0, 64)
 	N0 = N0.ModInverse(n, K0)
@@ -144,8 +212,11 @@ func TestRRbySM2(t *testing.T) {
 		}
 		t.Logf("new N0: %x, mont K0: %x", N0.Bits()[0], sm2g.montK0())
 	}
-	ww = smPP.Bits()
-	t.Logf("sm2 mP: %X %X %X %X", ww[0], ww[1], ww[2], ww[3])
+	if smPP.Cmp(p) != 0 {
+		ww = smPP.Bits()
+		t.Logf("sm2 polyP diff P: %X %X %X %X", ww[0], ww[1], ww[2], ww[3])
+		t.Fail()
+	}
 	ww = p.Bits()
 	t.Logf("P: %X %X %X %X", ww[0], ww[1], ww[2], ww[3])
 	ww = cParams.B.Bits()
