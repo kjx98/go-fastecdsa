@@ -46,12 +46,12 @@ func _vli_div_barrett(res, prod, mu unsafe.Pointer)
 // Functions implemented in ecc_asm_*64.s
 // multiplication modulo p
 //go:noescape
-func _mont_MulMod(res, in1, in2, p, rr unsafe.Pointer, k0 uint64)
+func _mont_mod_mult(res, in1, in2, p, rr unsafe.Pointer, k0 uint64)
 
 // Function implemented in ecc_asm_*86.s
 // Exp modulo prime p
 //go:noescape
-func _mont_ExpMod(res, in1, in2, p, rr unsafe.Pointer, k0 uint64)
+func _mont_mod_exp(res, in1, in2, p, rr unsafe.Pointer, k0 uint64)
 
 // Functions implemented in ecc_asm_*64.s
 // Montgomery inverse modulo prime mod
@@ -107,7 +107,7 @@ func vliBarrettDiv(prod *big.Int, muB []big.Word) (result *big.Int) {
 
 func vliModMultMont(x, y, mod []big.Word, rr []uint64, k0 uint64) (res *big.Int) {
 	var r [4]big.Word
-	_mont_MulMod(unsafe.Pointer(&r[0]), unsafe.Pointer(&x[0]),
+	_mont_mod_mult(unsafe.Pointer(&r[0]), unsafe.Pointer(&x[0]),
 		unsafe.Pointer(&y[0]), unsafe.Pointer(&mod[0]), unsafe.Pointer(&rr[0]),
 		k0)
 	res = new(big.Int).SetBits(r[:4])
@@ -116,7 +116,7 @@ func vliModMultMont(x, y, mod []big.Word, rr []uint64, k0 uint64) (res *big.Int)
 
 func vliExpModMont(x, y, mod []big.Word, rr []uint64, k0 uint64) (res *big.Int) {
 	var r [4]big.Word
-	_mont_ExpMod(unsafe.Pointer(&r[0]), unsafe.Pointer(&x[0]),
+	_mont_mod_exp(unsafe.Pointer(&r[0]), unsafe.Pointer(&x[0]),
 		unsafe.Pointer(&y[0]), unsafe.Pointer(&mod[0]),
 		unsafe.Pointer(&rr[0]), k0)
 	res = new(big.Int).SetBits(r[:4])

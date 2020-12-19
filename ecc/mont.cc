@@ -34,7 +34,7 @@
 
 
 //static u64 montOne[]={1, 0, 0, 0};
-void mont_MulMod(u64 *result, const u64 *x, const u64 *y, const u64 *prime,
+void mont_mod_mult(u64 *result, const u64 *x, const u64 *y, const u64 *prime,
 				const u64 *rr, const u64 k0)
 {
 	u64	xp[ECC_MAX_DIGITS];
@@ -47,7 +47,7 @@ void mont_MulMod(u64 *result, const u64 *x, const u64 *y, const u64 *prime,
 	mont_reduction<4>(result, r, prime, k0);
 }
 
-void mont_ExpMod(u64 *result, const u64 *x, const u64 *y, const u64 *prime,
+void mont_mod_exp(u64 *result, const u64 *x, const u64 *y, const u64 *prime,
 				const u64 *rr, const u64 k0)
 {
 	u64	xp[ECC_MAX_DIGITS];

@@ -130,6 +130,7 @@ int ecc_is_pubkey_valid_partial(const uint curve_id,
  */
 void vli_from_be64(u64 *dest, const void *src, uint ndigits);
 
+#ifdef	ommit
 /**
  * vli_from_le64() - Load vli from little-endian u64 array
  *
@@ -138,6 +139,7 @@ void vli_from_be64(u64 *dest, const void *src, uint ndigits);
  * @ndigits:		length of both vli and array
  */
 void vli_from_le64(u64 *dest, const void *src, uint ndigits);
+#endif
 
 /**
  * vli_mod_inv() - Modular inversion
@@ -161,9 +163,15 @@ void vli_mult(u64 *result, const u64 *left, const u64 *right);
  */
 void vli_mmod_barrett(u64 *result, u64 *product, const u64 *mod);
 void vli_div_barrett(u64 *result, u64 *product, const u64 *mod);
-void mont_MulMod(u64 *result, const u64 *x, const u64 *y, const u64 *prime,
+
+/*
+ * using Mongtgomey reduction/multiply with precomputed RR and K0
+ * RR		b^2n mod P
+ * K0		- P^(-1) mod b
+ */
+void mont_mod_mult(u64 *result, const u64 *x, const u64 *y, const u64 *prime,
 				const u64 *rr, const u64 k0);
-void mont_ExpMod(u64 *result, const u64 *x, const u64 *y, const u64 *prime,
+void mont_mod_exp(u64 *result, const u64 *x, const u64 *y, const u64 *prime,
 				const u64 *rr, const u64 k0);
 
 /**

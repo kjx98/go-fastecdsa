@@ -69,7 +69,7 @@ func vliBarrettDiv(prod *big.Int, muB []big.Word) (result *big.Int) {
 
 func vliModMultMont(x, y, mod []big.Word, rr []uint64, k0 uint64) (res *big.Int) {
 	var r [4]big.Word
-	C.mont_MulMod((*C.u64)(unsafe.Pointer(&r[0])),
+	C.mont_mod_mult((*C.u64)(unsafe.Pointer(&r[0])),
 		(*C.u64)(unsafe.Pointer(&x[0])), (*C.u64)(unsafe.Pointer(&y[0])),
 		(*C.u64)(unsafe.Pointer(&mod[0])), (*C.u64)(unsafe.Pointer(&rr[0])),
 		C.u64(k0))
@@ -79,7 +79,7 @@ func vliModMultMont(x, y, mod []big.Word, rr []uint64, k0 uint64) (res *big.Int)
 
 func vliExpModMont(x, y, mod []big.Word, rr []uint64, k0 uint64) (res *big.Int) {
 	var r [4]big.Word
-	C.mont_ExpMod((*C.u64)(unsafe.Pointer(&r[0])),
+	C.mont_mod_exp((*C.u64)(unsafe.Pointer(&r[0])),
 		(*C.u64)(unsafe.Pointer(&x[0])), (*C.u64)(unsafe.Pointer(&y[0])),
 		(*C.u64)(unsafe.Pointer(&mod[0])), (*C.u64)(unsafe.Pointer(&rr[0])),
 		C.u64(k0))

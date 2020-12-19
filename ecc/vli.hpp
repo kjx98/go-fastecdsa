@@ -40,7 +40,7 @@
 
 
 template<typename T> forceinline
-static T max(const T a, const T b) noexcept {
+static T max(const T&& a, const T&& b) noexcept {
 	static_assert(std::is_integral<T>::value, "Integral required.");
 	return (a>b)?a:b;
 }
@@ -156,15 +156,16 @@ bool vli_add(u64 *result, const u64 *left, const u64 *right) noexcept
 	bool carry = false;
 	for (uint i = 0; i < ndigits; i++) {
 		u64 sum;
+#ifdef	NO_BUILTIN_OVERFLOW
+		sum = left[i] + right[i] + carry;
+		if (sum != left[i])
+			carry = (sum < left[i]);
+#else
 		auto c_carry = __builtin_uaddl_overflow(left[i], right[i], &sum);
 		if (unlikely(carry)) {
 			carry = c_carry | __builtin_uaddl_overflow(sum, 1, &sum);
 		} else carry = c_carry;
-		/*
-		sum = left[i] + right[i] + carry;
-		if (sum != left[i])
-			carry = (sum < left[i]);
-		*/
+#endif
 		result[i] = sum;
 	}
 	return carry;
@@ -175,7 +176,7 @@ template<uint ndigits> forceinline
 __attribute__((optimize("unroll-loops")))
 static bool vli_uadd(u64 *result, const u64 *left, u64 right) noexcept
 {
-#ifdef	NO_INT128
+#ifdef	NO_BUILTIN_OVERFLOW
 	u64 carry = right;
 	uint i;
 	for (i = 0; i < ndigits; i++) {
@@ -218,14 +219,15 @@ bool vli_sub(u64 *result, const u64 *left, const u64 *right) noexcept
 	bool borrow = false;
 	for (uint i = 0; i < ndigits; i++) {
 		u64 diff;
+#ifdef	NO_BUILTIN_OVERFLOW
+		diff = left[i] - right[i] - borrow;
+		if (diff != left[i]) borrow = (diff > left[i]);
+#else
 		auto c_borrow = __builtin_usubl_overflow(left[i], right[i], &diff);
 		if (unlikely(borrow)) {
 			borrow = c_borrow | __builtin_usubl_overflow(diff, 1, &diff);
 		} else borrow = c_borrow;
-		/*
-		diff = left[i] - right[i] - borrow;
-		if (diff != left[i]) borrow = (diff > left[i]);
-		*/
+#endif
 		result[i] = diff;
 	}
 	return borrow;
@@ -236,7 +238,7 @@ template<uint ndigits> forceinline
 __attribute__((optimize("unroll-loops")))
 static bool vli_usub(u64 *result, const u64 *left, u64 right) noexcept
 {
-#ifdef	NO_INT128
+#ifdef	NO_BUILTIN_OVERFLOW
 	u64 borrow = right;
 	uint i;
 	for (i = 0; i < ndigits; i++) {
@@ -315,6 +317,7 @@ static void vli_from_be64(u64 *dest, const void *src) noexcept
 		dest[i] = be64toh(from[ndigits - 1 - i]);
 }
 
+#ifdef	ommit
 /**
  * vli_from_le64() - Load vli from little-endian u64 array
  *
@@ -330,6 +333,7 @@ static void vli_from_le64(u64 *dest, const void *src) noexcept
 	for (uint i = 0; i < ndigits; i++)
 		dest[i] = le64toh(from[ndigits - 1 - i]);
 }
+#endif
 
 class alignas(16) uint128_t {
 public:
@@ -478,11 +482,15 @@ static void vli_umult(u64 *result, const u64 *left, u64 right) noexcept
 		vli_set<ndigits>(result, left);
 		return;
 	case 0xffffffffffffffffULL:
-		vli_clear<ndigits>(result);
-		vli_set<ndigits>(result+ndigits, left);
-		if (vli_sub<ndigits>(result, result, left)) {
-			vli_usub<ndigits>(result +ndigits, result +ndigits, 1);
-		}
+	{
+		u64		r[ndigits*2];
+		u64		t[ndigits*2];
+		vli_clear<ndigits*2>(r);
+		vli_clear<ndigits*2>(t);
+		vli_set<ndigits>(r + 1, left);
+		vli_set<ndigits>(t, left);
+		vli_sub<ndigits *2>(result, r, t);
+	}
 		return;
 	}
 #endif
