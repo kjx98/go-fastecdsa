@@ -225,34 +225,35 @@ static void vli_div_barrett(u64 *result, u64 *product, const u64 *mu) noexcept
 forceinline __attribute__((optimize("unroll-loops")))
 static void vli_sm2_multP(u64 *result, const u64 u) noexcept
 {
-	u64	r[ECC_MAX_DIGITS +2];
-	u64 t[ECC_MAX_DIGITS +2];
-	vli_clear<4>(result +4);
-	vli_clear<4>(r);
-	r[4] = u;
-	vli_clear<4>(t);
-	t[3] = u << 32;	// ^192
-	t[4] = ((u >> 32) & 0xffffffff);
-	vli_sub<5>(result, r, t);	// ^256 - ^224
-	t[1] = t[3];
-	t[2] = t[4];
-	t[3] = 0;
-	t[4] = 0;
+	u64	r[ECC_MAX_DIGITS];
+	u64	t_low, t_high;
+	t_low = u << 32;	// ^192
+	t_high = ((u >> 32) & 0xffffffff);
+	result[5] = 0;
+	result[4] = u - t_high;
+	result[4]--;
+	result[3] = 0 - t_low;		// ^256 - ^224
+	result[2] = 0;
+	result[1] = 0;
+	result[0] = 0;
+	r[0] =0;
+	r[3] =0;
+	r[1] = t_low;
+	r[2] = t_high;
 	//vli_sub<5>(result, result, t);	// ^256 - ^224 - ^96
-	if (vli_sub<4>(result, result, t)) result[4]--;
-	vli_clear<4>(t);
-	t[1] = u-1;
-	t[0] = -u;		// ^64 -1
-	//vli_add<8>(result, result, t);
-	if (vli_add<4>(result, result, t)) result[4]++;
+	if (vli_sub<4>(result, result, r)) result[4]--;
+	r[2] = 0;
+	r[1] = u-1;
+	r[0] = -u;		// ^64 -1
+	if (vli_add<4>(result, result, r)) result[4]++;
 }
 
 forceinline __attribute__((optimize("unroll-loops")))
 static void mont_reductionP(u64 *result, const u64 *y, const u64 *prm) noexcept
 {
-	u64	s[ECC_MAX_DIGITS * 2];
-	u64	r[ECC_MAX_DIGITS * 2];
-	vli_clear<8>(r);
+	u64	s[ECC_MAX_DIGITS + 2];
+	u64	r[ECC_MAX_DIGITS + 2];
+	vli_clear<6>(r);
 	for (uint i=0; i < 4; i++) {
 		u64	u = r[0] + y[i];
 		vli_sm2_multP(s, u);
@@ -270,16 +271,16 @@ static void mont_multP(u64 *result, const u64 *x, const u64 *y,
 			const u64 *prime) noexcept
 {
 	u64	t[ECC_MAX_DIGITS * 2];
-	u64	s[ECC_MAX_DIGITS * 2];
-	u64	r[ECC_MAX_DIGITS * 2];
-	vli_clear<4 * 2>(r);
+	u64	s[ECC_MAX_DIGITS + 2];
+	u64	r[ECC_MAX_DIGITS + 2];
+	vli_clear<6>(r);
 	for (uint i=0; i < 4;i++) {
 		u64	u = r[0] + y[i]*x[0];
 		vli_sm2_multP(s, u);
 		vli_umult<4>(t, x, y[i]);
-		vli_add<4 * 2>(r, r, s);
-		vli_add<4 * 2>(r, r, t);
-		vli_rshift1w<4 + 2>(r);	
+		vli_add<6>(r, r, s);
+		vli_add<6>(r, r, t);
+		vli_rshift1w<6>(r);	
 	}
 	if (r[4] != 0 || vli_cmp<4>(r, prime) >= 0) {
 		vli_sub<4>(result, r, prime);
