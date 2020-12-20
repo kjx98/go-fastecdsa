@@ -46,11 +46,12 @@ static T max(const T&& a, const T&& b) noexcept {
 }
 
 
+//__attribute__((optimize("unroll-loops")))
 template<uint ndigits> forceinline
-__attribute__((optimize("unroll-loops")))
 static void vli_clear(u64 *vli) noexcept
 {
 	uint i;
+#pragma GCC unroll 4
 	for (i = 0; i < ndigits; i++)
 	vli[i] = 0;
 }
@@ -63,9 +64,10 @@ static void vli_clear(u64 *vli) noexcept
  */
 /* Returns true if vli == 0, false otherwise. */
 template<uint ndigits> forceinline
-__attribute__((optimize("unroll-loops")))
+//__attribute__((optimize("unroll-loops")))
 static bool vli_is_zero(const u64 *vli) noexcept
 {
+#pragma GCC unroll 4
 	for (uint i = 0; i < ndigits; i++) {
 		if (vli[i]) return false;
 	}
@@ -74,9 +76,10 @@ static bool vli_is_zero(const u64 *vli) noexcept
 
 /* Sets dest = src. */
 template<uint ndigits> forceinline
-__attribute__((optimize("unroll-loops")))
+//__attribute__((optimize("unroll-loops")))
 static void vli_set(u64 *dest, const u64 *src) noexcept
 {
+#pragma GCC unroll 4
 	for (uint i = 0; i < ndigits; i++)
 		dest[i] = src[i];
 }
@@ -98,9 +101,10 @@ static forceinline bool vli_test_bit(const u64 *vli, uint bit)
  * 0 if @left == @right, 1 if @left > @right.
  */
 template<uint ndigits> forceinline
-__attribute__((optimize("unroll-loops")))
+//__attribute__((optimize("unroll-loops")))
 static int vli_cmp(const u64 *left, const u64 *right) noexcept
 {
+#pragma GCC unroll 4
 	for (int i = ndigits - 1; i >= 0; i--) {
 		if (left[i] > right[i]) return 1;
 		else if (left[i] < right[i]) return -1;
@@ -113,10 +117,11 @@ static int vli_cmp(const u64 *left, const u64 *right) noexcept
  * (if result == in). 0 < shift < 64.
  */
 template<uint ndigits> forceinline static
-__attribute__((optimize("unroll-loops")))
+//__attribute__((optimize("unroll-loops")))
 u64 vli_lshift(u64 *result, const u64 *in, unsigned int shift) noexcept
 {
 	u64 carry = 0;
+#pragma GCC unroll 4
 	for (uint i = 0; i < ndigits; i++) {
 		u64 temp = in[i];
 		result[i] = (temp << shift) | carry;
@@ -127,10 +132,11 @@ u64 vli_lshift(u64 *result, const u64 *in, unsigned int shift) noexcept
 #endif
 
 template<uint ndigits> forceinline static
-__attribute__((optimize("unroll-loops")))
+//__attribute__((optimize("unroll-loops")))
 u64 vli_lshift1(u64 *result, const u64 *in) noexcept
 {
 	u64 carry = 0;
+#pragma GCC unroll 4
 	for (uint i = 0; i < ndigits; i++) {
 		u64 temp = in[i];
 		result[i] = (temp << 1) | carry;
@@ -141,10 +147,11 @@ u64 vli_lshift1(u64 *result, const u64 *in) noexcept
 
 /* Computes vli = vli >> 1. */
 template<uint ndigits> forceinline
-__attribute__((optimize("unroll-loops")))
+//__attribute__((optimize("unroll-loops")))
 static void vli_rshift1(u64 *vli) noexcept
 {
 	u64 carry = 0;
+#pragma GCC unroll 4
 	for (int i=ndigits - 1; i >= 0; i--) { 
 		u64 temp = vli[i];
 		vli[i] = (temp >> 1) | carry;
@@ -154,9 +161,10 @@ static void vli_rshift1(u64 *vli) noexcept
 
 /* Computes vli = vli >> 1. */
 template<uint ndigits> forceinline
-__attribute__((optimize("unroll-loops")))
+//__attribute__((optimize("unroll-loops")))
 static void vli_rshift1w(u64 *vli) noexcept
 {
+#pragma GCC unroll 4
 	for (uint i = 1; i < ndigits; i++) {
 		vli[i-1] = vli[i];
 	}
@@ -165,10 +173,11 @@ static void vli_rshift1w(u64 *vli) noexcept
 
 /* Computes result = left + right, returning carry. Can modify in place. */
 template<uint ndigits> forceinline static
-__attribute__((optimize("unroll-loops")))
+//__attribute__((optimize("unroll-loops")))
 bool vli_add(u64 *result, const u64 *left, const u64 *right) noexcept
 {
 	bool carry = false;
+#pragma GCC unroll 4
 	for (uint i = 0; i < ndigits; i++) {
 		u64 sum;
 #ifdef	NO_BUILTIN_OVERFLOW
@@ -188,12 +197,13 @@ bool vli_add(u64 *result, const u64 *left, const u64 *right) noexcept
 
 /* Computes result = left + right, returning carry. Can modify in place. */
 template<uint ndigits> forceinline
-__attribute__((optimize("unroll-loops")))
+//__attribute__((optimize("unroll-loops")))
 static bool vli_uadd(u64 *result, const u64 *left, u64 right) noexcept
 {
 #ifdef	NO_BUILTIN_OVERFLOW
 	u64 carry = right;
 	uint i;
+#pragma GCC unroll 4
 	for (i = 0; i < ndigits; i++) {
 		u64 sum;
 		sum = left[i] + carry;
@@ -228,10 +238,11 @@ static bool vli_uadd(u64 *result, const u64 *left, u64 right) noexcept
  * Return: carry bit.
  */
 template<uint ndigits> forceinline static
-__attribute__((optimize("unroll-loops")))
+//__attribute__((optimize("unroll-loops")))
 bool vli_sub(u64 *result, const u64 *left, const u64 *right) noexcept
 {
 	bool borrow = false;
+#pragma GCC unroll 4
 	for (uint i = 0; i < ndigits; i++) {
 		u64 diff;
 #ifdef	NO_BUILTIN_OVERFLOW
@@ -250,12 +261,13 @@ bool vli_sub(u64 *result, const u64 *left, const u64 *right) noexcept
 
 /* Computes result = left - right, returning borrow. Can modify in place. */
 template<uint ndigits> forceinline
-__attribute__((optimize("unroll-loops")))
+//__attribute__((optimize("unroll-loops")))
 static bool vli_usub(u64 *result, const u64 *left, u64 right) noexcept
 {
 #ifdef	NO_BUILTIN_OVERFLOW
 	u64 borrow = right;
 	uint i;
+#pragma GCC unroll 4
 	for (i = 0; i < ndigits; i++) {
 		u64 diff;
 		diff = left[i] - borrow;
@@ -266,6 +278,7 @@ static bool vli_usub(u64 *result, const u64 *left, u64 right) noexcept
 	return borrow != 0;
 #else
 	auto borrow = __builtin_usubl_overflow(left[0], right, result);
+#pragma GCC unroll 4
 	for (uint i = 1; i < ndigits; i++) {
 		if (unlikely(borrow)) {
 			borrow = __builtin_usubl_overflow(result[i], 1, result+i);
@@ -287,7 +300,7 @@ forceinline static bool vli_is_even(u64 *vli) noexcept {
 
 /* Counts the number of 64-bit "digits" in vli. */
 template<uint ndigits> forceinline
-__attribute__((optimize("unroll-loops")))
+//__attribute__((optimize("unroll-loops")))
 static uint vli_num_digits(const u64 *vli) noexcept
 {
 	/* Search from the end until we find a non-zero digit.
@@ -301,7 +314,7 @@ static uint vli_num_digits(const u64 *vli) noexcept
 
 /* Counts the number of bits required for vli. */
 template<uint ndigits> forceinline
-__attribute__((optimize("unroll-loops")))
+//__attribute__((optimize("unroll-loops")))
 static uint vli_num_bits(const u64 *vli) noexcept
 {
 	// uint i, num_digits;
@@ -324,10 +337,11 @@ forceinline static uint vli_bytes(uint ndigits) {
  * @ndigits:		length of both vli and array
  */
 template<uint ndigits> forceinline
-__attribute__((optimize("unroll-loops")))
+//__attribute__((optimize("unroll-loops")))
 static void vli_from_be64(u64 *dest, const void *src) noexcept
 {
 	const u64 *from = (const u64 *)src;
+#pragma GCC unroll 4
 	for (uint i = 0; i < ndigits; i++)
 		dest[i] = be64toh(from[ndigits - 1 - i]);
 }
@@ -438,7 +452,7 @@ private:
 };
 
 template<uint ndigits> forceinline static
-__attribute__((optimize("unroll-loops")))
+//__attribute__((optimize("unroll-loops")))
 void vli_mult(u64 *result, const u64 *left, const u64 *right) noexcept
 {
 	uint128_t r01( 0, 0 );
@@ -447,6 +461,7 @@ void vli_mult(u64 *result, const u64 *left, const u64 *right) noexcept
 	/* Compute each digit of result in sequence, maintaining the
 	 * carries.
 	 */
+#pragma GCC unroll 8
 	for (k = 0; k < ndigits * 2 - 1; k++) {
 		unsigned int min;
 		if (k < ndigits)
@@ -477,34 +492,13 @@ void vli_mult(u64 *result, const u64 *left, const u64 *right) noexcept
 
 /* Compute product = left * right, for a small right value. */
 template<uint ndigits> forceinline
-__attribute__((optimize("unroll-loops")))
+//__attribute__((optimize("unroll-loops")))
 static void vli_umult(u64 *result, const u64 *left, u64 right) noexcept
 {
 	uint128_t r01( 0, 0 );
 	unsigned int k;
 
-#ifdef	OPT_UMULT
-	switch (right) {
-	case 0:
-		vli_clear<ndigits *2>(result);
-		return;
-	case 1:
-		vli_clear<ndigits>(result +ndigits);
-		vli_set<ndigits>(result, left);
-		return;
-	case 0xffffffffffffffffULL:
-	{
-		u64		r[ndigits*2];
-		u64		t[ndigits*2];
-		vli_clear<ndigits*2>(r);
-		vli_clear<ndigits*2>(t);
-		vli_set<ndigits>(r + 1, left);
-		vli_set<ndigits>(t, left);
-		vli_sub<ndigits *2>(result, r, t);
-	}
-		return;
-	}
-#endif
+#pragma GCC unroll 4
 	for (k = 0; k < ndigits; k++) {
 		uint128_t product;
 
@@ -519,18 +513,20 @@ static void vli_umult(u64 *result, const u64 *left, u64 right) noexcept
 		//r01.m_high = 0;
 	}
 	result[ndigits] = r01.m_low();
+#pragma GCC unroll 4
 	for (k = ndigits+1; k < ndigits * 2; k++)
 		result[k] = 0;
 }
 
 template<uint ndigits> forceinline
-__attribute__((optimize("unroll-loops")))
+//__attribute__((optimize("unroll-loops")))
 static void vli_square(u64 *result, const u64 *left) noexcept
 {
 	uint128_t r01( 0, 0 );
 	u64 r2 = 0;
 	uint i, k;
 
+#pragma GCC unroll 8
 	for (k = 0; k < ndigits * 2 - 1; k++) {
 		unsigned int min;
 
@@ -571,7 +567,6 @@ static void vli_square(u64 *result, const u64 *left) noexcept
  * Assumes that left < mod and right < mod, result != mod.
  */
 template<uint ndigits> forceinline
-__attribute__((optimize("unroll-loops")))
 static void vli_mod_add(u64 *result, const u64 *left, const u64 *right,
 			const u64 *mod) noexcept
 {
@@ -588,7 +583,6 @@ static void vli_mod_add(u64 *result, const u64 *left, const u64 *right,
  * Assumes that left < mod and right < mod, result != mod.
  */
 template<uint ndigits> forceinline
-__attribute__((optimize("unroll-loops")))
 static void vli_mod_sub(u64 *result, const u64 *left, const u64 *right,
 			const u64 *mod) noexcept
 {

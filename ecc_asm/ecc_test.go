@@ -85,6 +85,26 @@ func TestMontExpMod(t *testing.T) {
 	}
 }
 
+func TestMontMultModP(t *testing.T) {
+	p := sm2.P256().Params().P
+	xy := new(big.Int).Mul(x1, y1)
+	xyMod := new(big.Int).Mod(xy, p)
+	bMod := vliModMultMontP(x1.Bits(), y1.Bits(), p.Bits(), rr)
+	if bMod.Cmp(xyMod) != 0 {
+		t.Logf("step1 big.mulmod diff ModMultMont:\n%s vs\n%s\n",
+			xyMod.Text(16), bMod.Text(16))
+		t.Fail()
+	}
+	xy = new(big.Int).Mul(x2, y2)
+	xyMod = new(big.Int).Mod(xy, p)
+	bMod = vliModMultMontP(x2.Bits(), y2.Bits(), p.Bits(), rr)
+	if bMod.Cmp(xyMod) != 0 {
+		t.Logf("step2 big.mulmod diff ModMultMont:\n%s vs\n%s\n",
+			xyMod.Text(16), bMod.Text(16))
+		t.Fail()
+	}
+}
+
 /*
 func TestEccInverse(t *testing.T) {
 	p := sm2.P256().Params().P
@@ -231,6 +251,17 @@ func BenchmarkMontExpMod(b *testing.B) {
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
 		_ = vliExpModMont(x1.Bits(), y1.Bits(), p.Bits(), rr, 1)
+	}
+}
+
+func BenchmarkMontModMulP(b *testing.B) {
+	b.ResetTimer()
+	p := sm2.P256().Params().P
+
+	b.ReportAllocs()
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		_ = vliModMultMontP(x1.Bits(), y1.Bits(), p.Bits(), rr)
 	}
 }
 

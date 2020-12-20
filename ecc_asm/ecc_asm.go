@@ -53,6 +53,26 @@ func _mont_mod_mult(res, in1, in2, p, rr unsafe.Pointer, k0 uint64)
 //go:noescape
 func _mont_mod_exp(res, in1, in2, p, rr unsafe.Pointer, k0 uint64)
 
+// Function implemented in ecc_asm_*86.s
+// u64 multiply prime P of SM2
+//go:noescape
+func _vli_sm2_mult_p(res unsafe.Pointer, u uint64)
+
+// Function implemented in ecc_asm_*86.s
+// u64 multiply prime N of SM2
+//go:noescape
+func _vli_sm2_mult_n(res unsafe.Pointer, u uint64)
+
+// Functions implemented in ecc_asm_*64.s
+// multiplication modulo p for SM2
+//go:noescape
+func _mont_sm2_mod_mult_p(res, in1, in2, p, rr unsafe.Pointer)
+
+// Functions implemented in ecc_asm_*64.s
+// multiplication modulo p for SM2
+//go:noescape
+func _mont_sm2_mod_mult_n(res, in1, in2, p, rr unsafe.Pointer)
+
 // Functions implemented in ecc_asm_*64.s
 // Montgomery inverse modulo prime mod
 func vliModInv(in, mod []big.Word) (result []big.Word) {
@@ -80,7 +100,7 @@ func vliModMult(left, right, mdU []big.Word) (result *big.Int) {
 	return
 }
 
-func vliModMultBarrett(left, right *big.Int, mdU []big.Word) (result *big.Int) {
+func vliModMultBarrett(left, right *big.Int, mdU []big.Word) *big.Int {
 	var res [4]big.Word
 	prod := new(big.Int).Mul(left, right)
 	var prd [8]big.Word
@@ -89,8 +109,7 @@ func vliModMultBarrett(left, right *big.Int, mdU []big.Word) (result *big.Int) {
 	copy(mod[:], mdU)
 	_vli_mmod_barrett(unsafe.Pointer(&res[0]), unsafe.Pointer(&prd[0]),
 		unsafe.Pointer(&mod[0]))
-	result = new(big.Int).SetBits(res[:4])
-	return
+	return new(big.Int).SetBits(res[:4])
 }
 
 func vliBarrettDiv(prod *big.Int, muB []big.Word) (result *big.Int) {
@@ -105,13 +124,12 @@ func vliBarrettDiv(prod *big.Int, muB []big.Word) (result *big.Int) {
 	return
 }
 
-func vliModMultMont(x, y, mod []big.Word, rr []uint64, k0 uint64) (res *big.Int) {
+func vliModMultMont(x, y, mod []big.Word, rr []uint64, k0 uint64) *big.Int {
 	var r [4]big.Word
 	_mont_mod_mult(unsafe.Pointer(&r[0]), unsafe.Pointer(&x[0]),
 		unsafe.Pointer(&y[0]), unsafe.Pointer(&mod[0]), unsafe.Pointer(&rr[0]),
 		k0)
-	res = new(big.Int).SetBits(r[:4])
-	return
+	return new(big.Int).SetBits(r[:4])
 }
 
 func vliExpModMont(x, y, mod []big.Word, rr []uint64, k0 uint64) (res *big.Int) {
@@ -121,4 +139,11 @@ func vliExpModMont(x, y, mod []big.Word, rr []uint64, k0 uint64) (res *big.Int) 
 		unsafe.Pointer(&rr[0]), k0)
 	res = new(big.Int).SetBits(r[:4])
 	return
+}
+
+func vliModMultMontP(x, y, mod []big.Word, rr []uint64) *big.Int {
+	var r [4]big.Word
+	_mont_sm2_mod_mult_p(unsafe.Pointer(&r[0]), unsafe.Pointer(&x[0]),
+		unsafe.Pointer(&y[0]), unsafe.Pointer(&mod[0]), unsafe.Pointer(&rr[0]))
+	return new(big.Int).SetBits(r[:4])
 }

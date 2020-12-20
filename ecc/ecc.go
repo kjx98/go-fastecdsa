@@ -2,7 +2,7 @@
 
 package ecc
 
-// #cgo CXXFLAGS: -O3 -Wpedantic -Wall -std=gnu++11 -DWITH_SM2_MULTP
+// #cgo CXXFLAGS: -O2 -Wpedantic -Wall -std=gnu++11
 // #include "ecc.h"
 import "C"
 
@@ -89,7 +89,9 @@ func vliExpModMont(x, y, mod []big.Word, rr []uint64, k0 uint64) *big.Int {
 func vliSM2MultP(u uint64) *big.Int {
 	var r [8]big.Word
 	C.vli_sm2_mult_p((*C.u64)(unsafe.Pointer(&r[0])), C.u64(u))
-	if r[4] == 0 { return new(big.Int).SetBits(r[:4]) }
+	if r[4] == 0 {
+		return new(big.Int).SetBits(r[:4])
+	}
 	return new(big.Int).SetBits(r[:5])
 }
 
