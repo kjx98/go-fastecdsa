@@ -97,14 +97,19 @@ func getWordAt(x *big.Int, i int) big.Word {
 // use poly, shift/add/sub
 func (curve sm2Curve) multP(u uint64) *big.Int {
 	var uBN big.Int
-	switch u {
-	case 0:
+	/*
+		switch u {
+		case 0:
+			return &uBN
+		case 1:
+			return curve.P
+		case 0xffffffffffffffff:
+			uBN.Lsh(curve.P, 64)
+			return uBN.Sub(&uBN, curve.P)
+		}
+	*/
+	if u == 0 {
 		return &uBN
-	case 1:
-		return curve.P
-	case 0xffffffffffffffff:
-		uBN.Lsh(curve.P, 64)
-		return uBN.Sub(&uBN, curve.P)
 	}
 	ub := new(big.Int).SetUint64(u)
 	var uBits [5]big.Word
@@ -117,7 +122,9 @@ func (curve sm2Curve) multP(u uint64) *big.Int {
 	ww := n96.Bits()
 	var uB224 [5]big.Word
 	uB224[3] = ww[1]
-	uB224[4] = ww[2]
+	if len(ww) > 2 {
+		uB224[4] = ww[2]
+	}
 	n224 := new(big.Int).SetBits(uB224[:])
 	/*
 		res := new(big.Int).Lsh(ub, 256)

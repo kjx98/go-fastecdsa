@@ -2,9 +2,11 @@
 
 package ecc
 
-// #cgo CXXFLAGS: -O2 -Wpedantic -Wall -std=gnu++11
+// #cgo CXXFLAGS: -O2 -Wpedantic -Wall -std=gnu++11 -DWITH_SM2_MULTP
 // #include "ecc.h"
 import "C"
+
+// cgo CXXFLAGS: -O2 -Wpedantic -Wall -std=gnu++11 -DWITH_SM2_MULTP
 
 import (
 	"math/big"
@@ -40,7 +42,7 @@ func vliModMult(left, right, mdU []big.Word) (result *big.Int) {
 	return
 }
 
-func vliModMultBarrett(left, right *big.Int, mdU []big.Word) (result *big.Int) {
+func vliModMultBarrett(left, right *big.Int, mdU []big.Word) *big.Int {
 	var res [4]big.Word
 	prod := new(big.Int).Mul(left, right)
 	var prd [8]big.Word
@@ -50,8 +52,7 @@ func vliModMultBarrett(left, right *big.Int, mdU []big.Word) (result *big.Int) {
 	C.vli_mmod_barrett((*C.u64)((unsafe.Pointer)(&res[0])),
 		(*C.u64)(unsafe.Pointer(&prd[0])),
 		(*C.u64)(unsafe.Pointer(&mod[0])))
-	result = new(big.Int).SetBits(res[:4])
-	return
+	return new(big.Int).SetBits(res[:4])
 }
 
 func vliBarrettDiv(prod *big.Int, muB []big.Word) (result *big.Int) {
@@ -67,24 +68,36 @@ func vliBarrettDiv(prod *big.Int, muB []big.Word) (result *big.Int) {
 	return
 }
 
-func vliModMultMont(x, y, mod []big.Word, rr []uint64, k0 uint64) (res *big.Int) {
+func vliModMultMont(x, y, mod []big.Word, rr []uint64, k0 uint64) *big.Int {
 	var r [4]big.Word
 	C.mont_mod_mult((*C.u64)(unsafe.Pointer(&r[0])),
 		(*C.u64)(unsafe.Pointer(&x[0])), (*C.u64)(unsafe.Pointer(&y[0])),
 		(*C.u64)(unsafe.Pointer(&mod[0])), (*C.u64)(unsafe.Pointer(&rr[0])),
 		C.u64(k0))
-	res = new(big.Int).SetBits(r[:4])
-	return
+	return new(big.Int).SetBits(r[:4])
 }
 
-func vliExpModMont(x, y, mod []big.Word, rr []uint64, k0 uint64) (res *big.Int) {
+func vliExpModMont(x, y, mod []big.Word, rr []uint64, k0 uint64) *big.Int {
 	var r [4]big.Word
 	C.mont_mod_exp((*C.u64)(unsafe.Pointer(&r[0])),
 		(*C.u64)(unsafe.Pointer(&x[0])), (*C.u64)(unsafe.Pointer(&y[0])),
 		(*C.u64)(unsafe.Pointer(&mod[0])), (*C.u64)(unsafe.Pointer(&rr[0])),
 		C.u64(k0))
-	res = new(big.Int).SetBits(r[:4])
-	return
+	return new(big.Int).SetBits(r[:4])
+}
+
+func vliSM2MultP(u uint64) *big.Int {
+	var r [8]big.Word
+	C.vli_sm2_mult_p((*C.u64)(unsafe.Pointer(&r[0])), C.u64(u))
+	return new(big.Int).SetBits(r[:5])
+}
+
+func vliModMultMontP(x, y, mod []big.Word, rr []uint64) *big.Int {
+	var r [4]big.Word
+	C.mont_sm2_mod_mult_p((*C.u64)(unsafe.Pointer(&r[0])),
+		(*C.u64)(unsafe.Pointer(&x[0])), (*C.u64)(unsafe.Pointer(&y[0])),
+		(*C.u64)(unsafe.Pointer(&mod[0])), (*C.u64)(unsafe.Pointer(&rr[0])))
+	return new(big.Int).SetBits(r[:4])
 }
 
 /*

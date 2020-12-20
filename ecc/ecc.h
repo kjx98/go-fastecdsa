@@ -174,6 +174,18 @@ void mont_mod_mult(u64 *result, const u64 *x, const u64 *y, const u64 *prime,
 void mont_mod_exp(u64 *result, const u64 *x, const u64 *y, const u64 *prime,
 				const u64 *rr, const u64 k0);
 
+/*
+ * vli_sm2_mult_p
+ * vli_sm2_mult_n
+ * mont_sm2_mod_mult_p
+ * mont_sm2_mod_mult_n
+ */
+void vli_sm2_mult_p(u64 *result, const u64 u);
+void vli_sm2_mult_n(u64 *result, const u64 u);
+void mont_sm2_mod_mult_p(u64 *result, const u64 *x, const u64 *y,
+				const u64 *prime, const u64 *rr);
+void mont_sm2_mod_mult_n(u64 *result, const u64 *x, const u64 *y);
+
 /**
  * vli_mod_mult_slow() - Modular multiplication
  *

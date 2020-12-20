@@ -223,44 +223,67 @@ static void vli_div_barrett(u64 *result, u64 *product, const u64 *mu) noexcept
 // SM2 prime optimize
 // p is 2^256 - 2^224 - 2^96 + 2^64 -1
 forceinline __attribute__((optimize("unroll-loops")))
-static void vli_mont_multP(u64 *result, const u64 *p, const u64 u) noexcept
+static void vli_sm2_multP(u64 *result, const u64 u) noexcept
 {
-	u64	r[ECC_MAX_DIGITS *2];
-	vli_clear<4>(result + 4);
-	switch (u) {
-	case 0:
-		vli_clear<4>(result);
-		return;
-	case 1:
-		vli_set<4>(result, p);
-		return;
-	case 0xffffffffffffffffULL:
-		vli_clear<4>(r+4);
-		vli_set<4>(r, p);
-		result[0] = 0;
-		result[1] = p[0];
-		result[2] = p[1];
-		result[3] = p[2];
-		result[4] = p[3];
-		vli_sub<8>(result, result, r);
-		return;
-	}
-	u64 t[ECC_MAX_DIGITS *2];
-	vli_clear<8>(r);
+	u64	r[ECC_MAX_DIGITS +2];
+	u64 t[ECC_MAX_DIGITS +2];
+	vli_clear<4>(result +4);
+	vli_clear<4>(r);
 	r[4] = u;
-	vli_clear<8>(t);
-	t[3] = u;	// ^192
-	vli_lshift<4>(t, t, 32);	// ^224
-	vli_sub<8>(result, r, t);	// ^256 - ^224
+	vli_clear<4>(t);
+	t[3] = u << 32;	// ^192
+	t[4] = ((u >> 32) & 0xffffffff);
+	vli_sub<5>(result, r, t);	// ^256 - ^224
 	t[1] = t[3];
 	t[2] = t[4];
 	t[3] = 0;
 	t[4] = 0;
-	vli_sub<8>(result, result, t);	// ^256 - ^224 - ^96
+	//vli_sub<5>(result, result, t);	// ^256 - ^224 - ^96
+	if (vli_sub<4>(result, result, t)) result[4]--;
 	vli_clear<4>(t);
-	t[1] = u;
-	vli_usub<4>(t, t, u);	// ^64 -1
-	vli_add<8>(result, result, t);
+	t[1] = u-1;
+	t[0] = -u;		// ^64 -1
+	//vli_add<8>(result, result, t);
+	if (vli_add<4>(result, result, t)) result[4]++;
+}
+
+forceinline __attribute__((optimize("unroll-loops")))
+static void mont_reductionP(u64 *result, const u64 *y, const u64 *prm) noexcept
+{
+	u64	s[ECC_MAX_DIGITS * 2];
+	u64	r[ECC_MAX_DIGITS * 2];
+	vli_clear<8>(r);
+	for (uint i=0; i < 4; i++) {
+		u64	u = r[0] + y[i];
+		vli_sm2_multP(s, u);
+		vli_uadd<6>(r, r, y[i]);
+		vli_add<6>(r, r, s);
+		vli_rshift1w<6>(r);	
+	}
+	if (r[4] !=0 || vli_cmp<4>(r, prm) >= 0) {
+		vli_sub<4>(result, r, prm);
+	} else vli_set<4>(result, r);
+}
+
+forceinline __attribute__((optimize("unroll-loops")))
+static void mont_multP(u64 *result, const u64 *x, const u64 *y,
+			const u64 *prime) noexcept
+{
+	u64	t[ECC_MAX_DIGITS * 2];
+	u64	s[ECC_MAX_DIGITS * 2];
+	u64	r[ECC_MAX_DIGITS * 2];
+	vli_clear<4 * 2>(r);
+	for (uint i=0; i < 4;i++) {
+		u64	u = r[0] + y[i]*x[0];
+		vli_sm2_multP(s, u);
+		vli_umult<4>(t, x, y[i]);
+		vli_add<4 * 2>(r, r, s);
+		vli_add<4 * 2>(r, r, t);
+		vli_rshift1w<4 + 2>(r);	
+	}
+	if (r[4] != 0 || vli_cmp<4>(r, prime) >= 0) {
+		vli_sub<4>(result, r, prime);
+	} else vli_set<4>(result, r);
 }
 
 template<uint ndigits> forceinline
@@ -273,11 +296,7 @@ static void mont_reduction(u64 *result, const u64 *y, const u64 *prime,
 	vli_clear<ndigits * 2>(r);
 	for (uint i=0; i < ndigits; i++) {
 		u64	u = (r[0] + y[i]) * k0;
-#ifdef	WITH_SM2_MULTP
-		vli_mont_multP(s, prime, u);
-#else
 		vli_umult<ndigits>(s, prime, u);
-#endif
 		vli_uadd<ndigits * 2>(r, r, y[i]);
 		vli_add<ndigits * 2>(r, r, s);
 		vli_rshift1w<ndigits + 2>(r);	
@@ -298,11 +317,7 @@ static void mont_mult(u64 *result, const u64 *x, const u64 *y, const u64 *prime,
 	vli_clear<ndigits * 2>(r);
 	for (uint i=0; i < ndigits;i++) {
 		u64	u = (r[0] + y[i]*x[0]) * k0;
-#ifdef	WITH_SM2_MULTP
-		vli_mont_multP(s, prime, u);
-#else
 		vli_umult<ndigits>(s, prime, u);
-#endif
 		vli_umult<ndigits>(t, x, y[i]);
 		vli_add<ndigits * 2>(r, r, s);
 		vli_add<ndigits * 2>(r, r, t);

@@ -108,6 +108,7 @@ static int vli_cmp(const u64 *left, const u64 *right) noexcept
 	return 0;
 }
 
+#ifdef	ommit
 /* Computes result = in << c, returning carry. Can modify in place
  * (if result == in). 0 < shift < 64.
  */
@@ -120,6 +121,20 @@ u64 vli_lshift(u64 *result, const u64 *in, unsigned int shift) noexcept
 		u64 temp = in[i];
 		result[i] = (temp << shift) | carry;
 		carry = temp >> (64 - shift);
+	}
+	return carry;
+}
+#endif
+
+template<uint ndigits> forceinline static
+__attribute__((optimize("unroll-loops")))
+u64 vli_lshift1(u64 *result, const u64 *in) noexcept
+{
+	u64 carry = 0;
+	for (uint i = 0; i < ndigits; i++) {
+		u64 temp = in[i];
+		result[i] = (temp << 1) | carry;
+		carry = temp >> 63;
 	}
 	return carry;
 }
@@ -369,18 +384,14 @@ public:
 		return _high;
 #endif
 	}
-#ifdef	ommit
-	uint128_t& operator+(const uint128_t &a, const uint128_t& b) noexcept
+	uint128_t operator+(const uint128_t &b) noexcept
 	{
 #if defined(__SIZEOF_INT128__)
-		_data = a._data + b._data;
+		return uint128_t(_data + b._data);
 #else
-		_low = a._low + b._low;
-		_high = a._high + b._high + (_low < a._low);
+		return uint128_t(_low + b._low, _high + b._high);
 #endif
-		return *this;
 	}
-#endif
 	uint128_t& operator+=(const uint128_t& b) noexcept
 	{
 #if defined(__SIZEOF_INT128__)

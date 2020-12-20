@@ -215,7 +215,7 @@ func TestRRbySM2(t *testing.T) {
 	polyP := sm2g.multP(1)
 	if polyP.Cmp(p) != 0 {
 		ww = polyP.Bits()
-		t.Logf("P256 polyP diff P: %X %X %X %X", ww[0], ww[1], ww[2], ww[3])
+		t.Logf("multP polyP diff P: %X %X %X %X", ww[0], ww[1], ww[2], ww[3])
 		t.Fail()
 	} else {
 		t.Log("polynomial Prime OK")

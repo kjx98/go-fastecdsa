@@ -98,14 +98,14 @@ static void forceinline vli_mmod_fast_256(u64 *result, const u64 *product,
 	tmp[1] = product[5] & 0xffffffff00000000ull;
 	tmp[2] = product[6];
 	tmp[3] = product[7];
-	carry = vli_lshift<4>(tmp, tmp, 1);
+	carry = vli_lshift1<4>(tmp, tmp);
 	carry += vli_add<4>(result, result, tmp);
 
 	/* s2 */
 	tmp[1] = product[6] << 32;
 	tmp[2] = (product[6] >> 32) | (product[7] << 32);
 	tmp[3] = product[7] >> 32;
-	carry += vli_lshift<4>(tmp, tmp, 1);
+	carry += vli_lshift1<4>(tmp, tmp);
 	carry += vli_add<4>(result, result, tmp);
 
 	/* s3 */

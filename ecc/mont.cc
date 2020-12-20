@@ -62,3 +62,20 @@ void mont_mod_exp(u64 *result, const u64 *x, const u64 *y, const u64 *prime,
 	//mont_mult<4>(result, montOne, t, prime, k0);
 	mont_reduction<4>(result, t, prime, k0);
 }
+
+void vli_sm2_mult_p(u64 *result, const u64 u)
+{
+	vli_sm2_multP(result, u);
+}
+
+void mont_sm2_mod_mult_p(u64 *result, const u64 *x, const u64 *y,
+				const u64 *prime, const u64 *rr)
+{
+	u64	xp[ECC_MAX_DIGITS];
+	u64	yp[ECC_MAX_DIGITS];
+	u64	r[ECC_MAX_DIGITS];
+	mont_multP(xp, x, rr, prime);
+	mont_multP(yp, y, rr, prime);
+	mont_multP(r, xp, yp, prime);
+	mont_reductionP(result, r, prime);
+}
