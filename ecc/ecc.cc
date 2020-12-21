@@ -67,19 +67,23 @@ static void forceinline vli_mmod_fast_192(u64 *result, const u64 *product,
 	vli_set<3>(result, product);
 
 	vli_set<3>(tmp, &product[3]);
-	carry = vli_add<3>(result, result, tmp);
+	carry = vli_add_to<3>(result, tmp);
+	//carry = vli_add<3>(result, result, tmp);
 
 	tmp[0] = 0;
 	tmp[1] = product[3];
 	tmp[2] = product[4];
-	carry += vli_add<3>(result, result, tmp);
+	carry += vli_add_to<3>(result, tmp);
+	//carry += vli_add<3>(result, result, tmp);
 
 	tmp[0] = tmp[1] = product[5];
 	tmp[2] = 0;
-	carry += vli_add<3>(result, result, tmp);
+	carry += vli_add_to<3>(result, tmp);
+	//carry += vli_add<3>(result, result, tmp);
 
 	while (carry || vli_cmp<3>(curve_prime, result) != 1)
-		carry -= vli_sub<3>(result, result, curve_prime);
+		carry -= vli_sub_from<3>(result, curve_prime);
+		//carry -= vli_sub<3>(result, result, curve_prime);
 }
 
 /* Computes result = product % curve_prime
@@ -99,64 +103,74 @@ static void forceinline vli_mmod_fast_256(u64 *result, const u64 *product,
 	tmp[2] = product[6];
 	tmp[3] = product[7];
 	carry = vli_lshift1<4>(tmp, tmp);
-	carry += vli_add<4>(result, result, tmp);
+	carry += vli_add_to<4>(result, tmp);
+	//carry += vli_add<4>(result, result, tmp);
 
 	/* s2 */
 	tmp[1] = product[6] << 32;
 	tmp[2] = (product[6] >> 32) | (product[7] << 32);
 	tmp[3] = product[7] >> 32;
 	carry += vli_lshift1<4>(tmp, tmp);
-	carry += vli_add<4>(result, result, tmp);
+	carry += vli_add_to<4>(result, tmp);
+	//carry += vli_add<4>(result, result, tmp);
 
 	/* s3 */
 	tmp[0] = product[4];
 	tmp[1] = product[5] & 0xffffffff;
 	tmp[2] = 0;
 	tmp[3] = product[7];
-	carry += vli_add<4>(result, result, tmp);
+	carry += vli_add_to<4>(result, tmp);
+	//carry += vli_add<4>(result, result, tmp);
 
 	/* s4 */
 	tmp[0] = (product[4] >> 32) | (product[5] << 32);
 	tmp[1] = (product[5] >> 32) | (product[6] & 0xffffffff00000000ull);
 	tmp[2] = product[7];
 	tmp[3] = (product[6] >> 32) | (product[4] << 32);
-	carry += vli_add<4>(result, result, tmp);
+	carry += vli_add_to<4>(result, tmp);
+	//carry += vli_add<4>(result, result, tmp);
 
 	/* d1 */
 	tmp[0] = (product[5] >> 32) | (product[6] << 32);
 	tmp[1] = (product[6] >> 32);
 	tmp[2] = 0;
 	tmp[3] = (product[4] & 0xffffffff) | (product[5] << 32);
-	carry -= vli_sub<4>(result, result, tmp);
+	carry -= vli_sub_from<4>(result, tmp);
+	//carry -= vli_sub<4>(result, result, tmp);
 
 	/* d2 */
 	tmp[0] = product[6];
 	tmp[1] = product[7];
 	tmp[2] = 0;
 	tmp[3] = (product[4] >> 32) | (product[5] & 0xffffffff00000000ull);
-	carry -= vli_sub<4>(result, result, tmp);
+	carry -= vli_sub_from<4>(result, tmp);
+	//carry -= vli_sub<4>(result, result, tmp);
 
 	/* d3 */
 	tmp[0] = (product[6] >> 32) | (product[7] << 32);
 	tmp[1] = (product[7] >> 32) | (product[4] << 32);
 	tmp[2] = (product[4] >> 32) | (product[5] << 32);
 	tmp[3] = (product[6] << 32);
-	carry -= vli_sub<4>(result, result, tmp);
+	carry -= vli_sub_from<4>(result, tmp);
+	//carry -= vli_sub<4>(result, result, tmp);
 
 	/* d4 */
 	tmp[0] = product[7];
 	tmp[1] = product[4] & 0xffffffff00000000ull;
 	tmp[2] = product[5];
 	tmp[3] = product[6] & 0xffffffff00000000ull;
-	carry -= vli_sub<4>(result, result, tmp);
+	carry -= vli_sub_from<4>(result, tmp);
+	//carry -= vli_sub<4>(result, result, tmp);
 
 	if (carry < 0) {
 		do {
-			carry += vli_add<4>(result, result, curve_prime);
+			carry += vli_add_to<4>(result, curve_prime);
+			//carry += vli_add<4>(result, result, curve_prime);
 		} while (carry < 0);
 	} else {
 		while (carry || vli_cmp<4>(curve_prime, result) != 1)
-			carry -= vli_sub<4>(result, result, curve_prime);
+			carry -= vli_sub_from<4>(result, curve_prime);
+			//carry -= vli_sub<4>(result, result, curve_prime);
 	}
 }
 
@@ -330,7 +344,8 @@ static void ecc_point_double_jacobian(u64 *x1, u64 *y1, u64 *z1,
 	/* t1 = 3*(x1^2 - z1^4) */
 	vli_mod_add<ndigits>(x1, x1, z1, curve_prime);
 	if (vli_test_bit(x1, 0)) {
-		u64 carry = vli_add<ndigits>(x1, x1, curve_prime);
+		u64 carry = vli_add_to<ndigits>(x1, curve_prime);
+		//u64 carry = vli_add<ndigits>(x1, x1, curve_prime);
 
 		vli_rshift1<ndigits>(x1);
 		x1[ndigits - 1] |= carry << 63;
@@ -685,7 +700,7 @@ static int __ecc_is_key_valid(const struct ecc_curve *curve,
 	if (vli_cmp<ndigits>(one, private_key) != -1)
 		return -EINVAL;
 	vli_sub<ndigits>(res, curve->n, one);
-	vli_sub<ndigits>(res, res, one);
+	vli_sub_from<ndigits>(res, one);
 	if (vli_cmp<ndigits>(res, private_key) != 1)
 		return -EINVAL;
 

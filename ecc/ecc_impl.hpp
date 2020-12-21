@@ -76,8 +76,8 @@ struct ecc_curve {
  * 9 Fast Algorithms for Large-Integer Arithmetic. 9.2.3 Moduli of special form
  * Algorithm 9.2.13 (Fast mod operation for special-form moduli).
  */
-template<uint ndigits> forceinline
 //__attribute__((optimize("unroll-loops")))
+template<uint ndigits> forceinline
 static void
 vli_mmod_special(u64 *result, const u64 *product, const u64 *mod) noexcept
 {
@@ -89,12 +89,12 @@ vli_mmod_special(u64 *result, const u64 *product, const u64 *mod) noexcept
 	while (!vli_is_zero<ndigits>(r + ndigits)) {
 		vli_umult<ndigits>(t, r + ndigits, c);
 		vli_clear<ndigits>(r + ndigits);
-		vli_add<ndigits * 2>(r, r, t);
+		vli_add_to<ndigits * 2>(r, t);
 	}
 	vli_set<ndigits>(t, mod);
 	vli_clear<ndigits>(t + ndigits);
 	while (vli_cmp<ndigits * 2>(r, t) >= 0)
-		vli_sub<ndigits * 2>(r, r, t);
+		vli_sub_from<ndigits * 2>(r, t);
 	vli_set<ndigits>(result, r);
 }
 
@@ -113,7 +113,6 @@ vli_mmod_special(u64 *result, const u64 *product, const u64 *mod) noexcept
  * Algorithm 10.25 Fast reduction for special form moduli
  */
 template<uint ndigits> forceinline
-//__attribute__((optimize("unroll-loops")))
 static void
 vli_mmod_special2(u64 *result, const u64 *product, const u64 *mod) noexcept
 {
@@ -139,21 +138,22 @@ vli_mmod_special2(u64 *result, const u64 *product, const u64 *mod) noexcept
 
 		vli_umult<ndigits>(qc, q, c2);
 		if (carry)
-			vli_uadd<ndigits*2>(qc, qc, mod[0]);
+			vli_uadd_to<ndigits*2>(qc, mod[0]);
 		vli_set<ndigits>(q, qc + ndigits);
 		vli_clear<ndigits>(qc + ndigits);
 		carry = vli_is_negative<ndigits>(qc);
 		if (carry)
 			qc[ndigits - 1] &= (1ull << 63) - 1;
 		if (i & 1)
-			vli_sub<ndigits*2>(r, r, qc);
+			vli_sub_from<ndigits*2>(r, qc);
 		else
-			vli_add<ndigits*2>(r, r, qc);
+			vli_add_to<ndigits*2>(r, qc);
+		//	vli_add<ndigits*2>(r, r, qc);
 	}
 	while (vli_is_negative<ndigits*2>(r))
-		vli_add<ndigits*2>(r, r, m);
+		vli_add_to<ndigits*2>(r, m);
 	while (vli_cmp<ndigits*2>(r, m) >= 0)
-		vli_sub<ndigits*2>(r, r, m);
+		vli_sub_from<ndigits*2>(r, m);
 
 	vli_set<ndigits>(result, r);
 }
@@ -168,7 +168,6 @@ vli_mmod_special2(u64 *result, const u64 *product, const u64 *mod) noexcept
  * 2.4.1 Barrett's algorithm. Algorithm 2.5.
  */
 template<uint ndigits> static void forceinline
-// __attribute__((optimize("unroll-loops")))
 vli_mmod_barrett(u64 *result, u64 *product, const u64 *mod) noexcept
 {
 	u64 q[ECC_MAX_DIGITS * 2 +2];
@@ -177,32 +176,24 @@ vli_mmod_barrett(u64 *result, u64 *product, const u64 *mod) noexcept
 
 	vli_mult<ndigits>(q, product + ndigits, mu);
 	if (mu[ndigits])
-		vli_add<ndigits>(q + ndigits, q + ndigits, product + ndigits);
+		vli_add_to<ndigits>(q + ndigits, product + ndigits);
 	// add remain * mod
 	vli_set<ndigits>(r, q+ndigits);
 	q[2*ndigits] = 0;
 	vli_umult<ndigits>(q, mu, product[ndigits-1]);
 	if (mu[ndigits])
-		vli_uadd<ndigits>(q + ndigits, q + ndigits, product[ndigits-1]);
+		vli_uadd_to<ndigits>(q + ndigits, product[ndigits-1]);
 	vli_add<ndigits>(result, r, q+ndigits+1);
 	vli_mult<ndigits>(r, mod, result);
 	vli_sub<ndigits*2>(r, product, r);
-	/*
-	while (!vli_is_zero<ndigits>(r + ndigits) ||
-	       vli_cmp<ndigits>(r, mod) != -1) {
-		auto carry = vli_sub<ndigits>(r, r, mod);
-		if (carry) vli_usub<ndigits>(r + ndigits, r + ndigits, 1);
-	}
-	*/
 	if (!vli_is_zero<ndigits>(r + ndigits) ||
 	       vli_cmp<ndigits>(r, mod) >= 0) {
-		vli_sub<ndigits>(r, r, mod);
+		vli_sub_from<ndigits>(r, mod);
 	}
 	vli_set<ndigits>(result, r);
 }
 
 template<uint ndigits> forceinline
-//__attribute__((optimize("unroll-loops")))
 static void vli_div_barrett(u64 *result, u64 *product, const u64 *mu) noexcept
 {
 	u64 q[ECC_MAX_DIGITS * 2 +2];
@@ -210,19 +201,19 @@ static void vli_div_barrett(u64 *result, u64 *product, const u64 *mu) noexcept
 
 	vli_mult<ndigits>(q, product + ndigits, mu);
 	if (mu[ndigits])
-		vli_add<ndigits>(q + ndigits, q + ndigits, product + ndigits);
+		vli_add_to<ndigits>(q + ndigits, product + ndigits);
 	vli_set<ndigits>(r, q+ndigits);
 	q[2*ndigits] = 0;
 	vli_umult<ndigits>(q, mu, product[ndigits-1]);
 	if (mu[ndigits])
-		vli_uadd<ndigits>(q + ndigits, q + ndigits, product[ndigits-1]);
+		vli_uadd_to<ndigits>(q + ndigits, product[ndigits-1]);
 	vli_add<ndigits>(result, r, q+ndigits+1);
 }
 
 
 // SM2 prime optimize
 // p is 2^256 - 2^224 - 2^96 + 2^64 -1
-forceinline // __attribute__((optimize("unroll-loops")))
+forceinline
 static void vli_sm2_multP(u64 *result, const u64 u) noexcept
 {
 	u64	r[ECC_MAX_DIGITS];
@@ -240,15 +231,15 @@ static void vli_sm2_multP(u64 *result, const u64 u) noexcept
 	r[3] =0;
 	r[1] = t_low;
 	r[2] = t_high;
-	//vli_sub<5>(result, result, t);	// ^256 - ^224 - ^96
-	if (vli_sub<4>(result, result, r)) result[4]--;
+	//vli_sub_from<5>(result, t);	// ^256 - ^224 - ^96
+	if (vli_sub_from<4>(result, r)) result[4]--;
 	r[2] = 0;
 	r[1] = u-1;
 	r[0] = -u;		// ^64 -1
-	if (vli_add<4>(result, result, r)) result[4]++;
+	if (vli_add_to<4>(result, r)) result[4]++;
 }
 
-forceinline // __attribute__((optimize("unroll-loops")))
+forceinline
 static void mont_reductionP(u64 *result, const u64 *y, const u64 *prm) noexcept
 {
 	u64	s[ECC_MAX_DIGITS * 2];
@@ -262,8 +253,8 @@ static void mont_reductionP(u64 *result, const u64 *y, const u64 *prm) noexcept
 #else
 		vli_umult<4>(s, prm, u);
 #endif
-		vli_uadd<8>(r, r, y[i]);
-		vli_add<8>(r, r, s);
+		vli_uadd_to<8>(r, y[i]);
+		vli_add_to<8>(r, s);
 		vli_rshift1w<6>(r);	
 	}
 	if (r[4] !=0 || vli_cmp<4>(r, prm) >= 0) {
@@ -271,7 +262,7 @@ static void mont_reductionP(u64 *result, const u64 *y, const u64 *prm) noexcept
 	} else vli_set<4>(result, r);
 }
 
-forceinline // __attribute__((optimize("unroll-loops")))
+forceinline
 static void mont_multP(u64 *result, const u64 *x, const u64 *y,
 			const u64 *prime) noexcept
 {
@@ -288,8 +279,8 @@ static void mont_multP(u64 *result, const u64 *x, const u64 *y,
 		vli_umult<4>(s, prime, u);
 #endif
 		vli_umult<4>(t, x, y[i]);
-		vli_add<8>(r, r, s);
-		vli_add<8>(r, r, t);
+		vli_add_to<8>(r, s);
+		vli_add_to<8>(r, t);
 		vli_rshift1w<6>(r);	
 	}
 	if (r[4] != 0 || vli_cmp<4>(r, prime) >= 0) {
@@ -298,7 +289,6 @@ static void mont_multP(u64 *result, const u64 *x, const u64 *y,
 }
 
 template<uint ndigits> forceinline
-//__attribute__((optimize("unroll-loops")))
 static void mont_reduction(u64 *result, const u64 *y, const u64 *prime,
 			const u64 k0) noexcept
 {
@@ -309,8 +299,8 @@ static void mont_reduction(u64 *result, const u64 *y, const u64 *prime,
 	for (uint i=0; i < ndigits; i++) {
 		u64	u = (r[0] + y[i]) * k0;
 		vli_umult<ndigits>(s, prime, u);
-		vli_uadd<ndigits * 2>(r, r, y[i]);
-		vli_add<ndigits * 2>(r, r, s);
+		vli_uadd_to<ndigits * 2>(r, y[i]);
+		vli_add_to<ndigits * 2>(r, s);
 		vli_rshift1w<ndigits + 2>(r);	
 	}
 	if (r[ndigits] !=0 || vli_cmp<ndigits>(r, prime) >= 0) {
@@ -319,7 +309,6 @@ static void mont_reduction(u64 *result, const u64 *y, const u64 *prime,
 }
 
 template<uint ndigits> forceinline
-//__attribute__((optimize("unroll-loops")))
 static void mont_mult(u64 *result, const u64 *x, const u64 *y, const u64 *prime,
 				const u64 k0) noexcept
 {
@@ -332,8 +321,8 @@ static void mont_mult(u64 *result, const u64 *x, const u64 *y, const u64 *prime,
 		u64	u = (r[0] + y[i]*x[0]) * k0;
 		vli_umult<ndigits>(s, prime, u);
 		vli_umult<ndigits>(t, x, y[i]);
-		vli_add<ndigits * 2>(r, r, s);
-		vli_add<ndigits * 2>(r, r, t);
+		vli_add_to<ndigits * 2>(r, s);
+		vli_add_to<ndigits * 2>(r, t);
 		vli_rshift1w<ndigits + 2>(r);	
 	}
 	if (r[ndigits] != 0 || vli_cmp<ndigits>(r, prime) >= 0) {
@@ -347,7 +336,6 @@ static void mont_mult(u64 *result, const u64 *x, const u64 *y, const u64 *prime,
  * https://labs.oracle.com/techrep/2001/smli_tr-2001-95.pdf
  */
 template<uint ndigits> forceinline
-//__attribute__((optimize("unroll-loops")))
 static void vli_mod_inv(u64 *result, const u64 *input, const u64 *mod) noexcept
 {
 	u64 a[ECC_MAX_DIGITS], b[ECC_MAX_DIGITS];
@@ -372,7 +360,8 @@ static void vli_mod_inv(u64 *result, const u64 *input, const u64 *mod) noexcept
 			vli_rshift1<ndigits>(a);
 
 			if (!vli_is_even(u))
-				carry = vli_add<ndigits>(u, u, mod);
+				carry = vli_add_to<ndigits>(u, mod);
+				//carry = vli_add<ndigits>(u, u, mod);
 
 			vli_rshift1<ndigits>(u);
 			if (carry)
@@ -381,35 +370,38 @@ static void vli_mod_inv(u64 *result, const u64 *input, const u64 *mod) noexcept
 			vli_rshift1<ndigits>(b);
 
 			if (!vli_is_even(v))
-				carry = vli_add<ndigits>(v, v, mod);
+				carry = vli_add_to<ndigits>(v, mod);
+				//carry = vli_add<ndigits>(v, v, mod);
 
 			vli_rshift1<ndigits>(v);
 			if (carry)
 				v[ndigits - 1] |= 0x8000000000000000ull;
 		} else if (cmp_result > 0) {
-			vli_sub<ndigits>(a, a, b);
+			vli_sub_from<ndigits>(a, b);
 			vli_rshift1<ndigits>(a);
 
 			if (vli_cmp<ndigits>(u, v) < 0)
-				vli_add<ndigits>(u, u, mod);
+				vli_add_to<ndigits>(u, mod);
 
-			vli_sub<ndigits>(u, u, v);
+			vli_sub_from<ndigits>(u, v);
 			if (!vli_is_even(u))
-				carry = vli_add<ndigits>(u, u, mod);
+				carry = vli_add_to<ndigits>(u, mod);
+				//carry = vli_add<ndigits>(u, u, mod);
 
 			vli_rshift1<ndigits>(u);
 			if (carry)
 				u[ndigits - 1] |= 0x8000000000000000ull;
 		} else {
-			vli_sub<ndigits>(b, b, a);
+			vli_sub_from<ndigits>(b, a);
 			vli_rshift1<ndigits>(b);
 
 			if (vli_cmp<ndigits>(v, u) < 0)
-				vli_add<ndigits>(v, v, mod);
+				vli_add_to<ndigits>(v, mod);
 
-			vli_sub<ndigits>(v, v, u);
+			vli_sub_from<ndigits>(v, u);
 			if (!vli_is_even(v))
-				carry = vli_add<ndigits>(v, v, mod);
+				carry = vli_add_to<ndigits>(v, mod);
+				//carry = vli_add<ndigits>(v, v, mod);
 
 			vli_rshift1<ndigits>(v);
 			if (carry)
