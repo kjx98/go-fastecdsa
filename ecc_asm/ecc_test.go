@@ -20,7 +20,6 @@ func init() {
 	rr = []uint64{0x200000003, 0x2ffffffff, 0x100000001, 0x400000002}
 }
 
-/*
 func TestEccMMod(t *testing.T) {
 	p := sm2.P256().Params().P
 	xy := new(big.Int).Mul(x1, y1)
@@ -38,14 +37,15 @@ func TestEccMMod(t *testing.T) {
 			xyMod.Text(16), bMod.Text(16))
 		t.Fail()
 	}
-	bMod = vliModMult(x1.Bits(), y1.Bits(), pb)
-	if bMod.Cmp(xyMod) != 0 {
-		t.Logf("big.mulmod diff vliModMult:\n%s vs\n%s\n",
-			xyMod.Text(16), bMod.Text(16))
-		t.Fail()
-	}
+	/*
+		bMod = vliModMult(x1.Bits(), y1.Bits(), pb)
+		if bMod.Cmp(xyMod) != 0 {
+			t.Logf("big.mulmod diff vliModMult:\n%s vs\n%s\n",
+				xyMod.Text(16), bMod.Text(16))
+			t.Fail()
+		}
+	*/
 }
-*/
 
 func TestMontMultMod(t *testing.T) {
 	p := sm2.P256().Params().P
@@ -227,6 +227,7 @@ func BenchmarkModMul(b *testing.B) {
 		_ = vliModMult(x1B, y1B, pb)
 	}
 }
+*/
 
 func BenchmarkModMulBarrett(b *testing.B) {
 	b.ResetTimer()
@@ -244,7 +245,6 @@ func BenchmarkModMulBarrett(b *testing.B) {
 		_ = vliModMultBarrett(x1, y1, pb)
 	}
 }
-*/
 
 func BenchmarkMontModMul(b *testing.B) {
 	b.ResetTimer()

@@ -49,7 +49,11 @@ extern "C" {
 
 typedef long long GoInt64;
 typedef GoInt64 GoInt;
-typedef struct { void *data; GoInt len; GoInt cap; } GoSlice;
+typedef struct {
+	u64 *data;
+	GoInt len;
+	GoInt cap;
+} GoSlice;
 #endif
 
 #ifdef	ommit
@@ -177,7 +181,11 @@ void vli_mult(u64 *result, const u64 *left, const u64 *right);
  * R. Brent, P. Zimmermann. Modern Computer Arithmetic. 2010.
  * 2.4.1 Barrett's algorithm. Algorithm 2.5.
  */
+#ifdef	WITH_C2GO
+void vli_mmod_barrett(u64 *result, u64 *product, const u64 *mod, u64 *buff);
+#else
 void vli_mmod_barrett(u64 *result, u64 *product, const u64 *mod);
+#endif
 void vli_div_barrett(u64 *result, u64 *product, const u64 *mod);
 
 /*

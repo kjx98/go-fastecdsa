@@ -38,6 +38,10 @@
 #pragma GCC optimize ("unroll-loops")
 #pragma GCC pop_options
 
+#ifndef	ARRAY_SIZE
+#define ARRAY_SIZE(arr) (sizeof(arr) / sizeof((arr)[0]))
+#endif
+
 
 static forceinline const ecc_curve *ecc_get_curve(uint curve_id)
 {
@@ -68,22 +72,18 @@ static void forceinline vli_mmod_fast_192(u64 *result, const u64 *product,
 
 	vli_set<3>(tmp, &product[3]);
 	carry = vli_add_to<3>(result, tmp);
-	//carry = vli_add<3>(result, result, tmp);
 
 	tmp[0] = 0;
 	tmp[1] = product[3];
 	tmp[2] = product[4];
 	carry += vli_add_to<3>(result, tmp);
-	//carry += vli_add<3>(result, result, tmp);
 
 	tmp[0] = tmp[1] = product[5];
 	tmp[2] = 0;
 	carry += vli_add_to<3>(result, tmp);
-	//carry += vli_add<3>(result, result, tmp);
 
 	while (carry || vli_cmp<3>(curve_prime, result) != 1)
 		carry -= vli_sub_from<3>(result, curve_prime);
-		//carry -= vli_sub<3>(result, result, curve_prime);
 }
 
 /* Computes result = product % curve_prime
@@ -104,7 +104,6 @@ static void forceinline vli_mmod_fast_256(u64 *result, const u64 *product,
 	tmp[3] = product[7];
 	carry = vli_lshift1<4>(tmp, tmp);
 	carry += vli_add_to<4>(result, tmp);
-	//carry += vli_add<4>(result, result, tmp);
 
 	/* s2 */
 	tmp[1] = product[6] << 32;
@@ -112,7 +111,6 @@ static void forceinline vli_mmod_fast_256(u64 *result, const u64 *product,
 	tmp[3] = product[7] >> 32;
 	carry += vli_lshift1<4>(tmp, tmp);
 	carry += vli_add_to<4>(result, tmp);
-	//carry += vli_add<4>(result, result, tmp);
 
 	/* s3 */
 	tmp[0] = product[4];
@@ -120,7 +118,6 @@ static void forceinline vli_mmod_fast_256(u64 *result, const u64 *product,
 	tmp[2] = 0;
 	tmp[3] = product[7];
 	carry += vli_add_to<4>(result, tmp);
-	//carry += vli_add<4>(result, result, tmp);
 
 	/* s4 */
 	tmp[0] = (product[4] >> 32) | (product[5] << 32);
@@ -128,7 +125,6 @@ static void forceinline vli_mmod_fast_256(u64 *result, const u64 *product,
 	tmp[2] = product[7];
 	tmp[3] = (product[6] >> 32) | (product[4] << 32);
 	carry += vli_add_to<4>(result, tmp);
-	//carry += vli_add<4>(result, result, tmp);
 
 	/* d1 */
 	tmp[0] = (product[5] >> 32) | (product[6] << 32);
@@ -136,7 +132,6 @@ static void forceinline vli_mmod_fast_256(u64 *result, const u64 *product,
 	tmp[2] = 0;
 	tmp[3] = (product[4] & 0xffffffff) | (product[5] << 32);
 	carry -= vli_sub_from<4>(result, tmp);
-	//carry -= vli_sub<4>(result, result, tmp);
 
 	/* d2 */
 	tmp[0] = product[6];
@@ -144,7 +139,6 @@ static void forceinline vli_mmod_fast_256(u64 *result, const u64 *product,
 	tmp[2] = 0;
 	tmp[3] = (product[4] >> 32) | (product[5] & 0xffffffff00000000ull);
 	carry -= vli_sub_from<4>(result, tmp);
-	//carry -= vli_sub<4>(result, result, tmp);
 
 	/* d3 */
 	tmp[0] = (product[6] >> 32) | (product[7] << 32);
@@ -152,7 +146,6 @@ static void forceinline vli_mmod_fast_256(u64 *result, const u64 *product,
 	tmp[2] = (product[4] >> 32) | (product[5] << 32);
 	tmp[3] = (product[6] << 32);
 	carry -= vli_sub_from<4>(result, tmp);
-	//carry -= vli_sub<4>(result, result, tmp);
 
 	/* d4 */
 	tmp[0] = product[7];
@@ -160,17 +153,14 @@ static void forceinline vli_mmod_fast_256(u64 *result, const u64 *product,
 	tmp[2] = product[5];
 	tmp[3] = product[6] & 0xffffffff00000000ull;
 	carry -= vli_sub_from<4>(result, tmp);
-	//carry -= vli_sub<4>(result, result, tmp);
 
 	if (carry < 0) {
 		do {
 			carry += vli_add_to<4>(result, curve_prime);
-			//carry += vli_add<4>(result, result, curve_prime);
 		} while (carry < 0);
 	} else {
 		while (carry || vli_cmp<4>(curve_prime, result) != 1)
 			carry -= vli_sub_from<4>(result, curve_prime);
-			//carry -= vli_sub<4>(result, result, curve_prime);
 	}
 }
 
@@ -228,7 +218,6 @@ static forceinline bool vli_mmod_fast(u64 *result, u64 *product,
 
 /* Computes result = left^2 % curve_prime. */
 template<uint ndigits> forceinline
-__attribute__((optimize("unroll-loops")))
 static void vli_mod_square_fast(u64 *result, const u64 *left,
 				const u64 *curve_prime) noexcept
 {
@@ -295,7 +284,6 @@ void vli_from_be64(u64 *dest, const void *src, uint ndigits)
 
 /* Returns true if p_point is the point at infinity, false otherwise. */
 template<uint ndigits> forceinline
-__attribute__((optimize("unroll-loops")))
 static bool ecc_point_is_zero(const u64 *p_x, const u64 *p_y)
 {
 	return (vli_is_zero<ndigits>(p_x) &&
@@ -308,7 +296,6 @@ static bool ecc_point_is_zero(const u64 *p_x, const u64 *p_y)
 
 /* Double in place */
 template<uint ndigits> forceinline
-__attribute__((optimize("unroll-loops")))
 static void ecc_point_double_jacobian(u64 *x1, u64 *y1, u64 *z1,
 				      const u64 *curve_prime)
 {
@@ -374,7 +361,6 @@ static void ecc_point_double_jacobian(u64 *x1, u64 *y1, u64 *z1,
 
 /* Modify (x1, y1) => (x1 * z^2, y1 * z^3) */
 template<uint ndigits> forceinline
-__attribute__((optimize("unroll-loops")))
 static void apply_z(u64 *x1, u64 *y1, u64 *z, const u64 *curve_prime) noexcept
 {
 	u64 t1[ECC_MAX_DIGITS];
@@ -387,7 +373,6 @@ static void apply_z(u64 *x1, u64 *y1, u64 *z, const u64 *curve_prime) noexcept
 
 /* P = (x1, y1) => 2P, (x2, y2) => P' */
 template<uint ndigits> forceinline
-__attribute__((optimize("unroll-loops")))
 static void xycz_initial_double(u64 *x1, u64 *y1, u64 *x2, u64 *y2,
 				u64 *p_initial_z, const u64 *curve_prime) noexcept
 {
@@ -414,7 +399,6 @@ static void xycz_initial_double(u64 *x1, u64 *y1, u64 *x2, u64 *y2,
  * or P => P', Q => P + Q
  */
 template<uint ndigits> forceinline
-__attribute__((optimize("unroll-loops")))
 static void
 xycz_add(u64 *x1, u64 *y1, u64 *x2, u64 *y2, const u64 *curve_prime) noexcept
 {
@@ -457,7 +441,6 @@ xycz_add(u64 *x1, u64 *y1, u64 *x2, u64 *y2, const u64 *curve_prime) noexcept
  * or P => P - Q, Q => P + Q
  */
 template<uint ndigits> forceinline
-__attribute__((optimize("unroll-loops")))
 static void xycz_add_c(u64 *x1, u64 *y1, u64 *x2, u64 *y2,
 				const u64 *curve_prime) noexcept
 {
@@ -512,7 +495,6 @@ static void xycz_add_c(u64 *x1, u64 *y1, u64 *x2, u64 *y2,
 }
 
 template<uint ndigits> forceinline
-__attribute__((optimize("unroll-loops")))
 static void ecc_point_mult(u64 *result_x, u64 *result_y,
 			   const u64 *point_x, const u64 *point_y, const u64 *scalar,
 			   u64 *initial_z, const struct ecc_curve *curve) noexcept
@@ -575,7 +557,6 @@ static void ecc_point_mult(u64 *result_x, u64 *result_y,
 
 /* Computes R = P + Q mod p */
 template<uint ndigits> forceinline
-__attribute__((optimize("unroll-loops")))
 static void ecc_point_add(u64 *result_x, u64 *result_y,
 		   const u64 *p_x, const u64 *p_y, const u64 *q_x, const u64 *q_y,
 		   const struct ecc_curve *curve)
@@ -595,6 +576,7 @@ static void ecc_point_add(u64 *result_x, u64 *result_y,
 	apply_z<ndigits>(result_x, result_y, z, curve->p);
 }
 
+
 /* Computes result = product % mod using Barrett's reduction with precomputed
  * value mu appended to the mod after ndigits, mu = (2^{2w} / mod) and have
  * length ndigits + 1, where mu * (2^w - 1) should not overflow ndigits
@@ -604,15 +586,12 @@ static void ecc_point_add(u64 *result_x, u64 *result_y,
  * R. Brent, P. Zimmermann. Modern Computer Arithmetic. 2010.
  * 2.4.1 Barrett's algorithm. Algorithm 2.5.
  */
-void vli_mmod_barrett(u64 *result, u64 *product, const u64 *mod)
-{
-	vli_mmod_barrett<4>(result, product, mod);
-}
-
+#ifndef  WITH_C2GO
 void vli_div_barrett(u64 *result, u64 *product, const u64 *mu)
 {
 	vli_div_barrett<4>(result, product, mu);
 }
+#endif
 
 #ifdef	WITH_SHAMIR
 /* Computes R = u1P + u2Q mod p using Shamir's trick.
@@ -672,18 +651,17 @@ void ecc_point_mult_shamir(const u64 *result_x, const u64 *result_y,
 }
 #endif
 
-forceinline __attribute__((optimize("unroll-loops")))
-static void ecc_swap_digits(const u64 *in, u64 *out, uint ndigits)
+forceinline static
+void ecc_swap_digits(const u64 *in, u64 *out, uint ndigits)
 {
 	const be64 *src = (be64 *)in;
 	uint i;
-
+#pragma GCC unroll 4
 	for (i = 0; i < ndigits; i++)
 		out[i] = be64toh(src[ndigits - 1 - i]);
 }
 
 template<uint ndigits> forceinline
-__attribute__((optimize("unroll-loops")))
 static int __ecc_is_key_valid(const struct ecc_curve *curve,
 			      const u64 *private_key) noexcept
 {

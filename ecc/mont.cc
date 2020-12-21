@@ -33,6 +33,27 @@
 #pragma GCC pop_options
 
 
+/* Computes result = product % mod using Barrett's reduction with precomputed
+ * value mu appended to the mod after ndigits, mu = (2^{2w} / mod) and have
+ * length ndigits + 1, where mu * (2^w - 1) should not overflow ndigits
+ * boundary.
+ *
+ * Reference:
+ * R. Brent, P. Zimmermann. Modern Computer Arithmetic. 2010.
+ * 2.4.1 Barrett's algorithm. Algorithm 2.5.
+ */
+#ifdef  WITH_C2GO
+void vli_mmod_barrett(u64 *result, u64 *product, const u64 *mod, u64 *buff)
+{
+	vli_mmod_barrett<4>(result, product, mod, buff);
+}
+#else
+void vli_mmod_barrett(u64 *result, u64 *product, const u64 *mod)
+{
+	vli_mmod_barrett<4>(result, product, mod);
+}
+#endif
+
 //static u64 montOne[]={1, 0, 0, 0};
 void mont_mod_mult(u64 *result, const u64 *x, const u64 *y, const u64 *prime,
 				const u64 *rr, const u64 k0)

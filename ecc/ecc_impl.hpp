@@ -168,10 +168,19 @@ vli_mmod_special2(u64 *result, const u64 *product, const u64 *mod) noexcept
  * 2.4.1 Barrett's algorithm. Algorithm 2.5.
  */
 template<uint ndigits> static void forceinline
+#ifdef  WITH_C2GO
+vli_mmod_barrett(u64 *result, u64 *product, const u64 *mod, u64 *buff) noexcept
+#else
 vli_mmod_barrett(u64 *result, u64 *product, const u64 *mod) noexcept
+#endif
 {
-	u64 q[ECC_MAX_DIGITS * 2 +2];
+#ifdef  WITH_C2GO
+	u64	*q = buff;
+	u64	*r = buff + ECC_MAX_DIGITS * 2;
+#else
+	u64 q[ECC_MAX_DIGITS * 2];
 	u64 r[ECC_MAX_DIGITS * 2];
+#endif
 	const u64 *mu = mod + ndigits;
 
 	vli_mult<ndigits>(q, product + ndigits, mu);
@@ -179,11 +188,11 @@ vli_mmod_barrett(u64 *result, u64 *product, const u64 *mod) noexcept
 		vli_add_to<ndigits>(q + ndigits, product + ndigits);
 	// add remain * mod
 	vli_set<ndigits>(r, q+ndigits);
-	q[2*ndigits] = 0;
 	vli_umult<ndigits>(q, mu, product[ndigits-1]);
 	if (mu[ndigits])
 		vli_uadd_to<ndigits>(q + ndigits, product[ndigits-1]);
-	vli_add<ndigits>(result, r, q+ndigits+1);
+	vli_rshift1w<ndigits>(q+ndigits);
+	vli_add<ndigits>(result, r, q+ndigits);
 	vli_mult<ndigits>(r, mod, result);
 	vli_sub<ndigits*2>(r, product, r);
 	if (!vli_is_zero<ndigits>(r + ndigits) ||
@@ -196,18 +205,18 @@ vli_mmod_barrett(u64 *result, u64 *product, const u64 *mod) noexcept
 template<uint ndigits> forceinline
 static void vli_div_barrett(u64 *result, u64 *product, const u64 *mu) noexcept
 {
-	u64 q[ECC_MAX_DIGITS * 2 +2];
+	u64 q[ECC_MAX_DIGITS * 2];
 	u64 r[ECC_MAX_DIGITS * 2];
 
 	vli_mult<ndigits>(q, product + ndigits, mu);
 	if (mu[ndigits])
 		vli_add_to<ndigits>(q + ndigits, product + ndigits);
 	vli_set<ndigits>(r, q+ndigits);
-	q[2*ndigits] = 0;
 	vli_umult<ndigits>(q, mu, product[ndigits-1]);
 	if (mu[ndigits])
 		vli_uadd_to<ndigits>(q + ndigits, product[ndigits-1]);
-	vli_add<ndigits>(result, r, q+ndigits+1);
+	vli_rshift1w<ndigits>(q+ndigits);
+	vli_add<ndigits>(result, r, q+ndigits);
 }
 
 

@@ -45,8 +45,4 @@ typedef	unsigned int	uint;
 # error "MUST compiled by gcc/clang, gcc 7 or above"
 #endif
 
-#ifndef	ARRAY_SIZE
-#define ARRAY_SIZE(arr) (sizeof(arr) / sizeof((arr)[0]))
-#endif
-
 #endif	//	__CDEFS_H__
