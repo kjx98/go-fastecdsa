@@ -445,13 +445,15 @@ public:
 		return _high;
 #endif
 	}
-	uint128_t operator+(const uint128_t &b) noexcept
+	friend uint128_t operator+(uint128_t a, const uint128_t &b) noexcept
 	{
 #if defined(__SIZEOF_INT128__)
-		return uint128_t(_data + b._data);
+		a._data += b._data;
 #else
-		return uint128_t(_low + b._low, _high + b._high);
+		a._high += b._high;
+		if (__builtin_uaddl_overflow(a._low, b._low, &a._low)) ++a._high;
 #endif
+		return a;
 	}
 	uint128_t& operator+=(const uint128_t& b) noexcept
 	{

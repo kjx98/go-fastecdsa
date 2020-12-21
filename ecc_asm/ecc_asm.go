@@ -20,7 +20,7 @@ import (
 )
 
 // Function check CPU support FMA
-func _vli_asm_acc() uint
+func _vli_asm_acc() (res uint)
 
 // Functions implemented in ecc_asm_*64.s
 // multiplication modulo p

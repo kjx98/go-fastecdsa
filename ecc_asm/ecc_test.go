@@ -10,6 +10,7 @@ var (
 	x1, y1 *big.Int
 	x2, y2 *big.Int
 	rr     []uint64
+	bSkip  bool
 )
 
 func init() {
@@ -18,9 +19,18 @@ func init() {
 	x2, _ = new(big.Int).SetString("48121564271922987841895377752074498583012355812029682461364979458450873405695", 10)
 	y2, _ = new(big.Int).SetString("37446874645719659508108418738243030372422533994743756508347851178597805285404", 10)
 	rr = []uint64{0x200000003, 0x2ffffffff, 0x100000001, 0x400000002}
+	if _vli_asm_acc() == 0 {
+		bSkip = true
+	}
 }
 
 func TestEccMMod(t *testing.T) {
+	if bSkip {
+		t.Log("CPU not support FMA and AVX")
+		t.Fail()
+	} else {
+		t.Log("CPU support FMA")
+	}
 	p := sm2.P256().Params().P
 	xy := new(big.Int).Mul(x1, y1)
 	xyMod := new(big.Int).Mod(xy, p)
@@ -48,6 +58,10 @@ func TestEccMMod(t *testing.T) {
 }
 
 func TestMontMultMod(t *testing.T) {
+	if bSkip {
+		t.Log("CPU not support FMA and AVX")
+		t.Fail()
+	}
 	p := sm2.P256().Params().P
 	xy := new(big.Int).Mul(x1, y1)
 	xyMod := new(big.Int).Mod(xy, p)
@@ -68,6 +82,10 @@ func TestMontMultMod(t *testing.T) {
 }
 
 func TestMontExpMod(t *testing.T) {
+	if bSkip {
+		t.Log("CPU not support FMA and AVX")
+		t.Fail()
+	}
 	p := sm2.P256().Params().P
 	xyMod := new(big.Int).Exp(x1, y1, p)
 	bMod := vliExpModMont(x1.Bits(), y1.Bits(), p.Bits(), rr, 1)
@@ -86,6 +104,10 @@ func TestMontExpMod(t *testing.T) {
 }
 
 func TestMontMultModP(t *testing.T) {
+	if bSkip {
+		t.Log("CPU not support FMA and AVX")
+		t.Fail()
+	}
 	p := sm2.P256().Params().P
 	xy := new(big.Int).Mul(x1, y1)
 	xyMod := new(big.Int).Mod(xy, p)
@@ -106,6 +128,10 @@ func TestMontMultModP(t *testing.T) {
 }
 
 func TestSM2MultP(t *testing.T) {
+	if bSkip {
+		t.Log("CPU not support FMA and AVX")
+		t.Fail()
+	}
 	p := sm2.P256().Params().P
 	polyP := vliMultP(1)
 	if polyP.Cmp(p) != 0 {

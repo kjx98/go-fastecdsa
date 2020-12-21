@@ -44,25 +44,12 @@
 extern "C" {
 #endif
 
-#ifndef GO_CGO_PROLOGUE_H
-#define GO_CGO_PROLOGUE_H
 
-typedef long long GoInt64;
-typedef GoInt64 GoInt;
 typedef struct {
-	u64 *data;
-	GoInt len;
-	GoInt cap;
-} GoSlice;
-#endif
-
-#ifdef	ommit
-struct slice_t {
-	void	*array;
+	void	*data;
 	int64_t	len;
 	int64_t	cap;
-};
-#endif
+}	 GoSlice;
 
 /**
  * ecc_is_key_valid() - Validate a given ECDH private key
@@ -164,7 +151,7 @@ void vli_from_le64(u64 *dest, const void *src, uint ndigits);
 /**
  * vli_mod_inv() - Modular inversion
  *
- * @result:		where to write vli number
+ * @result:		where to write vli number, 256 Bits
  * @input:		vli value to operate on
  * @mod:		modulus
  * @ndigits:		length of all vlis

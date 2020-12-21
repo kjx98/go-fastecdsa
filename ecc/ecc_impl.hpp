@@ -67,6 +67,34 @@ struct ecc_curve {
 	const bool use_barrett = false;
 };
 
+struct slice_t {
+	u64	*data;
+	int64_t	len;
+	int64_t	cap;
+	bool isZero() {
+		if (len == 0) return true;
+		for (int i=0;i<len;++i) {
+			if (data[i] != 0) return false;
+		}
+		return true;
+	}
+	explicit operator bool () { return len != 0; }
+	template <uint ndigits>slice_t(u64 vd[ndigits]) noexcept : data(vd),
+			len(ndigits), cap(ndigits)
+	{
+		vli_clear<ndigits>(data);
+	}
+	void normal() {
+		if (len < 0) len = 0;
+		if (len == 0) return;
+		int	i;
+		for(i=len-1;i>=0;i--) {
+			if (data[i] != 0) break;
+		}
+		len = i+1;
+	}
+};
+
 /*
  * Computes result = product % mod
  * for special form moduli: p = 2^k-c, for small c (note the minus sign)
