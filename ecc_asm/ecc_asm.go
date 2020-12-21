@@ -19,6 +19,9 @@ import (
 	"unsafe"
 )
 
+// Function check CPU support FMA
+func _vli_asm_acc() uint
+
 // Functions implemented in ecc_asm_*64.s
 // multiplication modulo p
 //go:noescape

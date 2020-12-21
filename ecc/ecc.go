@@ -13,6 +13,10 @@ import (
 	"unsafe"
 )
 
+func vliTestFMA() bool {
+	return C.vli_asm_acc() != 0
+}
+
 // Functions implemented in ecc_asm_*64.s
 // Montgomery inverse modulo P256
 func vliModInv(in, mod []big.Word) (result []big.Word) {

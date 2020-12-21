@@ -24,6 +24,7 @@
  */
 
 #include <errno.h>
+#include <cpuid.h>
 #include "vli.hpp"
 #include "ecc.h"
 #include "ecc_impl.hpp"
@@ -32,6 +33,12 @@
 #pragma GCC optimize ("unroll-loops")
 #pragma GCC pop_options
 
+u64 vli_asm_acc()
+{
+	uint	_eax, _ebx, _ecx, _edx;
+	__cpuid(1, _eax, _ebx, _ecx, _edx);
+	return _ecx & bit_FMA;
+}
 
 /* Computes result = product % mod using Barrett's reduction with precomputed
  * value mu appended to the mod after ndigits, mu = (2^{2w} / mod) and have

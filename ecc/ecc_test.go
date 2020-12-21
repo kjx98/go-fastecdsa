@@ -21,6 +21,8 @@ func init() {
 }
 
 func TestEccMMod(t *testing.T) {
+	bFMA := vliTestFMA()
+	t.Log("CPU support FMA: ", bFMA)
 	p := sm2.P256().Params().P
 	xy := new(big.Int).Mul(x1, y1)
 	xyMod := new(big.Int).Mod(xy, p)

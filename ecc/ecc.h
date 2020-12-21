@@ -213,6 +213,7 @@ void vli_sm2_mult_n(u64 *result, const u64 u);
 void mont_sm2_mod_mult_p(u64 *result, const u64 *x, const u64 *y,
 				const u64 *prime, const u64 *rr);
 void mont_sm2_mod_mult_n(u64 *result, const u64 *x, const u64 *y);
+u64 vli_asm_acc();
 
 /**
  * vli_mod_mult_slow() - Modular multiplication
