@@ -197,7 +197,7 @@ void mont_mod_exp(u64 *result, const u64 *x, const u64 *y, const u64 *prime,
  * mont_sm2_mod_mult_n
  */
 #ifdef	WITH_C2GO
-void vli_sm2_mult_p(GoSlice result, const u64 u);
+void vli_sm2_mult_p(GoSlice *result, const u64 u);
 #else
 void vli_sm2_mult_p(u64 *result, const u64 rLen, const u64 u);
 #endif

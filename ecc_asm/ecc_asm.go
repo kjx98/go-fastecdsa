@@ -56,7 +56,7 @@ func _mont_mod_exp(res, in1, in2, p, rr unsafe.Pointer, k0 uint64)
 // Function implemented in ecc_asm_*86.s
 // u64 multiply prime P of SM2
 //go:noescape
-func _vli_sm2_mult_p(res unsafe.Pointer, rLen, u uint64)
+func _vli_sm2_mult_p(res *[]big.Word, u uint64)
 
 // Function implemented in ecc_asm_*86.s
 // u64 multiply prime N of SM2
@@ -149,7 +149,7 @@ func vliModMultMontP(x, y, mod []big.Word, rr []uint64) *big.Int {
 }
 
 func vliMultP(u uint64) *big.Int {
-	var res [6]big.Word
-	_vli_sm2_mult_p(unsafe.Pointer(&res[0]), uint64(len(res)), u)
+	res := make([]big.Word, 6)
+	_vli_sm2_mult_p(&res, u)
 	return new(big.Int).SetBits(res[:5])
 }
