@@ -105,6 +105,20 @@ func TestMontMultModP(t *testing.T) {
 	}
 }
 
+func TestSM2MultP(t *testing.T) {
+	p := sm2.P256().Params().P
+	polyP := vliMultP(1)
+	if polyP.Cmp(p) != 0 {
+		ww := polyP.Bits()
+		t.Logf("sm2 polyP diff P: %X %X %X %X", ww[0], ww[1], ww[2], ww[3])
+		ww = p.Bits()
+		t.Logf("sm2 P: %X %X %X %X", ww[0], ww[1], ww[2], ww[3])
+		t.Fail()
+	} else {
+		t.Log("polynomial Prime OK")
+	}
+}
+
 /*
 func TestEccInverse(t *testing.T) {
 	p := sm2.P256().Params().P
@@ -262,6 +276,16 @@ func BenchmarkMontModMulP(b *testing.B) {
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
 		_ = vliModMultMontP(x1.Bits(), y1.Bits(), p.Bits(), rr)
+	}
+}
+
+func BenchmarkSM2MultP(b *testing.B) {
+	b.ResetTimer()
+
+	b.ReportAllocs()
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		_ = vliMultP(0x55557777)
 	}
 }
 

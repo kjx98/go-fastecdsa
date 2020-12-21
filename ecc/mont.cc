@@ -63,8 +63,15 @@ void mont_mod_exp(u64 *result, const u64 *x, const u64 *y, const u64 *prime,
 	mont_reduction<4>(result, t, prime, k0);
 }
 
+#ifdef	WITH_C2GO
+void vli_sm2_mult_p(u64 *result, const u64 rLen, const u64 u)
+#else
 void vli_sm2_mult_p(u64 *result, const u64 u)
+#endif
 {
+#ifdef	WITH_C2GO
+	if (rLen < 5) return;
+#endif
 	vli_sm2_multP(result, u);
 }
 

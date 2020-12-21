@@ -275,6 +275,16 @@ func BenchmarkMontMultModP(b *testing.B) {
 	}
 }
 
+func BenchmarkSM2MultP(b *testing.B) {
+	b.ResetTimer()
+
+	b.ReportAllocs()
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		_ = vliSM2MultP(0x55557777)
+	}
+}
+
 /*
 func BenchmarkECADD(b *testing.B) {
 	b.ResetTimer()

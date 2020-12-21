@@ -44,6 +44,12 @@
 extern "C" {
 #endif
 
+struct slice_t {
+	void	*array;
+	int64_t	len;
+	int64_t	cap;
+};
+
 /**
  * ecc_is_key_valid() - Validate a given ECDH private key
  *
@@ -180,7 +186,11 @@ void mont_mod_exp(u64 *result, const u64 *x, const u64 *y, const u64 *prime,
  * mont_sm2_mod_mult_p
  * mont_sm2_mod_mult_n
  */
+#ifdef	WITH_C2GO
+void vli_sm2_mult_p(u64 *result, const u64 rLen, const u64 u);
+#else
 void vli_sm2_mult_p(u64 *result, const u64 u);
+#endif
 void vli_sm2_mult_n(u64 *result, const u64 u);
 void mont_sm2_mod_mult_p(u64 *result, const u64 *x, const u64 *y,
 				const u64 *prime, const u64 *rr);
