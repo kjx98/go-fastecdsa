@@ -59,7 +59,7 @@ struct ecc_curve {
 	const u64 *n;
 	const u64 *a;
 	const u64 *b;
-	const u64 *rr_pi = nullptr;
+	const u64 *rr_p = nullptr;
 	const u64 *rr_n = nullptr;
 	const u64 k0_p = 0;
 	const u64 k0_n = 0;
@@ -72,7 +72,7 @@ struct slice_t {
 	int64_t	len;
 	int64_t	cap;
 	bool isZero() {
-		if (len == 0) return true;
+		if (len <= 0) return true;
 		for (int i=0;i<len;++i) {
 			if (data[i] != 0) return false;
 		}
@@ -85,8 +85,7 @@ struct slice_t {
 		vli_clear<ndigits>(data);
 	}
 	void normal() {
-		if (len < 0) len = 0;
-		if (len == 0) return;
+		if (len <= 0) return;
 		int	i;
 		for(i=len-1;i>=0;i--) {
 			if (data[i] != 0) break;
@@ -257,17 +256,13 @@ static void vli_sm2_multP(u64 *result, const u64 u) noexcept
 	u64	t_low, t_high;
 	t_low = u << 32;	// ^192
 	t_high = ((u >> 32) & 0xffffffff);
-	result[5] = 0;
-	result[4] = u - t_high;
-	result[4]--;
+	vli_clear<4>(result);
 	result[3] = 0 - t_low;		// ^256 - ^224
-	result[2] = 0;
-	result[1] = 0;
-	result[0] = 0;
+	result[4] = u - t_high -1;
 	r[0] =0;
-	r[3] =0;
 	r[1] = t_low;
 	r[2] = t_high;
+	r[3] =0;
 	//vli_sub_from<5>(result, t);	// ^256 - ^224 - ^96
 	if (vli_sub_from<4>(result, r)) result[4]--;
 	r[2] = 0;
@@ -303,7 +298,7 @@ forceinline
 static void mont_multP(u64 *result, const u64 *x, const u64 *y,
 			const u64 *prime) noexcept
 {
-	u64	t[ECC_MAX_DIGITS * 2];
+	//u64	t[ECC_MAX_DIGITS * 2];
 	u64	s[ECC_MAX_DIGITS * 2];
 	u64	r[ECC_MAX_DIGITS * 2];
 	vli_clear<8>(r);
@@ -315,9 +310,9 @@ static void mont_multP(u64 *result, const u64 *x, const u64 *y,
 #else
 		vli_umult<4>(s, prime, u);
 #endif
-		vli_umult<4>(t, x, y[i]);
-		vli_add_to<8>(r, s);
-		vli_add_to<8>(r, t);
+		vli_add_to<6>(r, s);
+		vli_umult<4>(s, x, y[i]);
+		vli_add_to<6>(r, s);
 		vli_rshift1w<6>(r);	
 	}
 	if (r[4] != 0 || vli_cmp<4>(r, prime) >= 0) {
@@ -336,8 +331,8 @@ static void mont_reduction(u64 *result, const u64 *y, const u64 *prime,
 	for (uint i=0; i < ndigits; i++) {
 		u64	u = (r[0] + y[i]) * k0;
 		vli_umult<ndigits>(s, prime, u);
-		vli_uadd_to<ndigits * 2>(r, y[i]);
-		vli_add_to<ndigits * 2>(r, s);
+		vli_uadd_to<ndigits + 2>(r, y[i]);
+		vli_add_to<ndigits + 2>(r, s);
 		vli_rshift1w<ndigits + 2>(r);	
 	}
 	if (r[ndigits] !=0 || vli_cmp<ndigits>(r, prime) >= 0) {
@@ -349,7 +344,7 @@ template<uint ndigits> forceinline
 static void mont_mult(u64 *result, const u64 *x, const u64 *y, const u64 *prime,
 				const u64 k0) noexcept
 {
-	u64	t[ECC_MAX_DIGITS * 2];
+	//u64	t[ECC_MAX_DIGITS * 2];
 	u64	s[ECC_MAX_DIGITS * 2];
 	u64	r[ECC_MAX_DIGITS * 2];
 	vli_clear<ndigits * 2>(r);
@@ -357,9 +352,11 @@ static void mont_mult(u64 *result, const u64 *x, const u64 *y, const u64 *prime,
 	for (uint i=0; i < ndigits;i++) {
 		u64	u = (r[0] + y[i]*x[0]) * k0;
 		vli_umult<ndigits>(s, prime, u);
-		vli_umult<ndigits>(t, x, y[i]);
-		vli_add_to<ndigits * 2>(r, s);
-		vli_add_to<ndigits * 2>(r, t);
+		vli_add_to<ndigits + 2>(r, s);
+		//vli_umult<ndigits>(t, x, y[i]);
+		//vli_add_to<ndigits * 2>(r, t);
+		vli_umult<ndigits>(s, x, y[i]);
+		vli_add_to<ndigits + 2>(r, s);
 		vli_rshift1w<ndigits + 2>(r);	
 	}
 	if (r[ndigits] != 0 || vli_cmp<ndigits>(r, prime) >= 0) {
@@ -398,7 +395,6 @@ static void vli_mod_inv(u64 *result, const u64 *input, const u64 *mod) noexcept
 
 			if (!vli_is_even(u))
 				carry = vli_add_to<ndigits>(u, mod);
-				//carry = vli_add<ndigits>(u, u, mod);
 
 			vli_rshift1<ndigits>(u);
 			if (carry)
@@ -408,7 +404,6 @@ static void vli_mod_inv(u64 *result, const u64 *input, const u64 *mod) noexcept
 
 			if (!vli_is_even(v))
 				carry = vli_add_to<ndigits>(v, mod);
-				//carry = vli_add<ndigits>(v, v, mod);
 
 			vli_rshift1<ndigits>(v);
 			if (carry)
@@ -423,7 +418,6 @@ static void vli_mod_inv(u64 *result, const u64 *input, const u64 *mod) noexcept
 			vli_sub_from<ndigits>(u, v);
 			if (!vli_is_even(u))
 				carry = vli_add_to<ndigits>(u, mod);
-				//carry = vli_add<ndigits>(u, u, mod);
 
 			vli_rshift1<ndigits>(u);
 			if (carry)
@@ -438,7 +432,6 @@ static void vli_mod_inv(u64 *result, const u64 *input, const u64 *mod) noexcept
 			vli_sub_from<ndigits>(v, u);
 			if (!vli_is_even(v))
 				carry = vli_add_to<ndigits>(v, mod);
-				//carry = vli_add<ndigits>(v, v, mod);
 
 			vli_rshift1<ndigits>(v);
 			if (carry)

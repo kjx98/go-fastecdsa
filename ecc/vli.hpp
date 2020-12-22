@@ -225,10 +225,16 @@ bool vli_add_to(u64 *result, const u64 *right) noexcept
 #pragma GCC unroll 4
 	for (uint i = 0; i < ndigits; i++) {
 		u64 sum;
+#ifdef	NO_BUILTIN_OVERFLOW
+		sum = result[i] + right[i] + carry;
+		if (sum != result[i])
+			carry = (sum < result[i]);
+#else
 		auto c_carry = __builtin_uaddl_overflow(result[i], right[i], &sum);
 		if (unlikely(carry)) {
 			carry = c_carry | __builtin_uaddl_overflow(sum, 1, &sum);
 		} else carry = c_carry;
+#endif
 		result[i] = sum;
 	}
 	return carry;
@@ -238,6 +244,21 @@ bool vli_add_to(u64 *result, const u64 *right) noexcept
 template<uint ndigits> forceinline
 static bool vli_uadd_to(u64 *result, u64 right) noexcept
 {
+#ifdef	NO_BUILTIN_OVERFLOW
+	u64 carry = right;
+	uint i;
+#pragma GCC unroll 4
+	for (i = 0; i < ndigits; i++) {
+		u64 sum;
+		sum = result[i] + carry;
+		if (sum != result[i])
+			carry = (sum < result[i]);
+		else
+			carry = !!carry;
+		result[i] = sum;
+	}
+	return carry != 0;
+#else
 	auto carry = __builtin_uaddl_overflow(result[0], right, result);
 #pragma GCC unroll 4
 	for (uint i = 1; i < ndigits; i++) {
@@ -246,6 +267,7 @@ static bool vli_uadd_to(u64 *result, u64 right) noexcept
 		} else break;
 	}
 	return carry;
+#endif
 }
 
 /**
@@ -316,10 +338,15 @@ bool vli_sub_from(u64 *result, const u64 *right) noexcept
 #pragma GCC unroll 4
 	for (uint i = 0; i < ndigits; i++) {
 		u64 diff;
+#ifdef	NO_BUILTIN_OVERFLOW
+		diff = result[i] - right[i] - borrow;
+		if (diff != result[i]) borrow = (diff > result[i]);
+#else
 		auto c_borrow = __builtin_usubl_overflow(result[i], right[i], &diff);
 		if (unlikely(borrow)) {
 			borrow = c_borrow | __builtin_usubl_overflow(diff, 1, &diff);
 		} else borrow = c_borrow;
+#endif
 		result[i] = diff;
 	}
 	return borrow;
@@ -329,6 +356,19 @@ bool vli_sub_from(u64 *result, const u64 *right) noexcept
 template<uint ndigits> forceinline
 static bool vli_usub_from(u64 *result, const u64 *left, u64 right) noexcept
 {
+#ifdef	NO_BUILTIN_OVERFLOW
+	u64 borrow = right;
+	uint i;
+#pragma GCC unroll 4
+	for (i = 0; i < ndigits; i++) {
+		u64 diff;
+		diff = result[i] - borrow;
+		if (diff != result[i])
+			borrow = (diff > result[i]);
+		result[i] = diff;
+	}
+	return borrow != 0;
+#else
 	auto borrow = __builtin_usubl_overflow(result[0], right, result);
 #pragma GCC unroll 4
 	for (uint i = 1; i < ndigits; i++) {
@@ -337,6 +377,7 @@ static bool vli_usub_from(u64 *result, const u64 *left, u64 right) noexcept
 		} else break;
 	}
 	return borrow;
+#endif
 }
 
 template<uint ndigits> forceinline
