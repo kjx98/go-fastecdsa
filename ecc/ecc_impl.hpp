@@ -256,7 +256,7 @@ static void vli_sm2_multP(u64 *result, const u64 u) noexcept
 	u64	t_low, t_high;
 	t_low = u << 32;	// ^192
 	t_high = ((u >> 32) & 0xffffffff);
-	vli_clear<4>(result);
+	vli_clear<6>(result);
 	result[3] = 0 - t_low;		// ^256 - ^224
 	result[4] = u - t_high -1;
 	r[0] =0;
@@ -285,8 +285,8 @@ static void mont_reductionP(u64 *result, const u64 *y, const u64 *prm) noexcept
 #else
 		vli_umult<4>(s, prm, u);
 #endif
-		vli_uadd_to<8>(r, y[i]);
-		vli_add_to<8>(r, s);
+		vli_uadd_to<6>(r, y[i]);
+		vli_add_to<6>(r, s);
 		vli_rshift1w<6>(r);	
 	}
 	if (r[4] !=0 || vli_cmp<4>(r, prm) >= 0) {

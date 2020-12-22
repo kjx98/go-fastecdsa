@@ -2,13 +2,13 @@
 
 package ecc
 
-// #cgo CXXFLAGS: -O2 -Wpedantic -Wall -std=gnu++11
+// #cgo CXXFLAGS: -O3 -Wpedantic -Wall -std=gnu++11
 // #include "ecc.h"
 import "C"
 
 // for gcc 4.8.5, __builtin_add/sub_overflow improve 10% -- 20%
 // cgo CXXFLAGS: -O2 -Wpedantic -Wall -std=gnu++11 -DNO_BUILTIN_OVERFLOW
-// WITH_SM2_MULTP using shift instead of multiply, no improvement @x86_64
+// WITH_SM2_MULTP using shift instead of multiply, no improvement @x86_64/arm64
 // cgo CXXFLAGS: -O2 -Wpedantic -Wall -std=gnu++11 -DWITH_SM2_MULTP
 
 import (

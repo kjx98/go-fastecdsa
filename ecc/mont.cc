@@ -24,7 +24,9 @@
  */
 
 #include <errno.h>
+#ifdef	__x86_64__
 #include <cpuid.h>
+#endif
 #include "vli.hpp"
 #include "ecc.h"
 #include "ecc_impl.hpp"
@@ -35,9 +37,13 @@
 
 u64 vli_asm_acc()
 {
+#ifdef	__x86_64__
 	uint	_eax, _ebx, _ecx, _edx;
 	__cpuid(1, _eax, _ebx, _ecx, _edx);
 	return _ecx & bit_FMA;
+#else
+	return 0;
+#endif
 }
 
 /* Computes result = product % mod using Barrett's reduction with precomputed
