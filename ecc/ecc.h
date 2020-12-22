@@ -58,6 +58,8 @@ typedef	struct {
 	bool	isZero;
 }	POINT;
 
+typedef	void*	CURVE_HND;
+
 /**
  * ecc_is_key_valid() - Validate a given ECDH private key
  *
@@ -228,6 +230,18 @@ void vli_mod_mult_fast(u64 *result, const u64 *left, const u64 *right,
 			      const u64 *curve_prime, unsigned int ndigits);
 
 /**
+ * get_curve()		--	get curve defines
+ *
+ */
+CURVE_HND   get_curve(uint curve_id);
+/**
+ * get_curve_params	--	get curve params
+ * p, n, b, gx, gy	--	bn_t 256 Bits
+ */
+void	get_curve_params(u64 *p, u64 *n, u64 *b, u64 *gx, u64 *gy,
+				CURVE_HND curveH);
+
+/**
  * ecc_point_mult_shamir() - Add two points multiplied by scalars
  *
  * @result:		resulting point
@@ -243,7 +257,7 @@ void vli_mod_mult_fast(u64 *result, const u64 *left, const u64 *right,
 void ecc_point_mult_shamir(const u64 *result_x, const u64 *result_y,
 			   const u64 *x, const u64 *px, const u64 *py,
 			   const u64 *y, const u64 *qx, const u64 *qy,
-			   const uint curve_id);
+			   const CURVE_HND curveH);
 #ifdef	__cplusplus
 }
 #endif

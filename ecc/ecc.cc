@@ -59,6 +59,30 @@ static forceinline const ecc_curve *ecc_get_curve(uint curve_id)
 }
 
 
+CURVE_HND	get_curve(uint curve_id)
+{
+	return (CURVE_HND)ecc_get_curve(curve_id);
+}
+
+
+/**
+ * get_curve_params	--	get curve params
+ * p, n, b, gx, gy	--	bn_t 256 Bits
+ */
+void	get_curve_params(u64 *p, u64 *n, u64 *b, u64 *gx, u64 *gy,
+				CURVE_HND curveH)
+{
+	if (curveH == nullptr) return;
+	ecc_curve	*curve=(ecc_curve *)curveH;
+	if (curve->name[0] == 0 || curve->ndigits != 4) return;
+	vli_set<4>(p, curve->p);
+	vli_set<4>(n, curve->n);
+	vli_set<4>(b, curve->b);
+	vli_set<4>(gx, curve->gx);
+	vli_set<4>(gy, curve->gy);
+}
+
+
 /* Computes p_result = p_product % curve_p.
  * See algorithm 5 and 6 from
  * http://www.isys.uni-klu.ac.at/PDF/2001-0126-MT.pdf
@@ -290,6 +314,12 @@ static bool ecc_point_is_zero(const u64 *p_x, const u64 *p_y)
 		vli_is_zero<ndigits>(p_y));
 }
 
+bool ecc_point_is_zero(const POINT *p)
+{
+	if (p->isZero || vli_is_zero<4>(p->z)) return true;
+	return ecc_point_is_zero<4>(p->x, p->y);
+}
+
 /* Point multiplication algorithm using Montgomery's ladder with co-Z
  * coordinates. From http://eprint.iacr.org/2011/338.pdf
  */
@@ -332,7 +362,6 @@ static void ecc_point_double_jacobian(u64 *x1, u64 *y1, u64 *z1,
 	vli_mod_add<ndigits>(x1, x1, z1, curve_prime);
 	if (vli_test_bit(x1, 0)) {
 		u64 carry = vli_add_to<ndigits>(x1, curve_prime);
-		//u64 carry = vli_add<ndigits>(x1, x1, curve_prime);
 
 		vli_rshift1<ndigits>(x1);
 		x1[ndigits - 1] |= carry << 63;

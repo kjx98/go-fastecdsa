@@ -12,12 +12,44 @@ import "C"
 // cgo CXXFLAGS: -O2 -Wpedantic -Wall -std=gnu++11 -DWITH_SM2_MULTP
 
 import (
+	"crypto/elliptic"
 	"math/big"
 	"unsafe"
 )
 
+// A Curve represents a short-form Weierstrass curve with a=-3.
+// See https://www.hyperelliptic.org/EFD/g1p/auto-shortw.html
+type Curve = elliptic.Curve
+
+// CurveParams contains the parameters of an elliptic curve and also provides
+// a generic, non-constant time implementation of Curve.
+type CurveParams = elliptic.CurveParams
+
 func vliTestFMA() bool {
 	return C.vli_asm_acc() != 0
+}
+
+func getCurveParams(curveId uint) *CurveParams {
+	if curveId == 0 {
+		curveId = uint(C.ECC_CURVE_SM2)
+	}
+	cHnd := C.get_curve(C.uint(curveId))
+	if cHnd == C.CURVE_HND(uintptr(0)) {
+		return nil
+	}
+	var p, n, b, gx, gy [4]big.Word
+	C.get_curve_params((*C.u64)(unsafe.Pointer(&p[0])),
+		(*C.u64)(unsafe.Pointer(&n[0])), (*C.u64)(unsafe.Pointer(&b[0])),
+		(*C.u64)(unsafe.Pointer(&gx[0])), (*C.u64)(unsafe.Pointer(&gy[0])),
+		cHnd)
+	sm2Params := &CurveParams{Name: "SM2-c"}
+	sm2Params.P = new(big.Int).SetBits(p[:])
+	sm2Params.N = new(big.Int).SetBits(n[:])
+	sm2Params.B = new(big.Int).SetBits(b[:])
+	sm2Params.Gx = new(big.Int).SetBits(gx[:])
+	sm2Params.Gy = new(big.Int).SetBits(gy[:])
+	sm2Params.BitSize = 256
+	return sm2Params
 }
 
 // Functions implemented in ecc_asm_*64.s

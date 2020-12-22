@@ -24,6 +24,17 @@ func init() {
 	k0N = 0x327f9e8872350975
 }
 
+func TestEccCurveParam(t *testing.T) {
+	c := getCurveParams(0)
+	if c == nil {
+		t.Log("Can't get ECC Curve Params")
+		t.Fail()
+	}
+	t.Logf("ECC Curve Params: %s\nP: %s\nN: %s\nB: %s\nGx: %s\nGy: %s\n",
+		c.Name, c.P.Text(16), c.N.Text(16), c.B.Text(16),
+		c.Gx.Text(16), c.Gy.Text(16))
+}
+
 func TestEccMMod(t *testing.T) {
 	bFMA := vliTestFMA()
 	t.Log("CPU support FMA: ", bFMA)
