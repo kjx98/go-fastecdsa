@@ -71,6 +71,10 @@ static u64 sm2_p256_p[] = { 0xFFFFFFFFFFFFFFFFull, 0xffffffff00000000ull,
 				0x200000003, 0x200000002, 0x100000001, 0x100000001, 1};
 static u64 sm2_p256_n[] = { 0x53bbf40939d54123ull, 0x7203df6b21c6052bull,
 				0xFFFFFFFFFFFFFFFFull, 0xfffffffeffffffffull };
+static u64 sm2_p256_p_rr[] = { 0x200000003ull, 0x2ffffffffull,
+				0x100000001ull, 0x400000002ull };
+static u64 sm2_p256_n_rr[] = { 0x200000003ull, 0x2ffffffffull,
+				0x100000001ull, 0x400000002ull };
 static u64 sm2_p256_a[] = { 0xFFFFFFFFFFFFFFFCull, 0xffffffff00000000ull,
 				0xffffffffffffffffull, 0xfffffffeffffffffull };
 static u64 sm2_p256_b[] = { 0xDDBCBD414D940E93ull, 0xF39789F515AB8F92ull,
@@ -81,6 +85,29 @@ static u64 sm2_p256_gy[]= { 0x2DF32E52139F0A0ull, 0xD0A9877CC62A4740ull,
 			0x59BDCEE36B692153ull, 0xBC3736A2F4F6779Cull };
 static ecc_curve sm2_p256( //.name
 	"sm2p256",
+	// .gx
+	sm2_p256_gx,
+	//.gy
+	sm2_p256_gy,
+	//.p
+	sm2_p256_p,
+	//.n
+	sm2_p256_n,
+	//.a
+	sm2_p256_a,
+	//.b
+	sm2_p256_b,
+	// rr_p, rr_n
+	sm2_p256_p_rr,
+	sm2_p256_n_rr,
+	// k0_p, k0_n
+	1, 0x327f9e8872350975,
+	//.ndigits
+	4,
+	//.use_barrett
+	true);
+static ecc_curve sm2_p256_mont( //.name
+	"sm2p256mont",
 	// .gx
 	sm2_p256_gx,
 	//.gy

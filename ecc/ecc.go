@@ -24,8 +24,11 @@ func vliTestFMA() bool {
 // Montgomery inverse modulo P256
 func vliModInv(in, mod []big.Word) (result []big.Word) {
 	var res [4]big.Word
+	var in1, md1 [4]big.Word
+	copy(in1[:], in)
+	copy(md1[:], mod)
 	C.vli_mod_inv((*C.u64)(unsafe.Pointer(&res[0])),
-		(*C.u64)(unsafe.Pointer(&in[0])), (*C.u64)(unsafe.Pointer(&mod[0])))
+		(*C.u64)(unsafe.Pointer(&in1[0])), (*C.u64)(unsafe.Pointer(&md1[0])))
 	result = res[:]
 	return
 }

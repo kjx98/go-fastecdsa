@@ -52,6 +52,13 @@ struct ecc_curve {
 				const bool bBat=false) : name(_name), gx(_gx), gy(_gy),
 			p(_p), n(_n), a(_a), b(_b),
 			ndigits(ndig), use_barrett(bBat) {}
+	ecc_curve(const char *_name, const u64 *_gx, const u64 *_gy, const u64 *_p,
+				const u64 *_n, const u64 *_a, const u64 *_b, const u64 *rrP,
+				const u64 *rrN, const u64 pK0=1,
+				const u64 nK0=0x327f9e8872350975, const uint ndig=4,
+				const bool bBat=false) : name(_name), gx(_gx), gy(_gy),
+			p(_p), n(_n), a(_a), b(_b), rr_p(rrP), rr_n(rrN), k0_p(pK0),
+			k0_n(nK0), ndigits(ndig), use_barrett(bBat) {}
 	const char *name;
 	const u64 *gx;
 	const u64 *gy;
@@ -66,6 +73,15 @@ struct ecc_curve {
 	const uint ndigits = 4;
 	const bool use_barrett = false;
 };
+
+template<uint ndigits>
+struct point_t {
+	bool	isZero;
+	u64		x[ndigits];
+	u64		y[ndigits];
+	u64		z[ndigits];
+};
+
 
 struct slice_t {
 	u64	*data;
@@ -206,7 +222,7 @@ vli_mmod_barrett(u64 *result, u64 *product, const u64 *mod) noexcept
 	u64	*r = buff + ECC_MAX_DIGITS * 2;
 #else
 	u64 q[ECC_MAX_DIGITS * 2];
-	u64 r[ECC_MAX_DIGITS * 2];
+	u64 r[ECC_MAX_DIGITS];
 #endif
 	const u64 *mu = mod + ndigits;
 
@@ -220,20 +236,20 @@ vli_mmod_barrett(u64 *result, u64 *product, const u64 *mod) noexcept
 		vli_uadd_to<ndigits>(q + ndigits, product[ndigits-1]);
 	vli_rshift1w<ndigits>(q+ndigits);
 	vli_add<ndigits>(result, r, q+ndigits);
-	vli_mult<ndigits>(r, mod, result);
-	vli_sub<ndigits*2>(r, product, r);
-	if (!vli_is_zero<ndigits>(r + ndigits) ||
-	       vli_cmp<ndigits>(r, mod) >= 0) {
-		vli_sub_from<ndigits>(r, mod);
+	vli_mult<ndigits>(q, mod, result);
+	vli_sub<ndigits*2>(q, product, q);
+	if (!vli_is_zero<ndigits>(q + ndigits) ||
+	       vli_cmp<ndigits>(q, mod) >= 0) {
+		vli_sub_from<ndigits>(q, mod);
 	}
-	vli_set<ndigits>(result, r);
+	vli_set<ndigits>(result, q);
 }
 
 template<uint ndigits> forceinline
 static void vli_div_barrett(u64 *result, u64 *product, const u64 *mu) noexcept
 {
 	u64 q[ECC_MAX_DIGITS * 2];
-	u64 r[ECC_MAX_DIGITS * 2];
+	u64 r[ECC_MAX_DIGITS];
 
 	vli_mult<ndigits>(q, product + ndigits, mu);
 	if (mu[ndigits])
@@ -298,7 +314,6 @@ forceinline
 static void mont_multP(u64 *result, const u64 *x, const u64 *y,
 			const u64 *prime) noexcept
 {
-	//u64	t[ECC_MAX_DIGITS * 2];
 	u64	s[ECC_MAX_DIGITS * 2];
 	u64	r[ECC_MAX_DIGITS * 2];
 	vli_clear<8>(r);
@@ -344,7 +359,6 @@ template<uint ndigits> forceinline
 static void mont_mult(u64 *result, const u64 *x, const u64 *y, const u64 *prime,
 				const u64 k0) noexcept
 {
-	//u64	t[ECC_MAX_DIGITS * 2];
 	u64	s[ECC_MAX_DIGITS * 2];
 	u64	r[ECC_MAX_DIGITS * 2];
 	vli_clear<ndigits * 2>(r);
@@ -353,8 +367,6 @@ static void mont_mult(u64 *result, const u64 *x, const u64 *y, const u64 *prime,
 		u64	u = (r[0] + y[i]*x[0]) * k0;
 		vli_umult<ndigits>(s, prime, u);
 		vli_add_to<ndigits + 2>(r, s);
-		//vli_umult<ndigits>(t, x, y[i]);
-		//vli_add_to<ndigits * 2>(r, t);
 		vli_umult<ndigits>(s, x, y[i]);
 		vli_add_to<ndigits + 2>(r, s);
 		vli_rshift1w<ndigits + 2>(r);	

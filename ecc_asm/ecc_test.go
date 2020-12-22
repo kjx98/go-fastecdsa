@@ -27,7 +27,7 @@ func init() {
 func TestEccMMod(t *testing.T) {
 	if bSkip {
 		t.Log("CPU not support FMA and AVX")
-		t.Fail()
+		t.FailNow()
 	} else {
 		t.Log("CPU support FMA")
 	}
@@ -60,7 +60,7 @@ func TestEccMMod(t *testing.T) {
 func TestMontMultMod(t *testing.T) {
 	if bSkip {
 		t.Log("CPU not support FMA and AVX")
-		t.Fail()
+		t.FailNow()
 	}
 	p := sm2.P256().Params().P
 	xy := new(big.Int).Mul(x1, y1)
@@ -84,7 +84,7 @@ func TestMontMultMod(t *testing.T) {
 func TestMontExpMod(t *testing.T) {
 	if bSkip {
 		t.Log("CPU not support FMA and AVX")
-		t.Fail()
+		t.FailNow()
 	}
 	p := sm2.P256().Params().P
 	xyMod := new(big.Int).Exp(x1, y1, p)
@@ -106,7 +106,7 @@ func TestMontExpMod(t *testing.T) {
 func TestMontMultModP(t *testing.T) {
 	if bSkip {
 		t.Log("CPU not support FMA and AVX")
-		t.Fail()
+		t.FailNow()
 	}
 	p := sm2.P256().Params().P
 	xy := new(big.Int).Mul(x1, y1)
@@ -130,7 +130,7 @@ func TestMontMultModP(t *testing.T) {
 func TestSM2MultP(t *testing.T) {
 	if bSkip {
 		t.Log("CPU not support FMA and AVX")
-		t.Fail()
+		t.FailNow()
 	}
 	p := sm2.P256().Params().P
 	polyP := vliMultP(1)

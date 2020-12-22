@@ -49,7 +49,14 @@ typedef struct {
 	void	*data;
 	int64_t	len;
 	int64_t	cap;
-}	 GoSlice;
+}	GoSlice;
+
+typedef	struct {
+	u64		x[4];
+	u64		y[4];
+	u64		z[4];
+	bool	isZero;
+}	POINT;
 
 /**
  * ecc_is_key_valid() - Validate a given ECDH private key

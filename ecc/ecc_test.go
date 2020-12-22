@@ -7,9 +7,10 @@ import (
 )
 
 var (
-	x1, y1 *big.Int
-	x2, y2 *big.Int
-	rr     []uint64
+	x1, y1  *big.Int
+	x2, y2  *big.Int
+	rr, rrN []uint64
+	k0N     uint64
 )
 
 func init() {
@@ -18,6 +19,9 @@ func init() {
 	x2, _ = new(big.Int).SetString("48121564271922987841895377752074498583012355812029682461364979458450873405695", 10)
 	y2, _ = new(big.Int).SetString("37446874645719659508108418738243030372422533994743756508347851178597805285404", 10)
 	rr = []uint64{0x200000003, 0x2ffffffff, 0x100000001, 0x400000002}
+	rrN = []uint64{0x901192af7c114f20, 0x3464504ade6fa2fa,
+		0x620fc84c3affe0d4, 0x1eb5e412a22b3d3b}
+	k0N = 0x327f9e8872350975
 }
 
 func TestEccMMod(t *testing.T) {
@@ -76,6 +80,23 @@ func TestMontMultMod(t *testing.T) {
 	bMod = vliModMultMont(x2.Bits(), y2.Bits(), p.Bits(), rr, 1)
 	if bMod.Cmp(xyMod) != 0 {
 		t.Logf("step2 big.mulmod diff ModMultMont:\n%s vs\n%s\n",
+			xyMod.Text(16), bMod.Text(16))
+		t.Fail()
+	}
+	n := sm2.P256().Params().N
+	xy = new(big.Int).Mul(x1, y1)
+	xyMod = new(big.Int).Mod(xy, n)
+	bMod = vliModMultMont(x1.Bits(), y1.Bits(), n.Bits(), rrN, k0N)
+	if bMod.Cmp(xyMod) != 0 {
+		t.Logf("step3 big.mulmod diff ModMultMont:\n%s vs\n%s\n",
+			xyMod.Text(16), bMod.Text(16))
+		t.Fail()
+	}
+	xy = new(big.Int).Mul(x2, y2)
+	xyMod = new(big.Int).Mod(xy, n)
+	bMod = vliModMultMont(x2.Bits(), y2.Bits(), n.Bits(), rrN, k0N)
+	if bMod.Cmp(xyMod) != 0 {
+		t.Logf("step4 big.mulmod diff ModMultMont:\n%s vs\n%s\n",
 			xyMod.Text(16), bMod.Text(16))
 		t.Fail()
 	}
@@ -193,6 +214,12 @@ func TestBarrettDiv(t *testing.T) {
 		t.Log("delta prod/p, q < 0 or > 2, delta: ", dd)
 		t.Fail()
 	}
+}
+
+func TestCurveAdd(t *testing.T) {
+	//c := sm2.P256()
+	//x3, y3 := c.Add(x1, y1, x2, y2)
+
 }
 
 func BenchmarkInverse(b *testing.B) {

@@ -590,10 +590,13 @@ static void vli_umult(u64 *result, const u64 *left, u64 right) noexcept
 	for (k = 0; k < ndigits; k++) {
 		uint128_t product;
 
-		//product = mul_64_64(left[k], right);
-		product.mul_64_64(left[k], right);
-		//r01 = add_128_128(r01, product);
-		r01 += product;
+		//if (likely(left[k] != 0))
+		{
+			//product = mul_64_64(left[k], right);
+			product.mul_64_64(left[k], right);
+			//r01 = add_128_128(r01, product);
+			r01 += product;
+		}
 		/* no carry */
 		result[k] = r01.m_low();
 		r01 = uint128_t(r01.m_high(), 0);
