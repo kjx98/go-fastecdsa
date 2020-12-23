@@ -479,4 +479,5 @@ void	point_mult(POINT *pt_r, const POINT *pt, const u64 *scalar,
 	if (curveH == nullptr) return;
 	ecc_curve	*curve=(ecc_curve *)curveH;
 	if (curve->name[0] == 0 || curve->ndigits != 4) return;
+	ecc_point_mult<4>(pt_r->x, pt_r->y, pt->x, pt->y, scalar, nullptr, curve);
 }

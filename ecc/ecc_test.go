@@ -408,3 +408,18 @@ func BenchmarkECDBL(b *testing.B) {
 		}
 	})
 }
+
+func BenchmarkECMULT(b *testing.B) {
+	b.ResetTimer()
+	curve := sm2c
+	aGx := curve.Params().Gx
+	aGy := curve.Params().Gy
+
+	b.ReportAllocs()
+	b.ResetTimer()
+	b.RunParallel(func(pb *testing.PB) {
+		for pb.Next() {
+			_, _ = curve.ScalarMult(aGx, aGy, d1.Bytes())
+		}
+	})
+}
