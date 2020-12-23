@@ -228,9 +228,17 @@ func TestBarrettDiv(t *testing.T) {
 }
 
 func TestCurveAdd(t *testing.T) {
-	//c := sm2.P256()
-	//x3, y3 := c.Add(x1, y1, x2, y2)
-
+	c := sm2.P256()
+	x3, y3 := c.Add(x1, y1, x2, y2)
+	x3a, y3a := sm2c.Add(x1, y1, x2, y2)
+	if x3.Cmp(x3a) != 0 {
+		t.Logf("sm2c.Add diff sm2.Add x:\n%s\n%s", x3.Text(16), x3a.Text(16))
+		t.Fail()
+	}
+	if y3.Cmp(y3a) != 0 {
+		t.Logf("sm2c.Add diff sm2.Add y:\n%s\n%s", y3.Text(16), y3a.Text(16))
+		t.Fail()
+	}
 }
 
 func BenchmarkInverse(b *testing.B) {

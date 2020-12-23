@@ -25,15 +25,47 @@ type Curve = elliptic.Curve
 // a generic, non-constant time implementation of Curve.
 type CurveParams = elliptic.CurveParams
 
+// eccCurve contains the parameters of an elliptic curve and also provides
+// a generic, non-constant time implementation of Curve.
+type eccCurve struct {
+	*CurveParams
+	hnd    C.CURVE_HND
+	inited bool
+}
+
+var sm2c eccCurve
+
+func init() {
+	if sm2c.inited {
+		return
+	}
+	sm2c.inited = true
+	cHnd := C.get_curve(C.ECC_CURVE_SM2)
+	if cHnd == C.CURVE_HND(uintptr(0)) {
+		return
+	}
+	sm2c.hnd = cHnd
+	sm2c.CurveParams = getCurveParams(0)
+}
+
+func SM2C() *eccCurve {
+	if sm2c.CurveParams == nil {
+		return nil
+	}
+	return &sm2c
+}
+
 func vliTestFMA() bool {
 	return C.vli_asm_acc() != 0
 }
 
 func getCurveParams(curveId uint) *CurveParams {
+	var cHnd C.CURVE_HND
 	if curveId == 0 {
-		curveId = uint(C.ECC_CURVE_SM2)
+		cHnd = sm2c.hnd
+	} else {
+		cHnd = C.get_curve(C.uint(curveId))
 	}
-	cHnd := C.get_curve(C.uint(curveId))
 	if cHnd == C.CURVE_HND(uintptr(0)) {
 		return nil
 	}
@@ -50,6 +82,94 @@ func getCurveParams(curveId uint) *CurveParams {
 	sm2Params.Gy = new(big.Int).SetBits(gy[:])
 	sm2Params.BitSize = 256
 	return sm2Params
+}
+
+func (c eccCurve) newPoint(x, y, z *big.Int) *C.POINT {
+	var pt C.POINT
+	var xb, yb, zb [4]big.Word
+	copy(xb[:], x.Bits())
+	copy(yb[:], y.Bits())
+	if z == nil {
+		zb[0] = 1
+	} else {
+		copy(zb[:], z.Bits())
+	}
+	for i := 0; i < 4; i++ {
+		pt.x[i] = C.u64(xb[i])
+		pt.y[i] = C.u64(yb[i])
+		pt.z[i] = C.u64(zb[i])
+	}
+	return &pt
+}
+
+func (c eccCurve) Add(x1, y1, x2, y2 *big.Int) (rx, ry *big.Int) {
+	pt1 := c.newPoint(x1, y1, nil)
+	pt2 := c.newPoint(x2, y2, nil)
+	var pt C.POINT
+	C.point_add(&pt, pt1, pt2, c.hnd)
+	var xb, yb [4]big.Word
+	for i := 0; i < 4; i++ {
+		xb[i] = big.Word(pt.x[i])
+		yb[i] = big.Word(pt.y[i])
+	}
+	rx = new(big.Int).SetBits(xb[:])
+	ry = new(big.Int).SetBits(yb[:])
+	return
+}
+
+func (c eccCurve) AddJacobian(x1, y1, z1, x2, y2, z2 *big.Int) (rx, ry, rz *big.Int) {
+	pt1 := c.newPoint(x1, y1, z1)
+	pt2 := c.newPoint(x2, y2, z2)
+	var pt C.POINT
+	C.point_add_jacobian(&pt, pt1, pt2, c.hnd)
+	var xb, yb, zb [4]big.Word
+	for i := 0; i < 4; i++ {
+		xb[i] = big.Word(pt.x[i])
+		yb[i] = big.Word(pt.y[i])
+		zb[i] = big.Word(pt.z[i])
+	}
+	rx = new(big.Int).SetBits(xb[:])
+	ry = new(big.Int).SetBits(yb[:])
+	rz = new(big.Int).SetBits(zb[:])
+	return
+}
+
+func (c eccCurve) DoubleJacobian(x, y, z *big.Int) (rx, ry, rz *big.Int) {
+	pt1 := c.newPoint(x, y, z)
+	var pt C.POINT
+	C.point_double_jacobian(&pt, pt1, c.hnd)
+	var xb, yb, zb [4]big.Word
+	for i := 0; i < 4; i++ {
+		xb[i] = big.Word(pt.x[i])
+		yb[i] = big.Word(pt.y[i])
+		zb[i] = big.Word(pt.z[i])
+	}
+	rx = new(big.Int).SetBits(xb[:])
+	ry = new(big.Int).SetBits(yb[:])
+	rz = new(big.Int).SetBits(zb[:])
+	return
+}
+
+func (c eccCurve) Double(x, y *big.Int) (rx, ry *big.Int) {
+	pt1 := c.newPoint(x, y, nil)
+	var pt C.POINT
+	C.point_double_jacobian(&pt, pt1, c.hnd)
+	var xb, yb [4]big.Word
+	C.affine_from_jacobian((*C.u64)(unsafe.Pointer(&xb[0])),
+		(*C.u64)(unsafe.Pointer(&yb[0])), pt, c.hnd)
+	rx = new(big.Int).SetBits(xb[:])
+	ry = new(big.Int).SetBits(yb[:])
+	return
+}
+
+func (c eccCurve) AffineFromJacobian(x, y, z *big.Int) (xOut, yOut *big.Int) {
+	var xb, yb [4]big.Word
+	pt := c.newPoint(x, y, z)
+	C.affine_from_jacobian((*C.u64)(unsafe.Pointer(&xb[0])),
+		(*C.u64)(unsafe.Pointer(&yb[0])), pt, c.hnd)
+	xOut = new(big.Int).SetBits(xb[:])
+	yOut = new(big.Int).SetBits(yb[:])
+	return
 }
 
 // Functions implemented in ecc_asm_*64.s

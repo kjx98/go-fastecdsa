@@ -240,6 +240,10 @@ CURVE_HND   get_curve(uint curve_id);
  */
 void	get_curve_params(u64 *p, u64 *n, u64 *b, u64 *gx, u64 *gy,
 				CURVE_HND curveH);
+void	point_double_jacobian(POINT *pt_r, const POINT *pt, CURVE_HND curveH);
+void	point_add_jacobian(POINT *pt_r, const POINT *pt1, const POINT *pt2,
+void	point_add(POINT *pt_r, const POINT *p, const POINT *q, CURVE_HND curvH);
+void	affine_from_jacobian(u64 *x, u64 *y, const POINT *pt, CURVE_HND curveH);
 
 /**
  * ecc_point_mult_shamir() - Add two points multiplied by scalars
@@ -251,7 +255,7 @@ void	get_curve_params(u64 *p, u64 *n, u64 *b, u64 *gx, u64 *gy,
  * @q:			point to multiply with @y
  * @curve:		curve
  *
- * Returns result = x * p + x * q over the curve.
+ * Returns result = x * p + y * q over the curve.
  * This works faster than two multiplications and addition.
  */
 void ecc_point_mult_shamir(const u64 *result_x, const u64 *result_y,
