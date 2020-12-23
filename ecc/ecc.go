@@ -156,7 +156,7 @@ func (c eccCurve) Double(x, y *big.Int) (rx, ry *big.Int) {
 	C.point_double_jacobian(&pt, pt1, c.hnd)
 	var xb, yb [4]big.Word
 	C.affine_from_jacobian((*C.u64)(unsafe.Pointer(&xb[0])),
-		(*C.u64)(unsafe.Pointer(&yb[0])), pt, c.hnd)
+		(*C.u64)(unsafe.Pointer(&yb[0])), &pt, c.hnd)
 	rx = new(big.Int).SetBits(xb[:])
 	ry = new(big.Int).SetBits(yb[:])
 	return

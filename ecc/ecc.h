@@ -242,6 +242,7 @@ void	get_curve_params(u64 *p, u64 *n, u64 *b, u64 *gx, u64 *gy,
 				CURVE_HND curveH);
 void	point_double_jacobian(POINT *pt_r, const POINT *pt, CURVE_HND curveH);
 void	point_add_jacobian(POINT *pt_r, const POINT *pt1, const POINT *pt2,
+				CURVE_HND curveH);
 void	point_add(POINT *pt_r, const POINT *p, const POINT *q, CURVE_HND curvH);
 void	affine_from_jacobian(u64 *x, u64 *y, const POINT *pt, CURVE_HND curveH);
 

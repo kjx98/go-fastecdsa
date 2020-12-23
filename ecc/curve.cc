@@ -93,7 +93,26 @@ bool ecc_point_is_zero(const POINT *p)
         vli_is_zero<4>(p->y));
 }
 
-#ifdef	ommit
+template<uint ndigits> forceinline
+static void
+vli_mod_mult_f(u64 *result, const u64 *left, const u64 *right, const u64 *prime)
+{
+	u64 product[2 * ECC_MAX_DIGITS];
+	vli_mult<ndigits * 2>(product, left, right);
+	vli_mmod_barrett<ndigits>(result, product, prime);
+}
+
+/* Computes result = left^2 % curve_prime. */
+template<uint ndigits> forceinline
+static void vli_mod_square_f(u64 *result, const u64 *left,
+				const u64 *curve_prime) noexcept
+{
+	u64 product[2 * ECC_MAX_DIGITS];
+
+	vli_square<ndigits>(product, left);
+	vli_mmod_barrett<ndigits>(result, product, curve_prime);
+}
+
 /* Point multiplication algorithm using Montgomery's ladder with co-Z
  * coordinates. From http://eprint.iacr.org/2011/338.pdf
  */
@@ -111,15 +130,15 @@ static void ecc_point_double_jacobian(u64 *x1, u64 *y1, u64 *z1,
 		return;
 
 	/* t4 = y1^2 */
-	vli_mod_square_fast<ndigits>(t4, y1, curve_prime);
+	vli_mod_square_f<ndigits>(t4, y1, curve_prime);
 	/* t5 = x1*y1^2 = A */
-	vli_mod_mult_fast(t5, x1, t4, curve_prime, ndigits);
+	vli_mod_mult_f<ndigits>(t5, x1, t4, curve_prime);
 	/* t4 = y1^4 */
-	vli_mod_square_fast<ndigits>(t4, t4, curve_prime);
+	vli_mod_square_f<ndigits>(t4, t4, curve_prime);
 	/* t2 = y1*z1 = z3 */
-	vli_mod_mult_fast(y1, y1, z1, curve_prime, ndigits);
+	vli_mod_mult_f<ndigits>(y1, y1, z1, curve_prime);
 	/* t3 = z1^2 */
-	vli_mod_square_fast<ndigits>(z1, z1, curve_prime);
+	vli_mod_square_f<ndigits>(z1, z1, curve_prime);
 
 	/* t1 = x1 + z1^2 */
 	vli_mod_add<ndigits>(x1, x1, z1, curve_prime);
@@ -128,7 +147,7 @@ static void ecc_point_double_jacobian(u64 *x1, u64 *y1, u64 *z1,
 	/* t3 = x1 - z1^2 */
 	vli_mod_sub<ndigits>(z1, x1, z1, curve_prime);
 	/* t1 = x1^2 - z1^4 */
-	vli_mod_mult_fast(x1, x1, z1, curve_prime, ndigits);
+	vli_mod_mult_f<ndigits>(x1, x1, z1, curve_prime);
 
 	/* t3 = 2*(x1^2 - z1^4) */
 	vli_mod_add<ndigits>(z1, x1, x1, curve_prime);
@@ -145,7 +164,7 @@ static void ecc_point_double_jacobian(u64 *x1, u64 *y1, u64 *z1,
 	/* t1 = 3/2*(x1^2 - z1^4) = B */
 
 	/* t3 = B^2 */
-	vli_mod_square_fast<ndigits>(z1, x1, curve_prime);
+	vli_mod_square_f<ndigits>(z1, x1, curve_prime);
 	/* t3 = B^2 - A */
 	vli_mod_sub<ndigits>(z1, z1, t5, curve_prime);
 	/* t3 = B^2 - 2A = x3 */
@@ -153,7 +172,7 @@ static void ecc_point_double_jacobian(u64 *x1, u64 *y1, u64 *z1,
 	/* t5 = A - x3 */
 	vli_mod_sub<ndigits>(t5, t5, z1, curve_prime);
 	/* t1 = B * (A - x3) */
-	vli_mod_mult_fast(x1, x1, t5, curve_prime, ndigits);
+	vli_mod_mult_f<ndigits>(x1, x1, t5, curve_prime, ndigits);
 	/* t4 = B * (A - x3) - y1^4 = y3 */
 	vli_mod_sub<ndigits>(t4, x1, t4, curve_prime);
 
@@ -168,10 +187,10 @@ static void apply_z(u64 *x1, u64 *y1, u64 *z, const u64 *curve_prime) noexcept
 {
 	u64 t1[ECC_MAX_DIGITS];
 
-	vli_mod_square_fast<ndigits>(t1, z, curve_prime);    /* z^2 */
-	vli_mod_mult_fast(x1, x1, t1, curve_prime, ndigits); /* x1 * z^2 */
-	vli_mod_mult_fast(t1, t1, z, curve_prime, ndigits);  /* z^3 */
-	vli_mod_mult_fast(y1, y1, t1, curve_prime, ndigits); /* y1 * z^3 */
+	vli_mod_square_f<ndigits>(t1, z, curve_prime);    /* z^2 */
+	vli_mod_mult_f<ndigits>(x1, x1, t1, curve_prime); /* x1 * z^2 */
+	vli_mod_mult_f<ndigits>(t1, t1, z, curve_prime);  /* z^3 */
+	vli_mod_mult_f<ndigits>(y1, y1, t1, curve_prime); /* y1 * z^3 */
 }
 
 /* P = (x1, y1) => 2P, (x2, y2) => P' */
@@ -211,15 +230,15 @@ xycz_add(u64 *x1, u64 *y1, u64 *x2, u64 *y2, const u64 *curve_prime) noexcept
 	/* t5 = x2 - x1 */
 	vli_mod_sub<ndigits>(t5, x2, x1, curve_prime);
 	/* t5 = (x2 - x1)^2 = A */
-	vli_mod_square_fast<ndigits>(t5, t5, curve_prime);
+	vli_mod_square_f<ndigits>(t5, t5, curve_prime);
 	/* t1 = x1*A = B */
-	vli_mod_mult_fast(x1, x1, t5, curve_prime, ndigits);
+	vli_mod_mult_f<ndigits>(x1, x1, t5, curve_prime);
 	/* t3 = x2*A = C */
-	vli_mod_mult_fast(x2, x2, t5, curve_prime, ndigits);
+	vli_mod_mult_f<ndigits>(x2, x2, t5, curve_prime);
 	/* t4 = y2 - y1 */
 	vli_mod_sub<ndigits>(y2, y2, y1, curve_prime);
 	/* t5 = (y2 - y1)^2 = D */
-	vli_mod_square_fast<ndigits>(t5, y2, curve_prime);
+	vli_mod_square_f<ndigits>(t5, y2, curve_prime);
 
 	/* t5 = D - B */
 	vli_mod_sub<ndigits>(t5, t5, x1, curve_prime);
@@ -228,11 +247,11 @@ xycz_add(u64 *x1, u64 *y1, u64 *x2, u64 *y2, const u64 *curve_prime) noexcept
 	/* t3 = C - B */
 	vli_mod_sub<ndigits>(x2, x2, x1, curve_prime);
 	/* t2 = y1*(C - B) */
-	vli_mod_mult_fast(y1, y1, x2, curve_prime, ndigits);
+	vli_mod_mult_f<ndigits>(y1, y1, x2, curve_prime);
 	/* t3 = B - x3 */
 	vli_mod_sub<ndigits>(x2, x1, t5, curve_prime);
 	/* t4 = (y2 - y1)*(B - x3) */
-	vli_mod_mult_fast(y2, y2, x2, curve_prime, ndigits);
+	vli_mod_mult_f<ndigits>(y2, y2, x2, curve_prime);
 	/* t4 = y3 */
 	vli_mod_sub<ndigits>(y2, y2, y1, curve_prime);
 
@@ -255,11 +274,11 @@ static void xycz_add_c(u64 *x1, u64 *y1, u64 *x2, u64 *y2,
 	/* t5 = x2 - x1 */
 	vli_mod_sub<ndigits>(t5, x2, x1, curve_prime);
 	/* t5 = (x2 - x1)^2 = A */
-	vli_mod_square_fast<ndigits>(t5, t5, curve_prime);
+	vli_mod_square_f<ndigits>(t5, t5, curve_prime);
 	/* t1 = x1*A = B */
-	vli_mod_mult_fast(x1, x1, t5, curve_prime, ndigits);
+	vli_mod_mult_f<ndigits>(x1, x1, t5, curve_prime);
 	/* t3 = x2*A = C */
-	vli_mod_mult_fast(x2, x2, t5, curve_prime, ndigits);
+	vli_mod_mult_f<ndigits>(x2, x2, t5, curve_prime);
 	/* t4 = y2 + y1 */
 	vli_mod_add<ndigits>(t5, y2, y1, curve_prime);
 	/* t4 = y2 - y1 */
@@ -268,29 +287,29 @@ static void xycz_add_c(u64 *x1, u64 *y1, u64 *x2, u64 *y2,
 	/* t6 = C - B */
 	vli_mod_sub<ndigits>(t6, x2, x1, curve_prime);
 	/* t2 = y1 * (C - B) */
-	vli_mod_mult_fast(y1, y1, t6, curve_prime, ndigits);
+	vli_mod_mult_f<ndigits>(y1, y1, t6, curve_prime);
 	/* t6 = B + C */
 	vli_mod_add<ndigits>(t6, x1, x2, curve_prime);
 	/* t3 = (y2 - y1)^2 */
-	vli_mod_square_fast<ndigits>(x2, y2, curve_prime);
+	vli_mod_square_f<ndigits>(x2, y2, curve_prime);
 	/* t3 = x3 */
 	vli_mod_sub<ndigits>(x2, x2, t6, curve_prime);
 
 	/* t7 = B - x3 */
 	vli_mod_sub<ndigits>(t7, x1, x2, curve_prime);
 	/* t4 = (y2 - y1)*(B - x3) */
-	vli_mod_mult_fast(y2, y2, t7, curve_prime, ndigits);
+	vli_mod_mult_f<ndigits>(y2, y2, t7, curve_prime);
 	/* t4 = y3 */
 	vli_mod_sub<ndigits>(y2, y2, y1, curve_prime);
 
 	/* t7 = (y2 + y1)^2 = F */
-	vli_mod_square_fast<ndigits>(t7, t5, curve_prime);
+	vli_mod_square_f<ndigits>(t7, t5, curve_prime);
 	/* t7 = x3' */
 	vli_mod_sub<ndigits>(t7, t7, t6, curve_prime);
 	/* t6 = x3' - B */
 	vli_mod_sub<ndigits>(t6, t7, x1, curve_prime);
 	/* t6 = (y2 + y1)*(x3' - B) */
-	vli_mod_mult_fast(t6, t6, t5, curve_prime, ndigits);
+	vli_mod_mult_f<ndigits>(t6, t6, t5, curve_prime);
 	/* t2 = y3' */
 	vli_mod_sub<ndigits>(y1, t6, y1, curve_prime);
 
@@ -337,17 +356,17 @@ static void ecc_point_mult(u64 *result_x, u64 *result_y,
 	/* X1 - X0 */
 	vli_mod_sub<ndigits>(z, rx[1], rx[0], curve_prime);
 	/* Yb * (X1 - X0) */
-	vli_mod_mult_fast(z, z, ry[1 - nb], curve_prime, ndigits);
+	vli_mod_mult_f<ndigits>(z, z, ry[1 - nb], curve_prime);
 	/* xP * Yb * (X1 - X0) */
-	vli_mod_mult_fast(z, z, point_x, curve_prime, ndigits);
+	vli_mod_mult_f<ndigits>(z, z, point_x, curve_prime);
 
 	/* 1 / (xP * Yb * (X1 - X0)) */
 	vli_mod_inv<ndigits>(z, z, curve_prime);
 
 	/* yP / (xP * Yb * (X1 - X0)) */
-	vli_mod_mult_fast(z, z, point_y, curve_prime, ndigits);
+	vli_mod_mult_f<ndigits>(z, z, point_y, curve_prime);
 	/* Xb * yP / (xP * Yb * (X1 - X0)) */
-	vli_mod_mult_fast(z, z, rx[1 - nb], curve_prime, ndigits);
+	vli_mod_mult_f<ndigits>(z, z, rx[1 - nb], curve_prime);
 	/* End 1/Z calculation */
 
 	xycz_add<ndigits>(rx[nb], ry[nb], rx[1 - nb], ry[1 - nb], curve_prime);
@@ -373,11 +392,10 @@ static void ecc_point_add(POINT *result, const POINT *p, const POINT *q,
 	vli_mod_sub<ndigits>(z, result->x, p->x, curve->p);
 	vli_set<ndigits>(px, p->x);
 	vli_set<ndigits>(py, p->y);
-	xycz_add<ndigits>(px, py, result->x, result->y, curve->p);
+	//xycz_add<ndigits>(px, py, result->x, result->y, curve->p);
 	vli_mod_inv<ndigits>(z, z, curve->p);
-	apply_z<ndigits>(result->x, result->y, z, curve->p);
+	//apply_z<ndigits>(result->x, result->y, z, curve->p);
 }
-#endif
 
 void    point_double_jacobian(POINT *pt_r, const POINT *pt, CURVE_HND curveH)
 {
@@ -388,22 +406,15 @@ void    point_add_jacobian(POINT *pt_r, const POINT *pt1, const POINT *pt2,
 {
 }
 
-void    point_add(POINT *pt_r, const POINT *pt1, const POINT *pt2,
+void    point_add(POINT *pt, const POINT *p, const POINT *q,
                 CURVE_HND curveH)
 {
+	if (curveH == nullptr) return;
+	ecc_curve	*curve=(ecc_curve *)curveH;
+	if (curve->name[0] == 0 || curve->ndigits != 4) return;
+	ecc_point_add<4>(pt, p, q, curve);
 }
 
 void    affine_from_jacobian(u64 *x, u64 *y, const POINT *pt, CURVE_HND curveH)
 {
-}
-
-void    point_add(POINT *pt_r, const POINT *pt1, const POINT *pt2,
-                CURVE_HND curveH)
-{
-#ifdef	ommit
-	if (curveH == nullptr) return;
-	ecc_curve	*curve=(ecc_curve *)curveH;
-	if (curve->name[0] == 0 || curve->ndigits != 4) return;
-	//ecc_point_add<4>(pt_r, pt1, pt2, curve);
-#endif
 }
