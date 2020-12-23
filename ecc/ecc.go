@@ -153,10 +153,29 @@ func (c eccCurve) DoubleJacobian(x, y, z *big.Int) (rx, ry, rz *big.Int) {
 func (c eccCurve) Double(x, y *big.Int) (rx, ry *big.Int) {
 	pt1 := c.newPoint(x, y, nil)
 	var pt C.POINT
-	C.point_double_jacobian(&pt, pt1, c.hnd)
+	C.point_double(&pt, pt1, c.hnd)
 	var xb, yb [4]big.Word
-	C.affine_from_jacobian((*C.u64)(unsafe.Pointer(&xb[0])),
-		(*C.u64)(unsafe.Pointer(&yb[0])), &pt, c.hnd)
+	for i := 0; i < 4; i++ {
+		xb[i] = big.Word(pt.x[i])
+		yb[i] = big.Word(pt.y[i])
+	}
+	rx = new(big.Int).SetBits(xb[:])
+	ry = new(big.Int).SetBits(yb[:])
+	return
+}
+
+func (c eccCurve) ScalarMult(x, y *big.Int, k []byte) (rx, ry *big.Int) {
+	pt1 := c.newPoint(x, y, nil)
+	var pt C.POINT
+	scal := new(big.Int).SetBytes(k)
+	var ss [4]big.Word
+	copy(ss[:], scal.Bits())
+	C.point_mult(&pt, pt1, (*C.u64)(unsafe.Pointer(&ss[0])), c.hnd)
+	var xb, yb [4]big.Word
+	for i := 0; i < 4; i++ {
+		xb[i] = big.Word(pt.x[i])
+		yb[i] = big.Word(pt.y[i])
+	}
 	rx = new(big.Int).SetBits(xb[:])
 	ry = new(big.Int).SetBits(yb[:])
 	return

@@ -239,6 +239,8 @@ func TestRRbySM2(t *testing.T) {
 
 func TestSM2AsmGo(t *testing.T) {
 	goCurve := SM2go()
+	//asm version SM2 not work yet
+	//asmCurve := SM2()
 	asmCurve := P256()
 	goGx := goCurve.Params().Gx
 	goGy := goCurve.Params().Gy
@@ -380,6 +382,21 @@ func BenchmarkECDBL(b *testing.B) {
 	b.RunParallel(func(pb *testing.PB) {
 		for pb.Next() {
 			_, _ = curve.Double(x1, y1)
+		}
+	})
+}
+
+func BenchmarkECMULT(b *testing.B) {
+	b.ResetTimer()
+	Curve := SM2go()
+	goGx := Curve.Params().Gx
+	goGy := Curve.Params().Gy
+
+	b.ReportAllocs()
+	b.ResetTimer()
+	b.RunParallel(func(pb *testing.PB) {
+		for pb.Next() {
+			_, _ = Curve.ScalarMult(goGx, goGy, d1.Bytes())
 		}
 	})
 }

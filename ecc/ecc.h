@@ -243,7 +243,10 @@ void	get_curve_params(u64 *p, u64 *n, u64 *b, u64 *gx, u64 *gy,
 void	point_double_jacobian(POINT *pt_r, const POINT *pt, CURVE_HND curveH);
 void	point_add_jacobian(POINT *pt_r, const POINT *pt1, const POINT *pt2,
 				CURVE_HND curveH);
+void	point_double(POINT *pt_r, const POINT *pt, CURVE_HND curveH);
 void	point_add(POINT *pt_r, const POINT *p, const POINT *q, CURVE_HND curvH);
+void	point_mult(POINT *pt_r, const POINT *pt, const u64 *scalar,
+				CURVE_HND curveH);
 void	affine_from_jacobian(u64 *x, u64 *y, const POINT *pt, CURVE_HND curveH);
 
 /**
@@ -259,10 +262,8 @@ void	affine_from_jacobian(u64 *x, u64 *y, const POINT *pt, CURVE_HND curveH);
  * Returns result = x * p + y * q over the curve.
  * This works faster than two multiplications and addition.
  */
-void ecc_point_mult_shamir(const u64 *result_x, const u64 *result_y,
-			   const u64 *x, const u64 *px, const u64 *py,
-			   const u64 *y, const u64 *qx, const u64 *qy,
-			   const CURVE_HND curveH);
+void ecc_point_mult_shamir(const POINT *result, const u64 *x, const POINT *p,
+			   const u64 *y, const POINT *qx, const CURVE_HND curveH);
 #ifdef	__cplusplus
 }
 #endif

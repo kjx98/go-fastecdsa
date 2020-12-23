@@ -9,6 +9,7 @@ import (
 var (
 	x1, y1  *big.Int
 	x2, y2  *big.Int
+	d1, d2  *big.Int
 	rr, rrN []uint64
 	k0N     uint64
 )
@@ -18,6 +19,8 @@ func init() {
 	y1, _ = new(big.Int).SetString("81307578426096630754000956949482484966368962694792140728234975018259774469569", 10)
 	x2, _ = new(big.Int).SetString("48121564271922987841895377752074498583012355812029682461364979458450873405695", 10)
 	y2, _ = new(big.Int).SetString("37446874645719659508108418738243030372422533994743756508347851178597805285404", 10)
+	d1, _ = new(big.Int).SetString("44960d13c3ae7889e7fdfc0c48f4ac1da4e68fd3a5be28ad3f53eddad6d9c892", 16)
+	d2, _ = new(big.Int).SetString("b68c5c25852521c647d7d0eddd09494949602ebaa885202a5573bb6ec8c5d96f", 16)
 	rr = []uint64{0x200000003, 0x2ffffffff, 0x100000001, 0x400000002}
 	rrN = []uint64{0x901192af7c114f20, 0x3464504ade6fa2fa,
 		0x620fc84c3affe0d4, 0x1eb5e412a22b3d3b}
@@ -241,6 +244,53 @@ func TestCurveAdd(t *testing.T) {
 	}
 }
 
+func TestCurveDouble(t *testing.T) {
+	c := sm2.P256()
+	x3, y3 := c.Double(x1, y1)
+	x3a, y3a := sm2c.Double(x1, y1)
+	if x3.Cmp(x3a) != 0 {
+		t.Logf("sm2c.Double step1 diff sm2.Double x:\n%s\n%s",
+			x3.Text(16), x3a.Text(16))
+		t.Fail()
+	}
+	if y3.Cmp(y3a) != 0 {
+		t.Logf("sm2c.Double step1 diff sm2.Double y:\n%s\n%s",
+			y3.Text(16), y3a.Text(16))
+		t.Fail()
+	}
+	x3, y3 = c.Double(x2, y2)
+	x3a, y3a = sm2c.Double(x2, y2)
+	if x3.Cmp(x3a) != 0 {
+		t.Logf("sm2c.Double step2 diff sm2.Double x:\n%s\n%s",
+			x3.Text(16), x3a.Text(16))
+		t.Fail()
+	}
+	if y3.Cmp(y3a) != 0 {
+		t.Logf("sm2c.Double step2 diff sm2.Double y:\n%s\n%s",
+			y3.Text(16), y3a.Text(16))
+		t.Fail()
+	}
+}
+
+func TestCurveMult(t *testing.T) {
+	goCurve := sm2.SM2go()
+	cCurve := sm2c
+	goGx := goCurve.Params().Gx
+	goGy := goCurve.Params().Gy
+	gx, gy := goCurve.ScalarMult(goGx, goGy, d1.Bytes())
+	aGx := cCurve.Params().Gx
+	aGy := cCurve.Params().Gy
+	ax, ay := cCurve.ScalarMult(aGx, aGy, d1.Bytes())
+	if ax.Cmp(gx) != 0 {
+		t.Log("mult X diff")
+		t.Fail()
+	}
+	if ay.Cmp(gy) != 0 {
+		t.Log("mult Y diff")
+		t.Fail()
+	}
+}
+
 func BenchmarkInverse(b *testing.B) {
 	b.ResetTimer()
 	p := sm2.P256().Params().P.Bits()
@@ -333,10 +383,9 @@ func BenchmarkSM2MultP(b *testing.B) {
 	}
 }
 
-/*
 func BenchmarkECADD(b *testing.B) {
 	b.ResetTimer()
-	curve := P256()
+	curve := sm2c
 
 	b.ReportAllocs()
 	b.ResetTimer()
@@ -349,7 +398,7 @@ func BenchmarkECADD(b *testing.B) {
 
 func BenchmarkECDBL(b *testing.B) {
 	b.ResetTimer()
-	curve := P256()
+	curve := sm2c
 
 	b.ReportAllocs()
 	b.ResetTimer()
@@ -359,4 +408,3 @@ func BenchmarkECDBL(b *testing.B) {
 		}
 	})
 }
-*/
