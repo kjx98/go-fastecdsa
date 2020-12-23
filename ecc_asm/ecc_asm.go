@@ -22,6 +22,19 @@ import (
 // Function check CPU support FMA
 func _vli_asm_acc() (res uint)
 
+// Function get ecc_curve point
+func _get_curve(curve_id uint) (curveH unsafe.Pointer)
+
+func _get_curve_params(p, n, b, gx, gy unsafe.Pointer, curveH unsafe.Pointer)
+
+func _point_double_jacobian(ptR, p unsafe.POinter, curveH unsafe.Pointer)
+func _point_double(ptR, p unsafe.POinter, curveH unsafe.Pointer)
+func _point_add_jacobian(ptR, p, q unsafe.POinter, curveH unsafe.Pointer)
+func _point_add(ptR, p, q unsafe.Pointer, curveH unsafe.Pointer)
+func _affine_from_jacobian(x, y, pt unsafe.Pointer, curveH unsafe.Pointer)
+
+func _point_mult(res, p, scalar, curveH unsafe.Pointer)
+
 // Functions implemented in ecc_asm_*64.s
 // multiplication modulo p
 //go:noescape

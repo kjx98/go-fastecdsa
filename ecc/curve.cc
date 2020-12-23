@@ -86,6 +86,7 @@ void	get_curve_params(u64 *p, u64 *n, u64 *b, u64 *gx, u64 *gy,
 /* ------ Point operations ------ */
 
 /* Returns true if p_point is the point at infinity, false otherwise. */
+static forceinline
 bool ecc_point_is_zero(const POINT *p)
 {
 	if (p->isZero || vli_is_zero<4>(p->z)) return true;

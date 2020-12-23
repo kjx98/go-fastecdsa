@@ -110,6 +110,12 @@ struct slice_t {
 	}
 };
 
+template<uint N>
+struct bignum {
+	u64		d[N];
+};
+
+
 /*
  * Computes result = product % mod
  * for special form moduli: p = 2^k-c, for small c (note the minus sign)
