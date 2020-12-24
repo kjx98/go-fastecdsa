@@ -48,7 +48,7 @@ func _vli_mult(res, in1, in2 unsafe.Pointer)
 // Functions implemented in ecc_asm_*64.s
 // in inverse mod prime p
 //go:noescape
-func _vli_mod_inv(res, in, p unsafe.Pointer)
+func _vli_mod_inv(res, in, p, buff unsafe.Pointer)
 
 // Function mod prime with barrett reduction
 // mod MUST be prime following with mu
@@ -98,8 +98,11 @@ func _mont_sm2_mod_mult_n(res, in1, in2, p, rr unsafe.Pointer)
 // Montgomery inverse modulo prime mod
 func vliModInv(in, mod []big.Word) (result []big.Word) {
 	var res [4]big.Word
-	_vli_mod_inv(unsafe.Pointer(&res[0]), unsafe.Pointer(&in[0]),
-		unsafe.Pointer(&mod[0]))
+	var x [4]big.Word
+	var buff [32]big.Word
+	copy(x[:], in)
+	_vli_mod_inv(unsafe.Pointer(&res[0]), unsafe.Pointer(&x[0]),
+		unsafe.Pointer(&mod[0]), unsafe.Pointer(&buff[0]))
 	result = res[:]
 	return
 }

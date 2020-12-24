@@ -79,6 +79,7 @@
  * work which got its smarts from Daniel J. Bernstein's work on the same.
  */
 
+// +build ignore
 # include <stdint.h>
 # include <stdbool.h>
 # include <sys/types.h>

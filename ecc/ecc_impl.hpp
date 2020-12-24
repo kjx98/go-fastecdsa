@@ -24,6 +24,7 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
+// +build ignore
 #pragma once
 #ifndef __ECC_IMPL_H__
 #define __ECC_IMPL_H__
@@ -407,10 +408,22 @@ mont_sqr(u64 *result, const u64 *x, const u64 *prime, const u64 k0) noexcept
  * https://labs.oracle.com/techrep/2001/smli_tr-2001-95.pdf
  */
 template<uint ndigits> forceinline
-static void vli_mod_inv(u64 *result, const u64 *input, const u64 *mod) noexcept
+static void
+#ifdef	WITH_C2GO
+vli_mod_inv(u64 *result, const u64 *input, const u64 *mod, u64 *buff) noexcept
+#else
+vli_mod_inv(u64 *result, const u64 *input, const u64 *mod) noexcept
+#endif
 {
+#ifdef	WITH_C2GO
+	u64	*a=buff;
+	u64 *b=a+ECC_MAX_DIGITS;
+	u64	*u=b+ECC_MAX_DIGITS;
+	u64	*v=u+ECC_MAX_DIGITS;
+#else
 	u64 a[ECC_MAX_DIGITS], b[ECC_MAX_DIGITS];
 	u64 u[ECC_MAX_DIGITS], v[ECC_MAX_DIGITS];
+#endif
 	int cmp_result;
 
 	if (vli_is_zero<ndigits>(input)) {

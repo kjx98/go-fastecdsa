@@ -24,6 +24,7 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
+// +build ignore
 #pragma once
 #ifndef __ECC_H__
 #define __ECC_H__
@@ -165,7 +166,11 @@ void vli_from_le64(u64 *dest, const void *src, uint ndigits);
  * @mod:		modulus
  * @ndigits:		length of all vlis
  */
+#ifdef	WITH_C2GO
+void vli_mod_inv(u64 *result, const u64 *input, const u64 *mod, u64 *buff);
+#else
 void vli_mod_inv(u64 *result, const u64 *input, const u64 *mod);
+#endif
 void vli_mult(u64 *result, const u64 *left, const u64 *right);
 
 /* Computes result = product % mod using Barrett's reduction with precomputed

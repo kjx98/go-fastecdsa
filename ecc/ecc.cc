@@ -245,11 +245,6 @@ void vli_mod_mult_fast(u64 *result, const u64 *left, const u64 *right,
 }
 
 
-void vli_mod_inv(u64 *result, const u64 *input, const u64 *mod)
-{
-	vli_mod_inv<4>(result, input, mod);
-}
-
 void vli_mult(u64 *result, const u64 *left, const u64 *right)
 {
 	vli_mult<4>(result, left, right);

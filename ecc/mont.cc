@@ -31,9 +31,9 @@
 #include "ecc.h"
 #include "ecc_impl.hpp"
 
-#pragma GCC push_options
-#pragma GCC optimize ("unroll-loops")
-#pragma GCC pop_options
+//#pragma GCC push_options
+//#pragma GCC optimize ("unroll-loops")
+//#pragma GCC pop_options
 
 u64 vli_asm_acc()
 {
@@ -123,3 +123,15 @@ void vli_sm2_mult_p(u64 *result, const u64 rLen, const u64 u)
 	vli_sm2_multP(result, u);
 #endif
 }
+
+#ifdef	WITH_C2GO
+void vli_mod_inv(u64 *result, const u64 *input, const u64 *mod, u64 *buff)
+{
+	vli_mod_inv<4>(result, input, mod, buff);
+}
+#else
+void vli_mod_inv(u64 *result, const u64 *input, const u64 *mod)
+{
+	vli_mod_inv<4>(result, input, mod);
+}
+#endif

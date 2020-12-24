@@ -23,6 +23,7 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
+// +build ignore
 #pragma once
 #ifndef __VLI_HPP__
 #define __VLI_HPP__
@@ -398,7 +399,7 @@ static bool vli_is_negative(const u64 *vli)  noexcept
 	return vli_test_bit(vli, ndigits * 64 - 1);
 }
 
-forceinline static bool vli_is_even(u64 *vli) noexcept {
+forceinline static bool vli_is_even(const u64 *vli) noexcept {
 	return (vli[0] & 1) == 0;
 }
 

@@ -25,6 +25,7 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
+
 #include <errno.h>
 #ifdef	WITH_SYS_RANDOM
 #include <sys/random.h>
