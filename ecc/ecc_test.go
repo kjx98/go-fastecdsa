@@ -14,6 +14,15 @@ var (
 	k0N     uint64
 )
 
+type jacobianIntf interface {
+	// affineFromJacobian reverses the Jacobian transform
+	AffineFromJacobian(x, y, z *big.Int) (xOut, yOut *big.Int)
+	// addJacobian takes two points in Jacobian coordinates
+	AddJacobian(x1, y1, z1, x2, y2, z2 *big.Int) (*big.Int, *big.Int, *big.Int)
+	// doubleJacobian takes a point in Jacobian coordinates
+	DoubleJacobian(x, y, z *big.Int) (*big.Int, *big.Int, *big.Int)
+}
+
 func init() {
 	x1, _ = new(big.Int).SetString("12504736780261570232047283225790923734936736733904083456330261180763076903173", 10)
 	y1, _ = new(big.Int).SetString("81307578426096630754000956949482484966368962694792140728234975018259774469569", 10)
@@ -231,7 +240,7 @@ func TestBarrettDiv(t *testing.T) {
 }
 
 func TestCurveAdd(t *testing.T) {
-	c := sm2.P256()
+	c := sm2.SM2go()
 	x3, y3 := c.Add(x1, y1, x2, y2)
 	x3a, y3a := sm2c.Add(x1, y1, x2, y2)
 	if x3.Cmp(x3a) != 0 {
@@ -245,7 +254,7 @@ func TestCurveAdd(t *testing.T) {
 }
 
 func TestCurveDouble(t *testing.T) {
-	c := sm2.P256()
+	c := sm2.SM2go()
 	x3, y3 := c.Double(x1, y1)
 	x3a, y3a := sm2c.Double(x1, y1)
 	if x3.Cmp(x3a) != 0 {
@@ -272,6 +281,54 @@ func TestCurveDouble(t *testing.T) {
 	}
 }
 
+/*
+func TestCurveDoubleJacobian(t *testing.T) {
+	c := sm2.SM2go()
+	var		jc	jacobianIntf
+	if opt, ok := c.(jacobianIntf); ok {
+		jc = opt
+	} else {
+		t.Log("not jacobian interface")
+		t.Fail()
+	}
+	x3, y3, z3 := jc.DoubleJacobian(x1, y1, bigOne)
+	x3a, y3a, z3a := sm2c.DoubleJacobian(x1, y1, bigOne)
+	if x3.Cmp(x3a) != 0 {
+		t.Logf("sm2c.DoubleJ step1 diff sm2.Double x:\n%s\n%s",
+			x3.Text(16), x3a.Text(16))
+		t.Fail()
+	}
+	if y3.Cmp(y3a) != 0 {
+		t.Logf("sm2c.DoubleJ step1 diff sm2.Double y:\n%s\n%s",
+			y3.Text(16), y3a.Text(16))
+		t.Fail()
+	}
+	if z3.Cmp(z3a) != 0 {
+		t.Logf("sm2c.DoubleJ step1 diff sm2.Double z:\n%s\n%s",
+			z3.Text(16), z3a.Text(16))
+		t.Fail()
+	}
+	x3, y3, z3 = jc.DoubleJacobian(x2, y2, bigOne)
+	x3a, y3a, z3a = sm2c.DoubleJacobian(x2, y2, bigOne)
+	if x3.Cmp(x3a) != 0 {
+		t.Logf("sm2c.DoubleJ step2 diff sm2.Double x:\n%s\n%s",
+			x3.Text(16), x3a.Text(16))
+		t.Fail()
+	}
+	if y3.Cmp(y3a) != 0 {
+		t.Logf("sm2c.DoubleJ step2 diff sm2.Double y:\n%s\n%s",
+			y3.Text(16), y3a.Text(16))
+		t.Fail()
+	}
+	if z3.Cmp(z3a) != 0 {
+		t.Logf("sm2c.DoubleJ step2 diff sm2.Double z:\n%s\n%s",
+			z3.Text(16), z3a.Text(16))
+		t.Fail()
+	}
+}
+*/
+
+/*
 func TestCurveMult(t *testing.T) {
 	goCurve := sm2.SM2go()
 	cCurve := sm2c
@@ -290,6 +347,7 @@ func TestCurveMult(t *testing.T) {
 		t.Fail()
 	}
 }
+*/
 
 func BenchmarkInverse(b *testing.B) {
 	b.ResetTimer()
@@ -404,6 +462,7 @@ func BenchmarkECDBL(b *testing.B) {
 	})
 }
 
+/*
 func BenchmarkECMULT(b *testing.B) {
 	b.ResetTimer()
 	curve := sm2c
@@ -418,3 +477,4 @@ func BenchmarkECMULT(b *testing.B) {
 		}
 	})
 }
+*/

@@ -374,6 +374,7 @@ static void xycz_add_c(u64 *x1, u64 *y1, u64 *x2, u64 *y2,
 	vli_set<ndigits>(x1, t7);
 }
 
+#ifdef	ommit
 template<uint ndigits> forceinline
 static void ecc_point_mult(u64 *result_x, u64 *result_y,
 			   const u64 *point_x, const u64 *point_y, const u64 *scalar,
@@ -433,6 +434,7 @@ static void ecc_point_mult(u64 *result_x, u64 *result_y,
 	vli_set<ndigits>(result_x, rx[0]);
 	vli_set<ndigits>(result_y, ry[0]);
 }
+#endif
 
 /* Computes R = P + Q mod p */
 template<uint ndigits> forceinline
@@ -506,6 +508,7 @@ void    affine_from_jacobian(u64 *x, u64 *y, const Point *pt, CURVE_HND curveH)
 	apply_z<4>(x, y, z, curve);
 }
 
+#ifdef	ommit
 void	point_mult(Point *pt_r, const Point *pt, const u64 *scalar,
 				CURVE_HND curveH)
 {
@@ -514,3 +517,4 @@ void	point_mult(Point *pt_r, const Point *pt, const u64 *scalar,
 	if (curve->name[0] == 0 || curve->ndigits != 4) return;
 	ecc_point_mult<4>(pt_r->x, pt_r->y, pt->x, pt->y, scalar, nullptr, curve);
 }
+#endif
