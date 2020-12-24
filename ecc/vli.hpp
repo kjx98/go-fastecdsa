@@ -73,6 +73,18 @@ static bool vli_is_zero(const u64 *vli) noexcept
 	return true;
 }
 
+template<uint ndigits> forceinline
+static bool vli_is_one(const u64 *vli) noexcept
+{
+	if (vli[0] != 1) return false;
+#pragma GCC unroll 4
+	for (uint i = 1; i < ndigits; i++) {
+		if (vli[i]) return false;
+	}
+	return true;
+}
+
+/* Sets dest = src. */
 /* Sets dest = src. */
 template<uint ndigits> forceinline
 static void vli_set(u64 *dest, const u64 *src) noexcept

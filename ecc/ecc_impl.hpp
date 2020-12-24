@@ -479,4 +479,88 @@ static void vli_mod_inv(u64 *result, const u64 *input, const u64 *mod) noexcept
 	vli_set<ndigits>(result, u);
 }
 
+/* Computes result = (1 / p_input) % mod. All VLIs are the same size.
+ * The binary extended gcd algorithm was first described by Knuth
+ */
+template<uint ndigits> forceinline
+static void
+vli_mod_inv_new(u64 *result, const u64 *x, const u64 *mod) noexcept
+{
+	u64 a[ECC_MAX_DIGITS], b[ECC_MAX_DIGITS];
+	u64 c[ECC_MAX_DIGITS], d[ECC_MAX_DIGITS];
+	u64 u[ECC_MAX_DIGITS], v[ECC_MAX_DIGITS];
+	// mod should be prime, >3 MUST BE odd
+	if ( vli_is_even(mod) ) {
+		vli_clear<ndigits>(result);
+		return;
+	}
+
+	vli_set<ndigits>(u, x);
+	vli_set<ndigits>(v, mod);
+	vli_clear<ndigits>(a);
+	vli_clear<ndigits>(b);
+	vli_clear<ndigits>(c);
+	vli_clear<ndigits>(d);
+	a[0] = 1;
+	d[0] = 1;
+	//int cmp_result;
+	bool	b_carry=false, d_carry = false;
+
+	while ( !vli_is_zero<ndigits>(u) ) {
+		bool carry;
+
+		while (vli_is_even(u)) {
+			vli_rshift1<ndigits>(u);
+			if (vli_is_even(a) && vli_is_even(b)) {
+				vli_rshift1<ndigits>(a);
+				vli_rshift1<ndigits>(b);
+			} else {
+				carry = vli_add_to<ndigits>(a, mod);
+				vli_rshift1<ndigits>(a);
+				if (carry) a[ndigits-1] |= (1L << 63);
+				if (b_carry) b_carry = vli_add_to<ndigits>(b, x); else
+					b_carry = vli_sub_from<ndigits>(b, x);
+				vli_rshift1<ndigits>(b);
+				if (b_carry) b[ndigits-1] |= (1L << 63);
+			}
+		}
+
+		while (vli_is_even(v)) {
+			vli_rshift1<ndigits>(v);
+			if (vli_is_even(c) && vli_is_even(d)) {
+				vli_rshift1<ndigits>(c);
+				vli_rshift1<ndigits>(d);
+			} else {
+				carry = vli_add_to<ndigits>(c, mod);
+				vli_rshift1<ndigits>(c);
+				if (carry) c[ndigits-1] |= (1L << 63);
+				if (d_carry) b_carry = vli_add_to<ndigits>(d, x); else
+					d_carry = vli_sub_from<ndigits>(d, x);
+				vli_rshift1<ndigits>(d);
+				if (carry) d[ndigits-1] |= (1L << 63);
+			}
+		}
+
+		if (vli_cmp<ndigits>(u, v) >= 0) {
+			vli_sub_from<ndigits>(u, v);
+			vli_sub_from<ndigits>(a, c);
+			if (b_carry) b_carry = vli_add_to<ndigits>(b, d); else
+					b_carry = vli_sub_from<ndigits>(b, d);
+		} else {
+			vli_sub_from<ndigits>(v, u);
+			vli_sub_from<ndigits>(c, a);
+			if (d_carry) d_carry = vli_add_to<ndigits>(d, b); else
+				d_carry = vli_sub_from<ndigits>(d, b);
+		}
+		vli_set<ndigits>(a, c);
+		vli_set<ndigits>(b, d);
+	}
+	if (likely(vli_is_one<ndigits>(v))) {
+		vli_set<ndigits>(result, d);
+	} else {
+		// no inverse
+		vli_clear<ndigits>(result);
+	}
+}
+
 #endif	//	__ECC_IMPL_H__
