@@ -2,11 +2,12 @@
 
 package ecc
 
-// #cgo CXXFLAGS: -O3 -Wpedantic -Wall -std=gnu++11
+// #cgo CXXFLAGS: -O3 -Wpedantic -Wall -Wno-maybe-uninitialized -std=gnu++11
 // #include "ecc.h"
 import "C"
 
 // for gcc 4.8.5, __builtin_add/sub_overflow improve 10% -- 20%
+// -fvar-tracking-assignments
 // cgo CXXFLAGS: -O2 -Wpedantic -Wall -std=gnu++11 -DNO_BUILTIN_OVERFLOW
 // WITH_SM2_MULTP using shift instead of multiply, no improvement @x86_64/arm64
 // cgo CXXFLAGS: -O2 -Wpedantic -Wall -std=gnu++11 -DWITH_SM2_MULTP
@@ -34,12 +35,14 @@ type eccCurve struct {
 }
 
 var sm2c eccCurve
+var bigOne *big.Int
 
 func init() {
 	if sm2c.inited {
 		return
 	}
 	sm2c.inited = true
+	bigOne = big.NewInt(1)
 	cHnd := C.get_curve(C.ECC_CURVE_SM2)
 	if cHnd == C.CURVE_HND(uintptr(0)) {
 		return
@@ -84,100 +87,77 @@ func getCurveParams(curveId uint) *CurveParams {
 	return sm2Params
 }
 
-func (c eccCurve) newPoint(x, y, z *big.Int) *C.POINT {
-	var pt C.POINT
-	var xb, yb, zb [4]big.Word
-	copy(xb[:], x.Bits())
-	copy(yb[:], y.Bits())
+func toWordSlice(x C.felem) []big.Word {
+	pt := (*[4]big.Word)(unsafe.Pointer(&x))
+	return pt[:]
+}
+
+func fromWordSlice(bits []big.Word) *C.felem {
+	var bb [4]big.Word
+	copy(bb[:], bits)
+	return (*C.felem)(unsafe.Pointer(&bb[0]))
+}
+
+func (c eccCurve) newPoint(x, y, z *big.Int) *C.Point {
+	var pt C.Point
 	if z == nil {
-		zb[0] = 1
-	} else {
-		copy(zb[:], z.Bits())
+		z = bigOne
 	}
-	for i := 0; i < 4; i++ {
-		pt.x[i] = C.u64(xb[i])
-		pt.y[i] = C.u64(yb[i])
-		pt.z[i] = C.u64(zb[i])
-	}
+	pt.x = *fromWordSlice(x.Bits())
+	pt.y = *fromWordSlice(y.Bits())
+	pt.z = *fromWordSlice(z.Bits())
 	return &pt
 }
 
 func (c eccCurve) Add(x1, y1, x2, y2 *big.Int) (rx, ry *big.Int) {
 	pt1 := c.newPoint(x1, y1, nil)
 	pt2 := c.newPoint(x2, y2, nil)
-	var pt C.POINT
+	var pt C.Point
 	C.point_add(&pt, pt1, pt2, c.hnd)
-	var xb, yb [4]big.Word
-	for i := 0; i < 4; i++ {
-		xb[i] = big.Word(pt.x[i])
-		yb[i] = big.Word(pt.y[i])
-	}
-	rx = new(big.Int).SetBits(xb[:])
-	ry = new(big.Int).SetBits(yb[:])
+	rx = new(big.Int).SetBits(toWordSlice(pt.x))
+	ry = new(big.Int).SetBits(toWordSlice(pt.y))
 	return
 }
 
 func (c eccCurve) AddJacobian(x1, y1, z1, x2, y2, z2 *big.Int) (rx, ry, rz *big.Int) {
 	pt1 := c.newPoint(x1, y1, z1)
 	pt2 := c.newPoint(x2, y2, z2)
-	var pt C.POINT
+	var pt C.Point
 	C.point_add_jacobian(&pt, pt1, pt2, c.hnd)
-	var xb, yb, zb [4]big.Word
-	for i := 0; i < 4; i++ {
-		xb[i] = big.Word(pt.x[i])
-		yb[i] = big.Word(pt.y[i])
-		zb[i] = big.Word(pt.z[i])
-	}
-	rx = new(big.Int).SetBits(xb[:])
-	ry = new(big.Int).SetBits(yb[:])
-	rz = new(big.Int).SetBits(zb[:])
+	rx = new(big.Int).SetBits(toWordSlice(pt.x))
+	ry = new(big.Int).SetBits(toWordSlice(pt.y))
+	rz = new(big.Int).SetBits(toWordSlice(pt.z))
 	return
 }
 
 func (c eccCurve) DoubleJacobian(x, y, z *big.Int) (rx, ry, rz *big.Int) {
 	pt1 := c.newPoint(x, y, z)
-	var pt C.POINT
+	var pt C.Point
 	C.point_double_jacobian(&pt, pt1, c.hnd)
-	var xb, yb, zb [4]big.Word
-	for i := 0; i < 4; i++ {
-		xb[i] = big.Word(pt.x[i])
-		yb[i] = big.Word(pt.y[i])
-		zb[i] = big.Word(pt.z[i])
-	}
-	rx = new(big.Int).SetBits(xb[:])
-	ry = new(big.Int).SetBits(yb[:])
-	rz = new(big.Int).SetBits(zb[:])
+	rx = new(big.Int).SetBits(toWordSlice(pt.x))
+	ry = new(big.Int).SetBits(toWordSlice(pt.y))
+	rz = new(big.Int).SetBits(toWordSlice(pt.z))
 	return
 }
 
 func (c eccCurve) Double(x, y *big.Int) (rx, ry *big.Int) {
 	pt1 := c.newPoint(x, y, nil)
-	var pt C.POINT
+	var pt C.Point
 	C.point_double(&pt, pt1, c.hnd)
-	var xb, yb [4]big.Word
-	for i := 0; i < 4; i++ {
-		xb[i] = big.Word(pt.x[i])
-		yb[i] = big.Word(pt.y[i])
-	}
-	rx = new(big.Int).SetBits(xb[:])
-	ry = new(big.Int).SetBits(yb[:])
+	rx = new(big.Int).SetBits(toWordSlice(pt.x))
+	ry = new(big.Int).SetBits(toWordSlice(pt.y))
 	return
 }
 
 func (c eccCurve) ScalarMult(x, y *big.Int, k []byte) (rx, ry *big.Int) {
 	pt1 := c.newPoint(x, y, nil)
-	var pt C.POINT
+	var pt C.Point
 	scal := new(big.Int).SetBytes(k)
 	var ss [4]big.Word
 	copy(ss[:], scal.Bits())
 	C.point_mult(&pt, pt1, (*C.u64)(unsafe.Pointer(&ss[0])), c.hnd)
-	var xb, yb [4]big.Word
-	for i := 0; i < 4; i++ {
-		xb[i] = big.Word(pt.x[i])
-		yb[i] = big.Word(pt.y[i])
-	}
-	rx = new(big.Int).SetBits(xb[:])
-	ry = new(big.Int).SetBits(yb[:])
+	rx = new(big.Int).SetBits(toWordSlice(pt.x))
+	ry = new(big.Int).SetBits(toWordSlice(pt.y))
 	return
 }
 
@@ -194,13 +174,11 @@ func (c eccCurve) AffineFromJacobian(x, y, z *big.Int) (xOut, yOut *big.Int) {
 // Functions implemented in ecc_asm_*64.s
 // Montgomery inverse modulo P256
 func vliModInv(in, mod []big.Word) (result []big.Word) {
-	var res [4]big.Word
-	var in1, md1 [4]big.Word
-	copy(in1[:], in)
-	copy(md1[:], mod)
-	C.vli_mod_inv((*C.u64)(unsafe.Pointer(&res[0])),
-		(*C.u64)(unsafe.Pointer(&in1[0])), (*C.u64)(unsafe.Pointer(&md1[0])))
-	result = res[:]
+	var res C.felem
+	C.vli_mod_inv((*C.u64)(unsafe.Pointer(&res)),
+		(*C.u64)(unsafe.Pointer(fromWordSlice(in))),
+		(*C.u64)(unsafe.Pointer(fromWordSlice(mod))))
+	result = toWordSlice(res)
 	return
 }
 
@@ -278,11 +256,17 @@ func vliSM2MultP(u uint64) *big.Int {
 	return new(big.Int).SetBits(r[:5])
 }
 
-func vliModMultMontP(x, y, mod []big.Word, rr []uint64) *big.Int {
+func vliModMultMontP(x, y []big.Word) *big.Int {
 	var r [4]big.Word
 	C.mont_sm2_mod_mult_p((*C.u64)(unsafe.Pointer(&r[0])),
-		(*C.u64)(unsafe.Pointer(&x[0])), (*C.u64)(unsafe.Pointer(&y[0])),
-		(*C.u64)(unsafe.Pointer(&mod[0])), (*C.u64)(unsafe.Pointer(&rr[0])))
+		(*C.u64)(unsafe.Pointer(&x[0])), (*C.u64)(unsafe.Pointer(&y[0])))
+	return new(big.Int).SetBits(r[:4])
+}
+
+func vliModMultMontN(x, y []big.Word) *big.Int {
+	var r [4]big.Word
+	C.mont_sm2_mod_mult_n((*C.u64)(unsafe.Pointer(&r[0])),
+		(*C.u64)(unsafe.Pointer(&x[0])), (*C.u64)(unsafe.Pointer(&y[0])))
 	return new(big.Int).SetBits(r[:4])
 }
 

@@ -36,8 +36,8 @@ typedef __uint64_t be64;
 typedef __uint8_t u8;
 typedef	unsigned int	uint;
 
-
-#if	__GNUC__ > 6 || __clang_major__ > 6
+// gcc before 6 w/out builtin_usubl_overflow...
+#if	__GNUC__ > 5 || __clang_major__ > 6
 # define unlikely(cond)	__builtin_expect ((cond), 0)
 # define likely(cond)	__builtin_expect (!!(cond), 1)
 #define forceinline __inline__ __attribute__((always_inline))

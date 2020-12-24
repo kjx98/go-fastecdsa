@@ -106,24 +106,6 @@ static ecc_curve sm2_p256( //.name
 	4,
 	//.use_barrett
 	true);
-static ecc_curve sm2_p256_mont( //.name
-	"sm2p256mont",
-	// .gx
-	sm2_p256_gx,
-	//.gy
-	sm2_p256_gy,
-	//.p
-	sm2_p256_p,
-	//.n
-	sm2_p256_n,
-	//.a
-	sm2_p256_a,
-	//.b
-	sm2_p256_b,
-	//.ndigits
-	4,
-	//.use_barrett
-	true);
 
 static u64 secp256k1_p[] = { 0xFFFFFFFEFFFFFC2Full, 0xFFFFFFFFFFFFFFFFull,
 				0xffffffffffffffffull, 0xFFFFFFFFFFFFFFFFull };

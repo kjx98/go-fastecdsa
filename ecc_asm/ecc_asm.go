@@ -27,9 +27,9 @@ func _get_curve(curve_id uint) (curveH unsafe.Pointer)
 
 func _get_curve_params(p, n, b, gx, gy unsafe.Pointer, curveH unsafe.Pointer)
 
-func _point_double_jacobian(ptR, p unsafe.POinter, curveH unsafe.Pointer)
-func _point_double(ptR, p unsafe.POinter, curveH unsafe.Pointer)
-func _point_add_jacobian(ptR, p, q unsafe.POinter, curveH unsafe.Pointer)
+func _point_double_jacobian(ptR, p unsafe.Pointer, curveH unsafe.Pointer)
+func _point_double(ptR, p unsafe.Pointer, curveH unsafe.Pointer)
+func _point_add_jacobian(ptR, p, q unsafe.Pointer, curveH unsafe.Pointer)
 func _point_add(ptR, p, q unsafe.Pointer, curveH unsafe.Pointer)
 func _affine_from_jacobian(x, y, pt unsafe.Pointer, curveH unsafe.Pointer)
 
@@ -63,6 +63,11 @@ func _vli_div_barrett(res, prod, mu unsafe.Pointer)
 // multiplication modulo p
 //go:noescape
 func _mont_mod_mult(res, in1, in2, p, rr unsafe.Pointer, k0 uint64)
+
+// Functions implemented in ecc_asm_*64.s
+// sqr modulo p, dup n times
+//go:noescape
+func _mont_mod_sqr(res, in1, p, rr unsafe.Pointer, k0 uint64, n uint)
 
 // Function implemented in ecc_asm_*86.s
 // Exp modulo prime p

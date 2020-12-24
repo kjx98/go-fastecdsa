@@ -32,7 +32,6 @@
 #include "vli.hpp"
 #include "ecc.h"
 #include "ecc_impl.hpp"
-#include "ecc_curve_defs.h"
 
 #pragma GCC push_options
 #pragma GCC optimize ("unroll-loops")

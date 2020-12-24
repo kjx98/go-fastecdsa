@@ -81,6 +81,18 @@ void mont_mod_mult(u64 *result, const u64 *x, const u64 *y, const u64 *prime,
 	mont_reduction<4>(result, r, prime, k0);
 }
 
+void mont_mod_sqr(u64 *result, const u64 *x, const u64 *prime, const u64 *rr,
+				const u64 k0, const u64 n)
+{
+	u64	r[ECC_MAX_DIGITS];
+	mont_mult<4>(r, x, rr, prime, k0);
+	for (uint i=0; i < n; i++) {
+		mont_sqr<4>(r, r, prime, k0);
+	}
+	//mont_mult<4>(result, montOne, r, prime, k0);
+	mont_reduction<4>(result, r, prime, k0);
+}
+
 void mont_mod_exp(u64 *result, const u64 *x, const u64 *y, const u64 *prime,
 				const u64 *rr, const u64 k0)
 {
@@ -90,7 +102,7 @@ void mont_mod_exp(u64 *result, const u64 *x, const u64 *y, const u64 *prime,
 	mont_mult<4>(xp, x, rr, prime, k0);
 	mont_reduction<4>(t, rr, prime, k0);
 	for (int i = num_bits - 1;i >= 0; i--) {
-		mont_mult<4>(t, t, t, prime, k0);
+		mont_sqr<4>(t, t, prime, k0);
 		if (vli_test_bit(y, i)) mont_mult<4>(t, t, xp, prime, k0);
 	}
 	//mont_mult<4>(result, montOne, t, prime, k0);
@@ -110,16 +122,4 @@ void vli_sm2_mult_p(u64 *result, const u64 rLen, const u64 u)
 	if (rLen < 5) return;
 	vli_sm2_multP(result, u);
 #endif
-}
-
-void mont_sm2_mod_mult_p(u64 *result, const u64 *x, const u64 *y,
-				const u64 *prime, const u64 *rr)
-{
-	u64	xp[ECC_MAX_DIGITS];
-	u64	yp[ECC_MAX_DIGITS];
-	u64	r[ECC_MAX_DIGITS];
-	mont_multP(xp, x, rr, prime);
-	mont_multP(yp, y, rr, prime);
-	mont_multP(r, xp, yp, prime);
-	mont_reductionP(result, r, prime);
 }

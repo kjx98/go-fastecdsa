@@ -76,7 +76,6 @@ struct ecc_curve {
 
 template<uint ndigits>
 struct point_t {
-	bool	isZero;
 	u64		x[ndigits];
 	u64		y[ndigits];
 	u64		z[ndigits];
@@ -382,6 +381,26 @@ static void mont_mult(u64 *result, const u64 *x, const u64 *y, const u64 *prime,
 	} else vli_set<ndigits>(result, r);
 }
 
+template<uint ndigits> forceinline
+static void
+mont_sqr(u64 *result, const u64 *x, const u64 *prime, const u64 k0) noexcept
+{
+	u64	s[ECC_MAX_DIGITS * 2];
+	u64	r[ECC_MAX_DIGITS * 2];
+	vli_clear<ndigits * 2>(r);
+#pragma GCC unroll 4
+	for (uint i=0; i < ndigits;i++) {
+		u64	u = (r[0] + x[i]*x[0]) * k0;
+		vli_umult<ndigits>(s, prime, u);
+		vli_add_to<ndigits + 2>(r, s);
+		vli_umult<ndigits>(s, x, x[i]);
+		vli_add_to<ndigits + 2>(r, s);
+		vli_rshift1w<ndigits + 2>(r);	
+	}
+	if (r[ndigits] != 0 || vli_cmp<ndigits>(r, prime) >= 0) {
+		vli_sub<ndigits>(result, r, prime);
+	} else vli_set<ndigits>(result, r);
+}
 
 /* Computes result = (1 / p_input) % mod. All VLIs are the same size.
  * See "From Euclid's GCD to Montgomery Multiplication to the Great Divide"

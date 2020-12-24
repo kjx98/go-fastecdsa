@@ -51,12 +51,12 @@ typedef struct {
 	int64_t	cap;
 }	GoSlice;
 
+typedef u64	felem[4];
 typedef	struct {
-	u64		x[4];
-	u64		y[4];
-	u64		z[4];
-	bool	isZero;
-}	POINT;
+	felem	x;
+	felem	y;
+	felem	z;
+}	Point;
 
 typedef	void*	CURVE_HND;
 
@@ -191,6 +191,8 @@ void vli_div_barrett(u64 *result, u64 *product, const u64 *mod);
  */
 void mont_mod_mult(u64 *result, const u64 *x, const u64 *y, const u64 *prime,
 				const u64 *rr, const u64 k0);
+void mont_mod_sqr(u64 *result, const u64 *x, const u64 *prime, const u64 *rr,
+				const u64 k0, const u64 n);
 void mont_mod_exp(u64 *result, const u64 *x, const u64 *y, const u64 *prime,
 				const u64 *rr, const u64 k0);
 
@@ -205,9 +207,7 @@ void vli_sm2_mult_p(GoSlice *result, const u64 u);
 #else
 void vli_sm2_mult_p(u64 *result, const u64 rLen, const u64 u);
 #endif
-void vli_sm2_mult_n(u64 *result, const u64 u);
-void mont_sm2_mod_mult_p(u64 *result, const u64 *x, const u64 *y,
-				const u64 *prime, const u64 *rr);
+void mont_sm2_mod_mult_p(u64 *result, const u64 *x, const u64 *y);
 void mont_sm2_mod_mult_n(u64 *result, const u64 *x, const u64 *y);
 u64 vli_asm_acc();
 
@@ -240,14 +240,14 @@ CURVE_HND   get_curve(uint curve_id);
  */
 void	get_curve_params(u64 *p, u64 *n, u64 *b, u64 *gx, u64 *gy,
 				CURVE_HND curveH);
-void	point_double_jacobian(POINT *pt_r, const POINT *pt, CURVE_HND curveH);
-void	point_add_jacobian(POINT *pt_r, const POINT *pt1, const POINT *pt2,
+void	point_double_jacobian(Point *pt_r, const Point *pt, CURVE_HND curveH);
+void	point_add_jacobian(Point *pt_r, const Point *pt1, const Point *pt2,
 				CURVE_HND curveH);
-void	point_double(POINT *pt_r, const POINT *pt, CURVE_HND curveH);
-void	point_add(POINT *pt_r, const POINT *p, const POINT *q, CURVE_HND curvH);
-void	point_mult(POINT *pt_r, const POINT *pt, const u64 *scalar,
+void	point_double(Point *pt_r, const Point *pt, CURVE_HND curveH);
+void	point_add(Point *pt_r, const Point *p, const Point *q, CURVE_HND curvH);
+void	point_mult(Point *pt_r, const Point *pt, const u64 *scalar,
 				CURVE_HND curveH);
-void	affine_from_jacobian(u64 *x, u64 *y, const POINT *pt, CURVE_HND curveH);
+void	affine_from_jacobian(u64 *x, u64 *y, const Point *pt, CURVE_HND curveH);
 
 /**
  * ecc_point_mult_shamir() - Add two points multiplied by scalars
@@ -262,8 +262,8 @@ void	affine_from_jacobian(u64 *x, u64 *y, const POINT *pt, CURVE_HND curveH);
  * Returns result = x * p + y * q over the curve.
  * This works faster than two multiplications and addition.
  */
-void ecc_point_mult_shamir(const POINT *result, const u64 *x, const POINT *p,
-			   const u64 *y, const POINT *qx, const CURVE_HND curveH);
+void ecc_point_mult_shamir(const Point *result, const u64 *x, const Point *p,
+			   const u64 *y, const Point *q, const CURVE_HND curveH);
 #ifdef	__cplusplus
 }
 #endif

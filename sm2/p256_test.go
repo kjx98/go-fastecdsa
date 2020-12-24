@@ -323,7 +323,7 @@ func BenchmarkInverse(b *testing.B) {
 	})
 }
 
-func BenchmarkMul(b *testing.B) {
+func BenchmarkModMul(b *testing.B) {
 	b.ResetTimer()
 	p := P256().Params().P
 	res := new(big.Int)
@@ -336,7 +336,7 @@ func BenchmarkMul(b *testing.B) {
 	}
 }
 
-func BenchmarkMulBarrettMod(b *testing.B) {
+func BenchmarkBarrettModMul(b *testing.B) {
 	b.ResetTimer()
 	c := sm2g
 	res := new(big.Int)
@@ -349,7 +349,7 @@ func BenchmarkMulBarrettMod(b *testing.B) {
 	}
 }
 
-func BenchmarkModMulMont(b *testing.B) {
+func BenchmarkMontModMul(b *testing.B) {
 	b.ResetTimer()
 	c := sm2g
 
