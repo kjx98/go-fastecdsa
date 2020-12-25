@@ -1,5 +1,3 @@
-// +build ignore
-
 /*
  * Copyright (c) 2013, Kenneth MacKay
  * All rights reserved.
@@ -54,6 +52,13 @@ typedef struct {
 }	GoSlice;
 
 typedef u64	fElem[4];
+
+typedef	struct {
+	u64	p[4];
+	u64	rr[4];
+	u64	k0;
+} montParams;
+
 typedef	struct {
 	fElem	x;
 	fElem	y;
@@ -195,12 +200,9 @@ void vli_div_barrett(u64 *result, u64 *product, const u64 *mod);
  * RR		b^2n mod P
  * K0		- P^(-1) mod b
  */
-void mont_mod_mult(u64 *result, const u64 *x, const u64 *y, const u64 *prime,
-				const u64 *rr, const u64 k0);
-void mont_mod_sqr(u64 *result, const u64 *x, const u64 *prime, const u64 *rr,
-				const u64 k0, const u64 n);
-void mont_mod_exp(u64 *result, const u64 *x, const u64 *y, const u64 *prime,
-				const u64 *rr, const u64 k0);
+void mont_mod_mult(u64 *res, const u64 *x, const u64 *y, const montParams *pa);
+void mont_mod_sqr(u64 *res, const u64 *x, const montParams *pa, const u64 n);
+void mont_mod_exp(u64 *re, const u64 *x, const u64 *y, const montParams *pa);
 
 /*
  * vli_sm2_mult_p

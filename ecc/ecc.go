@@ -32,6 +32,20 @@ func fromWordSlice(bits []big.Word) *C.fElem {
 	return (*C.fElem)(unsafe.Pointer(&bb[0]))
 }
 
+func fillMontParams(mod []big.Word, rr []uint64, k0 uint64) *C.montParams {
+	var pa C.montParams
+	for i := 0; i < 4; i++ {
+		if i < len(mod) {
+			pa.p[i] = C.u64(mod[i])
+		}
+		if i < len(rr) {
+			pa.rr[i] = C.u64(rr[i])
+		}
+	}
+	pa.k0 = C.u64(k0)
+	return &pa
+}
+
 // Functions implemented in ecc_asm_*64.s
 // Montgomery inverse modulo P256
 func vliModInv(in, mod []big.Word) (result []big.Word) {
@@ -90,19 +104,17 @@ func vliBarrettDiv(prod *big.Int, muB []big.Word) (result *big.Int) {
 
 func vliModMultMont(x, y, mod []big.Word, rr []uint64, k0 uint64) *big.Int {
 	var r [4]big.Word
+	pa := fillMontParams(mod, rr, k0)
 	C.mont_mod_mult((*C.u64)(unsafe.Pointer(&r[0])),
-		(*C.u64)(unsafe.Pointer(&x[0])), (*C.u64)(unsafe.Pointer(&y[0])),
-		(*C.u64)(unsafe.Pointer(&mod[0])), (*C.u64)(unsafe.Pointer(&rr[0])),
-		C.u64(k0))
+		(*C.u64)(unsafe.Pointer(&x[0])), (*C.u64)(unsafe.Pointer(&y[0])), pa)
 	return new(big.Int).SetBits(r[:4])
 }
 
 func vliExpModMont(x, y, mod []big.Word, rr []uint64, k0 uint64) *big.Int {
 	var r [4]big.Word
+	pa := fillMontParams(mod, rr, k0)
 	C.mont_mod_exp((*C.u64)(unsafe.Pointer(&r[0])),
-		(*C.u64)(unsafe.Pointer(&x[0])), (*C.u64)(unsafe.Pointer(&y[0])),
-		(*C.u64)(unsafe.Pointer(&mod[0])), (*C.u64)(unsafe.Pointer(&rr[0])),
-		C.u64(k0))
+		(*C.u64)(unsafe.Pointer(&x[0])), (*C.u64)(unsafe.Pointer(&y[0])), pa)
 	return new(big.Int).SetBits(r[:4])
 }
 

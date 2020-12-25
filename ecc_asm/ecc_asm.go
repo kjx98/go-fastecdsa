@@ -62,17 +62,17 @@ func _vli_div_barrett(res, prod, mu unsafe.Pointer)
 // Functions implemented in ecc_asm_*64.s
 // multiplication modulo p
 //go:noescape
-func _mont_mod_mult(res, in1, in2, p, rr unsafe.Pointer, k0 uint64)
+func _mont_mod_mult(res, in1, in2, prr unsafe.Pointer, k0 uint64)
 
 // Functions implemented in ecc_asm_*64.s
 // sqr modulo p, dup n times
 //go:noescape
-func _mont_mod_sqr(res, in1, p, rr unsafe.Pointer, k0 uint64, n uint)
+func _mont_mod_sqr(res, in1, prr unsafe.Pointer, k0 uint64, n uint)
 
 // Function implemented in ecc_asm_*86.s
 // Exp modulo prime p
 //go:noescape
-func _mont_mod_exp(res, in1, in2, p, rr unsafe.Pointer, k0 uint64)
+func _mont_mod_exp(res, in1, in2, prr unsafe.Pointer, k0 uint64)
 
 // Function implemented in ecc_asm_*86.s
 // u64 multiply prime P of SM2
@@ -87,12 +87,12 @@ func _vli_sm2_mult_n(res unsafe.Pointer, u uint64)
 // Functions implemented in ecc_asm_*64.s
 // multiplication modulo p for SM2
 //go:noescape
-func _mont_sm2_mod_mult_p(res, in1, in2, p, rr unsafe.Pointer)
+func _mont_sm2_mod_mult_p(res, in1, in2 unsafe.Pointer)
 
 // Functions implemented in ecc_asm_*64.s
 // multiplication modulo p for SM2
 //go:noescape
-func _mont_sm2_mod_mult_n(res, in1, in2, p, rr unsafe.Pointer)
+func _mont_sm2_mod_mult_n(res, in1, in2 unsafe.Pointer)
 
 // Functions implemented in ecc_asm_*64.s
 // Montgomery inverse modulo prime mod
@@ -154,17 +154,21 @@ func vliBarrettDiv(prod *big.Int, muB []big.Word) (result *big.Int) {
 
 func vliModMultMont(x, y, mod []big.Word, rr []uint64, k0 uint64) *big.Int {
 	var r [32]big.Word
+	var prime [8]big.Word
+	copy(prime[:4], mod)
+	copy(prime[4:], rr)
 	_mont_mod_mult(unsafe.Pointer(&r[0]), unsafe.Pointer(&x[0]),
-		unsafe.Pointer(&y[0]), unsafe.Pointer(&mod[0]), unsafe.Pointer(&rr[0]),
-		k0)
+		unsafe.Pointer(&y[0]), unsafe.Pointer(&prime[0]), k0)
 	return new(big.Int).SetBits(r[:4])
 }
 
 func vliExpModMont(x, y, mod []big.Word, rr []uint64, k0 uint64) (res *big.Int) {
 	var r [32]big.Word
+	var prime [8]big.Word
+	copy(prime[:4], mod)
+	copy(prime[4:], rr)
 	_mont_mod_exp(unsafe.Pointer(&r[0]), unsafe.Pointer(&x[0]),
-		unsafe.Pointer(&y[0]), unsafe.Pointer(&mod[0]),
-		unsafe.Pointer(&rr[0]), k0)
+		unsafe.Pointer(&y[0]), unsafe.Pointer(&prime[0]), k0)
 	res = new(big.Int).SetBits(r[:4])
 	return
 }
@@ -172,7 +176,7 @@ func vliExpModMont(x, y, mod []big.Word, rr []uint64, k0 uint64) (res *big.Int) 
 func vliModMultMontP(x, y, mod []big.Word, rr []uint64) *big.Int {
 	var r [32]big.Word
 	_mont_sm2_mod_mult_p(unsafe.Pointer(&r[0]), unsafe.Pointer(&x[0]),
-		unsafe.Pointer(&y[0]), unsafe.Pointer(&mod[0]), unsafe.Pointer(&rr[0]))
+		unsafe.Pointer(&y[0]))
 	return new(big.Int).SetBits(r[:4])
 }
 

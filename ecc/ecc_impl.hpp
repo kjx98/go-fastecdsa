@@ -539,7 +539,7 @@ vli_mod_inv_new(u64 *result, const u64 *n, const u64 *mod) noexcept
 	u64	*a=buff;
 	u64 *b=a+ECC_MAX_DIGITS;
 	u64	*x=b+ECC_MAX_DIGITS;
-	u64	*y=u+ECC_MAX_DIGITS;
+	u64	*y=x+ECC_MAX_DIGITS;
 #else
 	u64 a[ECC_MAX_DIGITS], b[ECC_MAX_DIGITS];
 	u64 x[ECC_MAX_DIGITS], y[ECC_MAX_DIGITS];

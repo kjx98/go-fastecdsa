@@ -68,11 +68,13 @@ void vli_mmod_barrett(u64 *result, u64 *product, const u64 *mod)
 #endif
 
 //static u64 montOne[]={1, 0, 0, 0};
-void mont_mod_mult(u64 *result, const u64 *x, const u64 *y, const u64 *prime,
-				const u64 *rr, const u64 k0)
+void mont_mod_mult(u64 *res, const u64 *x, const u64 *y, const montParams *pa)
 {
+	const u64	*rr = pa->rr;
+	const u64	*prime = pa->p;
+	const u64	k0 = pa->k0;
 #ifdef  WITH_C2GO
-	u64 *xp = result + ECC_MAX_DIGITS;
+	u64 *xp = res + ECC_MAX_DIGITS;
 	u64	*yp = xp + ECC_MAX_DIGITS;
 	u64	*r = yp + ECC_MAX_DIGITS;
 	u64	*buff = r + ECC_MAX_DIGITS;
@@ -80,7 +82,7 @@ void mont_mod_mult(u64 *result, const u64 *x, const u64 *y, const u64 *prime,
 	mont_mult<4>(yp, y, rr, prime, k0, buff);
 	mont_mult<4>(r, xp, yp, prime, k0, buff);
 	//mont_mult<4>(result, montOne, r, prime, k0, buff);
-	mont_reduction<4>(result, r, prime, k0, buff);
+	mont_reduction<4>(res, r, prime, k0, buff);
 #else
 	u64	xp[ECC_MAX_DIGITS];
 	u64	yp[ECC_MAX_DIGITS];
@@ -88,14 +90,16 @@ void mont_mod_mult(u64 *result, const u64 *x, const u64 *y, const u64 *prime,
 	mont_mult<4>(xp, x, rr, prime, k0);
 	mont_mult<4>(yp, y, rr, prime, k0);
 	mont_mult<4>(r, xp, yp, prime, k0);
-	//mont_mult<4>(result, montOne, r, prime, k0);
-	mont_reduction<4>(result, r, prime, k0);
+	//mont_mult<4>(res, montOne, r, prime, k0);
+	mont_reduction<4>(res, r, prime, k0);
 #endif
 }
 
-void mont_mod_sqr(u64 *result, const u64 *x, const u64 *prime, const u64 *rr,
-				const u64 k0, const u64 n)
+void mont_mod_sqr(u64 *result, const u64 *x, const montParams *pa, const u64 n)
 {
+	const u64	*rr = pa->rr;
+	const u64	*prime = pa->p;
+	const u64	k0 = pa->k0;
 #ifdef  WITH_C2GO
 	u64	*r = result + ECC_MAX_DIGITS;
 	u64	*buff = r + ECC_MAX_DIGITS;
@@ -116,9 +120,11 @@ void mont_mod_sqr(u64 *result, const u64 *x, const u64 *prime, const u64 *rr,
 #endif
 }
 
-void mont_mod_exp(u64 *result, const u64 *x, const u64 *y, const u64 *prime,
-				const u64 *rr, const u64 k0)
+void mont_mod_exp(u64 *result, const u64 *x, const u64 *y, const montParams *pa)
 {
+	const u64	*rr = pa->rr;
+	const u64	*prime = pa->p;
+	const u64	k0 = pa->k0;
 #ifdef  WITH_C2GO
 	u64	*xp = result + ECC_MAX_DIGITS;
 	u64	*t = xp + ECC_MAX_DIGITS;
@@ -137,7 +143,7 @@ void mont_mod_exp(u64 *result, const u64 *x, const u64 *y, const u64 *prime,
 #endif
 	for (int i = num_bits - 1;i >= 0; i--) {
 #ifdef	WITH_C2GO
-		mont_sqr<4>(t, t, prime, k0, buff);
+		mont_mult<4>(t, t, t, prime, k0, buff);
 		if (vli_test_bit(y, i)) mont_mult<4>(t, t, xp, prime, k0, buff);
 #else
 		mont_sqr<4>(t, t, prime, k0);
