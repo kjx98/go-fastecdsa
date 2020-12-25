@@ -1,3 +1,5 @@
+// +build ignore
+
 /*
  * Copyright (c) 2013, Kenneth MacKay
  * All rights reserved.
@@ -24,7 +26,6 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
-// +build ignore
 #pragma once
 #ifndef __ECC_IMPL_H__
 #define __ECC_IMPL_H__
@@ -497,79 +498,69 @@ vli_mod_inv(u64 *result, const u64 *input, const u64 *mod) noexcept
  */
 template<uint ndigits> forceinline
 static void
-vli_mod_inv_new(u64 *result, const u64 *x, const u64 *mod) noexcept
+#ifdef	WITH_C2GO
+vli_mod_inv_new(u64 *result, const u64 *n, const u64 *mod, u64 *buff) noexcept
+#else
+vli_mod_inv_new(u64 *result, const u64 *n, const u64 *mod) noexcept
+#endif
 {
+#ifdef	WITH_C2GO
+	u64	*a=buff;
+	u64 *b=a+ECC_MAX_DIGITS;
+	u64	*x=b+ECC_MAX_DIGITS;
+	u64	*y=u+ECC_MAX_DIGITS;
+#else
 	u64 a[ECC_MAX_DIGITS], b[ECC_MAX_DIGITS];
-	u64 c[ECC_MAX_DIGITS], d[ECC_MAX_DIGITS];
-	u64 u[ECC_MAX_DIGITS], v[ECC_MAX_DIGITS];
+	u64 x[ECC_MAX_DIGITS], y[ECC_MAX_DIGITS];
+#endif
 	// mod should be prime, >3 MUST BE odd
 	if ( vli_is_even(mod) ) {
 		vli_clear<ndigits>(result);
 		return;
 	}
 
-	vli_set<ndigits>(u, x);
-	vli_set<ndigits>(v, mod);
-	vli_clear<ndigits>(a);
-	vli_clear<ndigits>(b);
-	vli_clear<ndigits>(c);
-	vli_clear<ndigits>(d);
-	a[0] = 1;
-	d[0] = 1;
+	vli_set<ndigits>(a, mod);
+	vli_set<ndigits>(b, x);
+	vli_clear<ndigits>(x);
+	vli_clear<ndigits>(y);
+	x[0] = 1;
 	//int cmp_result;
-	bool	b_carry=false, d_carry = false;
+	bool	xc=false, yc=false;
 
-	while ( !vli_is_zero<ndigits>(u) ) {
-		bool carry;
+	while ( !vli_is_zero<ndigits>(b) ) {
 
-		while (vli_is_even(u)) {
-			vli_rshift1<ndigits>(u);
-			if (vli_is_even(a) && vli_is_even(b)) {
-				vli_rshift1<ndigits>(a);
-				vli_rshift1<ndigits>(b);
-			} else {
-				carry = vli_add_to<ndigits>(a, mod);
-				vli_rshift1<ndigits>(a);
-				if (carry) a[ndigits-1] |= (1L << 63);
-				if (b_carry) b_carry = vli_add_to<ndigits>(b, x); else
-					b_carry = vli_sub_from<ndigits>(b, x);
-				vli_rshift1<ndigits>(b);
-				if (b_carry) b[ndigits-1] |= (1L << 63);
+		while (vli_is_even(b)) {
+			vli_rshift1<ndigits>(b);
+			if ( !vli_is_even(x) ) {
+				xc = vli_add_to<ndigits>(x, mod);
 			}
+			vli_rshift1<ndigits>(x);
+			if (xc) x[ndigits-1] |= (1L << 63);
+			xc = false;
 		}
 
-		while (vli_is_even(v)) {
-			vli_rshift1<ndigits>(v);
-			if (vli_is_even(c) && vli_is_even(d)) {
-				vli_rshift1<ndigits>(c);
-				vli_rshift1<ndigits>(d);
-			} else {
-				carry = vli_add_to<ndigits>(c, mod);
-				vli_rshift1<ndigits>(c);
-				if (carry) c[ndigits-1] |= (1L << 63);
-				if (d_carry) b_carry = vli_add_to<ndigits>(d, x); else
-					d_carry = vli_sub_from<ndigits>(d, x);
-				vli_rshift1<ndigits>(d);
-				if (carry) d[ndigits-1] |= (1L << 63);
+		while (vli_is_even(a)) {
+			vli_rshift1<ndigits>(a);
+			if ( !vli_is_even(y) ) {
+				yc = vli_add_to<ndigits>(y, mod);
 			}
+			vli_rshift1<ndigits>(y);
+			if (yc) y[ndigits-1] |= (1L << 63);
+			yc = false;
 		}
 
-		if (vli_cmp<ndigits>(u, v) >= 0) {
-			vli_sub_from<ndigits>(u, v);
-			vli_sub_from<ndigits>(a, c);
-			if (b_carry) b_carry = vli_add_to<ndigits>(b, d); else
-					b_carry = vli_sub_from<ndigits>(b, d);
+		if (vli_cmp<ndigits>(b, a) >= 0) {
+			auto carry = vli_add_to<ndigits>(x, y);
+			vli_sub_from<ndigits>(b, a);
 		} else {
-			vli_sub_from<ndigits>(v, u);
-			vli_sub_from<ndigits>(c, a);
-			if (d_carry) d_carry = vli_add_to<ndigits>(d, b); else
-				d_carry = vli_sub_from<ndigits>(d, b);
+			auto carry = vli_add_to<ndigits>(y, x);
+			vli_sub_from<ndigits>(a, b);
 		}
-		vli_set<ndigits>(a, c);
-		vli_set<ndigits>(b, d);
 	}
-	if (likely(vli_is_one<ndigits>(v))) {
-		vli_set<ndigits>(result, d);
+	if (likely(vli_is_one<ndigits>(a))) {
+		if (vli_cmp<ndigits>(y, mod) >= 0) {
+			vli_sub<ndigits>(result, y, mod);
+		} else vli_set<ndigits>(result, y);
 	} else {
 		// no inverse
 		vli_clear<ndigits>(result);

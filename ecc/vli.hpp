@@ -1,3 +1,5 @@
+// +build ignore
+
 /*
  * Copyright(c) 2020 Jesse Kuang  <jkuang@21cn.com>
  * All rights reserved.
@@ -23,7 +25,6 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
-// +build ignore
 #pragma once
 #ifndef __VLI_HPP__
 #define __VLI_HPP__

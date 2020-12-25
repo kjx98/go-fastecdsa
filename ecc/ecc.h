@@ -1,3 +1,5 @@
+// +build ignore
+
 /*
  * Copyright (c) 2013, Kenneth MacKay
  * All rights reserved.
@@ -24,7 +26,6 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
-// +build ignore
 #pragma once
 #ifndef __ECC_H__
 #define __ECC_H__

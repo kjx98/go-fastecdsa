@@ -1,3 +1,5 @@
+// +build ignore
+
 /* ====================================================================
  * Copyright (c) 2014 - 2018 The GmSSL Project.  All rights reserved.
  *
@@ -79,7 +81,6 @@
  * work which got its smarts from Daniel J. Bernstein's work on the same.
  */
 
-// +build ignore
 # include <stdint.h>
 # include <stdbool.h>
 # include <sys/types.h>
