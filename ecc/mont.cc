@@ -71,6 +71,17 @@ void vli_mmod_barrett(u64 *result, u64 *product, const u64 *mod)
 void mont_mod_mult(u64 *result, const u64 *x, const u64 *y, const u64 *prime,
 				const u64 *rr, const u64 k0)
 {
+#ifdef  WITH_C2GO
+	u64 *xp = result + ECC_MAX_DIGITS;
+	u64	*yp = xp + ECC_MAX_DIGITS;
+	u64	*r = yp + ECC_MAX_DIGITS;
+	u64	*buff = r + ECC_MAX_DIGITS;
+	mont_mult<4>(xp, x, rr, prime, k0, buff);
+	mont_mult<4>(yp, y, rr, prime, k0, buff);
+	mont_mult<4>(r, xp, yp, prime, k0, buff);
+	//mont_mult<4>(result, montOne, r, prime, k0, buff);
+	mont_reduction<4>(result, r, prime, k0, buff);
+#else
 	u64	xp[ECC_MAX_DIGITS];
 	u64	yp[ECC_MAX_DIGITS];
 	u64	r[ECC_MAX_DIGITS];
@@ -79,11 +90,22 @@ void mont_mod_mult(u64 *result, const u64 *x, const u64 *y, const u64 *prime,
 	mont_mult<4>(r, xp, yp, prime, k0);
 	//mont_mult<4>(result, montOne, r, prime, k0);
 	mont_reduction<4>(result, r, prime, k0);
+#endif
 }
 
 void mont_mod_sqr(u64 *result, const u64 *x, const u64 *prime, const u64 *rr,
 				const u64 k0, const u64 n)
 {
+#ifdef  WITH_C2GO
+	u64	*r = result + ECC_MAX_DIGITS;
+	u64	*buff = r + ECC_MAX_DIGITS;
+	mont_mult<4>(r, x, rr, prime, k0, buff);
+	for (uint i=0; i < n; i++) {
+		mont_sqr<4>(r, r, prime, k0, buff);
+	}
+	//mont_mult<4>(result, montOne, r, prime, k0, buff);
+	mont_reduction<4>(result, r, prime, k0, buff);
+#else
 	u64	r[ECC_MAX_DIGITS];
 	mont_mult<4>(r, x, rr, prime, k0);
 	for (uint i=0; i < n; i++) {
@@ -91,22 +113,44 @@ void mont_mod_sqr(u64 *result, const u64 *x, const u64 *prime, const u64 *rr,
 	}
 	//mont_mult<4>(result, montOne, r, prime, k0);
 	mont_reduction<4>(result, r, prime, k0);
+#endif
 }
 
 void mont_mod_exp(u64 *result, const u64 *x, const u64 *y, const u64 *prime,
 				const u64 *rr, const u64 k0)
 {
+#ifdef  WITH_C2GO
+	u64	*xp = result + ECC_MAX_DIGITS;
+	u64	*t = xp + ECC_MAX_DIGITS;
+	u64	*buff = t + ECC_MAX_DIGITS;
+#else
 	u64	xp[ECC_MAX_DIGITS];
 	u64	t[ECC_MAX_DIGITS];
+#endif
 	int	num_bits = vli_num_bits<4>(y);
+#ifdef	WITH_C2GO
+	mont_mult<4>(xp, x, rr, prime, k0, buff);
+	mont_reduction<4>(t, rr, prime, k0, buff);
+#else
 	mont_mult<4>(xp, x, rr, prime, k0);
 	mont_reduction<4>(t, rr, prime, k0);
+#endif
 	for (int i = num_bits - 1;i >= 0; i--) {
+#ifdef	WITH_C2GO
+		mont_sqr<4>(t, t, prime, k0, buff);
+		if (vli_test_bit(y, i)) mont_mult<4>(t, t, xp, prime, k0, buff);
+#else
 		mont_sqr<4>(t, t, prime, k0);
 		if (vli_test_bit(y, i)) mont_mult<4>(t, t, xp, prime, k0);
+#endif
 	}
+#ifdef	WITH_C2GO
+	//mont_mult<4>(result, montOne, t, prime, k0, buff);
+	mont_reduction<4>(result, t, prime, k0, buff);
+#else
 	//mont_mult<4>(result, montOne, t, prime, k0);
 	mont_reduction<4>(result, t, prime, k0);
+#endif
 }
 
 #ifdef	WITH_C2GO

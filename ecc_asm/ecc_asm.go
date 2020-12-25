@@ -97,19 +97,19 @@ func _mont_sm2_mod_mult_n(res, in1, in2, p, rr unsafe.Pointer)
 // Functions implemented in ecc_asm_*64.s
 // Montgomery inverse modulo prime mod
 func vliModInv(in, mod []big.Word) (result []big.Word) {
-	var res [4]big.Word
+	var res [32]big.Word
 	var x [4]big.Word
 	var buff [32]big.Word
 	copy(x[:], in)
 	_vli_mod_inv(unsafe.Pointer(&res[0]), unsafe.Pointer(&x[0]),
 		unsafe.Pointer(&mod[0]), unsafe.Pointer(&buff[0]))
-	result = res[:]
+	result = res[:4]
 	return
 }
 
 // Montgomery multiplication modulo sm2
 func vliModMult(left, right, mdU []big.Word) (result *big.Int) {
-	var res [4]big.Word
+	var res [32]big.Word
 	var prod [8]big.Word
 	var lf, rt [4]big.Word
 	var mod [9]big.Word // should be 9, 4 word for mod, 5 word for mu
@@ -153,7 +153,7 @@ func vliBarrettDiv(prod *big.Int, muB []big.Word) (result *big.Int) {
 */
 
 func vliModMultMont(x, y, mod []big.Word, rr []uint64, k0 uint64) *big.Int {
-	var r [4]big.Word
+	var r [32]big.Word
 	_mont_mod_mult(unsafe.Pointer(&r[0]), unsafe.Pointer(&x[0]),
 		unsafe.Pointer(&y[0]), unsafe.Pointer(&mod[0]), unsafe.Pointer(&rr[0]),
 		k0)
@@ -161,7 +161,7 @@ func vliModMultMont(x, y, mod []big.Word, rr []uint64, k0 uint64) *big.Int {
 }
 
 func vliExpModMont(x, y, mod []big.Word, rr []uint64, k0 uint64) (res *big.Int) {
-	var r [4]big.Word
+	var r [32]big.Word
 	_mont_mod_exp(unsafe.Pointer(&r[0]), unsafe.Pointer(&x[0]),
 		unsafe.Pointer(&y[0]), unsafe.Pointer(&mod[0]),
 		unsafe.Pointer(&rr[0]), k0)
@@ -170,14 +170,14 @@ func vliExpModMont(x, y, mod []big.Word, rr []uint64, k0 uint64) (res *big.Int) 
 }
 
 func vliModMultMontP(x, y, mod []big.Word, rr []uint64) *big.Int {
-	var r [4]big.Word
+	var r [32]big.Word
 	_mont_sm2_mod_mult_p(unsafe.Pointer(&r[0]), unsafe.Pointer(&x[0]),
 		unsafe.Pointer(&y[0]), unsafe.Pointer(&mod[0]), unsafe.Pointer(&rr[0]))
 	return new(big.Int).SetBits(r[:4])
 }
 
 func vliMultP(u uint64) *big.Int {
-	res := make([]big.Word, 6)
+	res := make([]big.Word, 8)
 	_vli_sm2_mult_p(&res, u)
 	return new(big.Int).SetBits(res[:5])
 }

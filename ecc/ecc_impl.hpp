@@ -297,9 +297,9 @@ static void vli_sm2_multP(u64 *result, const u64 u) noexcept
 forceinline
 static void mont_reductionP(u64 *result, const u64 *y, const u64 *prm) noexcept
 {
-	u64	s[ECC_MAX_DIGITS * 2];
-	u64	r[ECC_MAX_DIGITS * 2];
-	vli_clear<8>(r);
+	u64	s[8];
+	u64	r[6];
+	vli_clear<6>(r);
 #pragma GCC unroll 4
 	for (uint i=0; i < 4; i++) {
 		u64	u = r[0] + y[i];
@@ -321,9 +321,9 @@ forceinline
 static void mont_multP(u64 *result, const u64 *x, const u64 *y,
 			const u64 *prime) noexcept
 {
-	u64	s[ECC_MAX_DIGITS * 2];
-	u64	r[ECC_MAX_DIGITS * 2];
-	vli_clear<8>(r);
+	u64	s[8];
+	u64	r[6];
+	vli_clear<6>(r);
 #pragma GCC unroll 4
 	for (uint i=0; i < 4;i++) {
 		u64	u = r[0] + y[i]*x[0];
@@ -343,12 +343,23 @@ static void mont_multP(u64 *result, const u64 *x, const u64 *y,
 }
 
 template<uint ndigits> forceinline
-static void mont_reduction(u64 *result, const u64 *y, const u64 *prime,
+static void
+#ifdef	WITH_C2GO
+mont_reduction(u64 *result, const u64 *y, const u64 *prime,
+			const u64 k0, u64 *buff) noexcept
+#else
+mont_reduction(u64 *result, const u64 *y, const u64 *prime,
 			const u64 k0) noexcept
+#endif
 {
+#ifdef	WITH_C2GO
+	u64	*s = buff;
+	u64	*r = s + ECC_MAX_DIGITS * 2;
+#else
 	u64	s[ECC_MAX_DIGITS * 2];
-	u64	r[ECC_MAX_DIGITS * 2];
-	vli_clear<ndigits * 2>(r);
+	u64	r[ECC_MAX_DIGITS + 2];
+#endif
+	vli_clear<ndigits + 2>(r);
 #pragma GCC unroll 4
 	for (uint i=0; i < ndigits; i++) {
 		u64	u = (r[0] + y[i]) * k0;
@@ -363,12 +374,23 @@ static void mont_reduction(u64 *result, const u64 *y, const u64 *prime,
 }
 
 template<uint ndigits> forceinline
-static void mont_mult(u64 *result, const u64 *x, const u64 *y, const u64 *prime,
+static void
+#ifdef	WITH_C2GO
+mont_mult(u64 *result, const u64 *x, const u64 *y, const u64 *prime,
+				const u64 k0, u64 *buff) noexcept
+#else
+mont_mult(u64 *result, const u64 *x, const u64 *y, const u64 *prime,
 				const u64 k0) noexcept
+#endif
 {
+#ifdef	WITH_C2GO
+	u64	*s = buff;
+	u64	*r = s + ECC_MAX_DIGITS * 2;
+#else
 	u64	s[ECC_MAX_DIGITS * 2];
-	u64	r[ECC_MAX_DIGITS * 2];
-	vli_clear<ndigits * 2>(r);
+	u64	r[ECC_MAX_DIGITS + 2];
+#endif
+	vli_clear<ndigits + 2>(r);
 #pragma GCC unroll 4
 	for (uint i=0; i < ndigits;i++) {
 		u64	u = (r[0] + y[i]*x[0]) * k0;
@@ -385,11 +407,20 @@ static void mont_mult(u64 *result, const u64 *x, const u64 *y, const u64 *prime,
 
 template<uint ndigits> forceinline
 static void
+#ifdef	WITH_C2GO
+mont_sqr(u64 *result, const u64 *x, const u64 *prime, const u64 k0, u64 *buff) noexcept
+#else
 mont_sqr(u64 *result, const u64 *x, const u64 *prime, const u64 k0) noexcept
+#endif
 {
+#ifdef	WITH_C2GO
+	u64	*s = buff;
+	u64	*r = s + ECC_MAX_DIGITS * 2;
+#else
 	u64	s[ECC_MAX_DIGITS * 2];
-	u64	r[ECC_MAX_DIGITS * 2];
-	vli_clear<ndigits * 2>(r);
+	u64	r[ECC_MAX_DIGITS + 2];
+#endif
+	vli_clear<ndigits + 2>(r);
 #pragma GCC unroll 4
 	for (uint i=0; i < ndigits;i++) {
 		u64	u = (r[0] + x[i]*x[0]) * k0;
@@ -509,7 +540,7 @@ vli_mod_inv_new(u64 *result, const u64 *n, const u64 *mod) noexcept
 	u64	*a=buff;
 	u64 *b=a+ECC_MAX_DIGITS;
 	u64	*x=b+ECC_MAX_DIGITS;
-	u64	*y=u+ECC_MAX_DIGITS;
+	u64	*y=x+ECC_MAX_DIGITS;
 #else
 	u64 a[ECC_MAX_DIGITS], b[ECC_MAX_DIGITS];
 	u64 x[ECC_MAX_DIGITS], y[ECC_MAX_DIGITS];
