@@ -53,11 +53,11 @@ typedef struct {
 	int64_t	cap;
 }	GoSlice;
 
-typedef u64	felem[4];
+typedef u64	fElem[4];
 typedef	struct {
-	felem	x;
-	felem	y;
-	felem	z;
+	fElem	x;
+	fElem	y;
+	fElem	z;
 }	Point;
 
 typedef	void*	CURVE_HND;

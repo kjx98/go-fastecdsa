@@ -1,5 +1,3 @@
-// +build ignore
-
 /*
  * Copyright(c) 2020 Jesse Kuang  <jkuang@21cn.com>
  * All rights reserved.

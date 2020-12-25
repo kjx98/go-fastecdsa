@@ -173,7 +173,8 @@ static const u64 bottom63bits = 0x7ffffffffffffffful;
  * bin32_to_felem takes a little-endian byte array and converts it into felem
  * form. This assumes that the CPU is little-endian.
  */
-static void bin32_to_felem(felem out, const u8 in[32])
+//static void bin32_to_felem(felem out, const u8 in[32])
+static void bin32_to_felem(felem out, const u8 *in)
 {
     out[0] = *((u64 *)&in[0]);
     out[1] = *((u64 *)&in[8]);
@@ -185,7 +186,8 @@ static void bin32_to_felem(felem out, const u8 in[32])
  * smallfelem_to_bin32 takes a smallfelem and serialises into a little
  * endian, 32 byte array. This assumes that the CPU is little-endian.
  */
-static void smallfelem_to_bin32(u8 out[32], const smallfelem in)
+//static void smallfelem_to_bin32(u8 out[32], const smallfelem in)
+static void smallfelem_to_bin32(u8 *out, const smallfelem in)
 {
     *((u64 *)&out[0]) = in[0];
     *((u64 *)&out[8]) = in[1];
