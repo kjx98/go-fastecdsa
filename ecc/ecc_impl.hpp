@@ -496,6 +496,7 @@ vli_mod_inv(u64 *result, const u64 *input, const u64 *mod) noexcept
 /* Computes result = (1 / p_input) % mod. All VLIs are the same size.
  * The binary extended gcd algorithm was first described by Knuth
  */
+// not work yet
 template<uint ndigits> forceinline
 static void
 #ifdef	WITH_C2GO
@@ -558,6 +559,7 @@ vli_mod_inv_new(u64 *result, const u64 *n, const u64 *mod) noexcept
 		}
 	}
 	if (likely(vli_is_one<ndigits>(a))) {
+		vli_sub_from<ndigits>(y, mod);
 		if (vli_cmp<ndigits>(y, mod) >= 0) {
 			vli_sub<ndigits>(result, y, mod);
 		} else vli_set<ndigits>(result, y);

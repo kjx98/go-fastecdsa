@@ -1,4 +1,4 @@
-// +build ignore
+// +build curve
 
 /*
  * Copyright (c) 2013, 2014 Kenneth MacKay. All rights reserved.

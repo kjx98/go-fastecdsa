@@ -4,7 +4,6 @@ package ecc
 
 // #cgo CXXFLAGS: -O3 -Wpedantic -Wall -Wno-maybe-uninitialized -std=gnu++11
 // #include "ecc.h"
-// #include "curve.cc"
 import "C"
 
 // for gcc 4.8.5, __builtin_add/sub_overflow improve 10% -- 20%
