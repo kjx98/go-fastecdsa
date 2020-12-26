@@ -85,33 +85,6 @@ void	get_curve_params(u64 *p, u64 *n, u64 *b, u64 *gx, u64 *gy,
 }
 
 
-void mont_sm2_mod_mult_p(u64 *result, const u64 *x, const u64 *y)
-{
-	u64	xp[ECC_MAX_DIGITS];
-	u64	yp[ECC_MAX_DIGITS];
-	u64	r[ECC_MAX_DIGITS];
-	auto rr = sm2_p256.rr_p;
-	auto prime = sm2_p256.p;
-	mont_multP(xp, x, rr, prime);
-	mont_multP(yp, y, rr, prime);
-	mont_multP(r, xp, yp, prime);
-	mont_reductionP(result, r, prime);
-}
-
-void mont_sm2_mod_mult_n(u64 *result, const u64 *x, const u64 *y)
-{
-	u64	xp[ECC_MAX_DIGITS];
-	u64	yp[ECC_MAX_DIGITS];
-	u64	r[ECC_MAX_DIGITS];
-	auto rr = sm2_p256.rr_n;
-	auto prime = sm2_p256.n;
-	auto k0 = sm2_p256.k0_n;
-	mont_mult<4>(xp, x, rr, prime, k0);
-	mont_mult<4>(yp, y, rr, prime, k0);
-	mont_mult<4>(r, xp, yp, prime, k0);
-	mont_reduction<4>(result, r, prime, k0);
-}
-
 /* ------ Point operations ------ */
 
 /* Returns true if p_point is the point at infinity, false otherwise. */

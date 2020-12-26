@@ -29,6 +29,7 @@
 #endif
 #include "vli.hpp"
 #include "ecc.h"
+#include "curve_const.hpp"
 #include "ecc_impl.hpp"
 
 //#pragma GCC push_options
@@ -158,6 +159,30 @@ void mont_mod_exp(u64 *result, const u64 *x, const u64 *y, const montParams *pa)
 	mont_reduction<4>(result, t, prime, k0);
 #endif
 }
+
+#ifndef	WITH_C2GO
+void mont_sm2_mod_mult_p(u64 *result, const u64 *x, const u64 *y)
+{
+	u64	xp[ECC_MAX_DIGITS];
+	u64	yp[ECC_MAX_DIGITS];
+	u64	r[ECC_MAX_DIGITS];
+	mont_multP(xp, x, sm2_p256_p_rr, sm2_p256_p);
+	mont_multP(yp, y, sm2_p256_p_rr, sm2_p256_p);
+	mont_multP(r, xp, yp, sm2_p256_p);
+	mont_reductionP(result, r, sm2_p256_p);
+}
+
+void mont_sm2_mod_mult_n(u64 *result, const u64 *x, const u64 *y)
+{
+	u64	xp[ECC_MAX_DIGITS];
+	u64	yp[ECC_MAX_DIGITS];
+	u64	r[ECC_MAX_DIGITS];
+	mont_mult<4>(xp, x, sm2_p256_n_rr, sm2_p256_n, sm2_p256_k0_n);
+	mont_mult<4>(yp, y, sm2_p256_n_rr, sm2_p256_n, sm2_p256_k0_n);
+	mont_mult<4>(r, xp, yp, sm2_p256_n, sm2_p256_k0_n);
+	mont_reduction<4>(result, r, sm2_p256_n, sm2_p256_k0_n);
+}
+#endif
 
 #ifdef	WITH_C2GO
 void vli_sm2_mult_p(GoSlice *result, const u64 u)
