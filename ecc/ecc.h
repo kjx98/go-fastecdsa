@@ -51,7 +51,7 @@ typedef struct {
 	int64_t	cap;
 }	GoSlice;
 
-typedef u64	fElem[4];
+typedef u64	bn_words[4];
 
 typedef	struct {
 	u64	p[4];
@@ -60,9 +60,9 @@ typedef	struct {
 } montParams;
 
 typedef	struct {
-	fElem	x;
-	fElem	y;
-	fElem	z;
+	bn_words	x;
+	bn_words	y;
+	bn_words	z;
 }	Point;
 
 typedef	void*	CURVE_HND;

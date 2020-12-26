@@ -29,7 +29,6 @@
 #ifdef	WITH_SYS_RANDOM
 #include <sys/random.h>
 #endif
-#include "vli.hpp"
 #include "ecc.h"
 #include "ecc_impl.hpp"
 

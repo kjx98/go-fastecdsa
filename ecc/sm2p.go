@@ -3,7 +3,7 @@
 package ecc
 
 // #cgo CXXFLAGS: -O3 -Wpedantic -Wall -Wno-maybe-uninitialized -std=gnu++11
-// #include "sm2p256.c"
+// #include "sm2p.h"
 import "C"
 
 // for gcc 4.8.5, __builtin_add/sub_overflow improve 10% -- 20%
@@ -13,24 +13,10 @@ import "C"
 // cgo CXXFLAGS: -O2 -Wpedantic -Wall -std=gnu++11 -DWITH_SM2_MULTP
 
 import (
-	//"crypto/elliptic"
-	"math/big"
-	"unsafe"
+//"crypto/elliptic"
+//"math/big"
+//"unsafe"
 )
-
-func felemFromWordSlice(x []big.Word) *C.felem {
-	var dd [4]big.Word
-	var out C.felem
-	copy(dd[:], x)
-	C.bin32_to_felem(out, (*C.u8)(unsafe.Pointer(&dd[0])))
-	return &out
-}
-
-func felemToWordSlice(in C.smallfelem) []big.Word {
-	var dd [4]big.Word
-	C.smallfelem_to_bin32((*C.u8)(unsafe.Pointer(&dd[0])), in)
-	return dd[:4]
-}
 
 /*
 func vliModMultMontP(x, y []big.Word) *big.Int {

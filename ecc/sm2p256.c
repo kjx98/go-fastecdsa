@@ -80,25 +80,7 @@
  * Otherwise based on Emilia's P224 work, which was inspired by my curve25519
  * work which got its smarts from Daniel J. Bernstein's work on the same.
  */
-
-# include <stdint.h>
-# include <stdbool.h>
-# include <sys/types.h>
-# include <string.h>
-
-# if defined(__GNUC__) && (__GNUC__ > 3 || (__GNUC__ == 3 && __GNUC_MINOR__ >= 1))
-  /* even with gcc, the typedef won't work for 32-bit platforms */
-typedef __uint128_t uint128_t;  /* nonstandard; implemented by gcc on 64-bit
-                                 * platforms */
-typedef __int128_t int128_t;
-# else
-#  error "Need GCC 3.1 or later to define type uint128_t"
-# endif
-
-typedef uint8_t u8;
-typedef uint32_t u32;
-typedef uint64_t u64;
-typedef int64_t s64;
+#include "sm2p.h"
 
 /*
  * The underlying field. SM2-P256 operates over GF(2^256-2^224-2^96+2^64-1).

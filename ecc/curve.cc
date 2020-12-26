@@ -31,10 +31,9 @@
 #ifdef	WITH_SYS_RANDOM
 #include <sys/random.h>
 #endif
-#include "vli.hpp"
 #include "ecc.h"
-#include "ecc_impl.hpp"
-#include "ecc_curve_defs.h"
+#include "curve_defs.hpp"
+#include "mont.hpp"
 
 #pragma GCC push_options
 #pragma GCC optimize ("unroll-loops")

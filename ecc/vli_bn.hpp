@@ -44,9 +44,10 @@ namespace vli {
 template<uint ndigits>
 class bignum {
 public:
-	bignum() = default;
+	using bn_words = u64[ndigits];
+	bignum(bn_words init = {}) noexcept : d{} {}
 	bignum(const bignum &) = default;
-	//bignum(const u64 src[]) : d(src) {}
+	explicit bignum(const u64 v) noexcept : d{v,0,0,0} {}
 	bignum(const u64 *src) {
 #pragma GCC unroll 4
 		for (uint i = 0; i < ndigits; i++)
@@ -58,6 +59,7 @@ public:
 		for (uint i = 0; i < ndigits; i++)
 			d[i] = 0;
 	}
+	const u64* data() const { return d; }
 	bool is_zero() noexcept
 	{
 #pragma GCC unroll 4
@@ -75,7 +77,7 @@ public:
 		}
 		return true;
 	}
-	/* Sets dest = src. */
+	/* Sets dest = this, copyout */
 	void set(u64 *dest) noexcept
 	{
 #pragma GCC unroll 4
@@ -328,7 +330,7 @@ public:
 	}
 
 protected:
-	u64		d[ndigits];
+	bn_words	d;
 };
 
 

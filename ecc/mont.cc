@@ -27,8 +27,6 @@
 #ifdef	__x86_64__
 #include <cpuid.h>
 #endif
-#include "vli.hpp"
-#include "vli_bn.hpp"
 #include "ecc.h"
 #include "curve_const.hpp"
 #include "mont.hpp"

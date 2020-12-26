@@ -3,6 +3,18 @@
 #define __CURVE_CONST_HPP__
 #include "cdefs.h"
 
+/* NIST P-192: a = p - 3 */
+/*
+constexpr u64 nist_p192_p[] = { 0xFFFFFFFFFFFFFFFFull, 0xFFFFFFFFFFFFFFFEull,
+				0xFFFFFFFFFFFFFFFFull };
+constexpr u64 nist_p192_n[] = { 0x146BC9B1B4D22831ull, 0xFFFFFFFF99DEF836ull,
+				0xFFFFFFFFFFFFFFFFull };
+constexpr u64 nist_p192_a[] = { 0xFFFFFFFFFFFFFFFCull, 0xFFFFFFFFFFFFFFFEull,
+				0xFFFFFFFFFFFFFFFFull };
+constexpr u64 nist_p192_b[] = { 0xFEB8DEECC146B9B1ull, 0x0FA7E9AB72243049ull,
+				0x64210519E59C80E7ull };
+*/
+
 /* NIST P-256: a = p - 3 */
 constexpr u64 nist_p256_p[] = { 0xFFFFFFFFFFFFFFFFull, 0x00000000FFFFFFFFull,
 				0x0000000000000000ull, 0xFFFFFFFF00000001ull };
