@@ -2,7 +2,6 @@
 #pragma once
 #ifndef _CRYTO_ECC_CURVE_DEFS_H
 #define _CRYTO_ECC_CURVE_DEFS_H
-#include "cdefs.h"
 #include "curve_const.hpp"
 #include "ecc_impl.hpp"
 

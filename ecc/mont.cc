@@ -28,9 +28,10 @@
 #include <cpuid.h>
 #endif
 #include "vli.hpp"
+#include "vli_bn.hpp"
 #include "ecc.h"
 #include "curve_const.hpp"
-#include "ecc_impl.hpp"
+#include "mont.hpp"
 
 //#pragma GCC push_options
 //#pragma GCC optimize ("unroll-loops")
