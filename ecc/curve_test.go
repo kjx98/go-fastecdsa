@@ -1,4 +1,4 @@
-// +build curve
+// +build curve sm2p
 
 package ecc
 

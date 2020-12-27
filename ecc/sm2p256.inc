@@ -1,4 +1,4 @@
-// +build sm2p256
+// +build sm2p
 
 /* ====================================================================
  * Copyright (c) 2014 - 2018 The GmSSL Project.  All rights reserved.

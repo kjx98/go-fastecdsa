@@ -1,4 +1,4 @@
-// +build sm2p256
+// +build sm2p
 
 #pragma once
 #ifndef	__SM2P_H__
@@ -23,8 +23,17 @@ typedef uint32_t u32;
 typedef uint64_t u64;
 typedef int64_t s64;
 
-void sm2_mod_inv(u64 *result, const u64 *in, const u64 *mod);
+typedef u64	bn_words[4];
+
+typedef	struct {
+	bn_words	x;
+	bn_words	y;
+	bn_words	z;
+}	Point;
+
+void sm2_mod_inv(u64 *result, const u64 *in);
 void sm2_mod_mul(u64 *result, const u64 *x, const u64 *y);
-void sm2_point_add(u64 *result, const u64 *p, const u64 *q);
+void sm2_point_add(Point *result, const Point *p, const Point *q);
+void sm2_point_double(Point *result, const Point *p);
 
 #endif	//	__SM2P_H__
