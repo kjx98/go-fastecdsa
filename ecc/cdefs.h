@@ -30,19 +30,34 @@
 #include <stdint.h>
 #include <stdbool.h>
 #include <sys/types.h>
+
 typedef	__uint32_t u32;
 typedef	__uint64_t u64;
 typedef __uint64_t be64;
 typedef __uint8_t u8;
+typedef __int64_t s64;
 typedef	unsigned int	uint;
 
 // gcc before 6 w/out builtin_usubl_overflow...
 #if	__GNUC__ > 5 || __clang_major__ > 6
+// has buildin_usubl_overflow...
+#elif defined(__GNUC__) && (__GNUC__ > 3 || (__GNUC__ == 3 && __GNUC_MINOR__ >= 1))
+  /* even with gcc, the typedef won't work for 32-bit platforms */
+# define	NO_BUILTIN_OVERFLOW
+#else
+#  error "Need GCC 3.1 or later to define type uint128_t"
+#endif
+
 # define unlikely(cond)	__builtin_expect ((cond), 0)
 # define likely(cond)	__builtin_expect (!!(cond), 1)
-#define forceinline __inline__ __attribute__((always_inline))
-#else
-# error "MUST compiled by gcc/clang, gcc 7 or above"
-#endif
+# define forceinline __inline__ __attribute__((always_inline))
+
+typedef u64	bn_words[4];
+
+typedef	struct {
+	bn_words	x;
+	bn_words	y;
+	bn_words	z;
+}	Point;
 
 #endif	//	__CDEFS_H__

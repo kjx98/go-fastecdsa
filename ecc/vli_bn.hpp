@@ -24,7 +24,7 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 #pragma once
-#ifndef __VLI_BN_HPP__
+#if	!defined(__VLI_BN_HPP__) && !defined(NO_BUILTIN_OVERFLOW)
 #define __VLI_BN_HPP__
 
 #include <stdint.h>

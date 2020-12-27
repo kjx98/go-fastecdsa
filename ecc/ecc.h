@@ -51,7 +51,15 @@ typedef struct {
 	int64_t	cap;
 }	GoSlice;
 
+#ifdef	ommit
 typedef u64	bn_words[4];
+
+typedef	struct {
+	bn_words	x;
+	bn_words	y;
+	bn_words	z;
+}	Point;
+#endif
 
 typedef	struct {
 	u64	p[4];
@@ -59,13 +67,8 @@ typedef	struct {
 	u64	k0;
 } montParams;
 
-typedef	struct {
-	bn_words	x;
-	bn_words	y;
-	bn_words	z;
-}	Point;
-
 typedef	void*	CURVE_HND;
+
 
 /**
  * ecc_is_key_valid() - Validate a given ECDH private key
