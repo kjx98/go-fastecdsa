@@ -49,17 +49,16 @@ func TestSM2Inverse(t *testing.T) {
 }
 
 // diff , maybe z diff
-/*
 func TestSM2AddJacobian(t *testing.T) {
 	c := sm2.SM2go()
-	var		jc	jacobianIntf
+	var jc jacobianIntf
 	if opt, ok := c.(jacobianIntf); ok {
 		jc = opt
 	} else {
 		t.Log("not jacobian interface")
 		t.Fail()
 	}
-	x3, y3, z3 := jc.DoubleJacobian(x1, y1, bigOne)
+	x3, y3, z3 := jc.AddJacobian(x1, y1, bigOne, x2, y2, bigOne)
 	x3a, y3a, z3a := sm2Add(x1, y1, bigOne, x2, y2, bigOne)
 	if x3.Cmp(x3a) != 0 {
 		t.Logf("sm2c.DoubleJ step1 diff sm2.Double x:\n%s\n%s",
@@ -77,11 +76,10 @@ func TestSM2AddJacobian(t *testing.T) {
 		t.Fail()
 	}
 }
-*/
 
 func TestSM2DoubleJacobian(t *testing.T) {
 	c := sm2.SM2go()
-	var		jc	jacobianIntf
+	var jc jacobianIntf
 	if opt, ok := c.(jacobianIntf); ok {
 		jc = opt
 	} else {
