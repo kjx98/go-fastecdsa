@@ -152,7 +152,7 @@ func vliBarrettDiv(prod *big.Int, muB []big.Word) (result *big.Int) {
 }
 */
 
-func vliModMultMont(x, y, mod []big.Word, rr []uint64, k0 uint64) *big.Int {
+func vliModMultMont(x, y, mod, rr []big.Word, k0 uint64) *big.Int {
 	var r [32]big.Word
 	var prime [8]big.Word
 	copy(prime[:4], mod)
@@ -162,7 +162,7 @@ func vliModMultMont(x, y, mod []big.Word, rr []uint64, k0 uint64) *big.Int {
 	return new(big.Int).SetBits(r[:4])
 }
 
-func vliExpModMont(x, y, mod []big.Word, rr []uint64, k0 uint64) (res *big.Int) {
+func vliExpModMont(x, y, mod, rr []big.Word, k0 uint64) (res *big.Int) {
 	var r [32]big.Word
 	var prime [8]big.Word
 	copy(prime[:4], mod)
@@ -173,7 +173,7 @@ func vliExpModMont(x, y, mod []big.Word, rr []uint64, k0 uint64) (res *big.Int) 
 	return
 }
 
-func vliModMultMontP(x, y, mod []big.Word, rr []uint64) *big.Int {
+func vliModMultMontP(x, y, mod, rr []big.Word) *big.Int {
 	var r [32]big.Word
 	_mont_sm2_mod_mult_p(unsafe.Pointer(&r[0]), unsafe.Pointer(&x[0]),
 		unsafe.Pointer(&y[0]))
