@@ -163,7 +163,7 @@ func TestRRbySM2(t *testing.T) {
 	RR := new(big.Int).Mul(R, R)
 	RR.Mod(RR, n)
 	ww := RR.Bits()
-	t.Logf("RR of sm2 is %X %X %X %X", ww[0], ww[1], ww[2], ww[3])
+	t.Logf("RR mod N of sm2 is %X %X %X %X", ww[0], ww[1], ww[2], ww[3])
 	ww = n.Bits()
 	t.Logf("N(order) is %X %X %X %X", ww[0], ww[1], ww[2], ww[3])
 
@@ -175,7 +175,7 @@ func TestRRbySM2(t *testing.T) {
 	rr := new(big.Int).Mul(r, r)
 	rr.Mod(rr, p)
 	ww = rr.Bits()
-	t.Logf("rr is %X %X %X %X", ww[0], ww[1], ww[2], ww[3])
+	t.Logf("rr mod P is %X %X %X %X", ww[0], ww[1], ww[2], ww[3])
 	Rinv := new(big.Int).SetUint64(1)
 	Rinv.Lsh(Rinv, 257)
 	Rinv.Mod(Rinv, p)

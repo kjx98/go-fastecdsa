@@ -18,6 +18,8 @@ typedef __int128_t int128_t;
 void sm2_mod_inv(bn_words *result, const bn_words *in);
 void sm2_mod_mul(bn_words *result, const bn_words *x, const bn_words *y);
 void sm2_point_add(Point *result, const Point *p, const Point *q);
+void sm2_point_add_jacobian(Point *result, const Point *p, const Point *q);
 void sm2_point_double(Point *result, const Point *p);
+void sm2_point_double_jacobian(Point *result, const Point *p);
 
 #endif	//	__SM2P_H__

@@ -48,7 +48,22 @@ func TestSM2Inverse(t *testing.T) {
 	}
 }
 
-// diff , maybe z diff
+func TestSM2Add(t *testing.T) {
+	c := sm2.SM2go()
+	x3, y3 := c.Add(x1, y1, x2, y2)
+	x3a, y3a := sm2Add(x1, y1, x2, y2)
+	if x3.Cmp(x3a) != 0 {
+		t.Logf("sm2c.Add step1 diff sm2.Double x:\n%s\n%s",
+			x3.Text(16), x3a.Text(16))
+		t.Fail()
+	}
+	if y3.Cmp(y3a) != 0 {
+		t.Logf("sm2c.AddJ step1 diff sm2.Double y:\n%s\n%s",
+			y3.Text(16), y3a.Text(16))
+		t.Fail()
+	}
+}
+
 func TestSM2AddJacobian(t *testing.T) {
 	c := sm2.SM2go()
 	var jc jacobianIntf
@@ -59,7 +74,28 @@ func TestSM2AddJacobian(t *testing.T) {
 		t.Fail()
 	}
 	x3, y3, z3 := jc.AddJacobian(x1, y1, bigOne, x2, y2, bigOne)
-	x3a, y3a, z3a := sm2Add(x1, y1, bigOne, x2, y2, bigOne)
+	x3a, y3a, z3a := sm2AddJacobian(x1, y1, bigOne, x2, y2, bigOne)
+	if x3.Cmp(x3a) != 0 {
+		t.Logf("sm2c.AddJ step1 diff sm2.Double x:\n%s\n%s",
+			x3.Text(16), x3a.Text(16))
+		t.Fail()
+	}
+	if y3.Cmp(y3a) != 0 {
+		t.Logf("sm2c.AddJ step1 diff sm2.Double y:\n%s\n%s",
+			y3.Text(16), y3a.Text(16))
+		t.Fail()
+	}
+	if z3.Cmp(z3a) != 0 {
+		t.Logf("sm2c.AddJ step1 diff sm2.Double z:\n%s\n%s",
+			z3.Text(16), z3a.Text(16))
+		t.Fail()
+	}
+}
+
+func TestSM2Double(t *testing.T) {
+	c := sm2.SM2go()
+	x3, y3 := c.Double(x1, y1)
+	x3a, y3a := sm2Double(x1, y1)
 	if x3.Cmp(x3a) != 0 {
 		t.Logf("sm2c.DoubleJ step1 diff sm2.Double x:\n%s\n%s",
 			x3.Text(16), x3a.Text(16))
@@ -70,9 +106,16 @@ func TestSM2AddJacobian(t *testing.T) {
 			y3.Text(16), y3a.Text(16))
 		t.Fail()
 	}
-	if z3.Cmp(z3a) != 0 {
-		t.Logf("sm2c.DoubleJ step1 diff sm2.Double z:\n%s\n%s",
-			z3.Text(16), z3a.Text(16))
+	x3, y3 = c.Double(x2, y2)
+	x3a, y3a = sm2Double(x2, y2)
+	if x3.Cmp(x3a) != 0 {
+		t.Logf("sm2c.DoubleJ step2 diff sm2.Double x:\n%s\n%s",
+			x3.Text(16), x3a.Text(16))
+		t.Fail()
+	}
+	if y3.Cmp(y3a) != 0 {
+		t.Logf("sm2c.DoubleJ step2 diff sm2.Double y:\n%s\n%s",
+			y3.Text(16), y3a.Text(16))
 		t.Fail()
 	}
 }
@@ -87,7 +130,7 @@ func TestSM2DoubleJacobian(t *testing.T) {
 		t.Fail()
 	}
 	x3, y3, z3 := jc.DoubleJacobian(x1, y1, bigOne)
-	x3a, y3a, z3a := sm2Double(x1, y1, bigOne)
+	x3a, y3a, z3a := sm2DoubleJacobian(x1, y1, bigOne)
 	if x3.Cmp(x3a) != 0 {
 		t.Logf("sm2c.DoubleJ step1 diff sm2.Double x:\n%s\n%s",
 			x3.Text(16), x3a.Text(16))
@@ -104,7 +147,7 @@ func TestSM2DoubleJacobian(t *testing.T) {
 		t.Fail()
 	}
 	x3, y3, z3 = jc.DoubleJacobian(x2, y2, bigOne)
-	x3a, y3a, z3a = sm2Double(x2, y2, bigOne)
+	x3a, y3a, z3a = sm2DoubleJacobian(x2, y2, bigOne)
 	if x3.Cmp(x3a) != 0 {
 		t.Logf("sm2c.DoubleJ step2 diff sm2.Double x:\n%s\n%s",
 			x3.Text(16), x3a.Text(16))
@@ -154,18 +197,27 @@ func BenchmarkSM2ModInv(b *testing.B) {
 		_ = sm2ModInv(x1.Bits())
 	}
 }
+
 func BenchmarkSM2ECADD(b *testing.B) {
 	b.RunParallel(func(pb *testing.PB) {
 		for pb.Next() {
-			_, _, _ = sm2Add(x1, y1, bigOne, x2, y2, bigOne)
+			_, _ = sm2Add(x1, y1, x2, y2)
 		}
 	})
 }
 
-func BenchmarkSM2ECDBL(b *testing.B) {
+func BenchmarkSM2ECADDJac(b *testing.B) {
 	b.RunParallel(func(pb *testing.PB) {
 		for pb.Next() {
-			_, _, _ = sm2Double(x1, y1, bigOne)
+			_, _, _ = sm2AddJacobian(x1, y1, bigOne, x2, y2, bigOne)
+		}
+	})
+}
+
+func BenchmarkSM2ECDBLJac(b *testing.B) {
+	b.RunParallel(func(pb *testing.PB) {
+		for pb.Next() {
+			_, _, _ = sm2DoubleJacobian(x1, y1, bigOne)
 		}
 	})
 }

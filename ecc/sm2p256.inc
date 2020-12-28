@@ -1,5 +1,3 @@
-// +build sm2p
-
 /* ====================================================================
  * Copyright (c) 2014 - 2018 The GmSSL Project.  All rights reserved.
  *
@@ -156,7 +154,7 @@ static const u64 bottom63bits = 0x7ffffffffffffffful;
  * form. This assumes that the CPU is little-endian.
  */
 //static void bin32_to_felem(felem out, const u8 in[32])
-static void bin32_to_felem(felem out, const u8 *in)
+static forceinline void bin32_to_felem(felem out, const u8 *in)
 {
     out[0] = *((u64 *)&in[0]);
     out[1] = *((u64 *)&in[8]);
@@ -169,7 +167,7 @@ static void bin32_to_felem(felem out, const u8 *in)
  * endian, 32 byte array. This assumes that the CPU is little-endian.
  */
 //static void smallfelem_to_bin32(u8 out[32], const smallfelem in)
-static void smallfelem_to_bin32(u8 *out, const smallfelem in)
+static forceinline void smallfelem_to_bin32(u8 *out, const smallfelem in)
 {
     *((u64 *)&out[0]) = in[0];
     *((u64 *)&out[8]) = in[1];
@@ -178,7 +176,7 @@ static void smallfelem_to_bin32(u8 *out, const smallfelem in)
 }
 
 /* To preserve endianness when using BN_bn2bin and BN_bin2bn */
-static void flip_endian(u8 *out, const u8 *in, unsigned len)
+static forceinline void flip_endian(u8 *out, const u8 *in, unsigned len)
 {
     unsigned i;
     for (i = 0; i < len; ++i)
@@ -191,7 +189,7 @@ static void flip_endian(u8 *out, const u8 *in, unsigned len)
  * ----------------
  */
 
-static void smallfelem_one(smallfelem out)
+static forceinline void smallfelem_one(smallfelem out)
 {
     out[0] = 1;
     out[1] = 0;
@@ -199,7 +197,7 @@ static void smallfelem_one(smallfelem out)
     out[3] = 0;
 }
 
-static void smallfelem_assign(smallfelem out, const smallfelem in)
+static forceinline void smallfelem_assign(smallfelem out, const smallfelem in)
 {
     out[0] = in[0];
     out[1] = in[1];
@@ -207,7 +205,7 @@ static void smallfelem_assign(smallfelem out, const smallfelem in)
     out[3] = in[3];
 }
 
-static void felem_assign(felem out, const felem in)
+static forceinline void felem_assign(felem out, const felem in)
 {
     out[0] = in[0];
     out[1] = in[1];
@@ -216,7 +214,7 @@ static void felem_assign(felem out, const felem in)
 }
 
 /* felem_sum sets out = out + in. */
-static void felem_sum(felem out, const felem in)
+static forceinline void felem_sum(felem out, const felem in)
 {
     out[0] += in[0];
     out[1] += in[1];
@@ -225,7 +223,7 @@ static void felem_sum(felem out, const felem in)
 }
 
 /* felem_small_sum sets out = out + in. */
-static void felem_small_sum(felem out, const smallfelem in)
+static forceinline void felem_small_sum(felem out, const smallfelem in)
 {
     out[0] += in[0];
     out[1] += in[1];
@@ -234,7 +232,7 @@ static void felem_small_sum(felem out, const smallfelem in)
 }
 
 /* felem_scalar sets out = out * scalar */
-static void felem_scalar(felem out, const u64 scalar)
+static forceinline void felem_scalar(felem out, const u64 scalar)
 {
     out[0] *= scalar;
     out[1] *= scalar;
@@ -243,7 +241,7 @@ static void felem_scalar(felem out, const u64 scalar)
 }
 
 /* longfelem_scalar sets out = out * scalar */
-static void longfelem_scalar(longfelem out, const u64 scalar)
+static forceinline void longfelem_scalar(longfelem out, const u64 scalar)
 {
     out[0] *= scalar;
     out[1] *= scalar;
@@ -268,7 +266,7 @@ static const felem zero105 =
  * On exit:
  *   out[i] < out[i] + 2^105
  */
-static void smallfelem_neg(felem out, const smallfelem small)
+static forceinline void smallfelem_neg(felem out, const smallfelem small)
 {
     /* In order to prevent underflow, we subtract from 0 mod p. */
     out[0] = zero105[0] - small[0];
@@ -284,7 +282,7 @@ static void smallfelem_neg(felem out, const smallfelem small)
  * On exit:
  *   out[i] < out[i] + 2^105
  */
-static void felem_diff(felem out, const felem in)
+static forceinline void felem_diff(felem out, const felem in)
 {
     /*
      * In order to prevent underflow, we add 0 mod p before subtracting.
@@ -316,7 +314,7 @@ static const felem zero107 =
  * On exit:
  *   out[i] < out[i] + 2^107
  */
-static void felem_diff_zero107(felem out, const felem in)
+static forceinline void felem_diff_zero107(felem out, const felem in)
 {
     /*
      * In order to prevent underflow, we add 0 mod p before subtracting.
@@ -339,7 +337,7 @@ static void felem_diff_zero107(felem out, const felem in)
  * On exit:
  *   out[i] < out[i] + 2^70 + 2^40
  */
-static void longfelem_diff(longfelem out, const longfelem in)
+static forceinline void longfelem_diff(longfelem out, const longfelem in)
 {
     static const limb two70m39m7m6 =
         (((limb) 1) << 70) - (((limb) 1) << 39)- (((limb) 1) << 7) -
@@ -389,7 +387,7 @@ static const felem zero64 = { two64m0, two64m32, two64m0, two64m32m0 };
  * On exit:
  *   out[i] < 2^64
  */
-static void felem_shrink(smallfelem out, const felem in)
+static forceinline void felem_shrink(smallfelem out, const felem in)
 {
     felem tmp;
     u64 a, b, mask;
@@ -479,7 +477,7 @@ static void felem_shrink(smallfelem out, const felem in)
 }
 
 /* smallfelem_expand converts a smallfelem to an felem */
-static void smallfelem_expand(felem out, const smallfelem in)
+static forceinline void smallfelem_expand(felem out, const smallfelem in)
 {
     out[0] = in[0];
     out[1] = in[1];
@@ -737,7 +735,7 @@ static void felem_small_mul(longfelem out, const smallfelem small1,
  *   out[2] <= out[2] + in[7] + 2*in[6] + 2^33*in[7]
  *   out[3] <= out[3] + 2^32*in[4] + 3*in[7]
  */
-static void felem_reduce(felem out, const longfelem in)
+static forceinline void felem_reduce(felem out, const longfelem in)
 {
     uint128_t a, b, c, d;
     a = in[6] + in[7];
@@ -755,7 +753,7 @@ static void felem_reduce(felem out, const longfelem in)
  * subtract_u64 sets *result = *result - v and *carry to one if the
  * subtraction underflowed.
  */
-static void subtract_u64(u64 *result, u64 *carry, u64 v)
+static forceinline void subtract_u64(u64 *result, u64 *carry, u64 v)
 {
     uint128_t r = *result;
     r -= v;
@@ -767,7 +765,7 @@ static void subtract_u64(u64 *result, u64 *carry, u64 v)
  * felem_contract converts |in| to its unique, minimal representation. On
  * entry: in[i] < 2^109
  */
-static void felem_contract(smallfelem out, const felem in)
+static forceinline void felem_contract(smallfelem out, const felem in)
 {
     unsigned i;
     u64 all_equal_so_far = 0, result = 0, carry;
@@ -1744,7 +1742,94 @@ static char get_bit(const felem_bytearray in, int i)
     return (in[i >> 3] >> (i & 7)) & 1;
 }
 
-#ifdef	ommit
+/*-
+ * This function looks at 5+1 scalar bits (5 current, 1 adjacent less
+ * significant bit), and recodes them into a signed digit for use in fast point
+ * multiplication: the use of signed rather than unsigned digits means that
+ * fewer points need to be precomputed, given that point inversion is easy
+ * (a precomputed point dP makes -dP available as well).
+ *
+ * BACKGROUND:
+ *
+ * Signed digits for multiplication were introduced by Booth ("A signed binary
+ * multiplication technique", Quart. Journ. Mech. and Applied Math., vol. IV,
+ * pt. 2 (1951), pp. 236-240), in that case for multiplication of integers.
+ * Booth's original encoding did not generally improve the density of nonzero
+ * digits over the binary representation, and was merely meant to simplify the
+ * handling of signed factors given in two's complement; but it has since been
+ * shown to be the basis of various signed-digit representations that do have
+ * further advantages, including the wNAF, using the following general approach:
+ *
+ * (1) Given a binary representation
+ *
+ *       b_k  ...  b_2  b_1  b_0,
+ *
+ *     of a nonnegative integer (b_k in {0, 1}), rewrite it in digits 0, 1, -1
+ *     by using bit-wise subtraction as follows:
+ *
+ *        b_k b_(k-1)  ...  b_2  b_1  b_0
+ *      -     b_k      ...  b_3  b_2  b_1  b_0
+ *       -------------------------------------
+ *        s_k b_(k-1)  ...  s_3  s_2  s_1  s_0
+ *
+ *     A left-shift followed by subtraction of the original value yields a new
+ *     representation of the same value, using signed bits s_i = b_(i+1) - b_i.
+ *     This representation from Booth's paper has since appeared in the
+ *     literature under a variety of different names including "reversed binary
+ *     form", "alternating greedy expansion", "mutual opposite form", and
+ *     "sign-alternating {+-1}-representation".
+ *
+ *     An interesting property is that among the nonzero bits, values 1 and -1
+ *     strictly alternate.
+ *
+ * (2) Various window schemes can be applied to the Booth representation of
+ *     integers: for example, right-to-left sliding windows yield the wNAF
+ *     (a signed-digit encoding independently discovered by various researchers
+ *     in the 1990s), and left-to-right sliding windows yield a left-to-right
+ *     equivalent of the wNAF (independently discovered by various researchers
+ *     around 2004).
+ *
+ * To prevent leaking information through side channels in point multiplication,
+ * we need to recode the given integer into a regular pattern: sliding windows
+ * as in wNAFs won't do, we need their fixed-window equivalent -- which is a few
+ * decades older: we'll be using the so-called "modified Booth encoding" due to
+ * MacSorley ("High-speed arithmetic in binary computers", Proc. IRE, vol. 49
+ * (1961), pp. 67-91), in a radix-2^5 setting.  That is, we always combine five
+ * signed bits into a signed digit:
+ *
+ *       s_(4j + 4) s_(4j + 3) s_(4j + 2) s_(4j + 1) s_(4j)
+ *
+ * The sign-alternating property implies that the resulting digit values are
+ * integers from -16 to 16.
+ *
+ * Of course, we don't actually need to compute the signed digits s_i as an
+ * intermediate step (that's just a nice way to see how this scheme relates
+ * to the wNAF): a direct computation obtains the recoded digit from the
+ * six bits b_(4j + 4) ... b_(4j - 1).
+ *
+ * This function takes those five bits as an integer (0 .. 63), writing the
+ * recoded digit to *sign (0 for positive, 1 for negative) and *digit (absolute
+ * value, in the range 0 .. 8).  Note that this integer essentially provides the
+ * input bits "shifted to the left" by one position: for example, the input to
+ * compute the least significant recoded digit, given that there's no bit b_-1,
+ * has to be b_4 b_3 b_2 b_1 b_0 0.
+ *
+ */
+static void recode_scalar_bits(unsigned char *sign,
+                                     unsigned char *digit, unsigned char in)
+{
+    unsigned char s, d;
+
+    s = ~((in >> 5) - 1);       /* sets all bits to MSB(in), 'in' seen as
+                                 * 6-bit value */
+    d = (1 << 6) - in - 1;
+    d = (d & s) | (in & ~s);
+    d = (d >> 1) + (d & 1);
+
+    *sign = s & 1;
+    *digit = d;
+}
+
 /*
  * Interleaved point multiplication using precomputed point multiples: The
  * small point multiples 0*P, 1*P, ..., 17*P are in pre_comp[], the scalars
@@ -1824,7 +1909,7 @@ static void batch_mul(felem x_out, felem y_out, felem z_out,
                 bits |= get_bit(scalars[num], i + 1) << 2;
                 bits |= get_bit(scalars[num], i) << 1;
                 bits |= get_bit(scalars[num], i - 1);
-                ec_GFp_nistp_recode_scalar_bits(&sign, &digit, bits);
+                recode_scalar_bits(&sign, &digit, bits);
                 /*
                  * select the point to add or subtract, in constant time
                  */
@@ -1857,67 +1942,44 @@ static void batch_mul(felem x_out, felem y_out, felem z_out,
  * Takes the Jacobian coordinates (X, Y, Z) of a point and returns (X', Y') =
  * (X/Z^2, Y/Z^3)
  */
-int ec_GFp_sm2p256_point_get_affine_coordinates(const EC_GROUP *group,
-                                                const EC_POINT *point,
-                                                BIGNUM *x, BIGNUM *y,
-                                                BN_CTX *ctx)
+static int point_get_affine_jacobian(smallfelem x_out, smallfelem y_out,
+						const felem x_in, const felem y_in, const felem z_in)
 {
-    felem z1, z2, x_in, y_in;
-    smallfelem x_out, y_out;
+    felem z1, z2, xy;
     longfelem tmp;
-
-    if (EC_POINT_is_at_infinity(group, point)) {
-        ECerr(EC_F_EC_GFP_SM2P256_POINT_GET_AFFINE_COORDINATES,
-              EC_R_POINT_AT_INFINITY);
-        return 0;
-    }
-    if ((!BN_to_felem(x_in, point->X)) || (!BN_to_felem(y_in, point->Y)) ||
-        (!BN_to_felem(z1, point->Z)))
-        return 0;
 
 #ifdef SM2_USE_INV_SQR
     /* z2 = z^-2 */
-    felem_inv_sqr(z2, z1);
+    felem_inv_sqr(z2, z_in);
     felem_mul(tmp, x_in, z2);
 #else
-    felem_inv(z2, z1);
+    felem_inv(z2, z_in);
     felem_square(tmp, z2);
     felem_reduce(z1, tmp);
     felem_mul(tmp, x_in, z1);
 #endif
 
-    felem_reduce(x_in, tmp);
-    felem_contract(x_out, x_in);
-    if (x != NULL) {
-        if (!smallfelem_to_BN(x, x_out)) {
-            ECerr(EC_F_EC_GFP_SM2P256_POINT_GET_AFFINE_COORDINATES,
-                  ERR_R_BN_LIB);
-            return 0;
-        }
-    }
-    if (y != NULL) {
+    felem_reduce(xy, tmp);
+    felem_contract(x_out, xy);
 #ifdef SM2_USE_INV_SQR
-        felem_square(tmp, z2);
-        felem_reduce(z2, tmp);
-        felem_mul(tmp, z1, z2);
+	// z2 = z^-2
+    felem_square(tmp, z2);
+    felem_reduce(z2, tmp);
+	// z_in = z
+    felem_mul(tmp, z_in, z2);
 #else
-        felem_mul(tmp, z1, z2);
+	// z2 = z^-1, z1 = z^-2
+    felem_mul(tmp, z1, z2);
 #endif
-        felem_reduce(z1, tmp);
-        felem_mul(tmp, y_in, z1);
-        felem_reduce(y_in, tmp);
-        felem_contract(y_out, y_in);
-
-        if (!smallfelem_to_BN(y, y_out)) {
-            ECerr(EC_F_EC_GFP_SM2P256_POINT_GET_AFFINE_COORDINATES,
-                  ERR_R_BN_LIB);
-            return 0;
-        }
-    }
+	// z1 = z^-3
+    felem_reduce(z1, tmp);
+    felem_mul(tmp, y_in, z1);
+    felem_reduce(xy, tmp);
+    felem_contract(y_out, xy);
     return 1;
 }
 
-
+#ifdef	ommit
 /*
  * Computes scalar*generator + \sum scalars[i]*points[i], ignoring NULL
  * values Result is stored in r (r can equal one of the inputs).
