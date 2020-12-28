@@ -1,4 +1,4 @@
-// +build !curve,sm2p
+// +build curve,!sm2p
 
 /*
  * Copyright (c) 2013, 2014 Kenneth MacKay. All rights reserved.
@@ -143,72 +143,84 @@ vli_mod_square_f(u64 *result, const u64 *left, const ecc_curve *curve) noexcept
  * coordinates. From http://eprint.iacr.org/2011/338.pdf
  */
 
+/*  RESULT = 2 * POINT  (Weierstrass version). */
 /* Double in place */
 template<uint ndigits> forceinline
-static void ecc_point_double_jacobian(u64 *x1, u64 *y1, u64 *z1,
-				      const ecc_curve *curve)
+static void ecc_point_double_jacobian(u64 *x3, u64 *y3, u64 *z3,
+					u64 *x1, u64 *y1, u64 *z1, const ecc_curve *curve)
 {
-	/* t1 = x, t2 = y, t3 = z */
-#pragma GCC diagnostic push
-#pragma GCC diagnostic ignored "-Wmaybe-uninitialized"
-	u64 t4[ECC_MAX_DIGITS];
-	u64 t5[ECC_MAX_DIGITS];
-	const u64 *curve_prime = curve->p;
+#define x3 (result->x)
+#define y3 (result->y)
+#define z3 (result->z)
+#define t1 (ctx->t.scratch[0])
+#define t2 (ctx->t.scratch[1])
+#define t3 (ctx->t.scratch[2])
+#define l1 (ctx->t.scratch[3])
+#define l2 (ctx->t.scratch[4])
+#define l3 (ctx->t.scratch[5])
 
-	if (vli_is_zero<ndigits>(z1))
-		return;
-
-	/* t4 = y1^2 */
-	vli_mod_square_f<ndigits>(t4, y1, curve);
-	/* t5 = x1*y1^2 = A */
-	vli_mod_mult_f<ndigits>(t5, x1, t4, curve);
-	/* t4 = y1^4 */
-	vli_mod_square_f<ndigits>(t4, t4, curve);
-	/* t2 = y1*z1 = z3 */
-	vli_mod_mult_f<ndigits>(y1, y1, z1, curve);
-	/* t3 = z1^2 */
-	vli_mod_square_f<ndigits>(z1, z1, curve);
-
-	/* t1 = x1 + z1^2 */
-	vli_mod_add<ndigits>(x1, x1, z1, curve_prime);
-	/* t3 = 2*z1^2 */
-	vli_mod_add<ndigits>(z1, z1, z1, curve_prime);
-	/* t3 = x1 - z1^2 */
-	vli_mod_sub<ndigits>(z1, x1, z1, curve_prime);
-	/* t1 = x1^2 - z1^4 */
-	vli_mod_mult_f<ndigits>(x1, x1, z1, curve);
-
-	/* t3 = 2*(x1^2 - z1^4) */
-	vli_mod_add<ndigits>(z1, x1, x1, curve_prime);
-	/* t1 = 3*(x1^2 - z1^4) */
-	vli_mod_add<ndigits>(x1, x1, z1, curve_prime);
-	if (vli_test_bit(x1, 0)) {
-		u64 carry = vli_add_to<ndigits>(x1, curve_prime);
-
-		vli_rshift1<ndigits>(x1);
-		x1[ndigits - 1] |= carry << 63;
+	if (!mpi_cmp_ui(point->y, 0) || !mpi_cmp_ui(point->z, 0)) {
+		/* P_y == 0 || P_z == 0 => [1:1:0] */
+		mpi_set_ui(x3, 1);
+		mpi_set_ui(y3, 1);
+		mpi_set_ui(z3, 0);
 	} else {
-		vli_rshift1<ndigits>(x1);
+		if (ec_get_a_is_pminus3(ctx)) {
+			/* Use the faster case.  */
+			/* L1 = 3(X - Z^2)(X + Z^2) */
+			/*                          T1: used for Z^2. */
+			/*                          T2: used for the right term. */
+			ec_pow2(t1, point->z, ctx);
+			ec_subm(l1, point->x, t1, ctx);
+			ec_mulm(l1, l1, mpi_const(MPI_C_THREE), ctx);
+			ec_addm(t2, point->x, t1, ctx);
+			ec_mulm(l1, l1, t2, ctx);
+		} else {
+			/* Standard case. */
+			/* L1 = 3X^2 + aZ^4 */
+			/*                          T1: used for aZ^4. */
+			ec_pow2(l1, point->x, ctx);
+			ec_mulm(l1, l1, mpi_const(MPI_C_THREE), ctx);
+			ec_powm(t1, point->z, mpi_const(MPI_C_FOUR), ctx);
+			ec_mulm(t1, t1, ctx->a, ctx);
+			ec_addm(l1, l1, t1, ctx);
+		}
+		/* Z3 = 2YZ */
+		ec_mulm(z3, point->y, point->z, ctx);
+		ec_mul2(z3, z3, ctx);
+
+		/* L2 = 4XY^2 */
+		/*                              T2: used for Y2; required later. */
+		ec_pow2(t2, point->y, ctx);
+		ec_mulm(l2, t2, point->x, ctx);
+		ec_mulm(l2, l2, mpi_const(MPI_C_FOUR), ctx);
+
+		/* X3 = L1^2 - 2L2 */
+		/*                              T1: used for L2^2. */
+		ec_pow2(x3, l1, ctx);
+		ec_mul2(t1, l2, ctx);
+		ec_subm(x3, x3, t1, ctx);
+
+		/* L3 = 8Y^4 */
+		/*                              T2: taken from above. */
+		ec_pow2(t2, t2, ctx);
+		ec_mulm(l3, t2, mpi_const(MPI_C_EIGHT), ctx);
+
+		/* Y3 = L1(L2 - X3) - L3 */
+		ec_subm(y3, l2, x3, ctx);
+		ec_mulm(y3, y3, l1, ctx);
+		ec_subm(y3, y3, l3, ctx);
 	}
-	/* t1 = 3/2*(x1^2 - z1^4) = B */
 
-	/* t3 = B^2 */
-	vli_mod_square_f<ndigits>(z1, x1, curve);
-	/* t3 = B^2 - A */
-	vli_mod_sub<ndigits>(z1, z1, t5, curve_prime);
-	/* t3 = B^2 - 2A = x3 */
-	vli_mod_sub<ndigits>(z1, z1, t5, curve_prime);
-	/* t5 = A - x3 */
-	vli_mod_sub<ndigits>(t5, t5, z1, curve_prime);
-	/* t1 = B * (A - x3) */
-	vli_mod_mult_f<ndigits>(x1, x1, t5, curve);
-	/* t4 = B * (A - x3) - y1^4 = y3 */
-	vli_mod_sub<ndigits>(t4, x1, t4, curve_prime);
-
-	vli_set<ndigits>(x1, z1);
-	vli_set<ndigits>(z1, y1);
-	vli_set<ndigits>(y1, t4);
-#pragma GCC diagnostic push
+#undef x3
+#undef y3
+#undef z3
+#undef t1
+#undef t2
+#undef t3
+#undef l1
+#undef l2
+#undef l3
 }
 
 /* Modify (x1, y1) => (x1 * z^2, y1 * z^3) */
@@ -223,129 +235,132 @@ static void apply_z(u64 *x1, u64 *y1, u64 *z, const ecc_curve *curve) noexcept
 	vli_mod_mult_f<ndigits>(y1, y1, t1, curve); /* y1 * z^3 */
 }
 
-/* P = (x1, y1) => 2P, (x2, y2) => P' */
-template<uint ndigits> forceinline
-static void xycz_initial_double(u64 *x1, u64 *y1, u64 *x2, u64 *y2,
-				u64 *p_initial_z, const ecc_curve *curve) noexcept
-{
-	u64 z[ECC_MAX_DIGITS];
 
-	vli_set<ndigits>(x2, x1);
-	vli_set<ndigits>(y2, y1);
-
-	vli_clear<ndigits>(z);
-	z[0] = 1;
-
-	if (p_initial_z) {
-		vli_set<ndigits>(z, p_initial_z);
-		apply_z<ndigits>(x1, y1, z, curve);
-	}
-
-	ecc_point_double_jacobian<ndigits>(x1, y1, z, curve);
-
-	apply_z<ndigits>(x2, y2, z, curve);
-}
-
-/* Input P = (x1, y1, Z), Q = (x2, y2, Z)
- * Output P' = (x1', y1', Z3), P + Q = (x3, y3, Z3)
- * or P => P', Q => P + Q
- */
+/* RESULT = P1 + P2  (Weierstrass version).*/
 template<uint ndigits> forceinline
 static void
-xycz_add(u64 *x1, u64 *y1, u64 *x2, u64 *y2, const ecc_curve *curve) noexcept
+point_add_jacobian(POINT result,
+		POINT p1, POINT p2,
+		const ecc_curve *curve) noexcept
 {
-	/* t1 = X1, t2 = Y1, t3 = X2, t4 = Y2 */
-	u64 t5[ECC_MAX_DIGITS];
-	const u64 *curve_prime = curve->p;
+#define x1 (p1->x)
+#define y1 (p1->y)
+#define z1 (p1->z)
+#define x2 (p2->x)
+#define y2 (p2->y)
+#define z2 (p2->z)
+#define x3 (result->x)
+#define y3 (result->y)
+#define z3 (result->z)
+#define l1 (ctx->t.scratch[0])
+#define l2 (ctx->t.scratch[1])
+#define l3 (ctx->t.scratch[2])
+#define l4 (ctx->t.scratch[3])
+#define l5 (ctx->t.scratch[4])
+#define l6 (ctx->t.scratch[5])
+#define l7 (ctx->t.scratch[6])
+#define l8 (ctx->t.scratch[7])
+#define l9 (ctx->t.scratch[8])
+#define t1 (ctx->t.scratch[9])
+#define t2 (ctx->t.scratch[10])
 
-	/* t5 = x2 - x1 */
-	vli_mod_sub<ndigits>(t5, x2, x1, curve_prime);
-	/* t5 = (x2 - x1)^2 = A */
-	vli_mod_square_f<ndigits>(t5, t5, curve);
-	/* t1 = x1*A = B */
-	vli_mod_mult_f<ndigits>(x1, x1, t5, curve);
-	/* t3 = x2*A = C */
-	vli_mod_mult_f<ndigits>(x2, x2, t5, curve);
-	/* t4 = y2 - y1 */
-	vli_mod_sub<ndigits>(y2, y2, y1, curve_prime);
-	/* t5 = (y2 - y1)^2 = D */
-	vli_mod_square_f<ndigits>(t5, y2, curve);
+	if ((!mpi_cmp(x1, x2)) && (!mpi_cmp(y1, y2)) && (!mpi_cmp(z1, z2))) {
+		/* Same point; need to call the duplicate function.  */
+		mpi_ec_dup_point(result, p1, ctx);
+	} else if (!mpi_cmp_ui(z1, 0)) {
+		/* P1 is at infinity.  */
+		mpi_set(x3, p2->x);
+		mpi_set(y3, p2->y);
+		mpi_set(z3, p2->z);
+	} else if (!mpi_cmp_ui(z2, 0)) {
+		/* P2 is at infinity.  */
+		mpi_set(x3, p1->x);
+		mpi_set(y3, p1->y);
+		mpi_set(z3, p1->z);
+	} else {
+		int z1_is_one = !mpi_cmp_ui(z1, 1);
+		int z2_is_one = !mpi_cmp_ui(z2, 1);
 
-	/* t5 = D - B */
-	vli_mod_sub<ndigits>(t5, t5, x1, curve_prime);
-	/* t5 = D - B - C = x3 */
-	vli_mod_sub<ndigits>(t5, t5, x2, curve_prime);
-	/* t3 = C - B */
-	vli_mod_sub<ndigits>(x2, x2, x1, curve_prime);
-	/* t2 = y1*(C - B) */
-	vli_mod_mult_f<ndigits>(y1, y1, x2, curve);
-	/* t3 = B - x3 */
-	vli_mod_sub<ndigits>(x2, x1, t5, curve_prime);
-	/* t4 = (y2 - y1)*(B - x3) */
-	vli_mod_mult_f<ndigits>(y2, y2, x2, curve);
-	/* t4 = y3 */
-	vli_mod_sub<ndigits>(y2, y2, y1, curve_prime);
+		/* l1 = x1 z2^2  */
+		/* l2 = x2 z1^2  */
+		if (z2_is_one)
+			mpi_set(l1, x1);
+		else {
+			ec_pow2(l1, z2, ctx);
+			ec_mulm(l1, l1, x1, ctx);
+		}
+		if (z1_is_one)
+			mpi_set(l2, x2);
+		else {
+			ec_pow2(l2, z1, ctx);
+			ec_mulm(l2, l2, x2, ctx);
+		}
+		/* l3 = l1 - l2 */
+		ec_subm(l3, l1, l2, ctx);
+		/* l4 = y1 z2^3  */
+		ec_powm(l4, z2, mpi_const(MPI_C_THREE), ctx);
+		ec_mulm(l4, l4, y1, ctx);
+		/* l5 = y2 z1^3  */
+		ec_powm(l5, z1, mpi_const(MPI_C_THREE), ctx);
+		ec_mulm(l5, l5, y2, ctx);
+		/* l6 = l4 - l5  */
+		ec_subm(l6, l4, l5, ctx);
 
-	vli_set<ndigits>(x2, t5);
-}
+		if (!mpi_cmp_ui(l3, 0)) {
+			if (!mpi_cmp_ui(l6, 0)) {
+				/* P1 and P2 are the same - use duplicate function. */
+				mpi_ec_dup_point(result, p1, ctx);
+			} else {
+				/* P1 is the inverse of P2.  */
+				mpi_set_ui(x3, 1);
+				mpi_set_ui(y3, 1);
+				mpi_set_ui(z3, 0);
+			}
+		} else {
+			/* l7 = l1 + l2  */
+			ec_addm(l7, l1, l2, ctx);
+			/* l8 = l4 + l5  */
+			ec_addm(l8, l4, l5, ctx);
+			/* z3 = z1 z2 l3  */
+			ec_mulm(z3, z1, z2, ctx);
+			ec_mulm(z3, z3, l3, ctx);
+			/* x3 = l6^2 - l7 l3^2  */
+			ec_pow2(t1, l6, ctx);
+			ec_pow2(t2, l3, ctx);
+			ec_mulm(t2, t2, l7, ctx);
+			ec_subm(x3, t1, t2, ctx);
+			/* l9 = l7 l3^2 - 2 x3  */
+			ec_mul2(t1, x3, ctx);
+			ec_subm(l9, t2, t1, ctx);
+			/* y3 = (l9 l6 - l8 l3^3)/2  */
+			ec_mulm(l9, l9, l6, ctx);
+			ec_powm(t1, l3, mpi_const(MPI_C_THREE), ctx); /* fixme: Use saved value*/
+			ec_mulm(t1, t1, l8, ctx);
+			ec_subm(y3, l9, t1, ctx);
+			ec_mulm(y3, y3, ec_get_two_inv_p(ctx), ctx);
+		}
+	}
 
-/* Input P = (x1, y1, Z), Q = (x2, y2, Z)
- * Output P + Q = (x3, y3, Z3), P - Q = (x3', y3', Z3)
- * or P => P - Q, Q => P + Q
- */
-template<uint ndigits> forceinline
-static void xycz_add_c(u64 *x1, u64 *y1, u64 *x2, u64 *y2,
-				const ecc_curve *curve) noexcept
-{
-	/* t1 = X1, t2 = Y1, t3 = X2, t4 = Y2 */
-	u64 t5[ECC_MAX_DIGITS];
-	u64 t6[ECC_MAX_DIGITS];
-	u64 t7[ECC_MAX_DIGITS];
-	const u64 *curve_prime = curve->p;
-
-	/* t5 = x2 - x1 */
-	vli_mod_sub<ndigits>(t5, x2, x1, curve_prime);
-	/* t5 = (x2 - x1)^2 = A */
-	vli_mod_square_f<ndigits>(t5, t5, curve);
-	/* t1 = x1*A = B */
-	vli_mod_mult_f<ndigits>(x1, x1, t5, curve);
-	/* t3 = x2*A = C */
-	vli_mod_mult_f<ndigits>(x2, x2, t5, curve);
-	/* t4 = y2 + y1 */
-	vli_mod_add<ndigits>(t5, y2, y1, curve_prime);
-	/* t4 = y2 - y1 */
-	vli_mod_sub<ndigits>(y2, y2, y1, curve_prime);
-
-	/* t6 = C - B */
-	vli_mod_sub<ndigits>(t6, x2, x1, curve_prime);
-	/* t2 = y1 * (C - B) */
-	vli_mod_mult_f<ndigits>(y1, y1, t6, curve);
-	/* t6 = B + C */
-	vli_mod_add<ndigits>(t6, x1, x2, curve_prime);
-	/* t3 = (y2 - y1)^2 */
-	vli_mod_square_f<ndigits>(x2, y2, curve);
-	/* t3 = x3 */
-	vli_mod_sub<ndigits>(x2, x2, t6, curve_prime);
-
-	/* t7 = B - x3 */
-	vli_mod_sub<ndigits>(t7, x1, x2, curve_prime);
-	/* t4 = (y2 - y1)*(B - x3) */
-	vli_mod_mult_f<ndigits>(y2, y2, t7, curve);
-	/* t4 = y3 */
-	vli_mod_sub<ndigits>(y2, y2, y1, curve_prime);
-
-	/* t7 = (y2 + y1)^2 = F */
-	vli_mod_square_f<ndigits>(t7, t5, curve);
-	/* t7 = x3' */
-	vli_mod_sub<ndigits>(t7, t7, t6, curve_prime);
-	/* t6 = x3' - B */
-	vli_mod_sub<ndigits>(t6, t7, x1, curve_prime);
-	/* t6 = (y2 + y1)*(x3' - B) */
-	vli_mod_mult_f<ndigits>(t6, t6, t5, curve);
-	/* t2 = y3' */
-	vli_mod_sub<ndigits>(y1, t6, y1, curve_prime);
-
-	vli_set<ndigits>(x1, t7);
+#undef x1
+#undef y1
+#undef z1
+#undef x2
+#undef y2
+#undef z2
+#undef x3
+#undef y3
+#undef z3
+#undef l1
+#undef l2
+#undef l3
+#undef l4
+#undef l5
+#undef l6
+#undef l7
+#undef l8
+#undef l9
+#undef t1
+#undef t2
 }
 
 #ifdef	ommit

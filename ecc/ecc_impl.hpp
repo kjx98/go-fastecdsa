@@ -53,11 +53,11 @@ struct ecc_curve {
 			p(_p), n(_n), a(_a), b(_b),
 			ndigits(ndig), use_barrett(bBat) {}
 	ecc_curve(const char *_name, const u64 *_gx, const u64 *_gy, const u64 *_p,
-				const u64 *_n, const u64 *_a, const u64 *_b, const u64 *rrP,
-				const u64 *rrN, const u64 pK0=1,
+				const u64 *_n, const u64 *_a, const u64 *_b, const u64* rrP,
+				const u64* rrN, const u64 pK0=1,
 				const u64 nK0=0x327f9e8872350975, const uint ndig=4,
 				const bool bBat=false) : name(_name), gx(_gx), gy(_gy),
-			p(_p), n(_n), a(_a), b(_b), rr_p(rrP), rr_n(rrN), k0_p(pK0),
+			p(_p), n(_n), a(_a), b(_b), rr_p{rrP}, rr_n{rrN}, k0_p(pK0),
 			k0_n(nK0), ndigits(ndig), use_barrett(bBat) {}
 	const char *name;
 	const u64 *gx;
@@ -66,8 +66,8 @@ struct ecc_curve {
 	const u64 *n;
 	const u64 *a;
 	const u64 *b;
-	const u64 *rr_p = nullptr;
-	const u64 *rr_n = nullptr;
+	const u64 *rr_p=nullptr;
+	const u64 *rr_n=nullptr;
 	const u64 k0_p = 0;
 	const u64 k0_n = 0;
 	const uint ndigits = 4;
