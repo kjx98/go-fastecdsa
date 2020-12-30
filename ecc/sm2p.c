@@ -81,3 +81,20 @@ void sm2_point_double_jacobian(Point *result, const Point *p)
 	felem_shrink(result->y, felem_y_out);
 	felem_shrink(result->z, felem_z_out);
 }
+
+void sm2_scalar_base_mult(Point *result, const u8 *scalar)
+{
+	felem felem_x3, felem_y3, felem_z3;
+	felem_bytearray g_secret;
+	flip_endian(g_secret, scalar, 32);
+	batch_mul(felem_x3, felem_y3, felem_z3, NULL, 0, g_secret, 0, NULL, gmul);
+	point_get_affine_jacobian(result->x, result->y,
+				felem_x3, felem_y3, felem_z3);
+}
+
+void sm2_scalar_mult(Point *result,const Point *p,  const bn_words scalar)
+{
+	felem felem_x3, felem_y3, felem_z3;
+	u64	(*scalars)[4]={scalar};
+	sm2_points_mul(result, NULL, 1, p, scalars);
+}

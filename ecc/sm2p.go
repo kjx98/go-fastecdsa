@@ -85,6 +85,28 @@ func sm2DoubleJacobian(x, y, z *big.Int) (rx, ry, rz *big.Int) {
 	return
 }
 
+func sm2ScalarBaseMult(k []byte) (rx, ry *big.Int) {
+	var pt C.Point
+	var bb [32]byte
+	copy(bb[:], k)
+	C.sm2_scalar_base_mult(&pt, (*C.u8)(unsafe.Pointer(&bb[0])))
+	rx = new(big.Int).SetBits(toWordSlice(pt.x))
+	ry = new(big.Int).SetBits(toWordSlice(pt.y))
+	return
+}
+
+func sm2ScalarMult(x, y *big.Int, k []byte) (rx, ry *big.Int) {
+	pt1 := newPoint(x, y, nil)
+	var pt C.Point
+	scal := new(big.Int).SetBytes(k)
+	var ss [4]big.Word
+	copy(ss[:], scal.Bits())
+	C.sm2_scalar_mult(&pt, pt1, (*C.u64)(unsafe.Pointer(&ss[0])))
+	rx = new(big.Int).SetBits(toWordSlice(pt.x))
+	ry = new(big.Int).SetBits(toWordSlice(pt.y))
+	return
+}
+
 /*
 func (c eccCurve) DoubleJacobian(x, y, z *big.Int) (rx, ry, rz *big.Int) {
 	pt1 := c.newPoint(x, y, z)
@@ -96,18 +118,6 @@ func (c eccCurve) DoubleJacobian(x, y, z *big.Int) (rx, ry, rz *big.Int) {
 	return
 }
 
-
-func (c eccCurve) ScalarMult(x, y *big.Int, k []byte) (rx, ry *big.Int) {
-	pt1 := c.newPoint(x, y, nil)
-	var pt C.Point
-	scal := new(big.Int).SetBytes(k)
-	var ss [4]big.Word
-	copy(ss[:], scal.Bits())
-	C.point_mult(&pt, pt1, (*C.u64)(unsafe.Pointer(&ss[0])), c.hnd)
-	rx = new(big.Int).SetBits(toWordSlice(pt.x))
-	ry = new(big.Int).SetBits(toWordSlice(pt.y))
-	return
-}
 
 func (c eccCurve) AffineFromJacobian(x, y, z *big.Int) (xOut, yOut *big.Int) {
 	var xb, yb [4]big.Word

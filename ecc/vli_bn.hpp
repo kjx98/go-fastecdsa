@@ -47,7 +47,16 @@ public:
 	using bn_words = u64[ndigits];
 	bignum(bn_words init = {}) noexcept : d{} {}
 	bignum(const bignum &) = default;
-	explicit bignum(const u64 v) noexcept : d{v,0,0,0} {}
+	explicit bignum(const u64 v) noexcept : d{v,0,0,0}
+	{
+#if	__cplusplus >= 201703L
+		if constexpr(ndigits > 4) {
+#pragma GCC unroll 4
+			for (uint i = 4; i < ndigits; i++)
+				d[i] = 0;
+		}
+#endif
+	}
 	bignum(const u64 *src) {
 #pragma GCC unroll 4
 		for (uint i = 0; i < ndigits; i++)
@@ -281,10 +290,10 @@ public:
 	}
 	uint vli_num_bits() noexcept
 	{
-		auto num_digits = num_digits();
-		if (num_digits == 0) return 0;
-		auto i = 64 - __builtin_clzl(d[num_digits - 1]);
-		return ((num_digits - 1) * 64 + i);
+		auto _ndigits = num_digits();
+		if (_ndigits == 0) return 0;
+		auto i = 64 - __builtin_clzl(d[_ndigits - 1]);
+		return ((_ndigits - 1) * 64 + i);
 	}
 /**
  * vli_from_be64() - Load vli from big-endian u64 array

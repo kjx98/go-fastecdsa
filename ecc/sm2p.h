@@ -21,5 +21,7 @@ void sm2_point_add(Point *result, const Point *p, const Point *q);
 void sm2_point_add_jacobian(Point *result, const Point *p, const Point *q);
 void sm2_point_double(Point *result, const Point *p);
 void sm2_point_double_jacobian(Point *result, const Point *p);
+void sm2_scalar_base_mult(Point *result, const u8 *scalar);
+void sm2_scalar_mult(Point *result,const Point *p,  const bn_words scalar);
 
 #endif	//	__SM2P_H__

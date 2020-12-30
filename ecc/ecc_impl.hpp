@@ -46,6 +46,7 @@
  * @a:		Curve parameter a.
  * @b:		Curve parameter b.
  */
+//template<uint ndigits>
 struct ecc_curve {
 	ecc_curve(const char *_name, const u64 *_gx, const u64 *_gy, const u64 *_p,
 				const u64 *_n, const u64 *_a, const u64 *_b, const uint ndig=4,

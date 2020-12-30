@@ -165,26 +165,55 @@ func TestSM2DoubleJacobian(t *testing.T) {
 	}
 }
 
-/*
-func TestCurveMult(t *testing.T) {
+func TestCurveBaseMult(t *testing.T) {
 	goCurve := sm2.SM2go()
-	cCurve := sm2c
-	goGx := goCurve.Params().Gx
-	goGy := goCurve.Params().Gy
-	gx, gy := goCurve.ScalarMult(goGx, goGy, d1.Bytes())
-	aGx := cCurve.Params().Gx
-	aGy := cCurve.Params().Gy
-	ax, ay := cCurve.ScalarMult(aGx, aGy, d1.Bytes())
+	gx, gy := goCurve.ScalarBaseMult(d1.Bytes())
+	ax, ay := sm2ScalarBaseMult(d1.Bytes())
 	if ax.Cmp(gx) != 0 {
-		t.Log("mult X diff")
+		t.Logf("BaseMult step1 X diff:\n%s\n%s", gx.Text(16), ax.Text(16))
 		t.Fail()
 	}
 	if ay.Cmp(gy) != 0 {
-		t.Log("mult Y diff")
+		t.Logf("BaseMult step1 Y diff:\n%s\n%s", gy.Text(16), ay.Text(16))
+		t.Fail()
+	}
+	gx, gy = goCurve.ScalarBaseMult(d2.Bytes())
+	ax, ay = sm2ScalarBaseMult(d2.Bytes())
+	if ax.Cmp(gx) != 0 {
+		t.Logf("BaseMult step2 X diff:\n%s\n%s", gx.Text(16), ax.Text(16))
+		t.Fail()
+	}
+	if ay.Cmp(gy) != 0 {
+		t.Logf("BaseMult step2 Y diff:\n%s\n%s", gy.Text(16), ay.Text(16))
 		t.Fail()
 	}
 }
 
+func TestCurveMult(t *testing.T) {
+	goCurve := sm2.SM2go()
+	gx, gy := goCurve.ScalarMult(x1, y1, d1.Bytes())
+	ax, ay := sm2ScalarMult(x1, y1, d1.Bytes())
+	if ax.Cmp(gx) != 0 {
+		t.Logf("BaseMult step1 X diff:\n%s\n%s", gx.Text(16), ax.Text(16))
+		t.Fail()
+	}
+	if ay.Cmp(gy) != 0 {
+		t.Logf("BaseMult step1 Y diff:\n%s\n%s", gy.Text(16), ay.Text(16))
+		t.Fail()
+	}
+	gx, gy = goCurve.ScalarMult(x2, y2, d2.Bytes())
+	ax, ay = sm2ScalarMult(x2, y2, d2.Bytes())
+	if ax.Cmp(gx) != 0 {
+		t.Logf("BaseMult step2 X diff:\n%s\n%s", gx.Text(16), ax.Text(16))
+		t.Fail()
+	}
+	if ay.Cmp(gy) != 0 {
+		t.Logf("BaseMult step2 Y diff:\n%s\n%s", gy.Text(16), ay.Text(16))
+		t.Fail()
+	}
+}
+
+/*
 func BenchmarkMontMultModP(b *testing.B) {
 	for i := 0; i < b.N; i++ {
 		_ = vliModMultMontP(x1.Bits(), y1.Bits())
@@ -222,19 +251,18 @@ func BenchmarkSM2ECDBLJac(b *testing.B) {
 	})
 }
 
-/*
 func BenchmarkECMULT(b *testing.B) {
-	b.ResetTimer()
-	curve := sm2c
-	aGx := curve.Params().Gx
-	aGy := curve.Params().Gy
-
-	b.ReportAllocs()
-	b.ResetTimer()
 	b.RunParallel(func(pb *testing.PB) {
 		for pb.Next() {
-			_, _ = curve.ScalarMult(aGx, aGy, d1.Bytes())
+			_, _ = sm2ScalarMult(x1, y1, d1.Bytes())
 		}
 	})
 }
-*/
+
+func BenchmarkECGMULT(b *testing.B) {
+	b.RunParallel(func(pb *testing.PB) {
+		for pb.Next() {
+			_, _ = sm2ScalarBaseMult(d1.Bytes())
+		}
+	})
+}

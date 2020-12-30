@@ -79,6 +79,7 @@
  * work which got its smarts from Daniel J. Bernstein's work on the same.
  */
 #include "sm2p.h"
+#include <malloc.h>
 
 /*
  * The underlying field. SM2-P256 operates over GF(2^256-2^224-2^96+2^64-1).
@@ -1979,21 +1980,17 @@ static int point_get_affine_jacobian(smallfelem x_out, smallfelem y_out,
     return 1;
 }
 
-#ifdef	ommit
 /*
  * Computes scalar*generator + \sum scalars[i]*points[i], ignoring NULL
  * values Result is stored in r (r can equal one of the inputs).
  */
-int ec_GFp_sm2p256_points_mul(const EC_GROUP *group, EC_POINT *r,
-                              const BIGNUM *scalar, size_t num,
-                              const EC_POINT *points[],
-                              const BIGNUM *scalars[], BN_CTX *ctx)
+int sm2_points_mul(Point *r, const bn_words *scalar, size_t num,
+						const Point *points, const u64 (*scalars)[4])
 {
     int ret = 0;
     int j;
     int mixed = 0;
-    BN_CTX *new_ctx = NULL;
-    BIGNUM *x, *y, *z, *tmp_scalar;
+    bn_words *x, *y, *z, *tmp_scalar;
     felem_bytearray g_secret;
     felem_bytearray *secrets = NULL;
     smallfelem (*pre_comp)[17][3] = NULL;
@@ -2004,54 +2001,23 @@ int ec_GFp_sm2p256_points_mul(const EC_GROUP *group, EC_POINT *r,
     size_t num_points = num;
     smallfelem x_in, y_in, z_in;
     felem x_out, y_out, z_out;
-    SM2P256_PRE_COMP *pre = NULL;
-    const smallfelem(*g_pre_comp)[16][3] = NULL;
-    EC_POINT *generator = NULL;
-    const EC_POINT *p = NULL;
-    const BIGNUM *p_scalar = NULL;
-
-    if (ctx == NULL)
-        if ((ctx = new_ctx = BN_CTX_new()) == NULL)
-            return 0;
-    BN_CTX_start(ctx);
-    if (((x = BN_CTX_get(ctx)) == NULL) ||
-        ((y = BN_CTX_get(ctx)) == NULL) ||
-        ((z = BN_CTX_get(ctx)) == NULL) ||
-        ((tmp_scalar = BN_CTX_get(ctx)) == NULL))
-        goto err;
+    const smallfelem(*g_pre_comp)[16][3] = gmul;
+    Point *generator = NULL;
+    const Point *p = NULL;
+    const bn_words *p_scalar = NULL;
 
     if (scalar != NULL) {
-        pre = group->pre_comp.sm2p256;
-        if (pre)
-            /* we have precomputation, try to use it */
-            g_pre_comp = (const smallfelem(*)[16][3])pre->g_pre_comp;
-        else {
-            /* try to use the standard precomputation */
-            g_pre_comp = &gmul[0];
-        }
-        generator = EC_POINT_new(group);
-        if (generator == NULL)
-            goto err;
-        /* get the generator from precomputation */
-        if (!smallfelem_to_BN(x, g_pre_comp[0][1][0]) ||
-            !smallfelem_to_BN(y, g_pre_comp[0][1][1]) ||
-            !smallfelem_to_BN(z, g_pre_comp[0][1][2])) {
-            ECerr(EC_F_EC_GFP_SM2P256_POINTS_MUL, ERR_R_BN_LIB);
-            goto err;
-        }
-        if (!EC_POINT_set_Jprojective_coordinates_GFp(group,
-                                                      generator, x, y, z,
-                                                      ctx))
-            goto err;
-        if (0 == EC_POINT_cmp(group, generator, group->generator, ctx))
+        //if (0 == Point_cmp(generator, group->generator, ctx))
             /* precomputation matches generator */
             have_pre_comp = 1;
+#ifdef	ommit
         else
             /*
              * we don't have valid precomputation: treat the generator as a
              * random point
              */
             num_points++;
+#endif
     }
     if (num_points > 0) {
         if (num_points >= 3) {
@@ -2059,16 +2025,16 @@ int ec_GFp_sm2p256_points_mul(const EC_GROUP *group, EC_POINT *r,
              * unless we precompute multiples for just one or two points,
              * converting those into affine form is time well spent
              */
+			// MUST never HERE
             mixed = 1;
         }
-        secrets = OPENSSL_malloc(sizeof(*secrets) * num_points);
-        pre_comp = OPENSSL_malloc(sizeof(*pre_comp) * num_points);
+        secrets = malloc(sizeof(*secrets) * num_points);
+        pre_comp = malloc(sizeof(*pre_comp) * num_points);
         if (mixed)
             tmp_smallfelems =
-              OPENSSL_malloc(sizeof(*tmp_smallfelems) * (num_points * 17 + 1));
+              malloc(sizeof(*tmp_smallfelems) * (num_points * 17 + 1));
         if ((secrets == NULL) || (pre_comp == NULL)
             || (mixed && (tmp_smallfelems == NULL))) {
-            ECerr(EC_F_EC_GFP_SM2P256_POINTS_MUL, ERR_R_MALLOC_FAILURE);
             goto err;
         }
 
@@ -2079,6 +2045,7 @@ int ec_GFp_sm2p256_points_mul(const EC_GROUP *group, EC_POINT *r,
         memset(secrets, 0, sizeof(*secrets) * num_points);
         memset(pre_comp, 0, sizeof(*pre_comp) * num_points);
         for (i = 0; i < num_points; ++i) {
+#ifdef	ommit
             if (i == num)
                 /*
                  * we didn't have a valid precomputation, so we pick the
@@ -2088,75 +2055,50 @@ int ec_GFp_sm2p256_points_mul(const EC_GROUP *group, EC_POINT *r,
                 p = EC_GROUP_get0_generator(group);
                 p_scalar = scalar;
             } else
+#endif
                 /* the i^th point */
             {
-                p = points[i];
-                p_scalar = scalars[i];
+                p = points+i;
+                p_scalar = scalars + i;
             }
-            if ((p_scalar != NULL) && (p != NULL)) {
-                /* reduce scalar to 0 <= scalar < 2^256 */
-                if ((BN_num_bits(p_scalar) > 256)
-                    || (BN_is_negative(p_scalar))) {
-                    /*
-                     * this is an unusual input, and we don't guarantee
-                     * constant-timeness
-                     */
-                    if (!BN_nnmod(tmp_scalar, p_scalar, group->order, ctx)) {
-                        ECerr(EC_F_EC_GFP_SM2P256_POINTS_MUL, ERR_R_BN_LIB);
-                        goto err;
-                    }
-                    num_bytes = BN_bn2bin(tmp_scalar, tmp);
-                } else
-                    num_bytes = BN_bn2bin(p_scalar, tmp);
-                flip_endian(secrets[i], tmp, num_bytes);
-                /* precompute multiples */
-                if ((!BN_to_felem(x_out, p->X)) ||
-                    (!BN_to_felem(y_out, p->Y)) ||
-                    (!BN_to_felem(z_out, p->Z)))
-                    goto err;
-                felem_shrink(pre_comp[i][1][0], x_out);
-                felem_shrink(pre_comp[i][1][1], y_out);
-                felem_shrink(pre_comp[i][1][2], z_out);
-                for (j = 2; j <= 16; ++j) {
-                    if (j & 1) {
-                        point_add_small(pre_comp[i][j][0], pre_comp[i][j][1],
-                                        pre_comp[i][j][2], pre_comp[i][1][0],
-                                        pre_comp[i][1][1], pre_comp[i][1][2],
-                                        pre_comp[i][j - 1][0],
-                                        pre_comp[i][j - 1][1],
-                                        pre_comp[i][j - 1][2]);
-                    } else {
-                        point_double_small(pre_comp[i][j][0],
-                                           pre_comp[i][j][1],
-                                           pre_comp[i][j][2],
-                                           pre_comp[i][j / 2][0],
-                                           pre_comp[i][j / 2][1],
-                                           pre_comp[i][j / 2][2]);
-                    }
+            //flip_endian(secrets[i], tmp, num_bytes);
+			memcpy(secrets[i], p_scalar, 32);
+            /* precompute multiples */
+            smallfelem_expand(x_out, p->x);
+            smallfelem_expand(y_out, p->y);
+            smallfelem_expand(z_out, p->z);
+            felem_shrink(pre_comp[i][1][0], x_out);
+            felem_shrink(pre_comp[i][1][1], y_out);
+            felem_shrink(pre_comp[i][1][2], z_out);
+            for (j = 2; j <= 16; ++j) {
+                if (j & 1) {
+                    point_add_small(pre_comp[i][j][0], pre_comp[i][j][1],
+                                    pre_comp[i][j][2], pre_comp[i][1][0],
+                                    pre_comp[i][1][1], pre_comp[i][1][2],
+                                    pre_comp[i][j - 1][0],
+                                    pre_comp[i][j - 1][1],
+                                    pre_comp[i][j - 1][2]);
+                } else {
+                    point_double_small(pre_comp[i][j][0],
+                                       pre_comp[i][j][1],
+                                       pre_comp[i][j][2],
+                                       pre_comp[i][j / 2][0],
+                                       pre_comp[i][j / 2][1],
+                                       pre_comp[i][j / 2][2]);
                 }
             }
         }
+#ifdef	ommit
         if (mixed)
             make_points_affine(num_points * 17, pre_comp[0], tmp_smallfelems);
+#endif
     }
 
     /* the scalar for the generator */
     if ((scalar != NULL) && (have_pre_comp)) {
-        memset(g_secret, 0, sizeof(g_secret));
+        memcpy(g_secret, scalar, sizeof(g_secret));
         /* reduce scalar to 0 <= scalar < 2^256 */
-        if ((BN_num_bits(scalar) > 256) || (BN_is_negative(scalar))) {
-            /*
-             * this is an unusual input, and we don't guarantee
-             * constant-timeness
-             */
-            if (!BN_nnmod(tmp_scalar, scalar, group->order, ctx)) {
-                ECerr(EC_F_EC_GFP_SM2P256_POINTS_MUL, ERR_R_BN_LIB);
-                goto err;
-            }
-            num_bytes = BN_bn2bin(tmp_scalar, tmp);
-        } else
-            num_bytes = BN_bn2bin(scalar, tmp);
-        flip_endian(g_secret, tmp, num_bytes);
+        //flip_endian(g_secret, tmp, num_bytes);
         /* do the multiplication with generator precomputation */
         batch_mul(x_out, y_out, z_out,
                   (const felem_bytearray(*))secrets, num_points,
@@ -2168,26 +2110,20 @@ int ec_GFp_sm2p256_points_mul(const EC_GROUP *group, EC_POINT *r,
                   (const felem_bytearray(*))secrets, num_points,
                   NULL, mixed, (const smallfelem(*)[17][3])pre_comp, NULL);
     /* reduce the output to its unique minimal representation */
-    felem_contract(x_in, x_out);
-    felem_contract(y_in, y_out);
-    felem_contract(z_in, z_out);
-    if ((!smallfelem_to_BN(x, x_in)) || (!smallfelem_to_BN(y, y_in)) ||
-        (!smallfelem_to_BN(z, z_in))) {
-        ECerr(EC_F_EC_GFP_SM2P256_POINTS_MUL, ERR_R_BN_LIB);
-        goto err;
-    }
-    ret = EC_POINT_set_Jprojective_coordinates_GFp(group, r, x, y, z, ctx);
+	point_get_affine_jacobian(r->x, r->y, x_out, y_out, z_out);
+    //felem_contract(r->x, x_out);
+    //felem_contract(r->y, y_out);
+    //felem_contract(r->z, z_out);
+    //ret = EC_POINT_set_Jprojective_coordinates_GFp(group, r, x, y, z, ctx);
 
  err:
-    BN_CTX_end(ctx);
-    EC_POINT_free(generator);
-    BN_CTX_free(new_ctx);
-    OPENSSL_free(secrets);
-    OPENSSL_free(pre_comp);
-    OPENSSL_free(tmp_smallfelems);
+    free(secrets);
+    free(pre_comp);
+    free(tmp_smallfelems);
     return ret;
 }
 
+#ifdef	ommit
 int ec_GFp_sm2p256_precompute_mult(EC_GROUP *group, BN_CTX *ctx)
 {
     int ret = 0;
