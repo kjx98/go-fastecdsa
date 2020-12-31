@@ -75,12 +75,12 @@ void	get_curve_params(u64 *p, u64 *n, u64 *b, u64 *gx, u64 *gy,
 {
 	if (curveH == nullptr) return;
 	ecc_curve	*curve=(ecc_curve *)curveH;
-	if (curve->name[0] == 0 || curve->ndigits != 4) return;
-	vli_set<4>(p, curve->p);
-	vli_set<4>(n, curve->n);
-	vli_set<4>(b, curve->b);
-	vli_set<4>(gx, curve->gx);
-	vli_set<4>(gy, curve->gy);
+	if ( !curve || curve->ndigits() != 4) return;
+	curve->getP(p);
+	curve->getN(n);
+	curve->getB(b);
+	curve->getGx(gx);
+	curve->getGy(gy);
 }
 
 
@@ -145,10 +145,14 @@ vli_mod_square_f(u64 *result, const u64 *left, const ecc_curve *curve) noexcept
 
 /*  RESULT = 2 * POINT  (Weierstrass version). */
 /* Double in place */
-template<uint ndigits> forceinline
+template<const uint N> forceinline
 static void ecc_point_double_jacobian(u64 *x3, u64 *y3, u64 *z3,
-					u64 *x1, u64 *y1, u64 *z1, const ecc_curve *curve)
+					const u64 *x1, const u64 *y1, const u64 *z1, const ecc_curve *curve)
 {
+	bignum<N>	t1, t2, t3, l1, l2, l3;
+	bignum<N>	*xp = reinterpret_cast<bignum<N> *>(const_cast<u64 *>(x1));
+	bignum<N>	*yp = reinterpret_cast<bignum<N> *>(const_cast<u64 *>(y1));
+	bignum<N>	*zp = reinterpret_cast<bignum<N> *>(const_cast<u64 *>(z1));
 #define t1 (ctx->t.scratch[0])
 #define t2 (ctx->t.scratch[1])
 #define t3 (ctx->t.scratch[2])
@@ -156,7 +160,7 @@ static void ecc_point_double_jacobian(u64 *x3, u64 *y3, u64 *z3,
 #define l2 (ctx->t.scratch[4])
 #define l3 (ctx->t.scratch[5])
 
-	if (vli_is_zero<ndigits>(y1) || vli_is_zero<ndigits>(z1)) {
+	if (vli_is_zero<N>(y1) || vli_is_zero<N>(z1)) {
 		/* P_y == 0 || P_z == 0 => [1:1:0] */
 		vli_clear<ndigits>(x3);
 		vli_clear<ndigits>(y3);
@@ -164,7 +168,7 @@ static void ecc_point_double_jacobian(u64 *x3, u64 *y3, u64 *z3,
 		x3[0] = 1;
 		y3[0] = 1;
 	} else {
-		if (ec_get_a_is_pminus3(ctx)) {
+		if (curce->a_is_pminus3()) {
 			/* Use the faster case.  */
 			/* L1 = 3(X - Z^2)(X + Z^2) */
 			/*                          T1: used for Z^2. */

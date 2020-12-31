@@ -212,18 +212,6 @@ static void vli_mod_square_fast(u64 *result, const u64 *left,
 /* Computes result = (left * right) % mod.
  * Assumes that mod is big enough curve order.
  */
-#ifdef	ommit
-void forceinline
-vli_mod_mult_slow(u64 *result, const u64 *left, const u64 *right,
-		       const u64 *mod, unsigned int ndigits)
-{
-	u64 product[4 * 2];
-
-	vli_mult<4>(product, left, right);
-	vli_mmod_slow<4>(result, product, mod);
-}
-#endif
-
 /* Computes result = (left * right) % curve_prime. */
 void vli_mod_mult_fast(u64 *result, const u64 *left, const u64 *right,
 			      const u64 *curve_prime, unsigned int ndigits)
@@ -554,21 +542,6 @@ static void ecc_point_add(u64 *result_x, u64 *result_y,
 }
 #endif
 
-/* Computes result = product % mod using Barrett's reduction with precomputed
- * value mu appended to the mod after ndigits, mu = (2^{2w} / mod) and have
- * length ndigits + 1, where mu * (2^w - 1) should not overflow ndigits
- * boundary.
- *
- * Reference:
- * R. Brent, P. Zimmermann. Modern Computer Arithmetic. 2010.
- * 2.4.1 Barrett's algorithm. Algorithm 2.5.
- */
-#ifndef  WITH_C2GO
-void vli_div_barrett(u64 *result, u64 *product, const u64 *mu)
-{
-	vli_div_barrett<4>(result, product, mu);
-}
-#endif
 
 #ifdef	WITH_SHAMIR
 /* Computes R = u1P + u2Q mod p using Shamir's trick.

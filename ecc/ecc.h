@@ -51,15 +51,6 @@ typedef struct {
 	int64_t	cap;
 }	GoSlice;
 
-#ifdef	ommit
-typedef u64	bn_words[4];
-
-typedef	struct {
-	bn_words	x;
-	bn_words	y;
-	bn_words	z;
-}	Point;
-#endif
 
 typedef	struct {
 	u64	p[4];
@@ -192,11 +183,11 @@ void vli_mult(u64 *result, const u64 *left, const u64 *right);
  * 2.4.1 Barrett's algorithm. Algorithm 2.5.
  */
 #ifdef	WITH_C2GO
-void vli_mmod_barrett(u64 *result, u64 *product, const u64 *mod, u64 *buff);
+void vli_mmod_barrett(u64 *result, const u64 *product, const u64 *mod, u64 *buff);
 #else
-void vli_mmod_barrett(u64 *result, u64 *product, const u64 *mod);
+void vli_mmod_barrett(u64 *result, const u64 *product, const u64 *mod);
 #endif
-void vli_div_barrett(u64 *result, u64 *product, const u64 *mod);
+void vli_div_barrett(u64 *result, const u64 *product, const u64 *mod);
 
 /*
  * using Mongtgomey reduction/multiply with precomputed RR and K0
@@ -222,19 +213,6 @@ void mont_sm2_mod_mult_p(u64 *result, const u64 *x, const u64 *y);
 void mont_sm2_mod_mult_n(u64 *result, const u64 *x, const u64 *y);
 u64 vli_asm_acc();
 
-/**
- * vli_mod_mult_slow() - Modular multiplication
- *
- * @result:		where to write result value
- * @left:		vli number to multiply with @right
- * @right:		vli number to multiply with @left
- * @mod:		modulus
- * @ndigits:		length of all vlis
- *
- * Note: Assumes that mod is big enough curve order.
- */
-void vli_mod_mult_slow(u64 *result, const u64 *left, const u64 *right,
-		       const u64 *mod, unsigned int ndigits);
 /* Computes result = (left * right) % curve_prime. */
 // SM2 use barret reduction
 void vli_mod_mult_fast(u64 *result, const u64 *left, const u64 *right,

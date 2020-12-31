@@ -70,6 +70,11 @@ public:
 		return res;
 	}
 #endif
+	bignum<4>& bn256() noexcept {
+		static_assert(ndigits >= 4, "ndigits >= 4 required.");
+		bignum<4>	*res=reinterpret_cast<bignum<4> *>(this->d);
+		return *res;
+	}
 	void clear() noexcept
 	{
 #pragma GCC unroll 4
@@ -522,22 +527,22 @@ public:
 		}
 		this->d[ndigits * 2 - 1] = r01.m_low();
 	}
-	void div_barrett(bignum<ndigits>& result, const bignum<ndigits>& prime,
-			const bignum<ndigits+1>& mu) noexcept
+	void div_barrett(bignum<ndigits>& result, const bignum<ndigits+1>& mu) noexcept
 	{
 		u64	q[ndigits*2];
 		u64	r[ndigits];
-		vli_mult<ndigits>(q, this->d + ndigits, mu.d);
-		if (mu.d[ndigits])
+		vli_mult<ndigits>(q, this->d + ndigits, mu.data());
+		if (mu.data()[ndigits])
 			vli_add_to<ndigits>(q + ndigits, this->d + ndigits);
 		// add remain * mod
 		vli_set<ndigits>(r, q+ndigits);
-		vli_umult<ndigits>(q, mu.d, this->d[ndigits-1]);
-		if (mu.d[ndigits])
+		vli_umult<ndigits>(q, mu.data(), this->d[ndigits-1]);
+		if (mu.data()[ndigits])
 			vli_uadd_to<ndigits>(q + ndigits, this->d[ndigits-1]);
 		vli_rshift1w<ndigits>(q+ndigits);
 		vli_add_to<ndigits>(r, q+ndigits);
-		result = bignum<ndigits>(r);
+		vli_set<ndigits>(const_cast<u64 *>(result.data()), r);
+		//result = bignum<ndigits>(r);
 	}
 	void mmod_barrett(bignum<ndigits>& result, const bignum<ndigits>& prime,
 			const bignum<ndigits+1>& mu) noexcept

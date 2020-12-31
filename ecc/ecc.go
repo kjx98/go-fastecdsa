@@ -118,6 +118,20 @@ func vliExpModMont(x, y, mod []big.Word, rr []uint64, k0 uint64) *big.Int {
 	return new(big.Int).SetBits(r[:4])
 }
 
+func vliSM2ModMultP(x, y []big.Word) *big.Int {
+	var r [4]big.Word
+	C.mont_sm2_mod_mult_p((*C.u64)(unsafe.Pointer(&r[0])),
+		(*C.u64)(unsafe.Pointer(&x[0])), (*C.u64)(unsafe.Pointer(&y[0])))
+	return new(big.Int).SetBits(r[:4])
+}
+
+func vliSM2ModMultN(x, y []big.Word) *big.Int {
+	var r [4]big.Word
+	C.mont_sm2_mod_mult_n((*C.u64)(unsafe.Pointer(&r[0])),
+		(*C.u64)(unsafe.Pointer(&x[0])), (*C.u64)(unsafe.Pointer(&y[0])))
+	return new(big.Int).SetBits(r[:4])
+}
+
 func vliSM2MultP(u uint64) *big.Int {
 	r := make([]big.Word, 6)
 	//can't convert []big.Word to slice_t

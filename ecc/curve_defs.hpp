@@ -7,7 +7,7 @@
 
 #ifdef	ommit
 /* NIST P-192: a = p - 3 */
-static ecc_curve nist_p192( "nist_192",
+static vli::ecc_curve<3> nist_p192( "nist_192",
 	// .gx
 	{ 0xF4FF0AFD82FF1012ull, 0x7CBF20EB43A18800ull,
 			0x188DA80EB03090F6ull },
@@ -21,9 +21,7 @@ static ecc_curve nist_p192( "nist_192",
 	//.a
 	nist_p192_a,
 	//.b
-	nist_p192_b,
-	//.ndigits
-	3);
+	nist_p192_b);
 #endif
 
 /* NIST P-256: a = p - 3 */
@@ -41,12 +39,11 @@ static vli::ecc_curve nist_p256( //.name
 	nist_p256_a,
 	//.b
 	nist_p256_b
-	//.ndigits = 4
 	);
 
 /* GM/T 0003.5-2012 SM2: a = p - 3 */
 /* prime following mu for Barrett's reduction */
-static vli::ecc_curve sm2_p256( //.name
+static vli::ecc_curve<4, 1, 0x327f9e8872350975> sm2_p256( //.name
 	"sm2p256",
 	// .gx
 	sm2_gx,
@@ -62,13 +59,8 @@ static vli::ecc_curve sm2_p256( //.name
 	sm2_b,
 	// rr_p, rr_n
 	sm2_p_rr,
-	sm2_n_rr,
-	// k0_p, k0_n
-	1, 0x327f9e8872350975,
-	//.ndigits
-	4,
-	//.use_barrett
-	true);
+	sm2_n_rr
+	);
 
 static vli::ecc_curve secp256k1( //.name
 	"secp256k1",
@@ -82,9 +74,8 @@ static vli::ecc_curve secp256k1( //.name
 	secp256k1_n,
 	//.a
 	secp256k1_a,
-	//.b
-	secp256k1_b
-	//.ndigits = 4,
+	//.b, a_is_pminus3
+	secp256k1_b, false
 	);
 
 #endif	//__CURVE_DEFS_HPP__

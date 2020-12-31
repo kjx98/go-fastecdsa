@@ -123,6 +123,43 @@ func TestMontExpMod(t *testing.T) {
 	}
 }
 
+func TestSM2MontMultMod(t *testing.T) {
+	p := sm2.P256().Params().P
+	xy := new(big.Int).Mul(x1, y1)
+	xyMod := new(big.Int).Mod(xy, p)
+	bMod := vliSM2ModMultP(x1.Bits(), y1.Bits())
+	if bMod.Cmp(xyMod) != 0 {
+		t.Logf("step1 big.mulmod diff SM2ModMultP:\n%s vs\n%s\n",
+			xyMod.Text(16), bMod.Text(16))
+		t.Fail()
+	}
+	xy = new(big.Int).Mul(x2, y2)
+	xyMod = new(big.Int).Mod(xy, p)
+	bMod = vliSM2ModMultP(x2.Bits(), y2.Bits())
+	if bMod.Cmp(xyMod) != 0 {
+		t.Logf("step2 big.mulmod diff SM2ModMultP:\n%s vs\n%s\n",
+			xyMod.Text(16), bMod.Text(16))
+		t.Fail()
+	}
+	n := sm2.P256().Params().N
+	xy = new(big.Int).Mul(x1, y1)
+	xyMod = new(big.Int).Mod(xy, n)
+	bMod = vliSM2ModMultN(x1.Bits(), y1.Bits())
+	if bMod.Cmp(xyMod) != 0 {
+		t.Logf("step3 big.mulmod diff SM2ModMultN:\n%s vs\n%s\n",
+			xyMod.Text(16), bMod.Text(16))
+		t.Fail()
+	}
+	xy = new(big.Int).Mul(x2, y2)
+	xyMod = new(big.Int).Mod(xy, n)
+	bMod = vliSM2ModMultN(x2.Bits(), y2.Bits())
+	if bMod.Cmp(xyMod) != 0 {
+		t.Logf("step4 big.mulmod diff SM2ModMultN:\n%s vs\n%s\n",
+			xyMod.Text(16), bMod.Text(16))
+		t.Fail()
+	}
+}
+
 func TestEccInverse(t *testing.T) {
 	p := sm2.P256().Params().P
 	two := big.NewInt(2)
@@ -256,6 +293,16 @@ func BenchmarkMontModMul(b *testing.B) {
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
 		_ = vliModMultMont(x1.Bits(), y1.Bits(), p.Bits(), rr, 1)
+	}
+}
+
+func BenchmarkSM2ModMulP(b *testing.B) {
+	b.ResetTimer()
+
+	b.ReportAllocs()
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		_ = vliSM2ModMultP(x1.Bits(), y1.Bits())
 	}
 }
 

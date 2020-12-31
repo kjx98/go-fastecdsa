@@ -57,14 +57,24 @@ u64 vli_asm_acc()
  * R. Brent, P. Zimmermann. Modern Computer Arithmetic. 2010.
  * 2.4.1 Barrett's algorithm. Algorithm 2.5.
  */
-void vli_mmod_barrett(u64 *result, u64 *product, const u64 *mod)
+void vli_mmod_barrett(u64 *result, const u64 *product, const u64 *mod)
 {
-	bn_prod<4>	*prod = reinterpret_cast<bn_prod<4> *>(product);
+	bn_prod<4>	*prod = reinterpret_cast<bn_prod<4> *>(const_cast<u64 *>(product));
 	bignum<4>	*res = reinterpret_cast<bignum<4> *>(result);
 	bignum<4>	*p = reinterpret_cast<bignum<4> *>(const_cast<u64 *>(mod));
 	bignum<5>	*mu = reinterpret_cast<bignum<5> *>(const_cast<u64 *>(mod+4));
 	prod->mmod_barrett(*res, *p, *mu);
 }
+
+#ifndef  WITH_C2GO
+void vli_div_barrett(u64 *result, const u64 *product, const u64 *mu)
+{
+	bn_prod<4>	*prod = reinterpret_cast<bn_prod<4> *>(const_cast<u64 *>(product));
+	bignum<4>	*res = reinterpret_cast<bignum<4> *>(result);
+	bignum<5>	*muPtr = reinterpret_cast<bignum<5> *>(const_cast<u64 *>(mu));
+	prod->div_barrett(*res, *muPtr);
+}
+#endif
 
 //static u64 montOne[]={1, 0, 0, 0};
 void mont_mod_mult(u64 *res, const u64 *x, const u64 *y, const montParams *pa)
@@ -159,7 +169,7 @@ void mont_mod_exp(u64 *result, const u64 *x, const u64 *y, const montParams *pa)
 }
 
 #ifndef	WITH_C2GO
-void mont_sm2_mod_mult_p(u64 *result, u64 *x, u64 *y)
+void mont_sm2_mod_mult_p(u64 *result, const u64 *x, const u64 *y)
 {
 	bignum<4> xp;
 	bignum<4> yp;
@@ -173,7 +183,7 @@ void mont_sm2_mod_mult_p(u64 *result, u64 *x, u64 *y)
 	res->mont_reduction<sm2_p_k0>(r, *p);
 }
 
-void mont_sm2_mod_mult_n(u64 *result, u64 *x, u64 *y)
+void mont_sm2_mod_mult_n(u64 *result, const u64 *x, const u64 *y)
 {
 	bignum<4> xp;
 	bignum<4> yp;
