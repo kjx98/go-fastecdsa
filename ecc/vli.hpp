@@ -38,6 +38,8 @@
 # error "C++ std MUST at least c++11"
 #endif
 
+#include "u128.hpp"
+
 
 template<typename T> forceinline
 static T max(const T&& a, const T&& b) noexcept {
@@ -464,94 +466,6 @@ static void vli_from_le64(u64 *dest, const void *src) noexcept
 }
 #endif
 
-class alignas(16) uint128_t {
-public:
-#if defined(__SIZEOF_INT128__)
-	uint128_t(const __uint128_t vd=0) : _data(vd) { };
-#else
-	uint128_t() : _low(0), _high(0) {};
-#endif
-	uint128_t(const u64 vl, const u64 vh) :
-#if defined(__SIZEOF_INT128__)
-		_data( (((__uint128_t)vh) << 64) | vl)
-#else
-		_low( vl ),
-		_high( vh )
-#endif
-	{
-	}
-	uint128_t(const uint128_t &) = default;
-#if defined(__SIZEOF_INT128__)
-	const __uint128_t data() const { return _data; }
-#endif
-	u64 m_low() const {
-#if defined(__SIZEOF_INT128__)
-		return (u64)_data;
-#else
-		return _low;
-#endif
-	}
-	u64 m_high() const {
-#if defined(__SIZEOF_INT128__)
-		return (u64)(_data >> 64);
-#else
-		return _high;
-#endif
-	}
-	friend uint128_t operator+(uint128_t a, const uint128_t &b) noexcept
-	{
-#if defined(__SIZEOF_INT128__)
-		a._data += b._data;
-#else
-		a._high += b._high;
-		if (__builtin_uaddl_overflow(a._low, b._low, &a._low)) ++a._high;
-#endif
-		return a;
-	}
-	uint128_t& operator+=(const uint128_t& b) noexcept
-	{
-#if defined(__SIZEOF_INT128__)
-		_data += b._data;
-#else
-		if (__builtin_uaddl_overflow(_low, b._low, &_low)) _high++;
-		_high += b._high;
-#endif
-		return *this;
-	}
-	uint128_t& mul_64_64(u64 left, u64 right) noexcept
-	{
-#if defined(__SIZEOF_INT128__)
-		_data = (__uint128_t)left * right;
-#else
-		u64 a0 = left & 0xffffffffull;
-		u64 a1 = left >> 32;
-		u64 b0 = right & 0xffffffffull;
-		u64 b1 = right >> 32;
-		u64 m0 = a0 * b0;
-		u64 m1 = a0 * b1;
-		u64 m2 = a1 * b0;
-		u64 m3 = a1 * b1;
-
-		m2 += (m0 >> 32);
-		m2 += m1;
-
-		/* Overflow */
-		if (m2 < m1)
-			m3 += 0x100000000ull;
-
-		_low = (m0 & 0xffffffffull) | (m2 << 32);
-		_high = m3 + (m2 >> 32);
-#endif
-		return *this;
-	}
-private:
-#if defined(__SIZEOF_INT128__)
-	__uint128_t	_data;
-#else
-	u64	_low;
-	u64	_high;
-#endif
-};
 
 template<uint ndigits> forceinline static
 void vli_mult(u64 *result, const u64 *left, const u64 *right) noexcept

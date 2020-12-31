@@ -43,6 +43,7 @@
 #define ARRAY_SIZE(arr) (sizeof(arr) / sizeof((arr)[0]))
 #endif
 
+using namespace vli;
 
 static forceinline const ecc_curve *ecc_get_curve(uint curve_id)
 {
@@ -75,12 +76,12 @@ void	get_curve_params(u64 *p, u64 *n, u64 *b, u64 *gx, u64 *gy,
 {
 	if (curveH == nullptr) return;
 	ecc_curve	*curve=(ecc_curve *)curveH;
-	if (curve->name[0] == 0 || curve->ndigits != 4) return;
-	vli_set<4>(p, curve->p);
-	vli_set<4>(n, curve->n);
-	vli_set<4>(b, curve->b);
-	vli_set<4>(gx, curve->gx);
-	vli_set<4>(gy, curve->gy);
+	if ((*curve) || curve->ndigits() != 4) return;
+	curve->getP(p);
+	curve->getN(n);
+	curve->getB(b);
+	curve->getGx(gx);
+	curve->getGy(gy);
 }
 
 
@@ -99,22 +100,24 @@ static void
 vli_mod_mult_f(u64 *result, const u64 *left, const u64 *right,
 				const ecc_curve *curve)
 {
+#ifdef	ommit
 #ifdef	WITH_BARRETT
 	if ( ! curve->use_barrett ) return;	// ERROR NOOP
-	u64 product[2 * ECC_MAX_DIGITS];
+	u64 product[2 * ndigits];
 
 	vli_mult<ndigits * 2>(product, left, right);
 	vli_mmod_barrett<ndigits>(result, product, curve->p);
 #else
 	if ( curve->rr_p == nullptr ) return;	// ERROR NOOP
-	u64		xp[ECC_MAX_DIGITS];
-	u64		yp[ECC_MAX_DIGITS];
-	u64		r[ECC_MAX_DIGITS];
+	u64		xp[ndigits];
+	u64		yp[ndigits];
+	u64		r[ndigits];
 
 	mont_mult<ndigits>(xp, left, curve->rr_p, curve->p, curve->k0_p);
 	mont_mult<ndigits>(yp, right, curve->rr_p, curve->p, curve->k0_p);
 	mont_mult<ndigits>(r, xp, yp, curve->p, curve->k0_p);
 	mont_reduction<ndigits>(result, r, curve->p, curve->k0_p);
+#endif
 #endif
 }
 
@@ -123,19 +126,21 @@ template<uint ndigits> forceinline
 static void
 vli_mod_square_f(u64 *result, const u64 *left, const ecc_curve *curve) noexcept
 {
+#ifdef	ommit
 #ifdef	WITH_BARRETT
 	if ( ! curve->use_barrett ) return;	// ERROR NOOP
-	u64 product[2 * ECC_MAX_DIGITS];
+	u64 product[2 * ndigits];
 
 	vli_square<ndigits>(product, left);
 	vli_mmod_barrett<ndigits>(result, product, curve->p);
 #else
 	if ( curve->rr_p == nullptr ) return;	// ERROR NOOP
-	u64		xp[ECC_MAX_DIGITS];
-	u64		r[ECC_MAX_DIGITS];
+	u64		xp[ndigits];
+	u64		r[ndigits];
 	mont_mult<ndigits>(xp, left, curve->rr_p, curve->p, curve->k0_p);
 	mont_mult<ndigits>(r, xp, xp, curve->p, curve->k0_p);
 	mont_reduction<ndigits>(result, r, curve->p, curve->k0_p);
+#endif
 #endif
 }
 
@@ -151,8 +156,8 @@ static void ecc_point_double_jacobian(u64 *x1, u64 *y1, u64 *z1,
 	/* t1 = x, t2 = y, t3 = z */
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wmaybe-uninitialized"
-	u64 t4[ECC_MAX_DIGITS];
-	u64 t5[ECC_MAX_DIGITS];
+	u64 t4[ndigits];
+	u64 t5[ndigits];
 	const u64 *curve_prime = curve->p;
 
 	if (vli_is_zero<ndigits>(z1))
@@ -215,7 +220,7 @@ static void ecc_point_double_jacobian(u64 *x1, u64 *y1, u64 *z1,
 template<uint ndigits> forceinline
 static void apply_z(u64 *x1, u64 *y1, u64 *z, const ecc_curve *curve) noexcept
 {
-	u64 t1[ECC_MAX_DIGITS];
+	u64 t1[ndigits];
 
 	vli_mod_square_f<ndigits>(t1, z, curve);    /* z^2 */
 	vli_mod_mult_f<ndigits>(x1, x1, t1, curve); /* x1 * z^2 */
@@ -228,7 +233,7 @@ template<uint ndigits> forceinline
 static void xycz_initial_double(u64 *x1, u64 *y1, u64 *x2, u64 *y2,
 				u64 *p_initial_z, const ecc_curve *curve) noexcept
 {
-	u64 z[ECC_MAX_DIGITS];
+	u64 z[ndigits];
 
 	vli_set<ndigits>(x2, x1);
 	vli_set<ndigits>(y2, y1);
@@ -255,7 +260,7 @@ static void
 xycz_add(u64 *x1, u64 *y1, u64 *x2, u64 *y2, const ecc_curve *curve) noexcept
 {
 	/* t1 = X1, t2 = Y1, t3 = X2, t4 = Y2 */
-	u64 t5[ECC_MAX_DIGITS];
+	u64 t5[ndigits];
 	const u64 *curve_prime = curve->p;
 
 	/* t5 = x2 - x1 */
@@ -298,9 +303,9 @@ static void xycz_add_c(u64 *x1, u64 *y1, u64 *x2, u64 *y2,
 				const ecc_curve *curve) noexcept
 {
 	/* t1 = X1, t2 = Y1, t3 = X2, t4 = Y2 */
-	u64 t5[ECC_MAX_DIGITS];
-	u64 t6[ECC_MAX_DIGITS];
-	u64 t7[ECC_MAX_DIGITS];
+	u64 t5[ndigits];
+	u64 t6[ndigits];
+	u64 t7[ndigits];
 	const u64 *curve_prime = curve->p;
 
 	/* t5 = x2 - x1 */
@@ -355,10 +360,10 @@ static void ecc_point_mult(u64 *result_x, u64 *result_y,
 			   u64 *initial_z, const struct ecc_curve *curve) noexcept
 {
 	/* R0 and R1 */
-	u64 rx[2][ECC_MAX_DIGITS];
-	u64 ry[2][ECC_MAX_DIGITS];
-	u64 z[ECC_MAX_DIGITS];
-	u64 sk[2][ECC_MAX_DIGITS];
+	u64 rx[2][ndigits];
+	u64 ry[2][ndigits];
+	u64 z[ndigits];
+	u64 sk[2][ndigits];
 	const u64 *curve_prime = curve->p;
 	int i, nb;
 	int num_bits;
@@ -415,9 +420,9 @@ template<uint ndigits> forceinline
 static void ecc_point_add(Point *result, const Point *p, const Point *q,
 		   const struct ecc_curve *curve)
 {
-	u64 z[ECC_MAX_DIGITS];
-	u64 px[ECC_MAX_DIGITS];
-	u64 py[ECC_MAX_DIGITS];
+	u64 z[ndigits];
+	u64 px[ndigits];
+	u64 py[ndigits];
 
 	if (ndigits != curve->ndigits) return;	// NOOOO
 	vli_set<ndigits>((u64 *)result->x, (u64 *)q->x);
@@ -443,7 +448,7 @@ void    point_double_jacobian(Point *pt_r, const Point *pt, CURVE_HND curveH)
 
 void    point_double(Point *pt, const Point *p, CURVE_HND curveH)
 {
-	u64 z[ECC_MAX_DIGITS];
+	u64 z[ndigits];
 	if (curveH == nullptr) return;
 	ecc_curve	*curve=(ecc_curve *)curveH;
 	if (curve->name[0] == 0 || curve->ndigits != 4) return;
@@ -474,7 +479,7 @@ void    point_add(Point *pt, const Point *p, const Point *q,
 
 void    affine_from_jacobian(u64 *x, u64 *y, const Point *pt, CURVE_HND curveH)
 {
-	u64 z[ECC_MAX_DIGITS];
+	u64 z[ndigits];
 	if (curveH == nullptr) return;
 	ecc_curve	*curve=(ecc_curve *)curveH;
 	if (curve->name[0] == 0 || curve->ndigits != 4) return;

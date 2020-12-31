@@ -38,7 +38,7 @@
 forceinline
 static void vli_sm2_multP(u64 *result, const u64 u) noexcept
 {
-	u64	r[ECC_MAX_DIGITS];
+	u64	r[4];
 	u64	t_low, t_high;
 	t_low = u << 32;	// ^192
 	t_high = ((u >> 32) & 0xffffffff);
@@ -57,6 +57,7 @@ static void vli_sm2_multP(u64 *result, const u64 u) noexcept
 	if (vli_add_to<4>(result, r)) result[4]++;
 }
 
+#ifdef	ommit
 forceinline
 static void mont_reductionP(u64 *result, const u64 *y, const u64 *prm) noexcept
 {
@@ -104,6 +105,7 @@ static void mont_multP(u64 *result, const u64 *x, const u64 *y,
 		vli_sub<4>(result, r, prime);
 	} else vli_set<4>(result, r);
 }
+#endif	// ommit
 
 template<uint ndigits> forceinline
 static void
@@ -117,10 +119,10 @@ mont_reduction(u64 *result, const u64 *y, const u64 *prime,
 {
 #ifdef	WITH_C2GO
 	u64	*s = buff;
-	u64	*r = s + ECC_MAX_DIGITS * 2;
+	u64	*r = s + ndigits * 2;
 #else
-	u64	s[ECC_MAX_DIGITS * 2];
-	u64	r[ECC_MAX_DIGITS + 2];
+	u64	s[ndigits * 2];
+	u64	r[ndigits + 2];
 #endif
 	vli_clear<ndigits + 2>(r);
 #pragma GCC unroll 4
@@ -148,10 +150,10 @@ mont_mult(u64 *result, const u64 *x, const u64 *y, const u64 *prime,
 {
 #ifdef	WITH_C2GO
 	u64	*s = buff;
-	u64	*r = s + ECC_MAX_DIGITS * 2;
+	u64	*r = s + ndigits * 2;
 #else
-	u64	s[ECC_MAX_DIGITS * 2];
-	u64	r[ECC_MAX_DIGITS + 2];
+	u64	s[ndigits * 2];
+	u64	r[ndigits + 2];
 #endif
 	vli_clear<ndigits + 2>(r);
 #pragma GCC unroll 4
@@ -178,10 +180,10 @@ mont_sqr(u64 *result, const u64 *x, const u64 *prime, const u64 k0) noexcept
 {
 #ifdef	WITH_C2GO
 	u64	*s = buff;
-	u64	*r = s + ECC_MAX_DIGITS * 2;
+	u64	*r = s + ndigits * 2;
 #else
-	u64	s[ECC_MAX_DIGITS * 2];
-	u64	r[ECC_MAX_DIGITS + 2];
+	u64	s[ndigits * 2];
+	u64	r[ndigits + 2];
 #endif
 	vli_clear<ndigits + 2>(r);
 #pragma GCC unroll 4

@@ -39,6 +39,8 @@
 #endif
 
 
+#include "u128.hpp"		// only for uint128_t
+
 namespace vli {
 
 template<uint ndigits>
@@ -57,11 +59,17 @@ public:
 		}
 #endif
 	}
-	bignum(const u64 *src) {
+	explicit bignum(const u64 *src) {
 #pragma GCC unroll 4
 		for (uint i = 0; i < ndigits; i++)
 			d[i] = src[i];
 	}
+#ifdef	ommit
+	bignum* operator=(const u64 *src) noexcept {
+		bignum	*res=reinterpret_cast<bignum *>(src);
+		return res;
+	}
+#endif
 	void clear() noexcept
 	{
 #pragma GCC unroll 4
@@ -338,6 +346,81 @@ public:
 			this->add_to(mod);
 	}
 
+	template<const u64 k0>
+	void mont_reduction(const bignum& y, const bignum& prime) noexcept
+	{
+		u64	s[ndigits*2];
+		u64	r[ndigits+2];
+		vli_clear<ndigits + 2>(r);
+#pragma GCC unroll 4
+		for (uint i=0; i < ndigits; i++) {
+			u64	u = (r[0] + y.d[i]) * k0;
+			vli_umult<ndigits>(s, prime.d, u);
+			vli_uadd_to<ndigits + 2>(r, y.d[i]);
+			vli_add_to<ndigits + 2>(r, s);
+			vli_rshift1w<ndigits + 2>(r);	
+		}
+		if (r[ndigits] !=0 || vli_cmp<ndigits>(r, prime.d) >= 0) {
+			vli_sub<ndigits>(this->d, r, prime.d);
+		} else vli_set<ndigits>(this->d, r);
+	}
+	template<const u64 k0>
+	void mont_mult(const bignum& x, const bignum& y, const bignum& prime) noexcept
+	{
+		u64	s[ndigits*2];
+		u64	r[ndigits+2];
+		vli_clear<ndigits + 2>(r);
+#pragma GCC unroll 4
+		for (uint i=0; i < ndigits;i++) {
+			u64	u = (r[0] + y.d[i]*x.d[0]) * k0;
+			vli_umult<ndigits>(s, prime.d, u);
+			vli_add_to<ndigits + 2>(r, s);
+			vli_umult<ndigits>(s, x.d, y.d[i]);
+			vli_add_to<ndigits + 2>(r, s);
+			vli_rshift1w<ndigits + 2>(r);	
+		}
+		if (r[ndigits] != 0 || vli_cmp<ndigits>(r, prime.d) >= 0) {
+			vli_sub<ndigits>(this->d, r, prime.d);
+		} else vli_set<ndigits>(this->d, r);
+	}
+	template<const u64 k0>
+	void mont_mult(const u64* x, const bignum& y, const bignum& prime) noexcept
+	{
+		u64	s[ndigits*2];
+		u64	r[ndigits+2];
+		vli_clear<ndigits + 2>(r);
+#pragma GCC unroll 4
+		for (uint i=0; i < ndigits;i++) {
+			u64	u = (r[0] + y.d[i]*x[0]) * k0;
+			vli_umult<ndigits>(s, prime.d, u);
+			vli_add_to<ndigits + 2>(r, s);
+			vli_umult<ndigits>(s, x, y.d[i]);
+			vli_add_to<ndigits + 2>(r, s);
+			vli_rshift1w<ndigits + 2>(r);	
+		}
+		if (r[ndigits] != 0 || vli_cmp<ndigits>(r, prime.d) >= 0) {
+			vli_sub<ndigits>(this->d, r, prime.d);
+		} else vli_set<ndigits>(this->d, r);
+	}
+	template<const u64 k0>
+	void mont_sqr(const bignum& x, const bignum& prime) noexcept
+	{
+		u64	s[ndigits*2];
+		u64	r[ndigits+2];
+		vli_clear<ndigits + 2>(r);
+#pragma GCC unroll 4
+		for (uint i=0; i < ndigits;i++) {
+			u64	u = (r[0] + x.d[i]*x.d[0]) * k0;
+			vli_umult<ndigits>(s, prime.d, u);
+			vli_add_to<ndigits + 2>(r, s);
+			vli_umult<ndigits>(s, x.d, x.d[i]);
+			vli_add_to<ndigits + 2>(r, s);
+			vli_rshift1w<ndigits + 2>(r);	
+		}
+		if (r[ndigits] != 0 || vli_cmp<ndigits>(r, prime.d) >= 0) {
+			vli_sub<ndigits>(this->d, r, prime.d);
+		} else vli_set<ndigits>(this->d, r);
+	}
 protected:
 	bn_words	d;
 };
@@ -346,6 +429,15 @@ protected:
 template<uint ndigits>
 class bn_prod: public bignum<ndigits*2> {
 public:
+	using bn_words = u64[ndigits*2];
+	bn_prod(bn_words init = {}) noexcept : bignum<ndigits*2>({}) {}
+	bn_prod(const bn_prod &) = default;
+#ifdef	ommit
+	bn_prod* operator=(const u64 *src) noexcept {
+		bn_prod	*res=reinterpret_cast<bn_prod *>(src);
+		return res;
+	}
+#endif
 	// this = left * right
 	void mult(const bignum<ndigits>& left, const bignum<ndigits>& right) noexcept
 	{
@@ -429,6 +521,48 @@ public:
 			r01 = uint128_t(r01.m_high(), r2);
 		}
 		this->d[ndigits * 2 - 1] = r01.m_low();
+	}
+	void div_barrett(bignum<ndigits>& result, const bignum<ndigits>& prime,
+			const bignum<ndigits+1>& mu) noexcept
+	{
+		u64	q[ndigits*2];
+		u64	r[ndigits];
+		vli_mult<ndigits>(q, this->d + ndigits, mu.d);
+		if (mu.d[ndigits])
+			vli_add_to<ndigits>(q + ndigits, this->d + ndigits);
+		// add remain * mod
+		vli_set<ndigits>(r, q+ndigits);
+		vli_umult<ndigits>(q, mu.d, this->d[ndigits-1]);
+		if (mu.d[ndigits])
+			vli_uadd_to<ndigits>(q + ndigits, this->d[ndigits-1]);
+		vli_rshift1w<ndigits>(q+ndigits);
+		vli_add_to<ndigits>(r, q+ndigits);
+		result = bignum<ndigits>(r);
+	}
+	void mmod_barrett(bignum<ndigits>& result, const bignum<ndigits>& prime,
+			const bignum<ndigits+1>& mu) noexcept
+	{
+		u64	q[ndigits*2];
+		u64	r[ndigits];
+		vli_mult<ndigits>(q, this->d + ndigits, mu.data());
+		if (mu.data()[ndigits])
+			vli_add_to<ndigits>(q + ndigits, this->d + ndigits);
+		// add remain * mod
+		vli_set<ndigits>(r, q+ndigits);
+		vli_umult<ndigits>(q, mu.data(), this->d[ndigits-1]);
+		if (mu.data()[ndigits])
+			vli_uadd_to<ndigits>(q + ndigits, this->d[ndigits-1]);
+		vli_rshift1w<ndigits>(q+ndigits);
+		vli_add_to<ndigits>(r, q+ndigits);
+		vli_mult<ndigits>(q, prime.data(), r);
+		vli_sub<ndigits*2>(q, this->d, q);
+		if (!vli_is_zero<ndigits>(q + ndigits) ||
+			vli_cmp<ndigits>(q, prime.data()) >= 0)
+		{
+			vli_sub_from<ndigits>(q, prime.data());
+		}
+		vli_set<ndigits>(const_cast<u64 *>(result.data()), q);
+		//result = bignum<ndigits>(q);
 	}
 };
 

@@ -154,7 +154,7 @@ static void forceinline vli_mmod_fast_256(u64 *result, const u64 *product,
 static forceinline bool vli_mmod_fast(u64 *result, u64 *product,
 			  const u64 *curve_prime, unsigned int ndigits)
 {
-	u64 tmp[2 * ECC_MAX_DIGITS];
+	u64 tmp[2 * 4];
 
 	/* Currently, both NIST primes have -1 in lowest qword. */
 	if (curve_prime[0] != -1ull) {
@@ -203,7 +203,7 @@ template<uint ndigits> forceinline
 static void vli_mod_square_fast(u64 *result, const u64 *left,
 				const u64 *curve_prime) noexcept
 {
-	u64 product[2 * ECC_MAX_DIGITS];
+	u64 product[2 * ndigits];
 
 	vli_square<ndigits>(product, left);
 	vli_mmod_fast(result, product, curve_prime, ndigits);
@@ -217,7 +217,7 @@ void forceinline
 vli_mod_mult_slow(u64 *result, const u64 *left, const u64 *right,
 		       const u64 *mod, unsigned int ndigits)
 {
-	u64 product[ECC_MAX_DIGITS * 2];
+	u64 product[4 * 2];
 
 	vli_mult<4>(product, left, right);
 	vli_mmod_slow<4>(result, product, mod);
@@ -228,7 +228,7 @@ vli_mod_mult_slow(u64 *result, const u64 *left, const u64 *right,
 void vli_mod_mult_fast(u64 *result, const u64 *left, const u64 *right,
 			      const u64 *curve_prime, unsigned int ndigits)
 {
-	u64 product[2 * ECC_MAX_DIGITS];
+	u64 product[2 * 4];
 
 	switch (ndigits) {
 	case 3:
@@ -277,8 +277,8 @@ static void ecc_point_double_jacobian(u64 *x1, u64 *y1, u64 *z1,
 				      const u64 *curve_prime)
 {
 	/* t1 = x, t2 = y, t3 = z */
-	u64 t4[ECC_MAX_DIGITS];
-	u64 t5[ECC_MAX_DIGITS];
+	u64 t4[ndigits];
+	u64 t5[ndigits];
 
 	if (vli_is_zero<ndigits>(z1))
 		return;
@@ -339,7 +339,7 @@ static void ecc_point_double_jacobian(u64 *x1, u64 *y1, u64 *z1,
 template<uint ndigits> forceinline
 static void apply_z(u64 *x1, u64 *y1, u64 *z, const u64 *curve_prime) noexcept
 {
-	u64 t1[ECC_MAX_DIGITS];
+	u64 t1[ndigits];
 
 	vli_mod_square_fast<ndigits>(t1, z, curve_prime);    /* z^2 */
 	vli_mod_mult_fast(x1, x1, t1, curve_prime, ndigits); /* x1 * z^2 */
@@ -352,7 +352,7 @@ template<uint ndigits> forceinline
 static void xycz_initial_double(u64 *x1, u64 *y1, u64 *x2, u64 *y2,
 				u64 *p_initial_z, const u64 *curve_prime) noexcept
 {
-	u64 z[ECC_MAX_DIGITS];
+	u64 z[ndigits];
 
 	vli_set<ndigits>(x2, x1);
 	vli_set<ndigits>(y2, y1);
@@ -379,7 +379,7 @@ static void
 xycz_add(u64 *x1, u64 *y1, u64 *x2, u64 *y2, const u64 *curve_prime) noexcept
 {
 	/* t1 = X1, t2 = Y1, t3 = X2, t4 = Y2 */
-	u64 t5[ECC_MAX_DIGITS];
+	u64 t5[ndigits];
 
 	/* t5 = x2 - x1 */
 	vli_mod_sub<ndigits>(t5, x2, x1, curve_prime);
@@ -421,9 +421,9 @@ static void xycz_add_c(u64 *x1, u64 *y1, u64 *x2, u64 *y2,
 				const u64 *curve_prime) noexcept
 {
 	/* t1 = X1, t2 = Y1, t3 = X2, t4 = Y2 */
-	u64 t5[ECC_MAX_DIGITS];
-	u64 t6[ECC_MAX_DIGITS];
-	u64 t7[ECC_MAX_DIGITS];
+	u64 t5[ndigits];
+	u64 t6[ndigits];
+	u64 t7[ndigits];
 
 	/* t5 = x2 - x1 */
 	vli_mod_sub<ndigits>(t5, x2, x1, curve_prime);
@@ -470,16 +470,17 @@ static void xycz_add_c(u64 *x1, u64 *y1, u64 *x2, u64 *y2,
 	vli_set<ndigits>(x1, t7);
 }
 
+#ifdef	ommit
 template<uint ndigits> forceinline
 static void ecc_point_mult(u64 *result_x, u64 *result_y,
 			   const u64 *point_x, const u64 *point_y, const u64 *scalar,
-			   u64 *initial_z, const struct ecc_curve *curve) noexcept
+			   u64 *initial_z, const ecc_curve *curve) noexcept
 {
 	/* R0 and R1 */
-	u64 rx[2][ECC_MAX_DIGITS];
-	u64 ry[2][ECC_MAX_DIGITS];
-	u64 z[ECC_MAX_DIGITS];
-	u64 sk[2][ECC_MAX_DIGITS];
+	u64 rx[2][ndigits];
+	u64 ry[2][ndigits];
+	u64 z[ndigits];
+	u64 sk[2][ndigits];
 	const u64 *curve_prime = curve->p;
 	int i, nb;
 	int num_bits;
@@ -537,9 +538,9 @@ static void ecc_point_add(u64 *result_x, u64 *result_y,
 		   const u64 *p_x, const u64 *p_y, const u64 *q_x, const u64 *q_y,
 		   const struct ecc_curve *curve)
 {
-	u64 z[ECC_MAX_DIGITS];
-	u64 px[ECC_MAX_DIGITS];
-	u64 py[ECC_MAX_DIGITS];
+	u64 z[ndigits];
+	u64 px[ndigits];
+	u64 py[ndigits];
 
 	if (ndigits != curve->ndigits) return;	// NOOOO
 	vli_set<ndigits>((u64 *)result_x, (u64 *)q_x);
@@ -551,7 +552,7 @@ static void ecc_point_add(u64 *result_x, u64 *result_y,
 	vli_mod_inv<ndigits>(z, z, curve->p);
 	apply_z<ndigits>(result_x, result_y, z, curve->p);
 }
-
+#endif
 
 /* Computes result = product % mod using Barrett's reduction with precomputed
  * value mu appended to the mod after ndigits, mu = (2^{2w} / mod) and have
@@ -578,7 +579,7 @@ void ecc_point_mult_shamir(const u64 *result_x, const u64 *result_y,
 			   const u64 *u2, const u64 *q_x, const u64 *q_y,
 			   const struct ecc_curve *curve)
 {
-	u64 z[ECC_MAX_DIGITS];
+	u64 z[ndigits];
 	u64 *rx = (u64 *)result_x;
 	u64 *ry = (u64 *)result_y;
 	unsigned int ndigits = curve->ndigits; //curve->g.ndigits;
@@ -610,9 +611,9 @@ void ecc_point_mult_shamir(const u64 *result_x, const u64 *result_y,
 		idx = (!!vli_test_bit(u1, i)) | ((!!vli_test_bit(u2, i)) << 1);
 		point = points[idx];
 		if (point) {
-			u64 tx[ECC_MAX_DIGITS];
-			u64 ty[ECC_MAX_DIGITS];
-			u64 tz[ECC_MAX_DIGITS];
+			u64 tx[ndigits];
+			u64 ty[ndigits];
+			u64 tz[ndigits];
 
 			vli_set(tx, point->x, ndigits);
 			vli_set(ty, point->y, ndigits);
@@ -637,12 +638,13 @@ void ecc_swap_digits(const u64 *in, u64 *out, uint ndigits)
 		out[i] = be64toh(src[ndigits - 1 - i]);
 }
 
+#ifdef	ommit
 template<uint ndigits> forceinline
 static int __ecc_is_key_valid(const struct ecc_curve *curve,
 			      const u64 *private_key) noexcept
 {
-	u64 one[ECC_MAX_DIGITS] = { 1, };
-	u64 res[ECC_MAX_DIGITS];
+	u64 one[ndigits] = { 1, };
+	u64 res[ndigits];
 
 	if (!private_key)
 		return -EINVAL;
@@ -661,7 +663,6 @@ static int __ecc_is_key_valid(const struct ecc_curve *curve,
 	return 0;
 }
 
-
 #ifdef	WITH_ECCKEY
 int ecc_is_key_valid(unsigned int curve_id, unsigned int ndigits,
 		     const u64 *private_key, unsigned int private_key_len)
@@ -676,6 +677,7 @@ int ecc_is_key_valid(unsigned int curve_id, unsigned int ndigits,
 
 	return __ecc_is_key_valid<4>(curve, private_key);
 }
+#endif
 
 /*
  * ECC private keys are generated using the method of extra random bits,
@@ -693,7 +695,7 @@ int ecc_is_key_valid(unsigned int curve_id, unsigned int ndigits,
 int ecc_gen_privkey(unsigned int curve_id, unsigned int ndigits, u64 *privkey)
 {
 	const ecc_curve *curve = ecc_get_curve(curve_id);
-	u64 priv[ECC_MAX_DIGITS];
+	u64 priv[4];
 	unsigned int nbytes = vli_bytes(ndigits);
 	unsigned int nbits = vli_num_bits(curve->n, ndigits);
 	int err;
@@ -734,9 +736,9 @@ int ecc_make_pub_key(unsigned int curve_id, unsigned int ndigits,
 		     const u64 *private_key, u64 *public_key)
 {
 	int ret = 0;
-	u64	pk_x[ECC_MAX_DIGITS];
-	u64	pk_y[ECC_MAX_DIGITS];
-	u64 priv[ECC_MAX_DIGITS];
+	u64	pk_x[4];
+	u64	pk_y[4];
+	u64 priv[4];
 	const ecc_curve *curve = ecc_get_curve(curve_id);
 
 	if (!private_key || !curve || curve->ndigits != ndigits
@@ -764,7 +766,7 @@ int ecc_is_pubkey_valid_partial(const uint curve_id,
 				const u64 *pk_x, const u64 *pk_y)
 {
 	const ecc_curve *curve = ecc_get_curve(curve_id);
-	u64 yy[ECC_MAX_DIGITS], xxx[ECC_MAX_DIGITS], w[ECC_MAX_DIGITS];
+	u64 yy[4], xxx[4], w[4];
 
 	if (curve == nullptr || curve->ndigits != 4) return -EINVAL;
 	uint	ndigits = curve->ndigits;
@@ -798,8 +800,8 @@ int crypto_ecdh_shared_secret(unsigned int curve_id, unsigned int ndigits,
 {
 	int ret = 0;
 	struct ecc_point *product, *pk;
-	u64 priv[ECC_MAX_DIGITS];
-	u64 rand_z[ECC_MAX_DIGITS];
+	u64 priv[4];
+	u64 rand_z[4];
 	unsigned int nbytes;
 	const struct ecc_curve *curve = ecc_get_curve(curve_id);
 

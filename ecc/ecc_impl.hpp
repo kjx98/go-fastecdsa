@@ -28,10 +28,15 @@
 #ifndef __ECC_IMPL_H__
 #define __ECC_IMPL_H__
 
+#include "cdefs.h"
+#include <functional>
 #include "vli.hpp"
+#include "vli_bn.hpp"
 
 /* One digit is u64 qword. */
-#define ECC_MAX_DIGITS             (256 / 64)
+
+
+namespace vli {
 
 /**
  * struct ecc_curve - definition of elliptic curve
@@ -46,32 +51,86 @@
  * @a:		Curve parameter a.
  * @b:		Curve parameter b.
  */
-//template<uint ndigits>
-struct ecc_curve {
+template<uint N>
+class ecc_curve {
 	ecc_curve(const char *_name, const u64 *_gx, const u64 *_gy, const u64 *_p,
-				const u64 *_n, const u64 *_a, const u64 *_b, const uint ndig=4,
-				const bool bBat=false) : name(_name), gx(_gx), gy(_gy),
+				const u64 *_n, const u64 *_a, const u64 *_b,
+				const bool bBat=false) :
+			name(_name), gx(_gx), gy(_gy),
 			p(_p), n(_n), a(_a), b(_b),
-			ndigits(ndig), use_barrett(bBat) {}
+			use_barrett(bBat) {}
 	ecc_curve(const char *_name, const u64 *_gx, const u64 *_gy, const u64 *_p,
 				const u64 *_n, const u64 *_a, const u64 *_b, const u64* rrP,
 				const u64* rrN, const u64 pK0=1,
-				const u64 nK0=0x327f9e8872350975, const uint ndig=4,
-				const bool bBat=false) : name(_name), gx(_gx), gy(_gy),
+				const u64 nK0=0x327f9e8872350975, const bool bBat=false) :
+			name(_name), gx(_gx), gy(_gy),
 			p(_p), n(_n), a(_a), b(_b), rr_p{rrP}, rr_n{rrN}, k0_p(pK0),
-			k0_n(nK0), ndigits(ndig), use_barrett(bBat) {}
-	const char *name;
-	const u64 *gx;
-	const u64 *gy;
-	const u64 *p;
-	const u64 *n;
-	const u64 *a;
-	const u64 *b;
+			k0_n(nK0), use_barrett(bBat) {}
+	const uint ndigits() const { return N; }
+	explicit operator bool() const noexcept {
+		return name != nullptr && name[0] != 0;
+	}
+	void getP(u64 *v) { p.set(v); }
+	void getN(u64 *v) { n.set(v); }
+	void getA(u64 *v) { a.set(v); }
+	void getB(u64 *v) { b.set(v); }
+	void getGx(u64 *v) { gx.set(v); }
+	void getGy(u64 *v) { gy.set(v); }
+	void mod_mult(bignum<N>& res, const bignum<N>& left, const bignum<N>& right) noexcept
+	{
+#ifdef	WITH_BARRETT
+		if (use_barrett) {
+			bn_prod<N>	prod;
+			prod.mult(left, right);
+			// res = barrettmod
+			return;
+		}
+#endif
+		if (mod_mult_) mod_mult_(res, left, right);
+	}
+	void mod_sqr(bignum<N>& res, const bignum<N> left) noexcept
+	{
+#ifdef	WITH_BARRETT
+		if (use_barrett) {
+			bn_prod<N>	prod;
+			prod.square(left);
+			// res = barrettmod
+			return;
+		}
+#endif
+		if (mod_sqr_) mod_sqr_(res, left);
+	}
+	// left,right less than p
+	void mod_add(bignum<N>& res, const bignum<N>& left, const bignum<N>& right)
+	noexcept {
+		if (res.add(left, right)) {
+			res.sub_from(p);
+		}
+	}
+	// left,right less than p
+	void mod_sub(bignum<N>& res, const bignum<N>& left, const bignum<N>& right)
+	noexcept {
+		if (res.sub(left, right)) {
+			res.add_to(p);
+		}
+	}
+private:
+	using mathFunc = std::function<void(bignum<N>&, const bignum<N>&, const bignum<N>&)>;
+	using math1Func = std::function<void(bignum<N>&, const bignum<N>&)>;
+	mathFunc	mod_mult_;
+	math1Func	mod_sqr_;
+	const char *name = nullptr;
+	const bignum<N> gx;
+	const bignum<N> gy;
+	const bignum<N> p;
+	const bignum<N> n;
+	const bignum<N> a;
+	const bignum<N> b;
 	const u64 *rr_p=nullptr;
 	const u64 *rr_n=nullptr;
 	const u64 k0_p = 0;
 	const u64 k0_n = 0;
-	const uint ndigits = 4;
+	const uint _ndigits = N;
 	const bool use_barrett = false;
 };
 
@@ -110,6 +169,7 @@ struct slice_t {
 	}
 };
 
+}
 
 /*
  * Computes result = product % mod
@@ -126,8 +186,8 @@ static void
 vli_mmod_special(u64 *result, const u64 *product, const u64 *mod) noexcept
 {
 	u64 c = -mod[0];
-	u64 t[ECC_MAX_DIGITS * 2];
-	u64 r[ECC_MAX_DIGITS * 2];
+	u64 t[ndigits * 2];
+	u64 r[ndigits * 2];
 
 	vli_set<ndigits * 2>(r, product);
 	while (!vli_is_zero<ndigits>(r + ndigits)) {
@@ -161,9 +221,9 @@ static void
 vli_mmod_special2(u64 *result, const u64 *product, const u64 *mod) noexcept
 {
 	u64 c2 = mod[0] * 2;
-	u64 q[ECC_MAX_DIGITS];
-	u64 r[ECC_MAX_DIGITS * 2];
-	u64 m[ECC_MAX_DIGITS * 2]; /* expanded mod */
+	u64 q[ndigits];
+	u64 r[ndigits * 2];
+	u64 m[ndigits * 2]; /* expanded mod */
 	bool carry; /* last bit that doesn't fit into q */
 	int i;
 
@@ -178,7 +238,7 @@ vli_mmod_special2(u64 *result, const u64 *product, const u64 *mod) noexcept
 	if (carry)
 		r[ndigits - 1] &= (1ull << 63) - 1;
 	for (i = 1; carry || !vli_is_zero<ndigits>(q); i++) {
-		u64 qc[ECC_MAX_DIGITS * 2];
+		u64 qc[ndigits * 2];
 
 		vli_umult<ndigits>(qc, q, c2);
 		if (carry)
@@ -220,10 +280,10 @@ vli_mmod_barrett(u64 *result, u64 *product, const u64 *mod) noexcept
 {
 #ifdef  WITH_C2GO
 	u64	*q = buff;
-	u64	*r = buff + ECC_MAX_DIGITS * 2;
+	u64	*r = buff + ndigits * 2;
 #else
-	u64 q[ECC_MAX_DIGITS * 2];
-	u64 r[ECC_MAX_DIGITS];
+	u64 q[ndigits * 2];
+	u64 r[ndigits];
 #endif
 	const u64 *mu = mod + ndigits;
 
@@ -249,8 +309,8 @@ vli_mmod_barrett(u64 *result, u64 *product, const u64 *mod) noexcept
 template<uint ndigits> forceinline
 static void vli_div_barrett(u64 *result, u64 *product, const u64 *mu) noexcept
 {
-	u64 q[ECC_MAX_DIGITS * 2];
-	u64 r[ECC_MAX_DIGITS];
+	u64 q[ndigits * 2];
+	u64 r[ndigits];
 
 	vli_mult<ndigits>(q, product + ndigits, mu);
 	if (mu[ndigits])
@@ -277,12 +337,12 @@ vli_mod_inv(u64 *result, const u64 *input, const u64 *mod) noexcept
 {
 #ifdef	WITH_C2GO
 	u64	*a=buff;
-	u64 *b=a+ECC_MAX_DIGITS;
-	u64	*u=b+ECC_MAX_DIGITS;
-	u64	*v=u+ECC_MAX_DIGITS;
+	u64 *b=a+ndigits;
+	u64	*u=b+ndigits;
+	u64	*v=u+ndigits;
 #else
-	u64 a[ECC_MAX_DIGITS], b[ECC_MAX_DIGITS];
-	u64 u[ECC_MAX_DIGITS], v[ECC_MAX_DIGITS];
+	u64 a[ndigits], b[ndigits];
+	u64 u[ndigits], v[ndigits];
 #endif
 	int cmp_result;
 
@@ -367,12 +427,12 @@ vli_mod_inv_new(u64 *result, const u64 *n, const u64 *mod) noexcept
 {
 #ifdef	WITH_C2GO
 	u64	*a=buff;
-	u64 *b=a+ECC_MAX_DIGITS;
-	u64	*x=b+ECC_MAX_DIGITS;
-	u64	*y=x+ECC_MAX_DIGITS;
+	u64 *b=a+ndigits;
+	u64	*x=b+ndigits;
+	u64	*y=x+ndigits;
 #else
-	u64 a[ECC_MAX_DIGITS], b[ECC_MAX_DIGITS];
-	u64 x[ECC_MAX_DIGITS], y[ECC_MAX_DIGITS];
+	u64 a[ndigits], b[ndigits];
+	u64 x[ndigits], y[ndigits];
 #endif
 	// mod should be prime, >3 MUST BE odd
 	if ( vli_is_even(mod) ) {
@@ -445,9 +505,9 @@ template<uint ndigits> forceinline
 static void
 vli_mod_inv_new(u64 *result, const u64 *y, const u64 *x) noexcept
 {
-	u64 a[ECC_MAX_DIGITS], b[ECC_MAX_DIGITS];
-	u64 c[ECC_MAX_DIGITS], d[ECC_MAX_DIGITS];
-	u64 u[ECC_MAX_DIGITS], v[ECC_MAX_DIGITS];
+	u64 a[ndigits], b[ndigits];
+	u64 c[ndigits], d[ndigits];
+	u64 u[ndigits], v[ndigits];
 	// mod should be prime, >3 MUST BE odd
 	if ( vli_is_even(x) ) {
 		vli_clear<ndigits>(result);
@@ -525,5 +585,6 @@ vli_mod_inv_new(u64 *result, const u64 *y, const u64 *x) noexcept
 	}
 }
 #endif
+
 
 #endif	//	__ECC_IMPL_H__
