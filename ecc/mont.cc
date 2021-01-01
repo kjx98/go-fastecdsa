@@ -35,7 +35,10 @@
 //#pragma GCC optimize ("unroll-loops")
 //#pragma GCC pop_options
 
+
+#ifndef	NO_BUILTIN_OVERFLOW
 using namespace vli;
+#endif
 
 u64 vli_asm_acc()
 {
@@ -59,20 +62,28 @@ u64 vli_asm_acc()
  */
 void vli_mmod_barrett(u64 *result, const u64 *product, const u64 *mod)
 {
+#ifdef	NO_BUILTIN_OVERFLOW
+	vli_mmod_barrett<4>(result, product, mod);
+#else
 	bn_prod<4>	*prod = reinterpret_cast<bn_prod<4> *>(const_cast<u64 *>(product));
 	bignum<4>	*res = reinterpret_cast<bignum<4> *>(result);
 	bignum<4>	*p = reinterpret_cast<bignum<4> *>(const_cast<u64 *>(mod));
 	bignum<5>	*mu = reinterpret_cast<bignum<5> *>(const_cast<u64 *>(mod+4));
 	prod->mmod_barrett(*res, *p, *mu);
+#endif
 }
 
 #ifndef  WITH_C2GO
 void vli_div_barrett(u64 *result, const u64 *product, const u64 *mu)
 {
+#ifdef	NO_BUILTIN_OVERFLOW
+	vli_div_barrett<4>(result, product, mu);
+#else
 	bn_prod<4>	*prod = reinterpret_cast<bn_prod<4> *>(const_cast<u64 *>(product));
 	bignum<4>	*res = reinterpret_cast<bignum<4> *>(result);
 	bignum<5>	*muPtr = reinterpret_cast<bignum<5> *>(const_cast<u64 *>(mu));
 	prod->div_barrett(*res, *muPtr);
+#endif
 }
 #endif
 
@@ -171,6 +182,15 @@ void mont_mod_exp(u64 *result, const u64 *x, const u64 *y, const montParams *pa)
 #ifndef	WITH_C2GO
 void mont_sm2_mod_mult_p(u64 *result, const u64 *x, const u64 *y)
 {
+#ifdef	NO_BUILTIN_OVERFLOW
+	u64	xp[4];
+	u64	yp[4];
+	u64	r[4];
+	mont_multP(xp, x, sm2_p_rr, sm2_p);
+	mont_multP(yp, y, sm2_p_rr, sm2_p);
+	mont_multP(r, xp, yp, sm2_p);
+	mont_reductionP(result, r, sm2_p);
+#else
 	bignum<4> xp;
 	bignum<4> yp;
 	bignum<4> r;
@@ -181,10 +201,20 @@ void mont_sm2_mod_mult_p(u64 *result, const u64 *x, const u64 *y)
 	yp.mont_mult<sm2_p_k0>(y, *rr, *p);
 	r.mont_mult<sm2_p_k0>(xp, yp, *p);
 	res->mont_reduction<sm2_p_k0>(r, *p);
+#endif
 }
 
 void mont_sm2_mod_mult_n(u64 *result, const u64 *x, const u64 *y)
 {
+#ifdef	NO_BUILTIN_OVERFLOW
+	u64	xp[4];
+	u64	yp[4];
+	u64	r[4];
+	mont_mult<4>(xp, x, sm2_n_rr, sm2_n, sm2_n_k0);
+	mont_mult<4>(yp, y, sm2_n_rr, sm2_n, sm2_n_k0);
+	mont_mult<4>(r, xp, yp, sm2_n, sm2_n_k0);
+	mont_reduction<4>(result, r, sm2_n, sm2_n_k0);
+#else
 	bignum<4> xp;
 	bignum<4> yp;
 	bignum<4> r;
@@ -195,6 +225,7 @@ void mont_sm2_mod_mult_n(u64 *result, const u64 *x, const u64 *y)
 	yp.mont_mult<sm2_n_k0>(y, *rr, *p);
 	r.mont_mult<sm2_n_k0>(xp, yp, *p);
 	res->mont_reduction<sm2_n_k0>(r, *p);
+#endif
 }
 #endif
 

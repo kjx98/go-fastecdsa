@@ -25,17 +25,21 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 #pragma once
-#ifndef __ECC_IMPL_H__
+#ifndef	__ECC_IMPL_H__
 #define __ECC_IMPL_H__
 
 #include "cdefs.h"
+#include <string>
 #include <functional>
 #include "vli.hpp"
 #include "vli_bn.hpp"
 
-/* One digit is u64 qword. */
+#if	__GNUC__ < 6
+//# error "requires at least gcc 6"
+#endif
 
-
+// vli_bn requires builtin_usubl_overflow...
+#ifndef	NO_BUILTIN_OVERFLOW
 namespace vli {
 
 /**
@@ -73,7 +77,8 @@ class ecc_curve {
 	}
 	const uint ndigits() const { return N; }
 	explicit operator bool() const noexcept {
-		return name != nullptr && name[0] != 0;
+		//return name != nullptr && name[0] != 0;
+		return name != "";
 	}
 	void getP(u64 *v) { p.set(v); }
 	void getN(u64 *v) { n.set(v); }
@@ -162,7 +167,7 @@ class ecc_curve {
 		}
 	}
 private:
-	const char *name = nullptr;
+	const std::string name;
 	const bignum<N> gx;
 	const bignum<N> gy;
 	const bignum<N> p;
@@ -214,6 +219,8 @@ struct slice_t {
 };
 
 }
+#endif
+
 
 /*
  * Computes result = product % mod
@@ -317,9 +324,9 @@ vli_mmod_special2(u64 *result, const u64 *product, const u64 *mod) noexcept
  */
 template<uint ndigits> static void forceinline
 #ifdef  WITH_C2GO
-vli_mmod_barrett(u64 *result, u64 *product, const u64 *mod, u64 *buff) noexcept
+vli_mmod_barrett(u64 *result, const u64 *product, const u64 *mod, u64 *buff) noexcept
 #else
-vli_mmod_barrett(u64 *result, u64 *product, const u64 *mod) noexcept
+vli_mmod_barrett(u64 *result, const u64 *product, const u64 *mod) noexcept
 #endif
 {
 #ifdef  WITH_C2GO
@@ -351,7 +358,8 @@ vli_mmod_barrett(u64 *result, u64 *product, const u64 *mod) noexcept
 }
 
 template<uint ndigits> forceinline
-static void vli_div_barrett(u64 *result, u64 *product, const u64 *mu) noexcept
+static void
+vli_div_barrett(u64 *result, const u64 *product, const u64 *mu) noexcept
 {
 	u64 q[ndigits * 2];
 	u64 r[ndigits];

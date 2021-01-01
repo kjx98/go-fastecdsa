@@ -27,20 +27,22 @@ func init() {
 	n256 = new(big.Int).Lsh(one, 256)
 }
 
-func calcK0(p *big.Int)  uint64 {
+func calcK0(p *big.Int) uint64 {
 	t := uint64(1)
 	N := uint64(p.Bits()[0])
 	for i := 1; i < 64; i++ {
-		t = t * t * N		// mod 2^64
+		t = t * t * N // mod 2^64
 	}
 	return -t
 }
 
 func calcRR(p *big.Int) *big.Int {
 	t := new(big.Int).Sub(n256, p)
-	for  i := 256; i<512; i++ {
+	for i := 256; i < 512; i++ {
 		t.Add(t, t)
-		if t.Cmp(p) >= 0 { t.Sub(t, p) }
+		if t.Cmp(p) >= 0 {
+			t.Sub(t, p)
+		}
 	}
 	return t
 }
@@ -56,6 +58,8 @@ func TestRRbyP256(t *testing.T) {
 	cRR := calcRR(n)
 	if cRR.Cmp(RR) != 0 {
 		t.Logf("calcRR diff, %s", cRR.Text(16))
+	} else {
+		t.Log("calcRR NIST P256 n works")
 	}
 	ww = n.Bits()
 	t.Logf("N(order) is %X %X %X %X", ww[0], ww[1], ww[2], ww[3])
@@ -82,6 +86,8 @@ func TestRRbyP256(t *testing.T) {
 	crr := calcRR(p)
 	if crr.Cmp(rr) != 0 {
 		t.Logf("calcRR diff, %s", crr.Text(16))
+	} else {
+		t.Log("calcRR NIST P256 p works")
 	}
 	Rinv := new(big.Int).SetUint64(1)
 	Rinv.Lsh(Rinv, 257)
@@ -128,6 +134,8 @@ func TestRRbyBTC(t *testing.T) {
 	cRR := calcRR(n)
 	if cRR.Cmp(RR) != 0 {
 		t.Logf("calcRR diff, %s", cRR.Text(16))
+	} else {
+		t.Log("calcRR secp256k1 n works")
 	}
 	ww = n.Bits()
 	t.Logf("N(order) is %X %X %X %X", ww[0], ww[1], ww[2], ww[3])
@@ -150,13 +158,15 @@ func TestRRbyBTC(t *testing.T) {
 	crr := calcRR(p)
 	if crr.Cmp(rr) != 0 {
 		t.Logf("calcRR diff, %s", crr.Text(16))
+	} else {
+		t.Log("calcRR secp256k1 p works")
 	}
 	Rinv := new(big.Int).SetUint64(1)
 	Rinv.Lsh(Rinv, 257)
 	Rinv.Mod(Rinv, p)
 	Rinv.ModInverse(Rinv, p)
 	t.Log("RInverse is ", Rinv.Text(16))
-	K0 := new(big.Int).SetUint64(0xccd1c8aaee00bc4f)
+	K0 := new(big.Int).SetUint64(0x4b0dff665588b13f)
 	N0 := new(big.Int).Mul(K0, n)
 	ww = N0.Bits()
 	ck := calcK0(n)
@@ -204,6 +214,8 @@ func TestRRbySM2(t *testing.T) {
 	cRR := calcRR(n)
 	if cRR.Cmp(RR) != 0 {
 		t.Logf("calcRR diff, %s", cRR.Text(16))
+	} else {
+		t.Log("calcRR sm2 n works")
 	}
 	ww = n.Bits()
 	t.Logf("N(order) is %X %X %X %X", ww[0], ww[1], ww[2], ww[3])
@@ -223,6 +235,8 @@ func TestRRbySM2(t *testing.T) {
 	crr := calcRR(p)
 	if crr.Cmp(rr) != 0 {
 		t.Logf("calcRR diff, %s", crr.Text(16))
+	} else {
+		t.Log("calcRR sm2 p works")
 	}
 	Rinv := new(big.Int).SetUint64(1)
 	Rinv.Lsh(Rinv, 257)
@@ -345,7 +359,7 @@ func TestBarrettMod(t *testing.T) {
 		t.Logf("step1 m1 diff m2:\n%s vs\n%s", m1.Text(16), m2.Text(16))
 		t.Fail()
 	} else {
-		t.Log("BarrettMod ok")
+		t.Log("BarrettMod step1 ok")
 	}
 	prod = new(big.Int).Mul(x2, y2)
 	m1 = new(big.Int).Mod(prod, c.P)
@@ -354,7 +368,7 @@ func TestBarrettMod(t *testing.T) {
 		t.Logf("step2 m1 diff m2:\n%s vs\n%s", m1.Text(16), m2.Text(16))
 		t.Fail()
 	} else {
-		t.Log("BarrettMod ok")
+		t.Log("BarrettMod step2 ok")
 	}
 }
 

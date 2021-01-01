@@ -57,7 +57,7 @@ static void vli_sm2_multP(u64 *result, const u64 u) noexcept
 	if (vli_add_to<4>(result, r)) result[4]++;
 }
 
-#ifdef	ommit
+#ifdef	NO_BUILTIN_OVERFLOW
 forceinline
 static void mont_reductionP(u64 *result, const u64 *y, const u64 *prm) noexcept
 {
@@ -105,7 +105,7 @@ static void mont_multP(u64 *result, const u64 *x, const u64 *y,
 		vli_sub<4>(result, r, prime);
 	} else vli_set<4>(result, r);
 }
-#endif	// ommit
+#endif	// NO_BUILTIN_OVERFLOW
 
 template<uint ndigits> forceinline
 static void

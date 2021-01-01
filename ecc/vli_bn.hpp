@@ -38,7 +38,6 @@
 # error "C++ std MUST at least c++11"
 #endif
 
-
 #include "u128.hpp"		// only for uint128_t
 
 namespace vli {
