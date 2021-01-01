@@ -43,7 +43,7 @@
 
 namespace vli {
 
-template<uint ndigits>
+template<const uint ndigits>
 class bignum {
 public:
 	using bn_words = u64[ndigits];
@@ -430,6 +430,32 @@ protected:
 	bn_words	d;
 };
 
+
+template<const uint N>
+static forceinline
+u64 calcK0(const bignum<N>& p) noexcept
+{
+	u64 t = 1;
+	auto n = p.data()[0];
+	for (uint i = 1; i < 64; i++) {
+		t = t * t * n;		// mod 2^64
+	}
+	return -t;
+}
+
+template<const uint N>
+bignum<N>& calcRR(const bignum<N>& p) noexcept
+{
+	bignum<N>	t;
+	t.clear();
+	t.sub_from(p);
+	for  (uint i = 256; i<512; i++) {
+		if (t.add_to(t) || t.Cmp(p) >= 0) {
+			t.sub_from(p);
+		}
+	}
+	return t;
+}
 
 template<uint ndigits>
 class bn_prod: public bignum<ndigits*2> {

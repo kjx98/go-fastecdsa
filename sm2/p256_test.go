@@ -27,6 +27,24 @@ func init() {
 	n256 = new(big.Int).Lsh(one, 256)
 }
 
+func calcK0(p *big.Int)  uint64 {
+	t := uint64(1)
+	N := uint64(p.Bits()[0])
+	for i := 1; i < 64; i++ {
+		t = t * t * N		// mod 2^64
+	}
+	return -t
+}
+
+func calcRR(p *big.Int) *big.Int {
+	t := new(big.Int).Sub(n256, p)
+	for  i := 256; i<512; i++ {
+		t.Add(t, t)
+		if t.Cmp(p) >= 0 { t.Sub(t, p) }
+	}
+	return t
+}
+
 func TestRRbyP256(t *testing.T) {
 	cParams := elliptic.P256().Params()
 	n := cParams.N
@@ -35,6 +53,10 @@ func TestRRbyP256(t *testing.T) {
 	RR.Mod(RR, n)
 	ww := RR.Bits()
 	t.Logf("NIST P256 RR is %X %X %X %X", ww[0], ww[1], ww[2], ww[3])
+	cRR := calcRR(n)
+	if cRR.Cmp(RR) != 0 {
+		t.Logf("calcRR diff, %s", cRR.Text(16))
+	}
 	ww = n.Bits()
 	t.Logf("N(order) is %X %X %X %X", ww[0], ww[1], ww[2], ww[3])
 
@@ -56,7 +78,11 @@ func TestRRbyP256(t *testing.T) {
 	rr := new(big.Int).Mul(r, r)
 	rr.Mod(rr, p)
 	ww = rr.Bits()
-	//t.Logf("rr is %x %x %x %x", ww[0], ww[1], ww[2], ww[3])
+	t.Logf("rr is %x %x %x %x", ww[0], ww[1], ww[2], ww[3])
+	crr := calcRR(p)
+	if crr.Cmp(rr) != 0 {
+		t.Logf("calcRR diff, %s", crr.Text(16))
+	}
 	Rinv := new(big.Int).SetUint64(1)
 	Rinv.Lsh(Rinv, 257)
 	Rinv.Mod(Rinv, p)
@@ -65,12 +91,13 @@ func TestRRbyP256(t *testing.T) {
 	K0 := new(big.Int).SetUint64(0xccd1c8aaee00bc4f)
 	N0 := new(big.Int).Mul(K0, n)
 	ww = N0.Bits()
-	t.Logf("K0: %s, n*K0: %x %x %x %x", K0.Text(16), ww[0], ww[1], ww[2], ww[3])
+	ck := calcK0(n)
+	t.Logf("K0: %s (%x), n*K0: %x %x %x %x", K0.Text(16), ck, ww[0], ww[1], ww[2], ww[3])
 	K0.SetUint64(1)
 	K0.Lsh(K0, 64)
 	N0 = N0.ModInverse(n, K0)
 	if N0 == nil {
-		t.Log("Ca'nt calc N0")
+		t.Log("Can't calc N0")
 	} else {
 		if N0.Cmp(K0) >= 0 {
 			t.Log("SHOULD NEVER OCCUR")
@@ -98,6 +125,10 @@ func TestRRbyBTC(t *testing.T) {
 	RR.Mod(RR, n)
 	ww := RR.Bits()
 	t.Logf("BTC RR is %X %X %X %X", ww[0], ww[1], ww[2], ww[3])
+	cRR := calcRR(n)
+	if cRR.Cmp(RR) != 0 {
+		t.Logf("calcRR diff, %s", cRR.Text(16))
+	}
 	ww = n.Bits()
 	t.Logf("N(order) is %X %X %X %X", ww[0], ww[1], ww[2], ww[3])
 
@@ -115,6 +146,11 @@ func TestRRbyBTC(t *testing.T) {
 	rr.Mod(rr, p)
 	ww = rr.Bits()
 	//t.Logf("rr is %x %x %x %x", ww[0], ww[1], ww[2], ww[3])
+	t.Logf("rr is %d words, %x %x", len(ww), ww[0], ww[1])
+	crr := calcRR(p)
+	if crr.Cmp(rr) != 0 {
+		t.Logf("calcRR diff, %s", crr.Text(16))
+	}
 	Rinv := new(big.Int).SetUint64(1)
 	Rinv.Lsh(Rinv, 257)
 	Rinv.Mod(Rinv, p)
@@ -123,12 +159,13 @@ func TestRRbyBTC(t *testing.T) {
 	K0 := new(big.Int).SetUint64(0xccd1c8aaee00bc4f)
 	N0 := new(big.Int).Mul(K0, n)
 	ww = N0.Bits()
-	t.Logf("K0: %s, n*K0: %x %x %x %x", K0.Text(16), ww[0], ww[1], ww[2], ww[3])
+	ck := calcK0(n)
+	t.Logf("K0: %s (%x), n*K0: %x %x %x %x", K0.Text(16), ck, ww[0], ww[1], ww[2], ww[3])
 	K0.SetUint64(1)
 	K0.Lsh(K0, 64)
 	N0 = N0.ModInverse(n, K0)
 	if N0 == nil {
-		t.Log("Ca'nt calc N0")
+		t.Log("Can't calc N0")
 	} else {
 		if N0.Cmp(K0) >= 0 {
 			t.Log("SHOULD NEVER OCCUR")
@@ -164,6 +201,10 @@ func TestRRbySM2(t *testing.T) {
 	RR.Mod(RR, n)
 	ww := RR.Bits()
 	t.Logf("RR mod N of sm2 is %X %X %X %X", ww[0], ww[1], ww[2], ww[3])
+	cRR := calcRR(n)
+	if cRR.Cmp(RR) != 0 {
+		t.Logf("calcRR diff, %s", cRR.Text(16))
+	}
 	ww = n.Bits()
 	t.Logf("N(order) is %X %X %X %X", ww[0], ww[1], ww[2], ww[3])
 
@@ -179,6 +220,10 @@ func TestRRbySM2(t *testing.T) {
 	rr.Mod(rr, p)
 	ww = rr.Bits()
 	t.Logf("rr mod P is %X %X %X %X", ww[0], ww[1], ww[2], ww[3])
+	crr := calcRR(p)
+	if crr.Cmp(rr) != 0 {
+		t.Logf("calcRR diff, %s", crr.Text(16))
+	}
 	Rinv := new(big.Int).SetUint64(1)
 	Rinv.Lsh(Rinv, 257)
 	Rinv.Mod(Rinv, p)
@@ -187,12 +232,13 @@ func TestRRbySM2(t *testing.T) {
 	K0 := new(big.Int).SetUint64(0x327f9e8872350975)
 	N0 := new(big.Int).Mul(K0, n)
 	ww = N0.Bits()
-	t.Logf("K0: %s, n*K0: %X %X %X %X", K0.Text(16), ww[0], ww[1], ww[2], ww[3])
+	ck := calcK0(n)
+	t.Logf("K0: %s (%x), n*K0: %X %X %X %X", K0.Text(16), ck, ww[0], ww[1], ww[2], ww[3])
 	K0.SetUint64(1)
 	K0.Lsh(K0, 64)
 	N0 = N0.ModInverse(n, K0)
 	if N0 == nil {
-		t.Log("Ca'nt calc N0")
+		t.Log("Can't calc N0")
 	} else {
 		if N0.Cmp(K0) >= 0 {
 			t.Log("SHOULD NEVER OCCUR")
@@ -204,8 +250,9 @@ func TestRRbySM2(t *testing.T) {
 	}
 	K0.Lsh(K0, 192)
 	N0 = N0.ModInverse(p, K0)
+	ck = calcK0(p)
 	if N0 == nil {
-		t.Log("Ca'nt calc N0")
+		t.Log("Can't calc N0")
 	} else {
 		if N0.Cmp(K0) >= 0 {
 			t.Log("SHOULD NEVER OCCUR")
@@ -213,7 +260,7 @@ func TestRRbySM2(t *testing.T) {
 		} else {
 			N0 = N0.Sub(K0, N0)
 		}
-		t.Logf("new N0: %x, mont K0: %x", N0.Bits()[0], sm2g.montK0())
+		t.Logf("new N0: %x, mont K0: %x (%x)", N0.Bits()[0], sm2g.montK0(), ck)
 	}
 	polyP := sm2g.multP(1)
 	if polyP.Cmp(p) != 0 {
