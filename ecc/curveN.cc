@@ -43,8 +43,9 @@
 #define ARRAY_SIZE(arr) (sizeof(arr) / sizeof((arr)[0]))
 #endif
 
+using namespace vli;
 
-static forceinline const ecc_curve *ecc_get_curve(uint curve_id)
+static forceinline const ecc_curve<4> *ecc_get_curve(uint curve_id) noexcept
 {
 	switch (curve_id) {
 	/* In FIPS mode only allow P256 and higher */
@@ -53,7 +54,7 @@ static forceinline const ecc_curve *ecc_get_curve(uint curve_id)
 	case ECC_CURVE_NIST_P256:
 		return &nist_p256;
 	case ECC_CURVE_SM2:
-		return &sm2_p256;
+		return (ecc_curve<4> *)&sm2_p256;
 	default:
 		return nullptr;
 	}
@@ -74,7 +75,7 @@ void	get_curve_params(u64 *p, u64 *n, u64 *b, u64 *gx, u64 *gy,
 				CURVE_HND curveH)
 {
 	if (curveH == nullptr) return;
-	ecc_curve	*curve=(ecc_curve *)curveH;
+	auto	*curve=(ecc_curve<4> *)curveH;
 	if ( !curve || curve->ndigits() != 4) return;
 	curve->getP(p);
 	curve->getN(n);
@@ -86,59 +87,6 @@ void	get_curve_params(u64 *p, u64 *n, u64 *b, u64 *gx, u64 *gy,
 
 /* ------ Point operations ------ */
 
-/* Returns true if p_point is the point at infinity, false otherwise. */
-static forceinline
-bool ecc_point_is_zero(const Point *p)
-{
-	if (/*p->isZero ||*/ vli_is_zero<4>(p->z)) return true;
-	return (vli_is_zero<4>(p->x) && vli_is_zero<4>(p->y));
-}
-
-template<uint ndigits> forceinline
-static void
-vli_mod_mult_f(u64 *result, const u64 *left, const u64 *right,
-				const ecc_curve *curve)
-{
-#ifdef	WITH_BARRETT
-	if ( ! curve->use_barrett ) return;	// ERROR NOOP
-	u64 product[2 * ndigits];
-
-	vli_mult<ndigits * 2>(product, left, right);
-	vli_mmod_barrett<ndigits>(result, product, curve->p);
-#else
-	if ( curve->rr_p == nullptr ) return;	// ERROR NOOP
-	u64		xp[ndigits];
-	u64		yp[ndigits];
-	u64		r[ndigits];
-
-	mont_mult<ndigits>(xp, left, curve->rr_p, curve->p, curve->k0_p);
-	mont_mult<ndigits>(yp, right, curve->rr_p, curve->p, curve->k0_p);
-	mont_mult<ndigits>(r, xp, yp, curve->p, curve->k0_p);
-	mont_reduction<ndigits>(result, r, curve->p, curve->k0_p);
-#endif
-}
-
-/* Computes result = left^2 % curve_prime. */
-template<uint ndigits> forceinline
-static void
-vli_mod_square_f(u64 *result, const u64 *left, const ecc_curve *curve) noexcept
-{
-#ifdef	WITH_BARRETT
-	if ( ! curve->use_barrett ) return;	// ERROR NOOP
-	u64 product[2 * ndigits];
-
-	vli_square<ndigits>(product, left);
-	vli_mmod_barrett<ndigits>(result, product, curve->p);
-#else
-	if ( curve->rr_p == nullptr ) return;	// ERROR NOOP
-	u64		xp[ndigits];
-	u64		r[ndigits];
-	mont_mult<ndigits>(xp, left, curve->rr_p, curve->p, curve->k0_p);
-	mont_mult<ndigits>(r, xp, xp, curve->p, curve->k0_p);
-	mont_reduction<ndigits>(result, r, curve->p, curve->k0_p);
-#endif
-}
-
 /* Point multiplication algorithm using Montgomery's ladder with co-Z
  * coordinates. From http://eprint.iacr.org/2011/338.pdf
  */
@@ -146,230 +94,282 @@ vli_mod_square_f(u64 *result, const u64 *left, const ecc_curve *curve) noexcept
 /*  RESULT = 2 * POINT  (Weierstrass version). */
 /* Double in place */
 template<const uint N> forceinline
-static void ecc_point_double_jacobian(u64 *x3, u64 *y3, u64 *z3,
-					const u64 *x1, const u64 *y1, const u64 *z1, const ecc_curve *curve)
+static void
+ecc_point_double_jacobian(u64 *x3, u64 *y3, u64 *z3, const u64 *x1,
+			const u64 *y1, const u64 *z1, const ecc_curve<N> *curve) noexcept
 {
-	bignum<N>	t1, t2, t3, l1, l2, l3;
-	bignum<N>	*xp = reinterpret_cast<bignum<N> *>(const_cast<u64 *>(x1));
-	bignum<N>	*yp = reinterpret_cast<bignum<N> *>(const_cast<u64 *>(y1));
-	bignum<N>	*zp = reinterpret_cast<bignum<N> *>(const_cast<u64 *>(z1));
-#define t1 (ctx->t.scratch[0])
-#define t2 (ctx->t.scratch[1])
-#define t3 (ctx->t.scratch[2])
-#define l1 (ctx->t.scratch[3])
-#define l2 (ctx->t.scratch[4])
-#define l3 (ctx->t.scratch[5])
-
 	if (vli_is_zero<N>(y1) || vli_is_zero<N>(z1)) {
 		/* P_y == 0 || P_z == 0 => [1:1:0] */
-		vli_clear<ndigits>(x3);
-		vli_clear<ndigits>(y3);
-		vli_clear<ndigits>(z3);
+		vli_clear<N>(x3);
+		vli_clear<N>(y3);
+		vli_clear<N>(z3);
 		x3[0] = 1;
 		y3[0] = 1;
+		return;
+	}
+	bool	z_is_one = vli_is_one<N>(z1);
+	bignum<N>	t1, t2, l1, l2, l3;
+	bignum<N>	xp, yp, zp;
+	//bignum<N>	x3p, y3p, z3p;
+	bignum<N>	*x3p = reinterpret_cast<bignum<N> *>(x3);
+	bignum<N>	*y3p = reinterpret_cast<bignum<N> *>(y3);
+	bignum<N>	*z3p = reinterpret_cast<bignum<N> *>(z3);
+	curve->to_montgomery(xp, x1);
+	curve->to_montgomery(yp, y1);
+	if (z_is_one) {
+		zp = curve->mont_one();
 	} else {
-		if (curce->a_is_pminus3()) {
-			/* Use the faster case.  */
-			/* L1 = 3(X - Z^2)(X + Z^2) */
-			/*                          T1: used for Z^2. */
-			/*                          T2: used for the right term. */
-			ec_pow2(t1, point->z, ctx);
-			ec_subm(l1, point->x, t1, ctx);
-			ec_mulm(l1, l1, mpi_const(MPI_C_THREE), ctx);
-			ec_addm(t2, point->x, t1, ctx);
-			ec_mulm(l1, l1, t2, ctx);
+		curve->to_montgomery(zp, z1);
+	}
+	if (curve->a_is_pminus3()) {
+		/* Use the faster case.  */
+		/* L1 = 3(X - Z^2)(X + Z^2) */
+		/*                          T1: used for Z^2. */
+		/*                          T2: used for the right term. */
+		if (z_is_one) {
+			// l1 = X - Z^2
+			curve->mod_sub(l1, xp, curve->mont_one());
+			// 3(X - Z^2) = 2(X - Z^2) + (X - Z^2)
+			// t1 = 2 * l1
+			curve->mont_mult2(t1, l1);
+			// l1 = 2 * l1 + l1 = 3(X - Z^2)
+			curve->mod_add_to(l1, t1);
+			// t1 = X + Z^2
+			curve->mod_add(t1, xp, curve->mont_one());
+			// l1 = 3(X - Z^2)(X + Z^2)
+			curve->mont_mult(l1, l1, t1);
 		} else {
-			/* Standard case. */
-			/* L1 = 3X^2 + aZ^4 */
-			/*                          T1: used for aZ^4. */
-			ec_pow2(l1, point->x, ctx);
-			ec_mulm(l1, l1, mpi_const(MPI_C_THREE), ctx);
-			ec_powm(t1, point->z, mpi_const(MPI_C_FOUR), ctx);
-			ec_mulm(t1, t1, ctx->a, ctx);
-			ec_addm(l1, l1, t1, ctx);
+			// t2 = Z^2
+			curve->mont_sqr(t2, zp);
+			// l1 = X - Z^2
+			curve->mod_sub(l1, xp, t2);
+			// 3(X - Z^2) = 2(X - Z^2) + (X - Z^2)
+			// t1 = 2 * l1
+			curve->mont_mult2(t1, l1);
+			// l1 = 2 * l1 + l1 = 3(X - Z^2)
+			curve->mod_add_to(l1, t1);
+			// t1 = X + Z^2
+			curve->mod_add(t1, xp, t2);
+			// l1 = 3(X - Z^2)(X + Z^2)
+			curve->mont_mult(l1, l1, t1);
 		}
-		/* Z3 = 2YZ */
-		ec_mulm(z3, point->y, point->z, ctx);
-		ec_mul2(z3, z3, ctx);
-
-		/* L2 = 4XY^2 */
-		/*                              T2: used for Y2; required later. */
-		ec_pow2(t2, point->y, ctx);
-		ec_mulm(l2, t2, point->x, ctx);
-		ec_mulm(l2, l2, mpi_const(MPI_C_FOUR), ctx);
-
-		/* X3 = L1^2 - 2L2 */
-		/*                              T1: used for L2^2. */
-		ec_pow2(x3, l1, ctx);
-		ec_mul2(t1, l2, ctx);
-		ec_subm(x3, x3, t1, ctx);
-
-		/* L3 = 8Y^4 */
-		/*                              T2: taken from above. */
-		ec_pow2(t2, t2, ctx);
-		ec_mulm(l3, t2, mpi_const(MPI_C_EIGHT), ctx);
-
-		/* Y3 = L1(L2 - X3) - L3 */
-		ec_subm(y3, l2, x3, ctx);
-		ec_mulm(y3, y3, l1, ctx);
-		ec_subm(y3, y3, l3, ctx);
+	} else {
+		/* Standard case. */
+		/* L1 = 3X^2 + aZ^4 */
+		/*                          T1: used for aZ^4. */
+		// l1 = X^2
+		curve->mont_sqr(l1, xp);
+		curve->mont_mult2(t1, l1);
+		curve->mod_add_to(l1, t1);	// l1 = 3X^2
+		if (z_is_one) {
+			curve-mod_add_to(l1, curve->paramA());
+		} else {
+			// t1 = Z^4
+			curve->mont_sqr(t1, zp, 2);
+			curve->mont_mult(t1, t1, curve->paramA());
+			curve->mod_add_to(l1, t1);
+		}
 	}
 
-#undef x3
-#undef y3
-#undef z3
-#undef t1
-#undef t2
-#undef t3
-#undef l1
-#undef l2
-#undef l3
+	/* Z3 = 2YZ */
+	if (z_is_one) {
+		curve->mont_mult2(*z3p, yp);
+	} else {
+		// Z3 = YZ
+		curve->mont_mult(*z3p, yp, zp);
+		// Z3 *= 2
+		curve->mont_mult2(*z3p, z3p);
+	}
+
+	/* L2 = 4XY^2 */
+	/*                              T2: used for Y2; required later. */
+	curve->mont_sqr(t2, yp);	// t2 = Y^2
+	// l2 = XY^2
+	curve->mont_mult(l2, t2, xp);
+	curve->mont_mult2(l2, l2);
+	curve->mont_mult2(l2, l2);
+
+	/* X3 = L1^2 - 2L2 */
+	/*                              T1: used for 2L2. */
+	curve->mont_sqr(*x3p, l1);
+	curve->mont_mult2(t1, l2);
+	curve->mod_sub_from(*x3p, t1);
+
+	/* L3 = 8Y^4 */
+	/*                              T2: taken from above. */
+	curve->mont_sqr(t2, t2);
+	curve->mont_mult2(l3, t2);
+	curve->mont_mult2(l3, l3);
+	curve->mont_mult2(l3, l3);
+
+	/* Y3 = L1(L2 - X3) - L3 */
+	curve->mod_sub(*y3p, l2, x3p);
+	curve->mont_mult(*y3p, y3p, l1);
+	curve->mod_sub_from(*y3p, l3);
+
+	// montgomery reduction
+	curve->from_montgomery(x3, *x3p);
+	curve->from_montgomery(y3, *y3p);
+	curve->from_montgomery(z3, *z3p);
 }
 
 /* Modify (x1, y1) => (x1 * z^2, y1 * z^3) */
-template<uint ndigits> forceinline
-static void apply_z(u64 *x1, u64 *y1, u64 *z, const ecc_curve *curve) noexcept
+template<const uint N> forceinline
+static void
+apply_z(u64 *x1, u64 *y1, u64 *z, const ecc_curve<N> *curve) noexcept
 {
-	u64 t1[ndigits];
+	bignum<N>	t1;
 
-	vli_mod_square_f<ndigits>(t1, z, curve);    /* z^2 */
-	vli_mod_mult_f<ndigits>(x1, x1, t1, curve); /* x1 * z^2 */
-	vli_mod_mult_f<ndigits>(t1, t1, z, curve);  /* z^3 */
-	vli_mod_mult_f<ndigits>(y1, y1, t1, curve); /* y1 * z^3 */
+	if (vli_is_one<N>(z) || vli_is_zero<N>(z)) return; 
+	bignum<N>	*xp = reinterpret_cast<bignum<N> *>(x1);
+	bignum<N>	*yp = reinterpret_cast<bignum<N> *>(y1);
+	bignum<N>	*zp = reinterpret_cast<bignum<N> *>(z);
+	curve->to_montgomery(*zp, z);
+	curve->mont_sqr(t1, *zp);	// t1 = z^2
+	curve->to_montgomery(*xp, x1);
+	curve->to_montgomery(*yp, y1);
+	curve->mont_mult(*xp, t1);	// x1 * z^2
+	curve->mont_mult(t1, t1, *zp);	// t1 = z^3
+	curve->mont_mult(*yp, t1);	// y1 * z^3
+
+	// montgomery reduction
+	curve->from_montgomery(x1, *xp);
+	curve->from_montgomery(y1, *yp);
 }
 
 
 /* RESULT = P1 + P2  (Weierstrass version).*/
-template<uint ndigits> forceinline
+template<const uint N> forceinline
 static void
-point_add_jacobian(POINT result,
-		POINT p1, POINT p2,
-		const ecc_curve *curve) noexcept
+ecc_point_add_jacobian(u64 *x3, u64 *y3, u64 *z3, const u64 *x1,
+			const u64 *y1, const u64 *z1, const u64 *x2,
+			const u64 *y2, const u64 *z2, const ecc_curve<N> *curve) noexcept
 {
-#define x1 (p1->x)
-#define y1 (p1->y)
-#define z1 (p1->z)
-#define x2 (p2->x)
-#define y2 (p2->y)
-#define z2 (p2->z)
-#define x3 (result->x)
-#define y3 (result->y)
-#define z3 (result->z)
-#define l1 (ctx->t.scratch[0])
-#define l2 (ctx->t.scratch[1])
-#define l3 (ctx->t.scratch[2])
-#define l4 (ctx->t.scratch[3])
-#define l5 (ctx->t.scratch[4])
-#define l6 (ctx->t.scratch[5])
-#define l7 (ctx->t.scratch[6])
-#define l8 (ctx->t.scratch[7])
-#define l9 (ctx->t.scratch[8])
-#define t1 (ctx->t.scratch[9])
-#define t2 (ctx->t.scratch[10])
 
-	if ((!mpi_cmp(x1, x2)) && (!mpi_cmp(y1, y2)) && (!mpi_cmp(z1, z2))) {
-		/* Same point; need to call the duplicate function.  */
-		mpi_ec_dup_point(result, p1, ctx);
-	} else if (!mpi_cmp_ui(z1, 0)) {
-		/* P1 is at infinity.  */
-		mpi_set(x3, p2->x);
-		mpi_set(y3, p2->y);
-		mpi_set(z3, p2->z);
-	} else if (!mpi_cmp_ui(z2, 0)) {
-		/* P2 is at infinity.  */
-		mpi_set(x3, p1->x);
-		mpi_set(y3, p1->y);
-		mpi_set(z3, p1->z);
+	if (vli_cmp<N>(x1,x2) == 0 && vli_cmp<N>(y1, y2) == 0 &&
+			vli_cmp<N>(z1, z2) == 0) {
+		ecc_point_double_jacobian(x3, y3, z3, x1, y1, z1, curve);
+		return;
+	}
+	if (vli_is_zero<N>(z1)) {
+		vli_set<N>(x3, x2);
+		vli_set<N>(y3, y2);
+		vli_set<N>(z3, z2);
+		return;
+	} else if (vli_is_zero<N>(z2)) {
+		vli_set<N>(x3, x1);
+		vli_set<N>(y3, y1);
+		vli_set<N>(z3, z1);
+		return;
+	}
+	bool	z1_is_one = vli_is_one<N>(z1);
+	bool	z2_is_one = vli_is_one<N>(z2);
+	bignum<N>	l1, l2, l3, l4, l5, l6, l7, l8;
+	bignum<N>	z1z1, z1p;
+	bignum<N>	z2z2, z2p;
+	bignum<N>	*x3p = reinterpret_cast<bignum<N> *>(x3);
+	bignum<N>	*y3p = reinterpret_cast<bignum<N> *>(y3);
+	bignum<N>	*z3p = reinterpret_cast<bignum<N> *>(z3);
+	//curve->to_montgomery(x1p, x1);
+	//curve->to_montgomery(y1p, y1);
+
+	/* l1 = x1 z2^2  */
+	/* l2 = x2 z1^2  */
+	if (z2_is_one) {
+		curve->to_montgomery(l1, x1);
 	} else {
-		int z1_is_one = !mpi_cmp_ui(z1, 1);
-		int z2_is_one = !mpi_cmp_ui(z2, 1);
-
-		/* l1 = x1 z2^2  */
-		/* l2 = x2 z1^2  */
-		if (z2_is_one)
-			mpi_set(l1, x1);
-		else {
-			ec_pow2(l1, z2, ctx);
-			ec_mulm(l1, l1, x1, ctx);
-		}
-		if (z1_is_one)
-			mpi_set(l2, x2);
-		else {
-			ec_pow2(l2, z1, ctx);
-			ec_mulm(l2, l2, x2, ctx);
-		}
-		/* l3 = l1 - l2 */
-		ec_subm(l3, l1, l2, ctx);
-		/* l4 = y1 z2^3  */
-		ec_powm(l4, z2, mpi_const(MPI_C_THREE), ctx);
-		ec_mulm(l4, l4, y1, ctx);
-		/* l5 = y2 z1^3  */
-		ec_powm(l5, z1, mpi_const(MPI_C_THREE), ctx);
-		ec_mulm(l5, l5, y2, ctx);
-		/* l6 = l4 - l5  */
-		ec_subm(l6, l4, l5, ctx);
-
-		if (!mpi_cmp_ui(l3, 0)) {
-			if (!mpi_cmp_ui(l6, 0)) {
-				/* P1 and P2 are the same - use duplicate function. */
-				mpi_ec_dup_point(result, p1, ctx);
-			} else {
-				/* P1 is the inverse of P2.  */
-				mpi_set_ui(x3, 1);
-				mpi_set_ui(y3, 1);
-				mpi_set_ui(z3, 0);
-			}
-		} else {
-			/* l7 = l1 + l2  */
-			ec_addm(l7, l1, l2, ctx);
-			/* l8 = l4 + l5  */
-			ec_addm(l8, l4, l5, ctx);
-			/* z3 = z1 z2 l3  */
-			ec_mulm(z3, z1, z2, ctx);
-			ec_mulm(z3, z3, l3, ctx);
-			/* x3 = l6^2 - l7 l3^2  */
-			ec_pow2(t1, l6, ctx);
-			ec_pow2(t2, l3, ctx);
-			ec_mulm(t2, t2, l7, ctx);
-			ec_subm(x3, t1, t2, ctx);
-			/* l9 = l7 l3^2 - 2 x3  */
-			ec_mul2(t1, x3, ctx);
-			ec_subm(l9, t2, t1, ctx);
-			/* y3 = (l9 l6 - l8 l3^3)/2  */
-			ec_mulm(l9, l9, l6, ctx);
-			ec_powm(t1, l3, mpi_const(MPI_C_THREE), ctx); /* fixme: Use saved value*/
-			ec_mulm(t1, t1, l8, ctx);
-			ec_subm(y3, l9, t1, ctx);
-			ec_mulm(y3, y3, ec_get_two_inv_p(ctx), ctx);
-		}
+		curve->to_montgomery(z2p, z2);
+		// z2z2 = z2^2
+		curve->mont_sqr(z2z2, z2p);
+		curve->to_montgomery(l1, x1);
+		// l1 = x1 z2^2
+		curve->mont_mult(l1, l1, z2z2);
+	}
+	if (z1_is_one) {
+		curve->to_montgomery(l2, x2);
+	} else {
+		curve->to_montgomery(z1p, z1);
+		// z1z1 = z1^2
+		curve->mont_sqr(z1z1, z1p);
+		curve->to_montgomery(l2, x2);
+		// l2 = x2 z1^2
+		curve->mont_mult(l2, l2, z1z1);
 	}
 
-#undef x1
-#undef y1
-#undef z1
-#undef x2
-#undef y2
-#undef z2
-#undef x3
-#undef y3
-#undef z3
-#undef l1
-#undef l2
-#undef l3
-#undef l4
-#undef l5
-#undef l6
-#undef l7
-#undef l8
-#undef l9
-#undef t1
-#undef t2
+	/* l3 = l1 - l2 */
+	curve->mod_sub(l3, l1, l2);
+	/* l4 = y1 z2^3  */
+	// z2z2 = z2^3
+	curve->mont_mult(z2z2, z2z2, z2p);
+	// l4 = y1
+	curve->to_montgomery(l4, y1);
+	// l4 = y1 z2^3
+	curve->mont_mult(l4, l4, z2z2);
+
+	/* l5 = y2 z1^3  */
+	// z1z1 = z1^3
+	curve->mont_mult(z1z1, z1z1, z1p);
+	// l5 = y2
+	curve->to_montgomery(l5, y2);
+	// l5 = y2 z1^3
+	curve->mont_mult(l5, l5, z1z1);
+	/* l6 = l4 - l5  */
+	curve->mod_sub(l6, l4, l5);
+
+	if (l3.is_zero()) {
+		if (l6.is_zero()) {
+			/* P1 and P2 are the same - use duplicate function. */
+			ecc_point_double_jacobian(x3, y3, z3, x1, y1, z1, curve);
+			return;
+		}
+		/* P1 is the inverse of P2.  */
+		vli_clear<N>(x3);
+		vli_clear<N>(y3);
+		vli_clear<N>(z3);
+		x3[0] = 1;
+		y3[0] = 1;
+		return;
+	}
+	/* l7 = l1 + l2  */
+	curve->mod_add(l7, l1, l2);	// no use l1, l2 following
+	/* l8 = l4 + l5  */
+	curve->mod_add(l8, l4, l5);
+	/* z3 = z1 z2 l3  */
+	curve->mont_mult(*z3p, z1p, z2p);
+	curve->mont_mult(*z3p, *z3p, l3);
+	/* x3 = l6^2 - l7 l3^2  */
+	// t1 = l3^2, reuse l1 for t1
+	curve->mont_sqr(l1, l3);
+	// x3 = l6^2
+	curve->mont_sqr(*x3p, l6);
+	// t2 = l7 l3^2, reuse l2 for t2
+	curve->mont_mult(l2, l7, l1);
+	// x3 = l6^2 - l7 l3^2
+	curve->mod_sub_from(*x3p, l2);
+	/* l9 = l7 l3^2 - 2 x3  */
+	// t2 = 2 x3, reuse l2 for t2
+	curve->mont_mult2(l2, *x3p);
+	// l9 = l7 l3^2 = l7 t1, reuse l4 for l9
+	curve->mont_mult(l4, l7, l1);
+	//  l9 = l7 l3^2 - 2 x3 = l9 - t2
+	curve->mod_sub_from(l4, l2);
+	/* y3 = (l9 l6 - l8 l3^3)/2  */
+	curve->mont_mult(l4, l4, l6);	// l9 = l9 l6
+	curve->mont_mult(l1, l1, l3);	// t1 = l3^3
+	curve->mont_mult(l2, l8, l1);	// t2 = l8 l3^3
+	curve->mod_sub_from(l4, l2);	// l9 = l9 l6 - l8 l3^3
+	curve->mont_mult(*y3p, l4, curve->mont_inv2());
+	// montgomery reduction
+	curve->from_montgomery(x3, *x3p);
+	curve->from_montgomery(y3, *y3p);
+	curve->from_montgomery(z3, *z3p);
 }
 
+#ifdef	ommit
 /* Computes R = P + Q mod p */
-template<uint ndigits> forceinline
+template<const uint N> forceinline
 static void ecc_point_add(Point *result, const Point *p, const Point *q,
-		   const struct ecc_curve *curve)
+		   const ecc_curve<N> *curve)
 {
 	u64 z[ndigits];
 	u64 px[ndigits];
@@ -396,45 +396,50 @@ void    point_double_jacobian(Point *pt_r, const Point *pt, CURVE_HND curveH)
 	vli_set<4>(pt_r->z, pt->z);
 	ecc_point_double_jacobian<4>(pt_r->x, pt_r->y, pt_r->z, curve);
 }
+#endif
 
 void    point_double(Point *pt, const Point *p, CURVE_HND curveH)
 {
 	u64 z[4];
 	if (curveH == nullptr) return;
-	ecc_curve	*curve=(ecc_curve *)curveH;
-	if (curve->name[0] == 0 || curve->ndigits != 4) return;
-	vli_set<4>(pt->x, p->x);
-	vli_set<4>(pt->y, p->y);
-	vli_set<4>(pt->z, p->z);
-	ecc_point_double_jacobian<4>(pt->x, pt->y, pt->z, curve);
-	vli_mod_inv<4>(z, pt->z, curve->p);
+	auto	*curve=(ecc_curve<4> *)curveH;
+	if (!curve || curve->ndigits() != 4) return;
+	ecc_point_double_jacobian<4>(pt->x, pt->y, pt->z, p->x, p->y, p->z, curve);
+	vli_mod_inv<4>(z, pt->z, curve->paramP().data());
 	apply_z<4>(pt->x, pt->y, z, curve);
 }
 
-void    point_add_jacobian(Point *pt_r, const Point *pt1, const Point *pt2,
+void    point_add_jacobian(Point *pt_r, const Point *p, const Point *q,
                 CURVE_HND curveH)
 {
 	if (curveH == nullptr) return;
-	ecc_curve	*curve=(ecc_curve *)curveH;
-	if (curve->name[0] == 0 || curve->ndigits != 4) return;
+	auto	*curve=(ecc_curve<4> *)curveH;
+	if (!curve || curve->ndigits() != 4) return;
+	ecc_point_add_jacobian<4>(pt->x, pt->y, pt->z, p->x, p->y, p->z,
+				q->x, q->y, q->z, curve);
 }
 
 void    point_add(Point *pt, const Point *p, const Point *q,
                 CURVE_HND curveH)
 {
 	if (curveH == nullptr) return;
-	ecc_curve	*curve=(ecc_curve *)curveH;
-	if (curve->name[0] == 0 || curve->ndigits != 4) return;
-	ecc_point_add<4>(pt, p, q, curve);
+	auto	*curve=(ecc_curve<4> *)curveH;
+	if (!curve || curve->ndigits() != 4) return;
+	ecc_point_add_jacobian<4>(pt->x, pt->y, pt->z, p->x, p->y, p->z,
+				q->x, q->y, q->z, curve);
+	vli_mod_inv<4>(z, pt->z, curve->paramP().data());
+	apply_z<4>(pt->x, pt->y, z, curve);
 }
 
 void    affine_from_jacobian(u64 *x, u64 *y, const Point *pt, CURVE_HND curveH)
 {
 	u64 z[4];
 	if (curveH == nullptr) return;
-	ecc_curve	*curve=(ecc_curve *)curveH;
-	if (curve->name[0] == 0 || curve->ndigits != 4) return;
-	vli_mod_inv<4>(z, pt->z, curve->p);
+	auto	*curve=(ecc_curve<4> *)curveH;
+	if (!curve || curve->ndigits() != 4) return;
+	vli_mod_inv<4>(z, pt->z, curve->paramP().data());
+	vli_set<4>(x, pt->x);
+	vli_set<4>(y, pt->y);
 	apply_z<4>(x, y, z, curve);
 }
 

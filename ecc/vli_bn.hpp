@@ -24,7 +24,7 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 #pragma once
-#if	!defined(__VLI_BN_HPP__) && !defined(NO_BUILTIN_OVERFLOW)
+#if	!defined(__VLI_BN_HPP__)
 #define __VLI_BN_HPP__
 
 #include <stdint.h>
@@ -33,6 +33,7 @@
 #include <cassert>
 #include <type_traits>
 #include "cdefs.h"
+#include "vli.hpp"
 
 #if	__cplusplus < 201103L
 # error "C++ std MUST at least c++11"
@@ -130,13 +131,13 @@ public:
 		}
 		return 0;
 	}
-	u64 lshift1(bignum& result) noexcept
+	u64 lshift1(const bignum& x) noexcept
 	{
 		u64 carry = 0;
 #pragma GCC unroll 4
 		for (uint i = 0; i < ndigits; i++) {
-			u64 temp = d[i];
-			result.d[i] = (temp << 1) | carry;
+			u64 temp = x.d[i];
+			this->d[i] = (temp << 1) | carry;
 			carry = temp >> 63;
 		}
 		return carry;
@@ -164,6 +165,9 @@ public:
 /* Computes result = this + right, returning carry. Can modify in place. */
 	bool add(const bignum& left, const bignum &right) noexcept
 	{
+#ifdef	NO_BUILTIN_OVERFLOW
+		return vli_add<ndigits>(this->d, left.d, right.d);
+#else
 		bool carry = false;
 #pragma GCC unroll 4
 		for (uint i = 0; i < ndigits; i++) {
@@ -175,10 +179,14 @@ public:
 			d[i] = sum;
 		}
 		return carry;
+#endif
 	}
 /* Computes this = left + right, returning carry. Can modify in place. */
 	bool uadd(const bignum& left, const u64 right) noexcept
 	{
+#ifdef	NO_BUILTIN_OVERFLOW
+		return vli_uadd<ndigits>(this->d, left.d, right);
+#else
 		auto carry = __builtin_uaddl_overflow(left.d[0], right, this->d);
 #pragma GCC unroll 4
 		for (uint i = 1; i < ndigits; i++) {
@@ -187,10 +195,14 @@ public:
 			} else d[i] = left.d[i];
 		}
 		return carry;
+#endif
 	}
 /* Computes this = this + right, returning carry. Can modify in place. */
 	bool add_to(const bignum& right) noexcept
 	{
+#ifdef	NO_BUILTIN_OVERFLOW
+		return vli_add_to<ndigits>(this->d, right.d);
+#else
 		bool carry = false;
 #pragma GCC unroll 4
 		for (uint i = 0; i < ndigits; i++) {
@@ -202,10 +214,14 @@ public:
 			d[i] = sum;
 		}
 		return carry;
+#endif
 	}
 /* Computes this = this + right, returning carry. Can modify in place. */
 	bool uadd_to(const u64 right) noexcept
 	{
+#ifdef	NO_BUILTIN_OVERFLOW
+		return vli_uadd_to<ndigits>(this->d, right);
+#else
 		auto carry = __builtin_uaddl_overflow(d[0], right, d);
 #pragma GCC unroll 4
 		for (uint i = 1; i < ndigits; i++) {
@@ -214,6 +230,7 @@ public:
 			} else break;
 		}
 		return carry;
+#endif
 	}
 /**
  * sub() - Subtracts right from this
@@ -229,6 +246,9 @@ public:
  */
 	bool sub(const bignum& left, const bignum& right) noexcept
 	{
+#ifdef	NO_BUILTIN_OVERFLOW
+		return vli_sub<ndigits>(this->d, left.d, right.d);
+#else
 		bool borrow = false;
 #pragma GCC unroll 4
 		for (uint i = 0; i < ndigits; i++) {
@@ -240,10 +260,14 @@ public:
 			d[i] = diff;
 		}
 		return borrow;
+#endif
 	}
 /* Computes this = left - right, returning borrow. Can modify in place. */
 	bool usub(const bignum& left, const u64 right) noexcept
 	{
+#ifdef	NO_BUILTIN_OVERFLOW
+		return vli_usub<ndigits>(this->d, left.d, right);
+#else
 		auto borrow = __builtin_usubl_overflow(left.d[0], right, this->d);
 #pragma GCC unroll 4
 		for (uint i = 1; i < ndigits; i++) {
@@ -252,9 +276,13 @@ public:
 			} else d[i] = left.d[i];
 		}
 		return borrow;
+#endif
 	}
 	bool sub_from(const bignum& right) noexcept
 	{
+#ifdef	NO_BUILTIN_OVERFLOW
+		return vli_sub_from<ndigits>(this->d, right.d);
+#else
 		bool borrow = false;
 #pragma GCC unroll 4
 		for (uint i = 0; i < ndigits; i++) {
@@ -266,10 +294,14 @@ public:
 			d[i] = diff;
 		}
 		return borrow;
+#endif
 	}
 /* Computes this = this` - right, returning borrow. Can modify in place. */
 	bool usub_from(const u64 right) noexcept
 	{
+#ifdef	NO_BUILTIN_OVERFLOW
+		return vli_usub_from<ndigits>(this->d, right);
+#else
 		auto borrow = __builtin_usubl_overflow(d[0], right, d);
 #pragma GCC unroll 4
 		for (uint i = 1; i < ndigits; i++) {
@@ -278,6 +310,7 @@ public:
 			} else break;
 		}
 		return borrow;
+#endif
 	}
 	bool is_negative()  noexcept
 	{

@@ -34,12 +34,8 @@
 #include "vli.hpp"
 #include "vli_bn.hpp"
 
-#if	__GNUC__ < 6
-//# error "requires at least gcc 6"
-#endif
 
 // vli_bn requires builtin_usubl_overflow...
-#ifndef	NO_BUILTIN_OVERFLOW
 namespace vli {
 
 /**
@@ -57,21 +53,22 @@ namespace vli {
  */
 template<const uint N=4, const u64 k0_p=0, const u64 k0_n=0>
 class ecc_curve {
+public:
 	ecc_curve(const char *_name, const u64 *_gx, const u64 *_gy, const u64 *_p,
-				const u64 *_n, const u64 *_a, const u64 *_b, const bool a_n3 = true,
-				const bool bBat=false) :
-			name(_name), gx(_gx), gy(_gy),
-			p(_p), n(_n), a(_a), b(_b), _a_is_neg3(a_n3),
-			use_barrett(bBat)
+			const u64 *_n, const u64 *_a, const u64 *_b, const bool a_n3 = true,
+			const bool bBat=false) :
+		name(_name), gx(_gx), gy(_gy),
+		p(_p), n(_n), a(_a), b(_b), _a_is_neg3(a_n3),
+		use_barrett(bBat)
 	{
 		static_assert(k0_p == 0 && k0_n == 0, "No use montgomery mult/reduction");
 	}
 	ecc_curve(const char *_name, const u64 *_gx, const u64 *_gy, const u64 *_p,
-				const u64 *_n, const u64 *_a, const u64 *_b, const u64* rrP,
-				const u64* rrN, const bool a_n3 = true) :
-			name(_name), gx(_gx), gy(_gy),
-			p(_p), n(_n), a(_a), b(_b), rr_p(rrP), rr_n(rrN), _a_is_neg3(a_n3),
-			use_barrett(false)
+			const u64 *_n, const u64 *_a, const u64 *_b, const u64* rrP,
+			const u64* rrN, const bool a_n3 = true) :
+		name(_name), gx(_gx), gy(_gy),
+		p(_p), n(_n), a(_a), b(_b), rr_p(rrP), rr_n(rrN), _a_is_neg3(a_n3),
+		use_barrett(false)
 	{
 		static_assert(k0_p != 0 && k0_n != 0, "Do use montgomery mult/reduction");
 	}
@@ -86,31 +83,66 @@ class ecc_curve {
 	void getB(u64 *v) { b.set(v); }
 	void getGx(u64 *v) { gx.set(v); }
 	void getGy(u64 *v) { gy.set(v); }
-	bool init_mu(const u64 *muP, const u64 *muN) noexcept {
+	const bignum<N>& paramA() const noexcept { return a; }
+	const bignum<N>& paramP() const noexcept { return p; }
+	bool init(const u64 *muP=nullptr, const u64 *muN=nullptr) noexcept {
+		if (_inited) return _inited;
+#ifdef	WITH_BARRETT
+		if (muP == nullptr || muN == nullptr) {
+			use_barrett = false;
+			return false;
+		}
+		mu_p = bignum<N+1>(muP);
+		mu_n = bignum<N+1>(muN);
+		use_barrett = true;
+		_inited = true;
+		return _inited;
+#else
 #if	__cplusplus >= 201703L
 		if constexpr(k0_p == 0)
 #else
 		if (k0_p == 0)
 #endif
 		{
-			mu_p = bignum<N+1>(muP);
-			mu_n = bignum<N+1>(muN);
-			use_barrett = true;
-		} else return false;
+			return false;
+		}
+		// should be calc K0 and RR
 		return true;
+#endif
 	}
 	const bool a_is_pminus3() const noexcept { return _a_is_neg3; }
-	void mod_mult(bignum<N>& res, const bignum<N>& left, const bignum<N>& right) noexcept
-	{
 #ifdef	WITH_BARRETT
+	void mmod_barrett(bignum<N>& res, const bn_prod<N>& prod) noexcept
+	{
 		if (use_barrett) {
-			bn_prod<N>	prod;
-			prod.mult(left, right);
 			// res = barrettmod
 			prod.mmod_barrett(res, p, mu_p);
-			return;
 		}
+		return;
+	}
 #endif
+	const bignum<N>& mont_one() const noexcept { return _mont_one; }
+	const bignum<N>& mont_inv2() const noexcept { return _mont_inv2; }
+	void to_montgomery(bignum<N>& res, const u64 *x) noexcept
+	{
+		res.mont_mult<k0_p>(x, rr_p, p);
+	}
+	void to_montgomery(bignum<N>& res, const bignum<N>& x) noexcept
+	{
+		res.mont_mult<k0_p>(x, rr_p, p);
+	}
+	void from_montgomery(bignum<N>& res, const bignum<N>& y) noexcept
+	{
+		res.mont_reduction<k0_p>(y, p);
+	}
+	void from_montgomery(u64* result, const bignum<N>& y) noexcept
+	{
+		bignum<N>   *res = reinterpret_cast<bignum<N> *>(result);
+		res.mont_reduction<k0_p>(y, p);
+	}
+	void
+	mont_mult(bignum<N>& res, const bignum<N>& left, const bignum<N>& right)
+	noexcept {
 #if	__cplusplus >= 201703L
 		if constexpr(k0_p != 0)
 #else
@@ -127,17 +159,8 @@ class ecc_curve {
 			return;
 		}
 	}
-	void mod_sqr(bignum<N>& res, const bignum<N> left, const uint nTimes=1) noexcept
-	{
-#ifdef	WITH_BARRETT
-		if (use_barrett) {
-			bn_prod<N>	prod;
-			prod.square(left);
-			// res = barrettmod
-			prod.mmod_barrett(res, p, mu_p);
-			return;
-		}
-#endif
+	void mont_sqr(bignum<N>& res, const bignum<N> left, const uint nTimes=1)
+	noexcept {
 #if	__cplusplus >= 201703L
 		if constexpr(k0_p != 0)
 #else
@@ -160,11 +183,34 @@ class ecc_curve {
 		}
 	}
 	// left,right less than p
+	void mod_add_to(bignum<N>& res, const bignum<N>& right) noexcept
+	{
+		if (res.add_to(right)) {
+			res.sub_from(p);
+		}
+	}
+	// left,right less than p
 	void mod_sub(bignum<N>& res, const bignum<N>& left, const bignum<N>& right)
 	noexcept {
 		if (res.sub(left, right)) {
 			res.add_to(p);
 		}
+	}
+	void mod_sub_from(bignum<N>& res, const bignum<N>& right) noexcept
+	{
+		if (res.sub_from(right)) {
+			res.add_to(p);
+		}
+	}
+	void mont_mult2(bignum<N>& res, const bignum<N>& left) noexcept
+	{
+#ifdef	ommit
+		this->mod_add(res, left, left);
+#else
+		if (res.lshift1(left) != 0 || res.cmp(p) >= 0) {
+			res.sub_from(p);
+		}
+#endif
 	}
 private:
 	const std::string name;
@@ -178,9 +224,12 @@ private:
 	const bignum<N> rr_n;
 	const bignum<N+1> mu_p;
 	const bignum<N+1> mu_n;
+	const bignum<N> _mont_one;
+	const bignum<N> _mont_inv2;
 	const uint _ndigits = N;
 	const bool _a_is_neg3;
 	const bool use_barrett = false;
+	bool _inited = false;
 };
 
 template<uint ndigits>
@@ -218,8 +267,7 @@ struct slice_t {
 	}
 };
 
-}
-#endif
+}	// namespace vli
 
 
 /*

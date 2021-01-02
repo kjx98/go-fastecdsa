@@ -57,7 +57,7 @@ static void vli_sm2_multP(u64 *result, const u64 u) noexcept
 	if (vli_add_to<4>(result, r)) result[4]++;
 }
 
-#ifdef	NO_BUILTIN_OVERFLOW
+#ifdef	ommit
 forceinline
 static void mont_reductionP(u64 *result, const u64 *y, const u64 *prm) noexcept
 {

@@ -25,7 +25,7 @@ static vli::ecc_curve<3> nist_p192( "nist_192",
 #endif
 
 /* NIST P-256: a = p - 3 */
-static vli::ecc_curve nist_p256( //.name
+static vli::ecc_curve<4> nist_p256( //.name
 	"nist_256",
 	//.gx
 	nist_p256_gx,
@@ -62,7 +62,7 @@ static vli::ecc_curve<4, 1, 0x327f9e8872350975> sm2_p256( //.name
 	sm2_n_rr
 	);
 
-static vli::ecc_curve secp256k1( //.name
+static vli::ecc_curve<4> secp256k1( //.name
 	"secp256k1",
 	//.gx
 	secp256k1_gx,
