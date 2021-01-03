@@ -1,4 +1,4 @@
-// +build ncurve,!sm2p
+// +build curve sm2p
 
 /*
  * Copyright (c) 2013, 2014 Kenneth MacKay. All rights reserved.

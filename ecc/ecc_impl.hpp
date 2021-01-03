@@ -54,6 +54,8 @@ namespace vli {
 template<const uint N=4>
 class ecc_curve {
 public:
+	using mont1_func=std::function<void(bignum<N>&, const bignum<N>&)>;
+	using mont2_func=std::function<void(bignum<N>&, const bignum<N>&, const bignum<N>&)>;
 	ecc_curve(const char *_name, const u64 *_gx, const u64 *_gy, const u64 *_p,
 			const u64 *_n, const u64 *_a, const u64 *_b, const bool a_n3 = true,
 			const bool bBat=false) :
@@ -65,10 +67,11 @@ public:
 	}
 	ecc_curve(const char *_name, const u64 *_gx, const u64 *_gy, const u64 *_p,
 			const u64 *_n, const u64 *_a, const u64 *_b, const u64* rrP,
-			const u64* rrN, const bool a_n3 = true, bool is_a0 = false) :
+			const u64* rrN, const u64 k0P, const u64 k0N, const bool a_n3 = true,
+			bool is_a0 = false) :
 		name(_name), gx(_gx), gy(_gy),
-		p(_p), n(_n), a(_a), b(_b), rr_p(rrP), rr_n(rrN), _a_is_neg3(a_n3),
-		_a_is_zero(is_a0), use_barrett(false)
+		p(_p), n(_n), a(_a), b(_b), rr_p(rrP), rr_n(rrN), k0_p(k0P), k0_n(k0N),
+		_a_is_neg3(a_n3), _a_is_zero(is_a0), use_barrett(false)
 	{
 		static_assert(N > 3, "curve only support 256Bits or more");
 		//static_assert(_name != nullptr && _name[0] != 0, "curve name MUST not empty");
@@ -131,50 +134,31 @@ public:
 	const bignum<N>& mont_inv2() const noexcept { return _mont_inv2; }
 	void to_montgomery(bignum<N>& res, const u64 *x) const noexcept
 	{
-		//res.mont_mult<k0_p>(x, rr_p, p);
+		bignum<N>   *xx = reinterpret_cast<bignum<N> *>(const_cast<u64 *>(x));
+		_mont_mult(res, *xx, rr_p);
 	}
 	void to_montgomery(bignum<N>& res, const bignum<N>& x) const noexcept
 	{
-		//res.mont_mult<k0_p>(x, rr_p, p);
+		_mont_mult(res, x, rr_p);
 	}
 	void from_montgomery(bignum<N>& res, const bignum<N>& y) const noexcept
 	{
-		//res.mont_reduction<k0_p>(y, p);
+		_mont_reduction(res, y);
 	}
 	void from_montgomery(u64* result, const bignum<N>& y) const noexcept
 	{
-		//bignum<N>   *res = reinterpret_cast<bignum<N> *>(result);
-		//res.mont_reduction<k0_p>(y, p);
+		bignum<N>   *res = reinterpret_cast<bignum<N> *>(result);
+		_mont_reduction(*res, y);
 	}
 	void
 	mont_mult(bignum<N>& res, const bignum<N>& left, const bignum<N>& right)
 	const noexcept {
-#ifdef	ommit
-#if	__cplusplus >= 201703L
-		if constexpr(k0_p != 0)
-#else
-		if (k0_p != 0)
-#endif
-		{
-			res.mont_mult<k0_p>(left, right, p);
-			return;
-		}
-#endif
+		_mont_mult(res, left, right);
 	}
 	void mont_sqr(bignum<N>& res, const bignum<N> left, const uint nTimes=1)
 	const noexcept {
-#ifdef	ommit
-#if	__cplusplus >= 201703L
-		if constexpr(k0_p != 0)
-#else
-		if (k0_p != 0)
-#endif
-		{
-			res.mont_sqr<k0_p>(left, p);
-			for (uint i=1; i < nTimes; i++) res.mont_sqr<k0_p>(res, p);
-			return;
-		}
-#endif
+		_mont_sqr(res, left);
+		for (uint i=1; i < nTimes; i++) _mont_sqr(res, res);
 	}
 	// left,right less than p
 	void mod_add(bignum<N>& res, const bignum<N>& left, const bignum<N>& right)
@@ -214,6 +198,16 @@ public:
 #endif
 	}
 private:
+	mont1_func	_mont_reduction = [this](bignum<N> &res, const bignum<N> &y) {
+		res.mont_reduction(y, p, k0_p);
+	};
+	mont1_func	_mont_sqr = [this](bignum<N> &res, const bignum<N> &y) {
+		res.mont_sqr(y, p, k0_p);
+	};
+	mont2_func	_mont_mult = [this](bignum<N> &res, const bignum<N>& x,
+					const bignum<N>& y) {
+		res.mont_mult(x, y, p, k0_p);
+	};
 	const std::string name;
 	const bignum<N> gx;
 	const bignum<N> gy;
@@ -227,6 +221,8 @@ private:
 	const bignum<N+1> mu_n;
 	const bignum<N> _mont_one;
 	const bignum<N> _mont_inv2;
+	const u64	k0_p = 0;
+	const u64	k0_n = 0;
 	const uint _ndigits = N;
 	const bool _a_is_neg3 = false;
 	const bool _a_is_zero = false;

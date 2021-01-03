@@ -60,7 +60,10 @@ static vli::ecc_curve<4> sm2_p256(//.name
 	sm2_b,
 	// rr_p, rr_n
 	sm2_p_rr,
-	sm2_n_rr
+	sm2_n_rr,
+	// k0_p, k0_n
+	1, 0x327f9e8872350975, //
+	true
 	);
 
 static vli::ecc_curve<4> secp256k1( //.name

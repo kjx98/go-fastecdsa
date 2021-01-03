@@ -360,10 +360,9 @@ public:
 	bignum& mod_add(bignum& left, const bignum &right, const bignum &mod) noexcept
 	{
 		auto carry = this->add(left, right);
-
-	/* result > mod (result = mod + remainder), so subtract mod to
-	 * get remainder.
-	 */
+		/* result > mod (result = mod + remainder), so subtract mod to
+		 * get remainder.
+		 */
 		if (carry || this->cmp(mod) >= 0)
 			this->sub_from(mod);
 		return *this;
@@ -374,11 +373,10 @@ public:
 	bignum& mod_sub(const bignum& left, const bignum& right, const bignum &mod) noexcept
 	{
 		auto borrow = this->sub(left, right);
-
-	/* In this case, p_result == -diff == (max int) - diff.
-	 * Since -x % d == d - x, we can get the correct result from
-	 * result + mod (with overflow).
-	 */
+		/* In this case, p_result == -diff == (max int) - diff.
+		 * Since -x % d == d - x, we can get the correct result from
+		 * result + mod (with overflow).
+		 */
 		if (borrow)
 			this->add_to(mod);
 	}
@@ -402,6 +400,23 @@ public:
 			vli_sub<ndigits>(res.d, r, prime.d);
 		} else vli_set<ndigits>(res.d, r);
 	}
+	void mont_reduction(const bignum& y, const bignum& prime, const u64 k0) noexcept
+	{
+		u64	s[ndigits*2];
+		u64	r[ndigits+2];
+		vli_clear<ndigits + 2>(r);
+#pragma GCC unroll 4
+		for (uint i=0; i < ndigits; i++) {
+			u64	u = (r[0] + y.d[i]) * k0;
+			vli_umult<ndigits>(s, prime.d, u);
+			vli_uadd_to<ndigits + 2>(r, y.d[i]);
+			vli_add_to<ndigits + 2>(r, s);
+			vli_rshift1w<ndigits + 2>(r);	
+		}
+		if (r[ndigits] !=0 || vli_cmp<ndigits>(r, prime.d) >= 0) {
+			vli_sub<ndigits>(this->d, r, prime.d);
+		} else vli_set<ndigits>(this->d, r);
+	}
 	template<const u64 k0>
 	friend void mont_mult(bignum& res, const bignum& x, const bignum& y,
 					const bignum& prime) noexcept
@@ -423,7 +438,8 @@ public:
 		} else vli_set<ndigits>(res.d, r);
 	}
 	template<const u64 k0>
-	void mont_mult(const u64* x, const bignum& y, const bignum& prime) noexcept
+	friend void mont_mult(bignum& res, const u64 *x, const bignum& y,
+					const bignum& prime) noexcept
 	{
 		u64	s[ndigits*2];
 		u64	r[ndigits+2];
@@ -434,6 +450,25 @@ public:
 			vli_umult<ndigits>(s, prime.d, u);
 			vli_add_to<ndigits + 2>(r, s);
 			vli_umult<ndigits>(s, x, y.d[i]);
+			vli_add_to<ndigits + 2>(r, s);
+			vli_rshift1w<ndigits + 2>(r);	
+		}
+		if (r[ndigits] != 0 || vli_cmp<ndigits>(r, prime.d) >= 0) {
+			vli_sub<ndigits>(res.d, r, prime.d);
+		} else vli_set<ndigits>(res.d, r);
+	}
+	void mont_mult(const bignum& x, const bignum& y, const bignum& prime,
+					const u64 k0) noexcept
+	{
+		u64	s[ndigits*2];
+		u64	r[ndigits+2];
+		vli_clear<ndigits + 2>(r);
+#pragma GCC unroll 4
+		for (uint i=0; i < ndigits;i++) {
+			u64	u = (r[0] + y.d[i]*x.d[0]) * k0;
+			vli_umult<ndigits>(s, prime.d, u);
+			vli_add_to<ndigits + 2>(r, s);
+			vli_umult<ndigits>(s, x.d, y.d[i]);
 			vli_add_to<ndigits + 2>(r, s);
 			vli_rshift1w<ndigits + 2>(r);	
 		}
@@ -459,6 +494,24 @@ public:
 		if (r[ndigits] != 0 || vli_cmp<ndigits>(r, prime.d) >= 0) {
 			vli_sub<ndigits>(res.d, r, prime.d);
 		} else vli_set<ndigits>(res.d, r);
+	}
+	void mont_sqr(const bignum& x, const bignum& prime, const u64 k0) noexcept
+	{
+		u64	s[ndigits*2];
+		u64	r[ndigits+2];
+		vli_clear<ndigits + 2>(r);
+#pragma GCC unroll 4
+		for (uint i=0; i < ndigits;i++) {
+			u64	u = (r[0] + x.d[i]*x.d[0]) * k0;
+			vli_umult<ndigits>(s, prime.d, u);
+			vli_add_to<ndigits + 2>(r, s);
+			vli_umult<ndigits>(s, x.d, x.d[i]);
+			vli_add_to<ndigits + 2>(r, s);
+			vli_rshift1w<ndigits + 2>(r);	
+		}
+		if (r[ndigits] != 0 || vli_cmp<ndigits>(r, prime.d) >= 0) {
+			vli_sub<ndigits>(this->d, r, prime.d);
+		} else vli_set<ndigits>(this->d, r);
 	}
 protected:
 	bn_words	d;
