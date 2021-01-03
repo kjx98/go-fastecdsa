@@ -54,7 +54,8 @@ static forceinline const ecc_curve<4> *ecc_get_curve(uint curve_id) noexcept
 	case ECC_CURVE_NIST_P256:
 		return &nist_p256;
 	case ECC_CURVE_SM2:
-		return &sm2_p256;
+		if (sm2_p256.init()) return &sm2_p256;
+		return nullptr;
 	default:
 		return nullptr;
 	}
@@ -76,7 +77,7 @@ void	get_curve_params(u64 *p, u64 *n, u64 *b, u64 *gx, u64 *gy,
 {
 	if (curveH == nullptr) return;
 	auto	*curve=(ecc_curve<4> *)curveH;
-	if ( !curve || curve->ndigits() != 4) return;
+	if ( !(*curve) || curve->ndigits() != 4) return;
 	curve->getP(p);
 	curve->getN(n);
 	curve->getB(b);
@@ -92,7 +93,7 @@ void	get_curve_params(u64 *p, u64 *n, u64 *b, u64 *gx, u64 *gy,
  */
 
 /*  RESULT = 2 * POINT  (Weierstrass version). */
-/* Double in place */
+#ifdef	ommit
 template<const uint N> forceinline
 static void
 ecc_point_double_jacobian(u64 *x3, u64 *y3, u64 *z3, const u64 *x1,
@@ -110,7 +111,6 @@ ecc_point_double_jacobian(u64 *x3, u64 *y3, u64 *z3, const u64 *x1,
 	bool	z_is_one = vli_is_one<N>(z1);
 	bignum<N>	t1, t2, l1, l2, l3;
 	bignum<N>	xp, yp, zp;
-	//bignum<N>	x3p, y3p, z3p;
 	bignum<N>	*x3p = reinterpret_cast<bignum<N> *>(x3);
 	bignum<N>	*y3p = reinterpret_cast<bignum<N> *>(y3);
 	bignum<N>	*z3p = reinterpret_cast<bignum<N> *>(z3);
@@ -161,12 +161,15 @@ ecc_point_double_jacobian(u64 *x3, u64 *y3, u64 *z3, const u64 *x1,
 		curve.mont_sqr(l1, xp);
 		curve.mont_mult2(t1, l1);
 		curve.mod_add_to(l1, t1);	// l1 = 3X^2
-		if (z_is_one) {
-			curve.mod_add_to(l1, curve.paramA());
+		if (curve.a_is_zero()) {
+			// do nothing
+		} else if (z_is_one) {
+			// should be mont_paramA
+			curve.mod_add_to(l1, curve.montParamA());
 		} else {
 			// t1 = Z^4
 			curve.mont_sqr(t1, zp, 2);
-			curve.mont_mult(t1, t1, curve.paramA());
+			curve.mont_mult(t1, t1, curve.montParamA());
 			curve.mod_add_to(l1, t1);
 		}
 	}
@@ -212,6 +215,90 @@ ecc_point_double_jacobian(u64 *x3, u64 *y3, u64 *z3, const u64 *x1,
 	curve.from_montgomery(y3, *y3p);
 	curve.from_montgomery(z3, *z3p);
 }
+#else
+template<const uint N> forceinline
+static void
+ecc_point_double_jacobian(u64 *x3, u64 *y3, u64 *z3, const u64 *x1,
+			const u64 *y1, const u64 *z1, const ecc_curve<N> &curve) noexcept
+{
+	if (vli_is_zero<N>(y1) || vli_is_zero<N>(z1)) {
+		/* P_y == 0 || P_z == 0 => [1:1:0] */
+		vli_clear<N>(x3);
+		vli_clear<N>(y3);
+		vli_clear<N>(z3);
+		x3[0] = 1;
+		y3[0] = 1;
+		return;
+	}
+	bool	z_is_one = vli_is_one<N>(z1);
+	bignum<N>	alpha, beta, delta, gamma, alpha2;
+	bignum<N>	xp, yp, zp, t1;
+	bignum<N>	*x3p = reinterpret_cast<bignum<N> *>(x3);
+	bignum<N>	*y3p = reinterpret_cast<bignum<N> *>(y3);
+	bignum<N>	*z3p = reinterpret_cast<bignum<N> *>(z3);
+	// delta = z1^2
+	if (z_is_one) {
+		zp = curve.mont_one();
+		delta = curve.mont_one();
+	} else {
+		curve.to_montgomery(zp, z1);
+		curve.mont_sqr(delta, zp);
+	}
+	// gamma = y1^2
+	curve.to_montgomery(yp, y1);
+	curve.mont_sqr(gamma, yp);
+   	curve.to_montgomery(xp, x1);
+	// alpha = x1 - delta
+	// t1 = x1 + delta
+	curve.mod_sub(alpha, xp, delta);
+	curve.mod_add(t1, xp, delta);
+	curve.mont_mult(alpha, alpha, t1);
+	t1 = alpha;
+	curve.mont_mult2(alpha, alpha);
+	// alpha = 3 (x1 - delta) (x1 + delta)
+	// alpha2 = (x1 - delta)(x1 + delta)
+	curve.mod_add_to(alpha, t1);
+
+	// beta = x gamma
+	curve.mont_mult(beta, xp, gamma);
+	curve.mont_sqr(*x3p, alpha);
+	// t1 = 8 beta
+	curve.mont_mult2(t1, beta);
+	curve.mont_mult2(t1, t1);
+	curve.mont_mult2(t1, t1);
+
+	// x3 = alpha^2 - 8 beta
+	curve.mod_sub_from(*x3p, t1);
+
+	// z3 = (y1 + z1)^2 - gamma - delta
+	curve.mod_add(*z3p, yp, zp);
+	curve.mont_sqr(*z3p, *z3p);
+	curve.mod_sub_from(*z3p, gamma);
+	curve.mod_sub_from(*z3p, delta);
+
+	// beta = 4 beta - x3
+	curve.mont_mult2(beta, beta);
+	curve.mont_mult2(beta, beta);
+	curve.mod_sub_from(beta, *x3p);
+	// y3 = alpha ( 4 beta - x3)
+	curve.mont_mult(*y3p, alpha, beta);
+
+	// gamma = 8 gamma^2
+	curve.mont_sqr(gamma, gamma);
+	curve.mont_mult2(gamma, gamma);
+	curve.mont_mult2(gamma, gamma);
+	curve.mont_mult2(gamma, gamma);
+	// y3 = alpha ( 4 beta - x3) - 8 gamma^2
+	curve.mod_sub_from(*y3p, gamma);
+
+
+	// montgomery reduction
+	curve.from_montgomery(x3, *x3p);
+	curve.from_montgomery(y3, *y3p);
+	curve.from_montgomery(z3, *z3p);
+}
+#endif
+
 
 /* Modify (x1, y1) => (x1 * z^2, y1 * z^3) */
 template<const uint N> forceinline

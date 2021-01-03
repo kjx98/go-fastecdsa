@@ -48,6 +48,7 @@ func TestMontMultModP(t *testing.T) {
 	}
 }
 
+/*
 func TestCurveAdd(t *testing.T) {
 	c := sm2.SM2go()
 	x3, y3 := c.Add(x1, y1, x2, y2)
@@ -61,6 +62,7 @@ func TestCurveAdd(t *testing.T) {
 		t.Fail()
 	}
 }
+*/
 
 func TestCurveDouble(t *testing.T) {
 	c := sm2.SM2go()
@@ -76,6 +78,18 @@ func TestCurveDouble(t *testing.T) {
 			y3.Text(16), y3a.Text(16))
 		t.Fail()
 	}
+	x3, y3 = c.Double(x3, y3)
+	x3a, y3a = sm2c.Double(x3a, y3a)
+	if x3.Cmp(x3a) != 0 {
+		t.Logf("sm2c.Double step1b diff sm2.Double x:\n%s\n%s",
+			x3.Text(16), x3a.Text(16))
+		t.Fail()
+	}
+	if y3.Cmp(y3a) != 0 {
+		t.Logf("sm2c.Double step1b diff sm2.Double y:\n%s\n%s",
+			y3.Text(16), y3a.Text(16))
+		t.Fail()
+	}
 	x3, y3 = c.Double(x2, y2)
 	x3a, y3a = sm2c.Double(x2, y2)
 	if x3.Cmp(x3a) != 0 {
@@ -88,12 +102,23 @@ func TestCurveDouble(t *testing.T) {
 			y3.Text(16), y3a.Text(16))
 		t.Fail()
 	}
+	x3, y3 = c.Double(x3, y3)
+	x3a, y3a = sm2c.Double(x3a, y3a)
+	if x3.Cmp(x3a) != 0 {
+		t.Logf("sm2c.Double step2b diff sm2.Double x:\n%s\n%s",
+			x3.Text(16), x3a.Text(16))
+		t.Fail()
+	}
+	if y3.Cmp(y3a) != 0 {
+		t.Logf("sm2c.Double step2b diff sm2.Double y:\n%s\n%s",
+			y3.Text(16), y3a.Text(16))
+		t.Fail()
+	}
 }
 
-/*
 func TestCurveDoubleJacobian(t *testing.T) {
 	c := sm2.SM2go()
-	var		jc	jacobianIntf
+	var jc jacobianIntf
 	if opt, ok := c.(jacobianIntf); ok {
 		jc = opt
 	} else {
@@ -117,6 +142,25 @@ func TestCurveDoubleJacobian(t *testing.T) {
 			z3.Text(16), z3a.Text(16))
 		t.Fail()
 	}
+	/*
+		x3, y3, z3 = jc.DoubleJacobian(x3, y3, z3)
+		x3a, y3a, z3a = sm2c.DoubleJacobian(x3, y3, z3a)
+		if x3.Cmp(x3a) != 0 {
+			t.Logf("sm2c.DoubleJ step1b diff sm2.Double x:\n%s\n%s",
+				x3.Text(16), x3a.Text(16))
+			t.Fail()
+		}
+		if y3.Cmp(y3a) != 0 {
+			t.Logf("sm2c.DoubleJ step1b diff sm2.Double y:\n%s\n%s",
+				y3.Text(16), y3a.Text(16))
+			t.Fail()
+		}
+		if z3.Cmp(z3a) != 0 {
+			t.Logf("sm2c.DoubleJ step1b diff sm2.Double z:\n%s\n%s",
+				z3.Text(16), z3a.Text(16))
+			t.Fail()
+		}
+	*/
 	x3, y3, z3 = jc.DoubleJacobian(x2, y2, bigOne)
 	x3a, y3a, z3a = sm2c.DoubleJacobian(x2, y2, bigOne)
 	if x3.Cmp(x3a) != 0 {
@@ -135,7 +179,6 @@ func TestCurveDoubleJacobian(t *testing.T) {
 		t.Fail()
 	}
 }
-*/
 
 /*
 func TestCurveMult(t *testing.T) {

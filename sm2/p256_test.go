@@ -238,6 +238,12 @@ func TestRRbySM2(t *testing.T) {
 	} else {
 		t.Log("calcRR sm2 p works")
 	}
+	m1 := sm2g.montRed(rr)
+	if m1.Cmp(r) == 0 {
+		t.Log("r is same as montRed(rr)")
+	} else {
+		t.Logf("r vs montRed(rr):\n%s\n%s", r.Text(16), m1.Text(16))
+	}
 	Rinv := new(big.Int).SetUint64(1)
 	Rinv.Lsh(Rinv, 257)
 	Rinv.Mod(Rinv, p)

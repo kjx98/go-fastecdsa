@@ -3,7 +3,7 @@
 #ifndef __CURVE_DEFS_HPP__
 #define __CURVE_DEFS_HPP__
 #include "curve_const.hpp"
-#include "ecc_impl.hpp"
+#include "mont.hpp"
 
 #ifdef	ommit
 /* NIST P-192: a = p - 3 */
