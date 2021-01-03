@@ -200,4 +200,66 @@ mont_sqr(u64 *result, const u64 *x, const u64 *prime, const u64 k0) noexcept
 	} else vli_set<ndigits>(result, r);
 }
 
+template<const uint N, const u64 k0> forceinline
+static void
+mont_reduction(u64 *result, const u64 *y, const u64 *prime) noexcept
+{
+	u64	s[N * 2];
+	u64	r[N + 2];
+	vli_clear<N + 2>(r);
+#pragma GCC unroll 4
+	for (uint i=0; i < N; i++) {
+		u64	u = (r[0] + y[i]) * k0;
+		vli_umult<N>(s, prime, u);
+		vli_uadd_to<N + 2>(r, y[i]);
+		vli_add_to<N + 2>(r, s);
+		vli_rshift1w<N + 2>(r);	
+	}
+	if (r[N] !=0 || vli_cmp<N>(r, prime) >= 0) {
+		vli_sub<N>(result, r, prime);
+	} else vli_set<N>(result, r);
+}
+
+template<const uint ndigits, const u64 k0> forceinline
+static void
+mont_mult(u64 *result, const u64 *x, const u64 *y, const u64 *prime) noexcept
+{
+	u64	s[ndigits * 2];
+	u64	r[ndigits + 2];
+	vli_clear<ndigits + 2>(r);
+#pragma GCC unroll 4
+	for (uint i=0; i < ndigits;i++) {
+		u64	u = (r[0] + y[i]*x[0]) * k0;
+		vli_umult<ndigits>(s, prime, u);
+		vli_add_to<ndigits + 2>(r, s);
+		vli_umult<ndigits>(s, x, y[i]);
+		vli_add_to<ndigits + 2>(r, s);
+		vli_rshift1w<ndigits + 2>(r);	
+	}
+	if (r[ndigits] != 0 || vli_cmp<ndigits>(r, prime) >= 0) {
+		vli_sub<ndigits>(result, r, prime);
+	} else vli_set<ndigits>(result, r);
+}
+
+template<const uint ndigits, const u64 k0> forceinline
+static void
+mont_sqr(u64 *result, const u64 *x, const u64 *prime) noexcept
+{
+	u64	s[ndigits * 2];
+	u64	r[ndigits + 2];
+	vli_clear<ndigits + 2>(r);
+#pragma GCC unroll 4
+	for (uint i=0; i < ndigits;i++) {
+		u64	u = (r[0] + x[i]*x[0]) * k0;
+		vli_umult<ndigits>(s, prime, u);
+		vli_add_to<ndigits + 2>(r, s);
+		vli_umult<ndigits>(s, x, x[i]);
+		vli_add_to<ndigits + 2>(r, s);
+		vli_rshift1w<ndigits + 2>(r);	
+	}
+	if (r[ndigits] != 0 || vli_cmp<ndigits>(r, prime) >= 0) {
+		vli_sub<ndigits>(result, r, prime);
+	} else vli_set<ndigits>(result, r);
+}
+
 #endif	//	__MONT_HPP__

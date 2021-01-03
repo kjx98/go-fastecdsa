@@ -100,7 +100,7 @@ public:
 		return true;
 	}
 	/* Sets dest = this, copyout */
-	void set(u64 *dest) noexcept
+	void set(u64 *dest) const noexcept
 	{
 #pragma GCC unroll 4
 		for (uint i = 0; i < ndigits; i++)
@@ -384,7 +384,8 @@ public:
 	}
 
 	template<const u64 k0>
-	void mont_reduction(const bignum& y, const bignum& prime) noexcept
+	friend void mont_reduction(bignum& res,  const bignum& y,
+					const bignum& prime) noexcept
 	{
 		u64	s[ndigits*2];
 		u64	r[ndigits+2];
@@ -398,11 +399,12 @@ public:
 			vli_rshift1w<ndigits + 2>(r);	
 		}
 		if (r[ndigits] !=0 || vli_cmp<ndigits>(r, prime.d) >= 0) {
-			vli_sub<ndigits>(this->d, r, prime.d);
-		} else vli_set<ndigits>(this->d, r);
+			vli_sub<ndigits>(res.d, r, prime.d);
+		} else vli_set<ndigits>(res.d, r);
 	}
 	template<const u64 k0>
-	void mont_mult(const bignum& x, const bignum& y, const bignum& prime) noexcept
+	friend void mont_mult(bignum& res, const bignum& x, const bignum& y,
+					const bignum& prime) noexcept
 	{
 		u64	s[ndigits*2];
 		u64	r[ndigits+2];
@@ -417,8 +419,8 @@ public:
 			vli_rshift1w<ndigits + 2>(r);	
 		}
 		if (r[ndigits] != 0 || vli_cmp<ndigits>(r, prime.d) >= 0) {
-			vli_sub<ndigits>(this->d, r, prime.d);
-		} else vli_set<ndigits>(this->d, r);
+			vli_sub<ndigits>(res.d, r, prime.d);
+		} else vli_set<ndigits>(res.d, r);
 	}
 	template<const u64 k0>
 	void mont_mult(const u64* x, const bignum& y, const bignum& prime) noexcept
@@ -440,7 +442,7 @@ public:
 		} else vli_set<ndigits>(this->d, r);
 	}
 	template<const u64 k0>
-	void mont_sqr(const bignum& x, const bignum& prime) noexcept
+	friend void mont_sqr(bignum& res, const bignum& x, const bignum& prime) noexcept
 	{
 		u64	s[ndigits*2];
 		u64	r[ndigits+2];
@@ -455,8 +457,8 @@ public:
 			vli_rshift1w<ndigits + 2>(r);	
 		}
 		if (r[ndigits] != 0 || vli_cmp<ndigits>(r, prime.d) >= 0) {
-			vli_sub<ndigits>(this->d, r, prime.d);
-		} else vli_set<ndigits>(this->d, r);
+			vli_sub<ndigits>(res.d, r, prime.d);
+		} else vli_set<ndigits>(res.d, r);
 	}
 protected:
 	bn_words	d;

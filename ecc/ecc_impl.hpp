@@ -51,7 +51,7 @@ namespace vli {
  * @a:		Curve parameter a.
  * @b:		Curve parameter b.
  */
-template<const uint N=4, const u64 k0_p=0, const u64 k0_n=0>
+template<const uint N=4>
 class ecc_curve {
 public:
 	ecc_curve(const char *_name, const u64 *_gx, const u64 *_gy, const u64 *_p,
@@ -61,28 +61,30 @@ public:
 		p(_p), n(_n), a(_a), b(_b), _a_is_neg3(a_n3),
 		use_barrett(bBat)
 	{
-		static_assert(k0_p == 0 && k0_n == 0, "No use montgomery mult/reduction");
+		static_assert(N > 3, "curve only support 256Bits or more");
 	}
 	ecc_curve(const char *_name, const u64 *_gx, const u64 *_gy, const u64 *_p,
 			const u64 *_n, const u64 *_a, const u64 *_b, const u64* rrP,
-			const u64* rrN, const bool a_n3 = true) :
+			const u64* rrN, const bool a_n3 = true, bool is_a0 = false) :
 		name(_name), gx(_gx), gy(_gy),
 		p(_p), n(_n), a(_a), b(_b), rr_p(rrP), rr_n(rrN), _a_is_neg3(a_n3),
-		use_barrett(false)
+		_a_is_zero(is_a0), use_barrett(false)
 	{
-		static_assert(k0_p != 0 && k0_n != 0, "Do use montgomery mult/reduction");
+		static_assert(N > 3, "curve only support 256Bits or more");
+		//static_assert(_name != nullptr && _name[0] != 0, "curve name MUST not empty");
 	}
+	ecc_curve(ecc_curve &&) = default;
 	const uint ndigits() const { return N; }
 	explicit operator bool() const noexcept {
 		//return name != nullptr && name[0] != 0;
 		return name != "";
 	}
-	void getP(u64 *v) { p.set(v); }
-	void getN(u64 *v) { n.set(v); }
-	void getA(u64 *v) { a.set(v); }
-	void getB(u64 *v) { b.set(v); }
-	void getGx(u64 *v) { gx.set(v); }
-	void getGy(u64 *v) { gy.set(v); }
+	void getP(u64 *v) const noexcept { p.set(v); }
+	void getN(u64 *v) const noexcept { n.set(v); }
+	void getA(u64 *v) const noexcept { a.set(v); }
+	void getB(u64 *v) const noexcept { b.set(v); }
+	void getGx(u64 *v) const noexcept { gx.set(v); }
+	void getGy(u64 *v) const noexcept { gy.set(v); }
 	const bignum<N>& paramA() const noexcept { return a; }
 	const bignum<N>& paramP() const noexcept { return p; }
 	bool init(const u64 *muP=nullptr, const u64 *muN=nullptr) noexcept {
@@ -98,6 +100,7 @@ public:
 		_inited = true;
 		return _inited;
 #else
+#ifdef	ommit
 #if	__cplusplus >= 201703L
 		if constexpr(k0_p == 0)
 #else
@@ -107,12 +110,15 @@ public:
 			return false;
 		}
 		// should be calc K0 and RR
+#endif
+		_inited = true;
 		return true;
 #endif
 	}
 	const bool a_is_pminus3() const noexcept { return _a_is_neg3; }
+	const bool a_is_zero() const noexcept { return _a_is_zero; }
 #ifdef	WITH_BARRETT
-	void mmod_barrett(bignum<N>& res, const bn_prod<N>& prod) noexcept
+	void mmod_barrett(bignum<N>& res, const bn_prod<N>& prod) const noexcept
 	{
 		if (use_barrett) {
 			// res = barrettmod
@@ -123,67 +129,62 @@ public:
 #endif
 	const bignum<N>& mont_one() const noexcept { return _mont_one; }
 	const bignum<N>& mont_inv2() const noexcept { return _mont_inv2; }
-	void to_montgomery(bignum<N>& res, const u64 *x) noexcept
+	void to_montgomery(bignum<N>& res, const u64 *x) const noexcept
 	{
-		res.mont_mult<k0_p>(x, rr_p, p);
+		//res.mont_mult<k0_p>(x, rr_p, p);
 	}
-	void to_montgomery(bignum<N>& res, const bignum<N>& x) noexcept
+	void to_montgomery(bignum<N>& res, const bignum<N>& x) const noexcept
 	{
-		res.mont_mult<k0_p>(x, rr_p, p);
+		//res.mont_mult<k0_p>(x, rr_p, p);
 	}
-	void from_montgomery(bignum<N>& res, const bignum<N>& y) noexcept
+	void from_montgomery(bignum<N>& res, const bignum<N>& y) const noexcept
 	{
-		res.mont_reduction<k0_p>(y, p);
+		//res.mont_reduction<k0_p>(y, p);
 	}
-	void from_montgomery(u64* result, const bignum<N>& y) noexcept
+	void from_montgomery(u64* result, const bignum<N>& y) const noexcept
 	{
-		bignum<N>   *res = reinterpret_cast<bignum<N> *>(result);
-		res.mont_reduction<k0_p>(y, p);
+		//bignum<N>   *res = reinterpret_cast<bignum<N> *>(result);
+		//res.mont_reduction<k0_p>(y, p);
 	}
 	void
 	mont_mult(bignum<N>& res, const bignum<N>& left, const bignum<N>& right)
-	noexcept {
+	const noexcept {
+#ifdef	ommit
 #if	__cplusplus >= 201703L
 		if constexpr(k0_p != 0)
 #else
 		if (k0_p != 0)
 #endif
 		{
-			bignum<N> xp;
-			bignum<N> yp;
-			bignum<N> r;
-			xp.mont_mult<k0_p>(left, rr_p, p);
-			yp.mont_mult<k0_p>(right, rr_p, p);
-			r.mont_mult<k0_p>(xp, yp, p);
-			res.mont_reduction<k0_p>(r, p);
+			res.mont_mult<k0_p>(left, right, p);
 			return;
 		}
+#endif
 	}
 	void mont_sqr(bignum<N>& res, const bignum<N> left, const uint nTimes=1)
-	noexcept {
+	const noexcept {
+#ifdef	ommit
 #if	__cplusplus >= 201703L
 		if constexpr(k0_p != 0)
 #else
 		if (k0_p != 0)
 #endif
 		{
-			bignum<N> xp;
-			bignum<N> r;
-			xp.mont_mult<k0_p>(left, rr_p, p);
-			for (uint i=0; i < nTimes; i++) r.mont_sqr<k0_p>(xp, p);
-			res.mont_reduction<k0_p>(r, p);
+			res.mont_sqr<k0_p>(left, p);
+			for (uint i=1; i < nTimes; i++) res.mont_sqr<k0_p>(res, p);
 			return;
 		}
+#endif
 	}
 	// left,right less than p
 	void mod_add(bignum<N>& res, const bignum<N>& left, const bignum<N>& right)
-	noexcept {
+	const noexcept {
 		if (res.add(left, right)) {
 			res.sub_from(p);
 		}
 	}
 	// left,right less than p
-	void mod_add_to(bignum<N>& res, const bignum<N>& right) noexcept
+	void mod_add_to(bignum<N>& res, const bignum<N>& right) const noexcept
 	{
 		if (res.add_to(right)) {
 			res.sub_from(p);
@@ -191,18 +192,18 @@ public:
 	}
 	// left,right less than p
 	void mod_sub(bignum<N>& res, const bignum<N>& left, const bignum<N>& right)
-	noexcept {
+	const noexcept {
 		if (res.sub(left, right)) {
 			res.add_to(p);
 		}
 	}
-	void mod_sub_from(bignum<N>& res, const bignum<N>& right) noexcept
+	void mod_sub_from(bignum<N>& res, const bignum<N>& right) const noexcept
 	{
 		if (res.sub_from(right)) {
 			res.add_to(p);
 		}
 	}
-	void mont_mult2(bignum<N>& res, const bignum<N>& left) noexcept
+	void mont_mult2(bignum<N>& res, const bignum<N>& left) const noexcept
 	{
 #ifdef	ommit
 		this->mod_add(res, left, left);
@@ -227,10 +228,12 @@ private:
 	const bignum<N> _mont_one;
 	const bignum<N> _mont_inv2;
 	const uint _ndigits = N;
-	const bool _a_is_neg3;
+	const bool _a_is_neg3 = false;
+	const bool _a_is_zero = false;
 	const bool use_barrett = false;
 	bool _inited = false;
 };
+
 
 template<uint ndigits>
 struct point_t {

@@ -197,8 +197,8 @@ void mont_sm2_mod_mult_p(u64 *result, const u64 *x, const u64 *y)
 	bignum<4>	*p = reinterpret_cast<bignum<4> *>(const_cast<u64 *>(sm2_p));
 	xp.mont_mult<sm2_p_k0>(x, *rr, *p);
 	yp.mont_mult<sm2_p_k0>(y, *rr, *p);
-	r.mont_mult<sm2_p_k0>(xp, yp, *p);
-	res->mont_reduction<sm2_p_k0>(r, *p);
+	mont_mult<sm2_p_k0>(r, xp, yp, *p);
+	mont_reduction<sm2_p_k0>(*res, r, *p);
 #endif
 }
 
@@ -221,8 +221,8 @@ void mont_sm2_mod_mult_n(u64 *result, const u64 *x, const u64 *y)
 	bignum<4>	*p = reinterpret_cast<bignum<4> *>(const_cast<u64 *>(sm2_n));
 	xp.mont_mult<sm2_n_k0>(x, *rr, *p);
 	yp.mont_mult<sm2_n_k0>(y, *rr, *p);
-	r.mont_mult<sm2_n_k0>(xp, yp, *p);
-	res->mont_reduction<sm2_n_k0>(r, *p);
+	mont_mult<sm2_n_k0>(r, xp, yp, *p);
+	mont_reduction<sm2_n_k0>(*res, r, *p);
 #endif
 }
 #endif
