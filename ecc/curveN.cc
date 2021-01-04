@@ -166,7 +166,8 @@ ecc_point_double_jacobian(u64 *x3, u64 *y3, u64 *z3, const u64 *x1,
 		// l1 = X^2
 		curve.mont_sqr(l1, xp);
 		curve.mont_mult2(t1, l1);
-		curve.mod_add_to(l1, t1);	// l1 = 3X^2
+		// l1 = 3X^2
+		curve.mod_add_to(l1, t1);
 		if (curve.a_is_zero()) {
 			/* Use the faster case.  */
 			/* L1 = 3X^2 */
@@ -177,7 +178,9 @@ ecc_point_double_jacobian(u64 *x3, u64 *y3, u64 *z3, const u64 *x1,
 		} else {
 			// t1 = Z^4
 			curve.mont_sqr(t1, zp, 2);
+			// t1 = a * Z^4
 			curve.mont_mult(t1, t1, curve.montParamA());
+			// l1 = 3 X^2 + a Z^4
 			curve.mod_add_to(l1, t1);
 		}
 	}
@@ -193,11 +196,13 @@ ecc_point_double_jacobian(u64 *x3, u64 *y3, u64 *z3, const u64 *x1,
 	}
 
 	/* L2 = 4XY^2 */
-	/*                              T2: used for Y2; required later. */
-	curve.mont_sqr(t2, yp);	// t2 = Y^2
-	// l2 = XY^2
+	/* t2 = Y1^2 */
+	curve.mont_sqr(t2, yp);
+	// t2 = 2 Y^2
+	curve.mont_mult2(t2, t2);
+	// l2 =  2 XY^2
 	curve.mont_mult(l2, t2, xp);
-	curve.mont_mult2(l2, l2);
+	// l2 = 4 X Y^2
 	curve.mont_mult2(l2, l2);
 
 	/* X3 = L1^2 - 2L2 */
@@ -207,14 +212,13 @@ ecc_point_double_jacobian(u64 *x3, u64 *y3, u64 *z3, const u64 *x1,
 	curve.mod_sub_from(*x3p, t1);
 
 	/* L3 = 8Y^4 */
-	/*                              T2: taken from above. */
-	curve.mont_mult2(t2, t2);	// t2 *= 2, t2 = 2Y^2
+	/*   L3 reuse t2, t2: taken from above. */
 	curve.mont_sqr(t2, t2);		// t2 = t2^2 = 4Y^4
 	curve.mont_mult2(t2, t2);	// t2 *= 2, t2 = 8Y^4
 
 	/* Y3 = L1(L2 - X3) - L3 */
 	curve.mod_sub(*y3p, l2, *x3p);
-	curve.mont_mult(*y3p, *y3p, l1);
+	curve.mont_mult(*y3p, l1, *y3p);
 	curve.mod_sub_from(*y3p, t2);
 
 	// montgomery reduction
@@ -273,12 +277,13 @@ ecc_point_double_jacobian(u64 *x3, u64 *y3, u64 *z3, const u64 *x1,
 
 	// beta = x gamma
 	curve.mont_mult(beta, xp, gamma);
+	curve.mont_mult2(beta, beta);
+	// beta = 4 beta = 4 x gamma
+	curve.mont_mult2(beta, beta);
 	// x3 = alpha^2 - 8 * beta
 	curve.mont_sqr(*x3p, alpha);
 	// t1 = 8 beta
 	curve.mont_mult2(t1, beta);
-	curve.mont_mult2(t1, t1);
-	curve.mont_mult2(t1, t1);
 
 	// x3 = alpha^2 - 8 beta
 	curve.mod_sub_from(*x3p, t1);
@@ -291,8 +296,6 @@ ecc_point_double_jacobian(u64 *x3, u64 *y3, u64 *z3, const u64 *x1,
 
 	// y3 = alpha ( 4 * beta - x3)
 	// beta = 4 beta - x3
-	curve.mont_mult2(beta, beta);
-	curve.mont_mult2(beta, beta);
 	curve.mod_sub_from(beta, *x3p);
 	curve.mont_mult(*y3p, alpha, beta);
 
