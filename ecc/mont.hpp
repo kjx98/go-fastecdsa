@@ -111,12 +111,6 @@ public:
 		bignum<N>	t1;
 		t1.clear();
 		_mont_one.sub(t1, p);
-		// calc inv2
-		u64		two[N];
-		vli_clear<N>(two);
-		two[0] = 2;
-		vli_mod_inv<N>(two, two, p.data());
-		to_montgomery(_mont_inv2, two);
 		// should be calc K0 and RR
 		_inited = true;
 		return true;
@@ -135,7 +129,6 @@ public:
 	}
 #endif
 	const bignum<N>& mont_one() const noexcept { return _mont_one; }
-	const bignum<N>& mont_inv2() const noexcept { return _mont_inv2; }
 	void to_montgomery(bignum<N>& res, const u64 *x) const noexcept
 	{
 		bignum<N>   *xx = reinterpret_cast<bignum<N> *>(const_cast<u64 *>(x));
@@ -224,7 +217,6 @@ private:
 	const bignum<N+1> mu_p;
 	const bignum<N+1> mu_n;
 	bignum<N> _mont_one;
-	bignum<N> _mont_inv2;
 	bignum<N> _mont_a;
 	const u64	k0_p = 0;
 	const u64	k0_n = 0;
