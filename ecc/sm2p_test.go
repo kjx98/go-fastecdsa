@@ -62,6 +62,18 @@ func TestSM2Add(t *testing.T) {
 			y3.Text(16), y3a.Text(16))
 		t.Fail()
 	}
+	x3, y3 = c.Add(x1, y1, x3, y3)
+	x3a, y3a = sm2Add(x1, y1, x3a, y3a)
+	if x3.Cmp(x3a) != 0 {
+		t.Logf("sm2c.Add step1b diff sm2.Double x:\n%s\n%s",
+			x3.Text(16), x3a.Text(16))
+		t.Fail()
+	}
+	if y3.Cmp(y3a) != 0 {
+		t.Logf("sm2c.AddJ step1b diff sm2.Double y:\n%s\n%s",
+			y3.Text(16), y3a.Text(16))
+		t.Fail()
+	}
 }
 
 func TestSM2AddJacobian(t *testing.T) {
@@ -87,6 +99,23 @@ func TestSM2AddJacobian(t *testing.T) {
 	}
 	if z3.Cmp(z3a) != 0 {
 		t.Logf("sm2c.AddJ step1 diff sm2.Double z:\n%s\n%s",
+			z3.Text(16), z3a.Text(16))
+		t.Fail()
+	}
+	x3, y3, z3 = jc.AddJacobian(x1, y1, bigOne, x3, y3, z3)
+	x3a, y3a, z3a = sm2AddJacobian(x1, y1, bigOne, x3a, y3a, z3a)
+	if x3.Cmp(x3a) != 0 {
+		t.Logf("sm2c.AddJ step1b diff sm2.Double x:\n%s\n%s",
+			x3.Text(16), x3a.Text(16))
+		t.Fail()
+	}
+	if y3.Cmp(y3a) != 0 {
+		t.Logf("sm2c.AddJ step1b diff sm2.Double y:\n%s\n%s",
+			y3.Text(16), y3a.Text(16))
+		t.Fail()
+	}
+	if z3.Cmp(z3a) != 0 {
+		t.Logf("sm2c.AddJ step1b diff sm2.Double z:\n%s\n%s",
 			z3.Text(16), z3a.Text(16))
 		t.Fail()
 	}
@@ -146,6 +175,23 @@ func TestSM2DoubleJacobian(t *testing.T) {
 			z3.Text(16), z3a.Text(16))
 		t.Fail()
 	}
+	x3, y3, z3 = jc.DoubleJacobian(x3, y3, z3)
+	x3a, y3a, z3a = sm2DoubleJacobian(x3a, y3a, z3a)
+	if x3.Cmp(x3a) != 0 {
+		t.Logf("sm2c.DoubleJ step1b diff sm2.Double x:\n%s\n%s",
+			x3.Text(16), x3a.Text(16))
+		t.Fail()
+	}
+	if y3.Cmp(y3a) != 0 {
+		t.Logf("sm2c.DoubleJ step1b diff sm2.Double y:\n%s\n%s",
+			y3.Text(16), y3a.Text(16))
+		t.Fail()
+	}
+	if z3.Cmp(z3a) != 0 {
+		t.Logf("sm2c.DoubleJ step1b diff sm2.Double z:\n%s\n%s",
+			z3.Text(16), z3a.Text(16))
+		t.Fail()
+	}
 	x3, y3, z3 = jc.DoubleJacobian(x2, y2, bigOne)
 	x3a, y3a, z3a = sm2DoubleJacobian(x2, y2, bigOne)
 	if x3.Cmp(x3a) != 0 {
@@ -160,6 +206,23 @@ func TestSM2DoubleJacobian(t *testing.T) {
 	}
 	if z3.Cmp(z3a) != 0 {
 		t.Logf("sm2c.DoubleJ step2 diff sm2.Double z:\n%s\n%s",
+			z3.Text(16), z3a.Text(16))
+		t.Fail()
+	}
+	x3, y3, z3 = jc.DoubleJacobian(x3, y3, z3)
+	x3a, y3a, z3a = sm2DoubleJacobian(x3a, y3a, z3a)
+	if x3.Cmp(x3a) != 0 {
+		t.Logf("sm2c.DoubleJ step2b diff sm2.Double x:\n%s\n%s",
+			x3.Text(16), x3a.Text(16))
+		t.Fail()
+	}
+	if y3.Cmp(y3a) != 0 {
+		t.Logf("sm2c.DoubleJ step2b diff sm2.Double y:\n%s\n%s",
+			y3.Text(16), y3a.Text(16))
+		t.Fail()
+	}
+	if z3.Cmp(z3a) != 0 {
+		t.Logf("sm2c.DoubleJ step2b diff sm2.Double z:\n%s\n%s",
 			z3.Text(16), z3a.Text(16))
 		t.Fail()
 	}

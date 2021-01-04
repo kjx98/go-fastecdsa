@@ -229,12 +229,12 @@ CURVE_HND   get_curve(uint curve_id);
  */
 void	get_curve_params(u64 *p, u64 *n, u64 *b, u64 *gx, u64 *gy,
 				CURVE_HND curveH);
-void	point_double_jacobian(Point *pt_r, const Point *pt, CURVE_HND curveH);
-void	point_add_jacobian(Point *pt_r, const Point *pt1, const Point *pt2,
+void	point_double_jacobian(Point *pt, const Point *p, CURVE_HND curveH);
+void	point_add_jacobian(Point *pt, const Point *p, const Point *q,
 				CURVE_HND curveH);
-void	point_double(Point *pt_r, const Point *pt, CURVE_HND curveH);
-void	point_add(Point *pt_r, const Point *p, const Point *q, CURVE_HND curvH);
-void	point_mult(Point *pt_r, const Point *pt, const u64 *scalar,
+void	point_double(Point *pt, const Point *p, CURVE_HND curveH);
+void	point_add(Point *pt, const Point *p, const Point *q, CURVE_HND curvH);
+void	point_mult(Point *pt, const Point *p, const u64 *scalar,
 				CURVE_HND curveH);
 void	affine_from_jacobian(u64 *x, u64 *y, const Point *pt, CURVE_HND curveH);
 

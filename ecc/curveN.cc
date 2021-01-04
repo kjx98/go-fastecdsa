@@ -93,12 +93,18 @@ void	get_curve_params(u64 *p, u64 *n, u64 *b, u64 *gx, u64 *gy,
  */
 
 /*  RESULT = 2 * POINT  (Weierstrass version). */
-#ifdef	ommit
+#ifndef	ommit
 template<const uint N> forceinline
 static void
 ecc_point_double_jacobian(u64 *x3, u64 *y3, u64 *z3, const u64 *x1,
 			const u64 *y1, const u64 *z1, const ecc_curve<N> &curve) noexcept
 {
+/* dbl-1998-cmo-2 algorithm
+ * http://hyperelliptic.org/EFD/g1p/auto-shortw-jacobian.html
+ * M ... l1
+ * S ... l2
+ * T ... x3
+ */
 	if (vli_is_zero<N>(y1) || vli_is_zero<N>(z1)) {
 		/* P_y == 0 || P_z == 0 => [1:1:0] */
 		vli_clear<N>(x3);
@@ -109,7 +115,7 @@ ecc_point_double_jacobian(u64 *x3, u64 *y3, u64 *z3, const u64 *x1,
 		return;
 	}
 	bool	z_is_one = vli_is_one<N>(z1);
-	bignum<N>	t1, t2, l1, l2, l3;
+	bignum<N>	t1, t2, l1, l2;
 	bignum<N>	xp, yp, zp;
 	bignum<N>	*x3p = reinterpret_cast<bignum<N> *>(x3);
 	bignum<N>	*y3p = reinterpret_cast<bignum<N> *>(y3);
@@ -139,19 +145,19 @@ ecc_point_double_jacobian(u64 *x3, u64 *y3, u64 *z3, const u64 *x1,
 			// l1 = 3(X - Z^2)(X + Z^2)
 			curve.mont_mult(l1, l1, t1);
 		} else {
-			// t2 = Z^2
-			curve.mont_sqr(t2, zp);
+			// t1 = Z^2
+			curve.mont_sqr(t1, zp);
 			// l1 = X - Z^2
-			curve.mod_sub(l1, xp, t2);
+			curve.mod_sub(l1, xp, t1);
 			// 3(X - Z^2) = 2(X - Z^2) + (X - Z^2)
-			// t1 = 2 * l1
-			curve.mont_mult2(t1, l1);
-			// l1 = 2 * l1 + l1 = 3(X - Z^2)
-			curve.mod_add_to(l1, t1);
-			// t1 = X + Z^2
-			curve.mod_add(t1, xp, t2);
+			// t2 = 2 * l1
+			curve.mont_mult2(t2, l1);
+			// l1 = l1 + 2 * l1 = 3(X - Z^2)
+			curve.mod_add_to(l1, t2);
+			// t2 = X + Z^2
+			curve.mod_add(t2, xp, t1);
 			// l1 = 3(X - Z^2)(X + Z^2)
-			curve.mont_mult(l1, l1, t1);
+			curve.mont_mult(l1, l1, t2);
 		}
 	} else {
 		/* Standard case. */
@@ -162,6 +168,8 @@ ecc_point_double_jacobian(u64 *x3, u64 *y3, u64 *z3, const u64 *x1,
 		curve.mont_mult2(t1, l1);
 		curve.mod_add_to(l1, t1);	// l1 = 3X^2
 		if (curve.a_is_zero()) {
+			/* Use the faster case.  */
+			/* L1 = 3X^2 */
 			// do nothing
 		} else if (z_is_one) {
 			// should be mont_paramA
@@ -200,15 +208,14 @@ ecc_point_double_jacobian(u64 *x3, u64 *y3, u64 *z3, const u64 *x1,
 
 	/* L3 = 8Y^4 */
 	/*                              T2: taken from above. */
-	curve.mont_sqr(t2, t2);
-	curve.mont_mult2(l3, t2);
-	curve.mont_mult2(l3, l3);
-	curve.mont_mult2(l3, l3);
+	curve.mont_mult2(t2, t2);	// t2 *= 2, t2 = 2Y^2
+	curve.mont_sqr(t2, t2);		// t2 = t2^2 = 4Y^4
+	curve.mont_mult2(t2, t2);	// t2 *= 2, t2 = 8Y^4
 
 	/* Y3 = L1(L2 - X3) - L3 */
 	curve.mod_sub(*y3p, l2, *x3p);
 	curve.mont_mult(*y3p, *y3p, l1);
-	curve.mod_sub_from(*y3p, l3);
+	curve.mod_sub_from(*y3p, t2);
 
 	// montgomery reduction
 	curve.from_montgomery(x3, *x3p);
@@ -221,6 +228,10 @@ static void
 ecc_point_double_jacobian(u64 *x3, u64 *y3, u64 *z3, const u64 *x1,
 			const u64 *y1, const u64 *z1, const ecc_curve<N> &curve) noexcept
 {
+/* dbl-2001-b algorithm
+ * http://hyperelliptic.org/EFD/g1p/auto-shortw-jacobian-3.html
+ * only for a = -3
+ */
 	if (vli_is_zero<N>(y1) || vli_is_zero<N>(z1)) {
 		/* P_y == 0 || P_z == 0 => [1:1:0] */
 		vli_clear<N>(x3);
@@ -231,7 +242,7 @@ ecc_point_double_jacobian(u64 *x3, u64 *y3, u64 *z3, const u64 *x1,
 		return;
 	}
 	bool	z_is_one = vli_is_one<N>(z1);
-	bignum<N>	alpha, beta, delta, gamma, alpha2;
+	bignum<N>	alpha, beta, delta, gamma;
 	bignum<N>	xp, yp, zp, t1;
 	bignum<N>	*x3p = reinterpret_cast<bignum<N> *>(x3);
 	bignum<N>	*y3p = reinterpret_cast<bignum<N> *>(y3);
@@ -248,19 +259,21 @@ ecc_point_double_jacobian(u64 *x3, u64 *y3, u64 *z3, const u64 *x1,
 	curve.to_montgomery(yp, y1);
 	curve.mont_sqr(gamma, yp);
    	curve.to_montgomery(xp, x1);
+	// alpha = 3 (x1 - delta) (x1 + delta)
 	// alpha = x1 - delta
 	// t1 = x1 + delta
 	curve.mod_sub(alpha, xp, delta);
 	curve.mod_add(t1, xp, delta);
-	curve.mont_mult(alpha, alpha, t1);
-	t1 = alpha;
-	curve.mont_mult2(alpha, alpha);
-	// alpha = 3 (x1 - delta) (x1 + delta)
-	// alpha2 = (x1 - delta)(x1 + delta)
+	// t1 = (x1 - delta) (x1 + delta)
+	curve.mont_mult(t1, alpha, t1);
+	alpha = t1;
+	// t1 *= 2
+	curve.mont_mult2(t1, t1);
 	curve.mod_add_to(alpha, t1);
 
 	// beta = x gamma
 	curve.mont_mult(beta, xp, gamma);
+	// x3 = alpha^2 - 8 * beta
 	curve.mont_sqr(*x3p, alpha);
 	// t1 = 8 beta
 	curve.mont_mult2(t1, beta);
@@ -271,22 +284,23 @@ ecc_point_double_jacobian(u64 *x3, u64 *y3, u64 *z3, const u64 *x1,
 	curve.mod_sub_from(*x3p, t1);
 
 	// z3 = (y1 + z1)^2 - gamma - delta
-	curve.mod_add(*z3p, yp, zp);
-	curve.mont_sqr(*z3p, *z3p);
+	curve.mod_add(t1, yp, zp);
+	curve.mont_sqr(*z3p, t1);
 	curve.mod_sub_from(*z3p, gamma);
 	curve.mod_sub_from(*z3p, delta);
 
+	// y3 = alpha ( 4 * beta - x3)
 	// beta = 4 beta - x3
 	curve.mont_mult2(beta, beta);
 	curve.mont_mult2(beta, beta);
 	curve.mod_sub_from(beta, *x3p);
-	// y3 = alpha ( 4 beta - x3)
 	curve.mont_mult(*y3p, alpha, beta);
 
 	// gamma = 8 gamma^2
-	curve.mont_sqr(gamma, gamma);
-	curve.mont_mult2(gamma, gamma);
-	curve.mont_mult2(gamma, gamma);
+	// t1 = 2 * gamma
+	curve.mont_mult2(t1, gamma);
+	// gamma = t1 ^ 2 = 4 gamma^2
+	curve.mont_sqr(gamma, t1);
 	curve.mont_mult2(gamma, gamma);
 	// y3 = alpha ( 4 beta - x3) - 8 gamma^2
 	curve.mod_sub_from(*y3p, gamma);
@@ -464,11 +478,11 @@ void    point_double_jacobian(Point *pt, const Point *p, CURVE_HND curveH)
 // p->z MUST be one
 void    point_double(Point *pt, const Point *p, CURVE_HND curveH)
 {
-	u64 z[4];
 	if (curveH == nullptr) return;
 	auto	*curve=(ecc_curve<4> *)curveH;
 	if (!(*curve) || curve->ndigits() != 4) return;
 	ecc_point_double_jacobian<4>(pt->x, pt->y, pt->z, p->x, p->y, p->z, *curve);
+	u64 z[4];
 	vli_mod_inv<4>(z, pt->z, curve->paramP().data());
 	apply_z<4>(pt->x, pt->y, z, *curve);
 }

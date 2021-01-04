@@ -21,7 +21,7 @@ func vliTestFMA() bool {
 }
 
 func toWordSlice(x C.bn_words) []big.Word {
-	pt := (*[4]big.Word)(unsafe.Pointer(&x))
+	pt := *(*[4]big.Word)(unsafe.Pointer(&x))
 	return pt[:]
 }
 
@@ -106,6 +106,14 @@ func vliModMultMont(x, y, mod []big.Word, rr []uint64, k0 uint64) *big.Int {
 	pa := fillMontParams(mod, rr, k0)
 	C.mont_mod_mult((*C.u64)(unsafe.Pointer(&r[0])),
 		(*C.u64)(unsafe.Pointer(&x[0])), (*C.u64)(unsafe.Pointer(&y[0])), pa)
+	return new(big.Int).SetBits(r[:4])
+}
+
+func vliModSqrMont(x, mod []big.Word, rr []uint64, k0 uint64) *big.Int {
+	var r [4]big.Word
+	pa := fillMontParams(mod, rr, k0)
+	C.mont_mod_sqr((*C.u64)(unsafe.Pointer(&r[0])),
+		(*C.u64)(unsafe.Pointer(&x[0])), pa, 1)
 	return new(big.Int).SetBits(r[:4])
 }
 

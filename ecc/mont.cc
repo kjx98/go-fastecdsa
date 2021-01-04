@@ -118,16 +118,6 @@ void mont_mod_sqr(u64 *result, const u64 *x, const montParams *pa, const u64 n)
 	const u64	*rr = pa->rr;
 	const u64	*prime = pa->p;
 	const u64	k0 = pa->k0;
-#ifdef  WITH_C2GO
-	u64	*r = result + 4;
-	u64	*buff = r + 4;
-	mont_mult<4>(r, x, rr, prime, k0, buff);
-	for (uint i=0; i < n; i++) {
-		mont_sqr<4>(r, r, prime, k0, buff);
-	}
-	//mont_mult<4>(result, montOne, r, prime, k0, buff);
-	mont_reduction<4>(result, r, prime, k0, buff);
-#else
 	u64	r[4];
 	mont_mult<4>(r, x, rr, prime, k0);
 	for (uint i=0; i < n; i++) {
@@ -135,7 +125,6 @@ void mont_mod_sqr(u64 *result, const u64 *x, const montParams *pa, const u64 n)
 	}
 	//mont_mult<4>(result, montOne, r, prime, k0);
 	mont_reduction<4>(result, r, prime, k0);
-#endif
 }
 
 void mont_mod_exp(u64 *result, const u64 *x, const u64 *y, const montParams *pa)
