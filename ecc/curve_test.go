@@ -62,7 +62,6 @@ func TestCurveAdd(t *testing.T) {
 	}
 }
 
-/*
 func TestCurveAddJacobian(t *testing.T) {
 	c := sm2.SM2go()
 	var jc jacobianIntf
@@ -74,23 +73,31 @@ func TestCurveAddJacobian(t *testing.T) {
 	}
 	x3, y3, z3 := jc.AddJacobian(x1, y1, bigOne, x2, y2, bigOne)
 	x3a, y3a, z3a := sm2c.AddJacobian(x1, y1, bigOne, x2, y2, bigOne)
-	if x3.Cmp(x3a) != 0 {
-		t.Logf("sm2c.AddJ diff sm2.Add x:\n%s\n%s", x3.Text(16), x3a.Text(16))
+	xx3, yy3 := jc.AffineFromJacobian(x3, y3, z3)
+	xx3a, yy3a := sm2c.AffineFromJacobian(x3a, y3a, z3a)
+	if xx3.Cmp(xx3a) != 0 {
+		t.Logf("sm2c.AddJ step1 diff sm2.Add x:\n%s\n%s", xx3.Text(16), xx3a.Text(16))
 		t.Fail()
 	}
-	if y3.Cmp(y3a) != 0 {
-		t.Logf("sm2c.AddJ diff sm2.Add y:\n%s\n%s", y3.Text(16), y3a.Text(16))
+	if yy3.Cmp(yy3a) != 0 {
+		t.Logf("sm2c.AddJ step1 diff sm2.Add y:\n%s\n%s", yy3.Text(16), yy3a.Text(16))
 		t.Fail()
 	}
-	if z3.Cmp(z3a) != 0 {
-		t.Logf("sm2c.AddJ step1 diff sm2.Double z:\n%s\n%s",
-			z3.Text(16), z3a.Text(16))
+	/*
+	x4, y4, z4 := jc.AddJacobian(x1, y1, bigOne, x3, y3, z3)
+	x4a, y4a, z4a := sm2c.AddJacobian(x1, y1, bigOne, x3a, y3a, z3a)
+	xx3, yy3 = jc.AffineFromJacobian(x4, y4, z4)
+	xx3a, yy3a = sm2c.AffineFromJacobian(x4a, y4a, z4a)
+	if xx3.Cmp(xx3a) != 0 {
+		t.Logf("sm2c.AddJ diff step1b sm2.Add x:\n%s\n%s", xx3.Text(16), xx3a.Text(16))
 		t.Fail()
-	} else {
-		t.Logf("sm2c.AddJ step1 z: %s", z3.Text(16))
 	}
+	if yy3.Cmp(yy3a) != 0 {
+		t.Logf("sm2c.AddJ diff step1b sm2.Add y:\n%s\n%s", yy3.Text(16), yy3a.Text(16))
+		t.Fail()
+	}
+	*/
 }
-*/
 
 func TestCurveDouble(t *testing.T) {
 	c := sm2.SM2go()
@@ -261,6 +268,19 @@ func BenchmarkECADD(b *testing.B) {
 	b.RunParallel(func(pb *testing.PB) {
 		for pb.Next() {
 			_, _ = curve.Add(x1, y1, x2, y2)
+		}
+	})
+}
+
+func BenchmarkECADDJac(b *testing.B) {
+	b.ResetTimer()
+	curve := sm2c
+
+	b.ReportAllocs()
+	b.ResetTimer()
+	b.RunParallel(func(pb *testing.PB) {
+		for pb.Next() {
+			_, _, _ = curve.AddJacobian(x1, y1, bigOne, x2, y2, bigOne)
 		}
 	})
 }

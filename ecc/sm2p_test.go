@@ -285,12 +285,14 @@ func BenchmarkMontMultModP(b *testing.B) {
 */
 
 func BenchmarkSM2ModInv(b *testing.B) {
+	b.ReportAllocs()
 	for i := 0; i < b.N; i++ {
 		_ = sm2ModInv(x1.Bits())
 	}
 }
 
 func BenchmarkSM2ECADD(b *testing.B) {
+	b.ReportAllocs()
 	b.RunParallel(func(pb *testing.PB) {
 		for pb.Next() {
 			_, _ = sm2Add(x1, y1, x2, y2)
@@ -299,6 +301,7 @@ func BenchmarkSM2ECADD(b *testing.B) {
 }
 
 func BenchmarkSM2ECADDJac(b *testing.B) {
+	b.ReportAllocs()
 	b.RunParallel(func(pb *testing.PB) {
 		for pb.Next() {
 			_, _, _ = sm2AddJacobian(x1, y1, bigOne, x2, y2, bigOne)
@@ -307,6 +310,7 @@ func BenchmarkSM2ECADDJac(b *testing.B) {
 }
 
 func BenchmarkSM2ECDBLJac(b *testing.B) {
+	b.ReportAllocs()
 	b.RunParallel(func(pb *testing.PB) {
 		for pb.Next() {
 			_, _, _ = sm2DoubleJacobian(x1, y1, bigOne)
@@ -315,6 +319,7 @@ func BenchmarkSM2ECDBLJac(b *testing.B) {
 }
 
 func BenchmarkECMULT(b *testing.B) {
+	b.ReportAllocs()
 	b.RunParallel(func(pb *testing.PB) {
 		for pb.Next() {
 			_, _ = sm2ScalarMult(x1, y1, d1.Bytes())
@@ -323,6 +328,7 @@ func BenchmarkECMULT(b *testing.B) {
 }
 
 func BenchmarkECGMULT(b *testing.B) {
+	b.ReportAllocs()
 	b.RunParallel(func(pb *testing.PB) {
 		for pb.Next() {
 			_, _ = sm2ScalarBaseMult(d1.Bytes())
