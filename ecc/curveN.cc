@@ -350,119 +350,181 @@ ecc_point_add_jacobian(u64 *x3, u64 *y3, u64 *z3, const u64 *x1,
 			const u64 *y2, const u64 *z2, const ecc_curve<N> &curve) noexcept
 {
 
-	if (vli_cmp<N>(x1,x2) == 0 && vli_cmp<N>(y1, y2) == 0 &&
-			vli_cmp<N>(z1, z2) == 0) {
-		ecc_point_double_jacobian(x3, y3, z3, x1, y1, z1, curve);
-		return;
-	}
-	if (vli_is_zero<N>(z1)) {
-		vli_set<N>(x3, x2);
-		vli_set<N>(y3, y2);
-		vli_set<N>(z3, z2);
-		return;
-	} else if (vli_is_zero<N>(z2)) {
-		vli_set<N>(x3, x1);
-		vli_set<N>(y3, y1);
-		vli_set<N>(z3, z1);
-		return;
-	}
-	bool	z1_is_one = vli_is_one<N>(z1);
-	bool	z2_is_one = vli_is_one<N>(z2);
-	bignum<N>	l1, l2, l3, l4, l5, l6, l7, l8;
-	bignum<N>	z1z1, z1p;
-	bignum<N>	z2z2, z2p;
 	bignum<N>	*x3p = reinterpret_cast<bignum<N> *>(x3);
 	bignum<N>	*y3p = reinterpret_cast<bignum<N> *>(y3);
 	bignum<N>	*z3p = reinterpret_cast<bignum<N> *>(z3);
-	//curve.to_montgomery(x1p, x1);
-	//curve.to_montgomery(y1p, y1);
-
-	/* l1 = x1 z2^2  */
-	/* l2 = x2 z1^2  */
-	if (z2_is_one) {
-		curve.to_montgomery(l1, x1);
-	} else {
-		curve.to_montgomery(z2p, z2);
-		// z2z2 = z2^2
-		curve.mont_sqr(z2z2, z2p);
-		curve.to_montgomery(l1, x1);
-		// l1 = x1 z2^2
-		curve.mont_mult(l1, l1, z2z2);
-	}
-	if (z1_is_one) {
-		curve.to_montgomery(l2, x2);
-	} else {
-		curve.to_montgomery(z1p, z1);
-		// z1z1 = z1^2
-		curve.mont_sqr(z1z1, z1p);
-		curve.to_montgomery(l2, x2);
-		// l2 = x2 z1^2
-		curve.mont_mult(l2, l2, z1z1);
-	}
-
-	/* l3 = l1 - l2 */
-	curve.mod_sub(l3, l1, l2);
-	/* l4 = y1 z2^3  */
-	// z2z2 = z2^3
-	curve.mont_mult(z2z2, z2z2, z2p);
-	// l4 = y1
-	curve.to_montgomery(l4, y1);
-	// l4 = y1 z2^3
-	curve.mont_mult(l4, l4, z2z2);
-
-	/* l5 = y2 z1^3  */
-	// z1z1 = z1^3
-	curve.mont_mult(z1z1, z1z1, z1p);
-	// l5 = y2
-	curve.to_montgomery(l5, y2);
-	// l5 = y2 z1^3
-	curve.mont_mult(l5, l5, z1z1);
-	/* l6 = l4 - l5  */
-	curve.mod_sub(l6, l4, l5);
-
-	if (l3.is_zero()) {
-		if (l6.is_zero()) {
-			/* P1 and P2 are the same - use duplicate function. */
-			ecc_point_double_jacobian(x3, y3, z3, x1, y1, z1, curve);
+	if ( vli_cmp<N>(z1, z2) == 0 ) {
+		/* zadd-2007-m algorithm
+		 * http://hyperelliptic.org/EFD/g1p/auto-shortw-jacobian-3.html
+		 */
+		if (vli_cmp<N>(x1,x2) == 0) {
+			if (vli_cmp<N>(y1, y2) == 0) {
+				ecc_point_double_jacobian(x3, y3, z3, x1, y1, z1, curve);
+				return;
+			}
+			/* P1 is the inverse of P2.  */
+			vli_clear<N>(x3);
+			vli_clear<N>(y3);
+			vli_clear<N>(z3);
+			x3[0] = 1;
+			y3[0] = 1;
 			return;
 		}
-		/* P1 is the inverse of P2.  */
-		vli_clear<N>(x3);
-		vli_clear<N>(y3);
-		vli_clear<N>(z3);
-		x3[0] = 1;
-		y3[0] = 1;
-		return;
+		bignum<N>		x1p, x2p, y1p, aa, bb,cc, dd;
+		curve.to_montgomery(x1p, x1);
+		curve.to_montgomery(x2p, x2);
+		curve.to_montgomery(y1p, y1);
+		bool	z1_is_one = vli_is_one<N>(z1);
+		bignum<N>		t1;
+		// t1 = x2 - x1
+		curve.mod_sub(t1, x2p, x1p);
+		// z3 = z1 * (x2 -x1)
+		if (z1_is_one) {
+			*z3p = t1;
+		} else {
+			curve.to_montgomery(*z3p, z1);
+			curve.mont_mult(*z3p, *z3p, t1);
+		}
+		// aa = (x2 - x1)^2
+		curve.mont_sqr(aa, t1);
+		// bb = x1 * aa
+		curve.mont_mult(bb, x1p, aa);
+		// cc = x2 * aa
+		curve.mont_mult(cc, x2p, aa);
+		curve.to_montgomery(t1, y2);
+		// t1 = y2 -y1
+		curve.mod_sub_from(t1, y1p);
+		// dd = (y2 -y1)^2
+		curve.mont_sqr(dd, t1);
+		// x3 = dd - bb - cc
+		curve.mod_sub(*x3p, dd, bb);
+		curve.mod_sub_from(*x3p, cc);
+		// y3 = bb - x3
+		curve.mod_sub(*y3p, bb, *x3p);
+		// y3 = t1 * (bb - x3) = (y2 - y1) * (bb - x3)
+		curve.mont_mult(*y3p, t1, *y3p);
+		// t1 = c - b
+		curve.mod_sub(t1, cc, bb);
+		// t1 = y1 * (c - b)
+		curve.mont_mult(t1, y1p, t1);
+		// y3 = y3 - t1 = (y2 - y1)(bb - x3) - y1(c-b)
+		curve.mod_sub_from(*y3p, t1);
+	} else {
+		if (vli_is_zero<N>(z1)) {
+			vli_set<N>(x3, x2);
+			vli_set<N>(y3, y2);
+			vli_set<N>(z3, z2);
+			return;
+		} else if (vli_is_zero<N>(z2)) {
+			vli_set<N>(x3, x1);
+			vli_set<N>(y3, y1);
+			vli_set<N>(z3, z1);
+			return;
+		}
+		// add-1986-cc-2
+		/* add-1986-cc-2 algorithm
+		 * http://hyperelliptic.org/EFD/g1p/auto-shortw-jacobian-3.html
+		 */
+		// U1 ... l1
+		// U2 ... l2
+		// P  ... l3
+		// S1 ... l4
+		// S2 ... l5
+		// R  ... l6
+		bool	z1_is_one = vli_is_one<N>(z1);
+		bool	z2_is_one = vli_is_one<N>(z2);
+		bignum<N>	l1, l2, l3, l4, l5, l6, l7, l8;
+		bignum<N>	t3;
+		bignum<N>	z1z1, z1p;
+		bignum<N>	z2z2, z2p;
+
+		/* l1 = x1 z2^2  */
+		/* l2 = x2 z1^2  */
+		if (z2_is_one) {
+			curve.to_montgomery(l1, x1);
+		} else {
+			curve.to_montgomery(z2p, z2);
+			// z2z2 = z2^2
+			curve.mont_sqr(z2z2, z2p);
+			curve.to_montgomery(l1, x1);
+			// l1 = x1 z2^2
+			curve.mont_mult(l1, l1, z2z2);
+		}
+		if (z1_is_one) {
+			curve.to_montgomery(l2, x2);
+		} else {
+			curve.to_montgomery(z1p, z1);
+			// z1z1 = z1^2
+			curve.mont_sqr(z1z1, z1p);
+			curve.to_montgomery(l2, x2);
+			// l2 = x2 z1^2
+			curve.mont_mult(l2, l2, z1z1);
+		}
+
+		/* l3 = l2 - l1 */
+		curve.mod_sub(l3, l2, l1);
+		/* l4 = y1 z2^3  */
+		// z2z2 = z2^3
+		curve.mont_mult(z2z2, z2z2, z2p);
+		// l4 = y1
+		curve.to_montgomery(l4, y1);
+		// l4 = y1 z2^3
+		curve.mont_mult(l4, l4, z2z2);
+
+		/* l5 = y2 z1^3  */
+		// z1z1 = z1^3
+		curve.mont_mult(z1z1, z1z1, z1p);
+		// l5 = y2
+		curve.to_montgomery(l5, y2);
+		// l5 = y2 z1^3
+		curve.mont_mult(l5, l5, z1z1);
+		/* l6 = l5 - l4  */
+		curve.mod_sub(l6, l5, l4);
+
+		if (l3.is_zero()) {
+			if (l6.is_zero()) {
+				/* P1 and P2 are the same - use duplicate function. */
+				ecc_point_double_jacobian(x3, y3, z3, x1, y1, z1, curve);
+				return;
+			}
+			/* P1 is the inverse of P2.  */
+			vli_clear<N>(x3);
+			vli_clear<N>(y3);
+			vli_clear<N>(z3);
+			x3[0] = 1;
+			y3[0] = 1;
+			return;
+		}
+		/* l7 = l1 + l2  */
+		// l7 = U1 + U2
+		curve.mod_add(l7, l1, l2);	// no use l1, l2 following
+		/* l8 = l4 + l5  */
+		// l8 = S1 + S2
+		curve.mod_add(l8, l4, l5);
+		/* z3 = z1 z2 l3  */
+		curve.mont_mult(*z3p, z1p, z2p);
+		curve.mont_mult(*z3p, *z3p, l3);
+		/* x3 = l6^2 - l7 l3^2  */
+		// t1 = l3^2, reuse l1 for t1
+		curve.mont_sqr(l1, l3);
+		// x3 = l6^2
+		curve.mont_sqr(*x3p, l6);
+		// t2 = l7 l3^2, reuse l2 for t2
+		curve.mont_mult(l2, l7, l1);
+		// x3 = l6^2 - l7 l3^2
+		curve.mod_sub_from(*x3p, l2);
+		/* l9 = l7 l3^2 - 2 x3  */
+		// t3 = 2 x3
+		curve.mont_mult2(t3, *x3p);
+		//  l9 = l7 l3^2 - 2 x3 = t2 - t3, reuse l4 for l9
+		curve.mod_sub(l4, l2, t3);
+		/* y3 = (l9 l6 - l8 l3^3)/2  */
+		curve.mont_mult(l4, l4, l6);	// l9 = l9 l6
+		curve.mont_mult(l1, l1, l3);	// t1 = l3^3
+		curve.mont_mult(l2, l8, l1);	// t2 = l8 l3^3
+		curve.mod_sub_from(l4, l2);	// l9 = l9 l6 - l8 l3^3
+		curve.mont_mult(*y3p, l4, curve.mont_inv2());
 	}
-	/* l7 = l1 + l2  */
-	curve.mod_add(l7, l1, l2);	// no use l1, l2 following
-	/* l8 = l4 + l5  */
-	curve.mod_add(l8, l4, l5);
-	/* z3 = z1 z2 l3  */
-	curve.mont_mult(*z3p, z1p, z2p);
-	curve.mont_mult(*z3p, *z3p, l3);
-	/* x3 = l6^2 - l7 l3^2  */
-	// t1 = l3^2, reuse l1 for t1
-	curve.mont_sqr(l1, l3);
-	// x3 = l6^2
-	curve.mont_sqr(*x3p, l6);
-	// t2 = l7 l3^2, reuse l2 for t2
-	curve.mont_mult(l2, l7, l1);
-	// x3 = l6^2 - l7 l3^2
-	curve.mod_sub_from(*x3p, l2);
-	/* l9 = l7 l3^2 - 2 x3  */
-	// t2 = 2 x3, reuse l2 for t2
-	curve.mont_mult2(l2, *x3p);
-	// l9 = l7 l3^2 = l7 t1, reuse l4 for l9
-	curve.mont_mult(l4, l7, l1);
-	//  l9 = l7 l3^2 - 2 x3 = l9 - t2
-	curve.mod_sub_from(l4, l2);
-	/* y3 = (l9 l6 - l8 l3^3)/2  */
-	curve.mont_mult(l4, l4, l6);	// l9 = l9 l6
-	curve.mont_mult(l1, l1, l3);	// t1 = l3^3
-	curve.mont_mult(l2, l8, l1);	// t2 = l8 l3^3
-	curve.mod_sub_from(l4, l2);	// l9 = l9 l6 - l8 l3^3
-	curve.mont_mult(*y3p, l4, curve.mont_inv2());
 	// montgomery reduction
 	curve.from_montgomery(x3, *x3p);
 	curve.from_montgomery(y3, *y3p);

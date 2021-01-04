@@ -48,7 +48,6 @@ func TestMontMultModP(t *testing.T) {
 	}
 }
 
-/*
 func TestCurveAdd(t *testing.T) {
 	c := sm2.SM2go()
 	x3, y3 := c.Add(x1, y1, x2, y2)
@@ -60,6 +59,35 @@ func TestCurveAdd(t *testing.T) {
 	if y3.Cmp(y3a) != 0 {
 		t.Logf("sm2c.Add diff sm2.Add y:\n%s\n%s", y3.Text(16), y3a.Text(16))
 		t.Fail()
+	}
+}
+
+/*
+func TestCurveAddJacobian(t *testing.T) {
+	c := sm2.SM2go()
+	var jc jacobianIntf
+	if opt, ok := c.(jacobianIntf); ok {
+		jc = opt
+	} else {
+		t.Log("not jacobian interface")
+		t.Fail()
+	}
+	x3, y3, z3 := jc.AddJacobian(x1, y1, bigOne, x2, y2, bigOne)
+	x3a, y3a, z3a := sm2c.AddJacobian(x1, y1, bigOne, x2, y2, bigOne)
+	if x3.Cmp(x3a) != 0 {
+		t.Logf("sm2c.AddJ diff sm2.Add x:\n%s\n%s", x3.Text(16), x3a.Text(16))
+		t.Fail()
+	}
+	if y3.Cmp(y3a) != 0 {
+		t.Logf("sm2c.AddJ diff sm2.Add y:\n%s\n%s", y3.Text(16), y3a.Text(16))
+		t.Fail()
+	}
+	if z3.Cmp(z3a) != 0 {
+		t.Logf("sm2c.AddJ step1 diff sm2.Double z:\n%s\n%s",
+			z3.Text(16), z3a.Text(16))
+		t.Fail()
+	} else {
+		t.Logf("sm2c.AddJ step1 z: %s", z3.Text(16))
 	}
 }
 */
