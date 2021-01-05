@@ -556,7 +556,7 @@ void    point_double_jacobian(Point *pt, const Point *p, CURVE_HND curveH)
 	if (curveH == nullptr) return;
 	auto	*curve=(ecc_curve<4> *)curveH;
 	if (!(*curve) || curve->ndigits() != 4) return;
-	ecc_point_double_jacobian<4>(pt->x, pt->y, pt->z, p->x, p->y, p->z, *curve);
+	curve->point_double_jacobian(pt->x, pt->y, pt->z, p->x, p->y, p->z);
 }
 
 // p->z MUST be one
@@ -565,10 +565,10 @@ void    point_double(Point *pt, const Point *p, CURVE_HND curveH)
 	if (curveH == nullptr) return;
 	auto	*curve=(ecc_curve<4> *)curveH;
 	if (!(*curve) || curve->ndigits() != 4) return;
-	ecc_point_double_jacobian<4>(pt->x, pt->y, pt->z, p->x, p->y, p->z, *curve);
+	curve->point_double_jacobian(pt->x, pt->y, pt->z, p->x, p->y, p->z);
 	u64 z[4];
 	vli_mod_inv<4>(z, pt->z, curve->paramP().data());
-	apply_z<4>(pt->x, pt->y, z, *curve);
+	curve->apply_z(pt->x, pt->y, z);
 }
 
 void    point_add_jacobian(Point *pt, const Point *p, const Point *q,
@@ -577,8 +577,8 @@ void    point_add_jacobian(Point *pt, const Point *p, const Point *q,
 	if (curveH == nullptr) return;
 	auto	*curve=(ecc_curve<4> *)curveH;
 	if (!(*curve) || curve->ndigits() != 4) return;
-	ecc_point_add_jacobian<4>(pt->x, pt->y, pt->z, p->x, p->y, p->z,
-				q->x, q->y, q->z, *curve);
+	curve->point_add_jacobian(pt->x, pt->y, pt->z, p->x, p->y, p->z,
+				q->x, q->y, q->z);
 }
 
 // p->z and q->z MUST be one
@@ -588,11 +588,11 @@ void    point_add(Point *pt, const Point *p, const Point *q,
 	if (curveH == nullptr) return;
 	auto	*curve=(ecc_curve<4> *)curveH;
 	if (!(*curve) || curve->ndigits() != 4) return;
-	ecc_point_add_jacobian<4>(pt->x, pt->y, pt->z, p->x, p->y, p->z,
-				q->x, q->y, q->z, *curve);
+	curve->point_add_jacobian(pt->x, pt->y, pt->z, p->x, p->y, p->z,
+				q->x, q->y, q->z);
 	u64	z[4];
 	vli_mod_inv<4>(z, pt->z, curve->paramP().data());
-	apply_z<4>(pt->x, pt->y, z, *curve);
+	curve->apply_z(pt->x, pt->y, z);
 }
 
 void    affine_from_jacobian(u64 *x, u64 *y, const Point *pt, CURVE_HND curveH)
@@ -604,7 +604,7 @@ void    affine_from_jacobian(u64 *x, u64 *y, const Point *pt, CURVE_HND curveH)
 	vli_mod_inv<4>(z, pt->z, curve->paramP().data());
 	vli_set<4>(x, pt->x);
 	vli_set<4>(y, pt->y);
-	apply_z<4>(x, y, z, *curve);
+	curve->apply_z(x, y, z);
 }
 
 #ifdef	ommit
