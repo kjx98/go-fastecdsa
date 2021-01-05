@@ -66,7 +66,6 @@ public:
 		_a_is_neg3(a_n3), use_barrett(false)
 	{
 		static_assert(N > 3, "curve only support 256Bits or more");
-		//static_assert(_name != nullptr && _name[0] != 0, "curve name MUST not empty");
 	}
 	ecc_curve(ecc_curve &&) = default;
 	const uint ndigits() const { return N; }
@@ -128,67 +127,53 @@ public:
 	{
 		bignum<N>   *xx = reinterpret_cast<bignum<N> *>(const_cast<u64 *>(x));
 #if	__cplusplus >= 201703L
-		if (k0_p == 1) {
-			res.mont_mult<1>(*xx, rr_p, p);
-		} else
-#endif
+		_mont_mult(res, *xx, rr_p);
+#else
 		res.mont_mult(*xx, rr_p, p, k0_p);
+#endif
 	}
 	void to_montgomery(bignum<N>& res, const bignum<N>& x) const noexcept
 	{
 #if	__cplusplus >= 201703L
-		if (k0_p == 1) {
-			res.mont_mult<1>(x, rr_p, p);
-		} else
-#endif
+		_mont_mult(res, x, rr_p);
+#else
 		res.mont_mult(x, rr_p, p, k0_p);
+#endif
 	}
 	void from_montgomery(bignum<N>& res, const bignum<N>& y) const noexcept
 	{
 #if	__cplusplus >= 201703L
-		if (k0_p == 1) {
-			res.mont_reduction<1>(y, p);
-		} else
-#endif
+		_mont_reduction(res, y);
+#else
 		res.mont_reduction(y, p, k0_p);
+#endif
 	}
 	void from_montgomery(u64* result, const bignum<N>& y) const noexcept
 	{
 		bignum<N>   *res = reinterpret_cast<bignum<N> *>(result);
 #if	__cplusplus >= 201703L
-		if (k0_p == 1) {
-			res->mont_reduction<1>(y, p);
-		} else
-#endif
+		_mont_reduction(*res, y);
+#else
 		res->mont_reduction(y, p, k0_p);
-		//_mont_reduction(*res, y);
+#endif
 	}
 	void
 	mont_mult(bignum<N>& res, const bignum<N>& left, const bignum<N>& right)
 	const noexcept {
 #if	__cplusplus >= 201703L
-		if (k0_p == 1) {
-			res.mont_mult<1>(left, right, p);
-		} else
-#endif
+		_mont_mult(res, left, right);
+#else
 		res.mont_mult(left, right, p, k0_p);
-		//_mont_mult(res, left, right);
+#endif
 	}
 	void mont_sqr(bignum<N>& res, const bignum<N> left, const uint nTimes=1)
 	const noexcept {
 #if	__cplusplus >= 201703L
-		if (k0_p == 1) {
-			res.mont_sqr<1>(left, p);
-			for (uint i=1; i < nTimes; i++) res.mont_sqr<1>(res, p);
-		} else 
-#endif
-		{
-			res.mont_sqr(left, p, k0_p);
-			for (uint i=1; i < nTimes; i++) res.mont_sqr(res, p, k0_p);
-		}
-#ifdef	ommit
 		_mont_sqr(res, left);
 		for (uint i=1; i < nTimes; i++) _mont_sqr(res, res);
+#else 
+		res.mont_sqr(left, p, k0_p);
+		for (uint i=1; i < nTimes; i++) res.mont_sqr(res, p, k0_p);
 #endif
 	}
 	// left,right less than p
@@ -229,7 +214,7 @@ public:
 #endif
 	}
 private:
-#ifdef	ommit
+#if	__cplusplus >= 201703L
 	mont1_func	_mont_reduction = [this](bignum<N> &res, const bignum<N> &y) {
 		res.mont_reduction(y, p, k0_p);
 	};

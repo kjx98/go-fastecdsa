@@ -83,6 +83,11 @@ func TestCurveAddJacobian(t *testing.T) {
 		t.Logf("sm2c.AddJ step1 diff sm2.Add y:\n%s\n%s", yy3.Text(16), yy3a.Text(16))
 		t.Fail()
 	}
+	if z3.Cmp(z3a) != 0 {
+		t.Logf("sm2c.AddJ step1 diff sm2.Add z:\n%s\n%s", z3.Text(16), z3a.Text(16))
+	} else {
+		t.Log("sm2c.AddJ step1 z is same")
+	}
 	x4, y4, z4 := jc.AddJacobian(x1, y1, bigOne, x3, y3, z3)
 	x4a, y4a, z4a := sm2c.AddJacobian(x1, y1, bigOne, x3a, y3a, z3a)
 	xx3, yy3 = jc.AffineFromJacobian(x4, y4, z4)
@@ -95,17 +100,27 @@ func TestCurveAddJacobian(t *testing.T) {
 		t.Logf("sm2c.AddJ diff step1b sm2.Add y:\n%s\n%s", yy3.Text(16), yy3a.Text(16))
 		t.Fail()
 	}
+	if z4.Cmp(z4a) != 0 {
+		t.Logf("sm2c.AddJ step1b diff sm2.Add z:\n%s\n%s", z4.Text(16), z4a.Text(16))
+	} else {
+		t.Log("sm2c.AddJ step1b z is same")
+	}
 	x5, y5, z5 := jc.AddJacobian(x4, y4, z4, x3, y3, z3)
 	x5a, y5a, z5a := sm2c.AddJacobian(x4a, y4a, z4a, x3a, y3a, z3a)
 	xx3, yy3 = jc.AffineFromJacobian(x5, y5, z5)
 	xx3a, yy3a = sm2c.AffineFromJacobian(x5a, y5a, z5a)
 	if xx3.Cmp(xx3a) != 0 {
-		t.Logf("sm2c.AddJ diff step1b sm2.Add x:\n%s\n%s", xx3.Text(16), xx3a.Text(16))
+		t.Logf("sm2c.AddJ diff step2 sm2.Add x:\n%s\n%s", xx3.Text(16), xx3a.Text(16))
 		t.Fail()
 	}
 	if yy3.Cmp(yy3a) != 0 {
-		t.Logf("sm2c.AddJ diff step1b sm2.Add y:\n%s\n%s", yy3.Text(16), yy3a.Text(16))
+		t.Logf("sm2c.AddJ diff step2 sm2.Add y:\n%s\n%s", yy3.Text(16), yy3a.Text(16))
 		t.Fail()
+	}
+	if z5.Cmp(z5a) != 0 {
+		t.Logf("sm2c.AddJ step2 diff sm2.Add z:\n%s\n%s", z4.Text(16), z4a.Text(16))
+	} else {
+		t.Log("sm2c.AddJ step2 z is same")
 	}
 }
 

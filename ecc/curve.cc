@@ -525,21 +525,22 @@ ecc_point_add_jacobian(u64 *x3, u64 *y3, u64 *z3, const u64 *x1,
 		// y3 = r * (v - x3) - 2 * s1 *j
 		curve.mod_sub_from(*y3p, t1);
 
-		if (z1_is_one && z2_is_one) {
-			curve.mont_mult2(*z3p, h);
+		if (z2_is_one) {
+			if (z1_is_one) {
+				curve.mont_mult2(*z3p, h);
+			} else {
+				curve.mont_mult2(t1, z1p);
+				curve.mont_mult(*z3p, t1, h);
+			}
 		} else {
 			if (z1_is_one) {
-				z1p = curve.mont_one();
-				z1z1 = curve.mont_one();
+				curve.mont_mult2(t1, z2p);
+			} else {
+				curve.mod_add(t1, z1p, z2p);
+				curve.mont_sqr(t1, t1);
+				curve.mod_sub_from(t1, z1z1);
+				curve.mod_sub_from(t1, z2z2);
 			}
-			if (z2_is_one) {
-				z2p = curve.mont_one();
-				z2z2 = curve.mont_one();
-			}
-			curve.mod_add(t1, z1p, z2p);
-			curve.mont_sqr(t1, t1);
-			curve.mod_sub_from(t1, z1z1);
-			curve.mod_sub_from(t1, z2z2);
 			curve.mont_mult(*z3p, t1, h);
 		}
 	}

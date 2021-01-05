@@ -340,9 +340,6 @@ func BenchmarkMontModSqr(b *testing.B) {
 }
 
 func BenchmarkSM2ModMulP(b *testing.B) {
-	b.ResetTimer()
-
-	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
 		_ = vliSM2ModMultP(x1.Bits(), y1.Bits())
 	}
@@ -359,9 +356,6 @@ func BenchmarkMontExpMod(b *testing.B) {
 }
 
 func BenchmarkSM2MultP(b *testing.B) {
-	b.ResetTimer()
-
-	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
 		_ = vliSM2MultP(0x55557777)
 	}
