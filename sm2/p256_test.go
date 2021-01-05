@@ -384,7 +384,6 @@ func BenchmarkInverse(b *testing.B) {
 	p := P256().Params().P
 	res := new(big.Int)
 
-	b.ReportAllocs()
 	b.ResetTimer()
 	b.RunParallel(func(pb *testing.PB) {
 		for pb.Next() {
@@ -398,7 +397,6 @@ func BenchmarkModMul(b *testing.B) {
 	p := P256().Params().P
 	res := new(big.Int)
 
-	b.ReportAllocs()
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
 		_ = res.Mul(x1, y1)
@@ -411,7 +409,6 @@ func BenchmarkBarrettModMul(b *testing.B) {
 	c := sm2g
 	res := new(big.Int)
 
-	b.ReportAllocs()
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
 		_ = res.Mul(x1, y1)
@@ -423,7 +420,6 @@ func BenchmarkMontModMul(b *testing.B) {
 	b.ResetTimer()
 	c := sm2g
 
-	b.ReportAllocs()
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
 		_ = c.montModMul(x1, y1)
@@ -434,7 +430,6 @@ func BenchmarkECADD(b *testing.B) {
 	b.ResetTimer()
 	curve := P256()
 
-	b.ReportAllocs()
 	b.ResetTimer()
 	b.RunParallel(func(pb *testing.PB) {
 		for pb.Next() {
@@ -447,7 +442,6 @@ func BenchmarkECDBL(b *testing.B) {
 	b.ResetTimer()
 	curve := P256()
 
-	b.ReportAllocs()
 	b.ResetTimer()
 	b.RunParallel(func(pb *testing.PB) {
 		for pb.Next() {
@@ -462,7 +456,6 @@ func BenchmarkECMULT(b *testing.B) {
 	goGx := Curve.Params().Gx
 	goGy := Curve.Params().Gy
 
-	b.ReportAllocs()
 	b.ResetTimer()
 	b.RunParallel(func(pb *testing.PB) {
 		for pb.Next() {

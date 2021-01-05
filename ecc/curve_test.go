@@ -273,7 +273,6 @@ func BenchmarkECADD(b *testing.B) {
 	b.ResetTimer()
 	curve := sm2c
 
-	b.ReportAllocs()
 	b.ResetTimer()
 	b.RunParallel(func(pb *testing.PB) {
 		for pb.Next() {
@@ -286,7 +285,6 @@ func BenchmarkECADDJac(b *testing.B) {
 	b.ResetTimer()
 	curve := sm2c
 
-	b.ReportAllocs()
 	b.ResetTimer()
 	b.RunParallel(func(pb *testing.PB) {
 		for pb.Next() {
@@ -299,7 +297,6 @@ func BenchmarkECDBL(b *testing.B) {
 	b.ResetTimer()
 	curve := sm2c
 
-	b.ReportAllocs()
 	b.ResetTimer()
 	b.RunParallel(func(pb *testing.PB) {
 		for pb.Next() {
@@ -312,7 +309,6 @@ func BenchmarkECDBLJac(b *testing.B) {
 	b.ResetTimer()
 	curve := sm2c
 
-	b.ReportAllocs()
 	b.ResetTimer()
 	b.RunParallel(func(pb *testing.PB) {
 		for pb.Next() {
@@ -328,7 +324,6 @@ func BenchmarkECMULT(b *testing.B) {
 	aGx := curve.Params().Gx
 	aGy := curve.Params().Gy
 
-	b.ReportAllocs()
 	b.ResetTimer()
 	b.RunParallel(func(pb *testing.PB) {
 		for pb.Next() {

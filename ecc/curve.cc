@@ -33,7 +33,7 @@
 #endif
 #include "ecc.h"
 #include "curve_defs.hpp"
-#include "mont.hpp"
+//#include "mont.hpp"
 
 #pragma GCC push_options
 #pragma GCC optimize ("unroll-loops")

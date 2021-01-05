@@ -1,7 +1,6 @@
 /*
- * Copyright (c) 2013, Kenneth MacKay
- * All rights reserved.
  * Copyright(c) 2020 Jesse Kuang  <jkuang@21cn.com>
+ * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are

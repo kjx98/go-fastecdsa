@@ -277,7 +277,6 @@ func BenchmarkInverse(b *testing.B) {
 	b.ResetTimer()
 	p := sm2.P256().Params().P.Bits()
 
-	b.ReportAllocs()
 	b.ResetTimer()
 	b.RunParallel(func(pb *testing.PB) {
 		for pb.Next() {
@@ -298,7 +297,6 @@ func BenchmarkModMul(b *testing.B) {
 	x1B := x1.Bits()
 	y1B := y1.Bits()
 
-	b.ReportAllocs()
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
 		_ = vliModMult(x1B, y1B, pb)
@@ -315,7 +313,6 @@ func BenchmarkBarrettModMul(b *testing.B) {
 	mu.Div(mu, p)
 	copy(pb[4:], mu.Bits())
 
-	b.ReportAllocs()
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
 		_ = vliModMultBarrett(x1, y1, pb)
@@ -326,7 +323,6 @@ func BenchmarkMontModMul(b *testing.B) {
 	b.ResetTimer()
 	p := sm2.P256().Params().P
 
-	b.ReportAllocs()
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
 		_ = vliModMultMont(x1.Bits(), y1.Bits(), p.Bits(), rr, 1)
@@ -337,7 +333,6 @@ func BenchmarkMontModSqr(b *testing.B) {
 	b.ResetTimer()
 	p := sm2.P256().Params().P
 
-	b.ReportAllocs()
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
 		_ = vliModSqrMont(x1.Bits(), p.Bits(), rr, 1)
@@ -347,7 +342,6 @@ func BenchmarkMontModSqr(b *testing.B) {
 func BenchmarkSM2ModMulP(b *testing.B) {
 	b.ResetTimer()
 
-	b.ReportAllocs()
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
 		_ = vliSM2ModMultP(x1.Bits(), y1.Bits())
@@ -358,7 +352,6 @@ func BenchmarkMontExpMod(b *testing.B) {
 	b.ResetTimer()
 	p := sm2.P256().Params().P
 
-	b.ReportAllocs()
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
 		_ = vliExpModMont(x1.Bits(), y1.Bits(), p.Bits(), rr, 1)
@@ -368,7 +361,6 @@ func BenchmarkMontExpMod(b *testing.B) {
 func BenchmarkSM2MultP(b *testing.B) {
 	b.ResetTimer()
 
-	b.ReportAllocs()
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
 		_ = vliSM2MultP(0x55557777)

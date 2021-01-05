@@ -47,8 +47,9 @@ template<const uint ndigits>
 class bignum {
 public:
 	using bn_words = u64[ndigits];
-	bignum(bn_words init = {}) noexcept : d{} {}
+	bignum() = default;
 	bignum(const bignum &) = default;
+	explicit bignum(const bn_words& init) noexcept : d{} {}
 	explicit bignum(const u64 v) noexcept : d{v,0,0,0}
 	{
 #if	__cplusplus >= 201703L
@@ -64,12 +65,6 @@ public:
 		for (uint i = 0; i < ndigits; i++)
 			d[i] = src[i];
 	}
-#ifdef	ommit
-	bignum* operator=(const u64 *src) noexcept {
-		bignum	*res=reinterpret_cast<bignum *>(src);
-		return res;
-	}
-#endif
 	bignum<4>& bn256() noexcept {
 		static_assert(ndigits >= 4, "ndigits >= 4 required.");
 		bignum<4>	*res=reinterpret_cast<bignum<4> *>(this->d);
@@ -81,8 +76,8 @@ public:
 		for (uint i = 0; i < ndigits; i++)
 			d[i] = 0;
 	}
-	const u64* data() const { return d; }
-	bool is_zero() noexcept
+	const u64* data() const noexcept { return d; }
+	bool is_zero() const noexcept
 	{
 #pragma GCC unroll 4
 		for (uint i = 0; i < ndigits; i++) {
@@ -90,7 +85,7 @@ public:
 		}
 		return true;
 	}
-	bool is_one() noexcept
+	bool is_one() const noexcept
 	{
 		if (d[0] != 1) return false;
 #pragma GCC unroll 4
@@ -107,7 +102,7 @@ public:
 			dest[i] = d[i];
 	}
 	/* Returns nonzero if bit bit of vli is set. */
-	bool test_bit(const uint bit)
+	bool test_bit(const uint bit) const noexcept
 	{
 		if ( bit >= ndigits*64 ) return false;	// out of bound
 		return (d[bit / 64] & ((u64)1 << (bit % 64)));
@@ -122,7 +117,7 @@ public:
  * Returns sign of @left - @right, i.e. -1 if @left < @right,
  * 0 if @left == @right, 1 if @left > @right.
  */
-	int cmp(const bignum& right) noexcept
+	int cmp(const bignum& right) const noexcept
 	{
 #pragma GCC unroll 4
 		for (int i = ndigits - 1; i >= 0; i--) {
@@ -172,7 +167,7 @@ public:
 #pragma GCC unroll 4
 		for (uint i = 0; i < ndigits; i++) {
 			u64 sum;
-			auto c_carry = __builtin_uaddl_overflow(left.d[i], right.d[i], &sum);
+			auto c_carry = __builtin_uaddl_overflow(left.d[i],right.d[i],&sum);
 			if (unlikely(carry)) {
 				carry = c_carry | __builtin_uaddl_overflow(sum, 1, &sum);
 			} else carry = c_carry;
@@ -253,7 +248,7 @@ public:
 #pragma GCC unroll 4
 		for (uint i = 0; i < ndigits; i++) {
 			u64 diff;
-			auto c_borrow = __builtin_usubl_overflow(left.d[i], right.d[i], &diff);
+			auto c_borrow=__builtin_usubl_overflow(left.d[i],right.d[i],&diff);
 			if (unlikely(borrow)) {
 				borrow = c_borrow | __builtin_usubl_overflow(diff, 1, &diff);
 			} else borrow = c_borrow;
@@ -357,7 +352,8 @@ public:
 /* Computes this = (left + right) % mod.
  * Assumes that left < mod and right < mod, result != mod.
  */
-	bignum& mod_add(bignum& left, const bignum &right, const bignum &mod) noexcept
+	bignum& mod_add(const bignum& left, const bignum &right, const bignum &mod)
+	noexcept
 	{
 		auto carry = this->add(left, right);
 		/* result > mod (result = mod + remainder), so subtract mod to
@@ -370,7 +366,8 @@ public:
 /* Computes this = (left - right) % mod.
  * Assumes that left < mod and right < mod, result != mod.
  */
-	bignum& mod_sub(const bignum& left, const bignum& right, const bignum &mod) noexcept
+	bignum& mod_sub(const bignum& left, const bignum& right, const bignum &mod)
+	noexcept
 	{
 		auto borrow = this->sub(left, right);
 		/* In this case, p_result == -diff == (max int) - diff.
@@ -382,6 +379,7 @@ public:
 	}
 
 	template<const u64 k0>
+	forceinline
 	friend void mont_reduction(bignum& res,  const bignum& y,
 					const bignum& prime) noexcept
 	{
@@ -400,7 +398,8 @@ public:
 			vli_sub<ndigits>(res.d, r, prime.d);
 		} else vli_set<ndigits>(res.d, r);
 	}
-	void mont_reduction(const bignum& y, const bignum& prime, const u64 k0) noexcept
+	void mont_reduction(const bignum& y, const bignum& prime, const u64 k0)
+	noexcept
 	{
 		u64	s[ndigits*2];
 		u64	r[ndigits+2];
@@ -418,6 +417,7 @@ public:
 		} else vli_set<ndigits>(this->d, r);
 	}
 	template<const u64 k0>
+	forceinline
 	friend void mont_mult(bignum& res, const bignum& x, const bignum& y,
 					const bignum& prime) noexcept
 	{
@@ -438,6 +438,7 @@ public:
 		} else vli_set<ndigits>(res.d, r);
 	}
 	template<const u64 k0>
+	forceinline
 	friend void mont_mult(bignum& res, const u64 *x, const bignum& y,
 					const bignum& prime) noexcept
 	{
@@ -477,7 +478,9 @@ public:
 		} else vli_set<ndigits>(this->d, r);
 	}
 	template<const u64 k0>
-	friend void mont_sqr(bignum& res, const bignum& x, const bignum& prime) noexcept
+	forceinline
+	friend void mont_sqr(bignum& res, const bignum& x, const bignum& prime)
+	noexcept
 	{
 		u64	s[ndigits*2];
 		u64	r[ndigits+2];
@@ -557,7 +560,8 @@ public:
 	}
 #endif
 	// this = left * right
-	void mult(const bignum<ndigits>& left, const bignum<ndigits>& right) noexcept
+	void mult(const bignum<ndigits>& left, const bignum<ndigits>& right)
+	noexcept
 	{
 		uint128_t r01( 0, 0 );
 	/* Compute each digit of result in sequence, maintaining the
@@ -625,7 +629,7 @@ public:
 				product.mul_64_64(left.d[i], left.d[k - i]);
 				if (i < k - i) {
 					r2 += product.m_high() >> 63;
-					u64 _high = (product.m_high() << 1) | (product.m_low() >> 63);
+					u64 _high=(product.m_high() << 1) | (product.m_low() >> 63);
 					u64 _low = product.m_low() << 1;
 					product = uint128_t(_low, _high);
 				}
@@ -640,7 +644,8 @@ public:
 		}
 		this->d[ndigits * 2 - 1] = r01.m_low();
 	}
-	void div_barrett(bignum<ndigits>& result, const bignum<ndigits+1>& mu) noexcept
+	void div_barrett(bignum<ndigits>& result, const bignum<ndigits+1>& mu)
+	noexcept
 	{
 		u64	q[ndigits*2];
 		u64	r[ndigits];
