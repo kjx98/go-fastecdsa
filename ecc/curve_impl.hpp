@@ -31,7 +31,6 @@
 #include "vli_bn.hpp"
 #include "ecc_impl.hpp"
 
-
 namespace vli {
 
 /**
@@ -128,30 +127,69 @@ public:
 	void to_montgomery(bignum<N>& res, const u64 *x) const noexcept
 	{
 		bignum<N>   *xx = reinterpret_cast<bignum<N> *>(const_cast<u64 *>(x));
-		_mont_mult(res, *xx, rr_p);
+#if	__cplusplus >= 201703L
+		if (k0_p == 1) {
+			res.mont_mult<1>(*xx, rr_p, p);
+		} else
+#endif
+		res.mont_mult(*xx, rr_p, p, k0_p);
 	}
 	void to_montgomery(bignum<N>& res, const bignum<N>& x) const noexcept
 	{
-		_mont_mult(res, x, rr_p);
+#if	__cplusplus >= 201703L
+		if (k0_p == 1) {
+			res.mont_mult<1>(x, rr_p, p);
+		} else
+#endif
+		res.mont_mult(x, rr_p, p, k0_p);
 	}
 	void from_montgomery(bignum<N>& res, const bignum<N>& y) const noexcept
 	{
-		_mont_reduction(res, y);
+#if	__cplusplus >= 201703L
+		if (k0_p == 1) {
+			res.mont_reduction<1>(y, p);
+		} else
+#endif
+		res.mont_reduction(y, p, k0_p);
 	}
 	void from_montgomery(u64* result, const bignum<N>& y) const noexcept
 	{
 		bignum<N>   *res = reinterpret_cast<bignum<N> *>(result);
-		_mont_reduction(*res, y);
+#if	__cplusplus >= 201703L
+		if (k0_p == 1) {
+			res->mont_reduction<1>(y, p);
+		} else
+#endif
+		res->mont_reduction(y, p, k0_p);
+		//_mont_reduction(*res, y);
 	}
 	void
 	mont_mult(bignum<N>& res, const bignum<N>& left, const bignum<N>& right)
 	const noexcept {
-		_mont_mult(res, left, right);
+#if	__cplusplus >= 201703L
+		if (k0_p == 1) {
+			res.mont_mult<1>(left, right, p);
+		} else
+#endif
+		res.mont_mult(left, right, p, k0_p);
+		//_mont_mult(res, left, right);
 	}
 	void mont_sqr(bignum<N>& res, const bignum<N> left, const uint nTimes=1)
 	const noexcept {
+#if	__cplusplus >= 201703L
+		if (k0_p == 1) {
+			res.mont_sqr<1>(left, p);
+			for (uint i=1; i < nTimes; i++) res.mont_sqr<1>(res, p);
+		} else 
+#endif
+		{
+			res.mont_sqr(left, p, k0_p);
+			for (uint i=1; i < nTimes; i++) res.mont_sqr(res, p, k0_p);
+		}
+#ifdef	ommit
 		_mont_sqr(res, left);
 		for (uint i=1; i < nTimes; i++) _mont_sqr(res, res);
+#endif
 	}
 	// left,right less than p
 	void mod_add(bignum<N>& res, const bignum<N>& left, const bignum<N>& right)
@@ -191,6 +229,7 @@ public:
 #endif
 	}
 private:
+#ifdef	ommit
 	mont1_func	_mont_reduction = [this](bignum<N> &res, const bignum<N> &y) {
 		res.mont_reduction(y, p, k0_p);
 	};
@@ -201,6 +240,7 @@ private:
 					const bignum<N>& y) {
 		res.mont_mult(x, y, p, k0_p);
 	};
+#endif
 	const std::string name;
 	const bignum<N> gx;
 	const bignum<N> gy;
