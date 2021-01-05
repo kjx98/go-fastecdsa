@@ -101,6 +101,22 @@ func vliBarrettDiv(prod *big.Int, muB []big.Word) (result *big.Int) {
 	return
 }
 
+func vliToMont(x, mod []big.Word, rr []uint64, k0 uint64) *big.Int {
+	var r [4]big.Word
+	pa := fillMontParams(mod, rr, k0)
+	C.to_montgomery((*C.u64)(unsafe.Pointer(&r[0])),
+		(*C.u64)(unsafe.Pointer(&x[0])), pa)
+	return new(big.Int).SetBits(r[:4])
+}
+
+func vliFromMont(y, mod []big.Word, rr []uint64, k0 uint64) *big.Int {
+	var r [4]big.Word
+	pa := fillMontParams(mod, rr, k0)
+	C.from_montgomery((*C.u64)(unsafe.Pointer(&r[0])),
+		(*C.u64)(unsafe.Pointer(&y[0])), pa)
+	return new(big.Int).SetBits(r[:4])
+}
+
 func vliModMultMont(x, y, mod []big.Word, rr []uint64, k0 uint64) *big.Int {
 	var r [4]big.Word
 	pa := fillMontParams(mod, rr, k0)

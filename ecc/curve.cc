@@ -92,6 +92,8 @@ void	get_curve_params(u64 *p, u64 *n, u64 *b, u64 *gx, u64 *gy,
  * coordinates. From http://eprint.iacr.org/2011/338.pdf
  */
 
+// move under ecc_curve class
+#ifdef	ommit
 /*  RESULT = 2 * POINT  (Weierstrass version). */
 #ifndef	ommit
 template<const uint N> forceinline
@@ -549,7 +551,7 @@ ecc_point_add_jacobian(u64 *x3, u64 *y3, u64 *z3, const u64 *x1,
 	curve.from_montgomery(y3, *y3p);
 	curve.from_montgomery(z3, *z3p);
 }
-
+#endif
 
 void    point_double_jacobian(Point *pt, const Point *p, CURVE_HND curveH)
 {

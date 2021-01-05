@@ -193,6 +193,8 @@ void vli_div_barrett(u64 *result, const u64 *product, const u64 *mod);
  * RR		b^2n mod P
  * K0		- P^(-1) mod b
  */
+void to_montgomery(u64 *res, const u64 *x, const montParams *pa);
+void from_montgomery(u64 *res, const u64 *y, const montParams *pa);
 void mont_mod_mult(u64 *res, const u64 *x, const u64 *y, const montParams *pa);
 void mont_mod_sqr(u64 *res, const u64 *x, const montParams *pa, const u64 n);
 void mont_mod_exp(u64 *re, const u64 *x, const u64 *y, const montParams *pa);

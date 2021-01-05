@@ -72,7 +72,10 @@ func TestMontMultMod(t *testing.T) {
 	p := sm2.P256().Params().P
 	xy := new(big.Int).Mul(x1, y1)
 	xyMod := new(big.Int).Mod(xy, p)
-	bMod := vliModMultMont(x1.Bits(), y1.Bits(), p.Bits(), rr, 1)
+	xp := vliToMont(x1.Bits(), p.Bits(), rr, 1)
+	yp := vliToMont(y1.Bits(), p.Bits(), rr, 1)
+	bMod1 := vliModMultMont(xp.Bits(), yp.Bits(), p.Bits(), rr, 1)
+	bMod := vliFromMont(bMod1.Bits(), p.Bits(), rr, 1)
 	if bMod.Cmp(xyMod) != 0 {
 		t.Logf("step1 big.mulmod diff ModMultMont:\n%s vs\n%s\n",
 			xyMod.Text(16), bMod.Text(16))
@@ -80,7 +83,10 @@ func TestMontMultMod(t *testing.T) {
 	}
 	xy = new(big.Int).Mul(x2, y2)
 	xyMod = new(big.Int).Mod(xy, p)
-	bMod = vliModMultMont(x2.Bits(), y2.Bits(), p.Bits(), rr, 1)
+	xp = vliToMont(x2.Bits(), p.Bits(), rr, 1)
+	yp = vliToMont(y2.Bits(), p.Bits(), rr, 1)
+	bMod1 = vliModMultMont(xp.Bits(), yp.Bits(), p.Bits(), rr, 1)
+	bMod = vliFromMont(bMod1.Bits(), p.Bits(), rr, 1)
 	if bMod.Cmp(xyMod) != 0 {
 		t.Logf("step2 big.mulmod diff ModMultMont:\n%s vs\n%s\n",
 			xyMod.Text(16), bMod.Text(16))
@@ -89,7 +95,10 @@ func TestMontMultMod(t *testing.T) {
 	n := sm2.P256().Params().N
 	xy = new(big.Int).Mul(x1, y1)
 	xyMod = new(big.Int).Mod(xy, n)
-	bMod = vliModMultMont(x1.Bits(), y1.Bits(), n.Bits(), rrN, k0N)
+	xp = vliToMont(x1.Bits(), n.Bits(), rrN, k0N)
+	yp = vliToMont(y1.Bits(), n.Bits(), rrN, k0N)
+	bMod1 = vliModMultMont(xp.Bits(), yp.Bits(), n.Bits(), rrN, k0N)
+	bMod = vliFromMont(bMod1.Bits(), n.Bits(), rrN, k0N)
 	if bMod.Cmp(xyMod) != 0 {
 		t.Logf("step3 big.mulmod diff ModMultMont:\n%s vs\n%s\n",
 			xyMod.Text(16), bMod.Text(16))
@@ -97,7 +106,10 @@ func TestMontMultMod(t *testing.T) {
 	}
 	xy = new(big.Int).Mul(x2, y2)
 	xyMod = new(big.Int).Mod(xy, n)
-	bMod = vliModMultMont(x2.Bits(), y2.Bits(), n.Bits(), rrN, k0N)
+	xp = vliToMont(x2.Bits(), n.Bits(), rrN, k0N)
+	yp = vliToMont(y2.Bits(), n.Bits(), rrN, k0N)
+	bMod1 = vliModMultMont(xp.Bits(), yp.Bits(), n.Bits(), rrN, k0N)
+	bMod = vliFromMont(bMod1.Bits(), n.Bits(), rrN, k0N)
 	if bMod.Cmp(xyMod) != 0 {
 		t.Logf("step4 big.mulmod diff ModMultMont:\n%s vs\n%s\n",
 			xyMod.Text(16), bMod.Text(16))
@@ -109,7 +121,9 @@ func TestMontSqrMod(t *testing.T) {
 	p := sm2.P256().Params().P
 	xy := new(big.Int).Mul(x1, x1)
 	xyMod := new(big.Int).Mod(xy, p)
-	bMod := vliModSqrMont(x1.Bits(), p.Bits(), rr, 1)
+	xp := vliToMont(x1.Bits(), p.Bits(), rr, 1)
+	bMod1 := vliModSqrMont(xp.Bits(), p.Bits(), rr, 1)
+	bMod := vliFromMont(bMod1.Bits(), p.Bits(), rr, 1)
 	if bMod.Cmp(xyMod) != 0 {
 		t.Logf("step1 big.mulsqr diff ModSqrMont:\n%s vs\n%s\n",
 			xyMod.Text(16), bMod.Text(16))
@@ -117,7 +131,9 @@ func TestMontSqrMod(t *testing.T) {
 	}
 	xy = new(big.Int).Mul(x2, x2)
 	xyMod = new(big.Int).Mod(xy, p)
-	bMod = vliModSqrMont(x2.Bits(), p.Bits(), rr, 1)
+	xp = vliToMont(x2.Bits(), p.Bits(), rr, 1)
+	bMod1 = vliModSqrMont(xp.Bits(), p.Bits(), rr, 1)
+	bMod = vliFromMont(bMod1.Bits(), p.Bits(), rr, 1)
 	if bMod.Cmp(xyMod) != 0 {
 		t.Logf("step2 big.mulsqr diff ModSqrMont:\n%s vs\n%s\n",
 			xyMod.Text(16), bMod.Text(16))
@@ -126,7 +142,9 @@ func TestMontSqrMod(t *testing.T) {
 	n := sm2.P256().Params().N
 	xy = new(big.Int).Mul(x1, x1)
 	xyMod = new(big.Int).Mod(xy, n)
-	bMod = vliModSqrMont(x1.Bits(), n.Bits(), rrN, k0N)
+	xp = vliToMont(x1.Bits(), n.Bits(), rrN, k0N)
+	bMod1 = vliModSqrMont(xp.Bits(), n.Bits(), rrN, k0N)
+	bMod = vliFromMont(bMod1.Bits(), n.Bits(), rrN, k0N)
 	if bMod.Cmp(xyMod) != 0 {
 		t.Logf("step3 big.mulsqr diff ModSqrMont:\n%s vs\n%s\n",
 			xyMod.Text(16), bMod.Text(16))
@@ -134,7 +152,9 @@ func TestMontSqrMod(t *testing.T) {
 	}
 	xy = new(big.Int).Mul(x2, x2)
 	xyMod = new(big.Int).Mod(xy, n)
-	bMod = vliModSqrMont(x2.Bits(), n.Bits(), rrN, k0N)
+	xp = vliToMont(x2.Bits(), n.Bits(), rrN, k0N)
+	bMod1 = vliModSqrMont(xp.Bits(), n.Bits(), rrN, k0N)
+	bMod = vliFromMont(bMod1.Bits(), n.Bits(), rrN, k0N)
 	if bMod.Cmp(xyMod) != 0 {
 		t.Logf("step4 big.mulsqr diff ModSqrMont:\n%s vs\n%s\n",
 			xyMod.Text(16), bMod.Text(16))

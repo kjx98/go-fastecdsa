@@ -19,6 +19,11 @@ import (
 	"unsafe"
 )
 
+type montParams struct {
+	p, rr [4]big.Word
+	k0    uint64
+}
+
 // Function check CPU support FMA
 func _vli_asm_acc() (res uint)
 
@@ -61,13 +66,16 @@ func _vli_div_barrett(res, prod, mu unsafe.Pointer)
 
 // Functions implemented in ecc_asm_*64.s
 // multiplication modulo p
+func _to_montgomery(res, in unsafe.Pointer, montPa *montParams)
+func _from_montgomery(res, in unsafe.Pointer, montPa *montParams)
+
 //go:noescape
-func _mont_mod_mult(res, in1, in2, prr unsafe.Pointer, k0 uint64)
+func _mont_mod_mult(res, in1, in2 unsafe.Pointer, montPa *montParams)
 
 // Functions implemented in ecc_asm_*64.s
 // sqr modulo p, dup n times
 //go:noescape
-func _mont_mod_sqr(res, in1, prr unsafe.Pointer, k0 uint64, n uint)
+func _mont_mod_sqr(res, in1 unsafe.Pointer, montPa *montParams, n uint)
 
 // Function implemented in ecc_asm_*86.s
 // Exp modulo prime p

@@ -59,7 +59,7 @@ static void vli_sm2_multP(u64 *result, const u64 u) noexcept
 
 template<const uint N> forceinline
 static void
-#ifdef	WITH_C2GO
+#ifdef	WITH_C2GO_1
 mont_reduction(u64 *result, const u64 *y, const u64 *prime,
 			const u64 k0, u64 *buff) noexcept
 #else
@@ -67,7 +67,7 @@ mont_reduction(u64 *result, const u64 *y, const u64 *prime,
 			const u64 k0) noexcept
 #endif
 {
-#ifdef	WITH_C2GO
+#ifdef	WITH_C2GO_1
 	u64	*s = buff;
 	u64	*r = s + N * 2;
 #else
@@ -90,7 +90,7 @@ mont_reduction(u64 *result, const u64 *y, const u64 *prime,
 
 template<const uint N> forceinline
 static void
-#ifdef	WITH_C2GO
+#ifdef	WITH_C2GO_1
 mont_mult(u64 *result, const u64 *x, const u64 *y, const u64 *prime,
 				const u64 k0, u64 *buff) noexcept
 #else
@@ -98,7 +98,7 @@ mont_mult(u64 *result, const u64 *x, const u64 *y, const u64 *prime,
 				const u64 k0) noexcept
 #endif
 {
-#ifdef	WITH_C2GO
+#ifdef	WITH_C2GO_1
 	u64	*s = buff;
 	u64	*r = s + N * 2;
 #else
@@ -122,13 +122,13 @@ mont_mult(u64 *result, const u64 *x, const u64 *y, const u64 *prime,
 
 template<const uint N> forceinline
 static void
-#ifdef	WITH_C2GO
+#ifdef	WITH_C2GO_1
 mont_sqr(u64 *result, const u64 *x, const u64 *prime, const u64 k0, u64 *buff) noexcept
 #else
 mont_sqr(u64 *result, const u64 *x, const u64 *prime, const u64 k0) noexcept
 #endif
 {
-#ifdef	WITH_C2GO
+#ifdef	WITH_C2GO_1
 	u64	*s = buff;
 	u64	*r = s + N * 2;
 #else

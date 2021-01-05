@@ -60,7 +60,7 @@ u64 vli_asm_acc()
  */
 void vli_mmod_barrett(u64 *result, const u64 *product, const u64 *mod)
 {
-#ifdef	ommit
+#ifdef	WITH_C2GO
 	vli_mmod_barrett<4>(result, product, mod);
 #else
 	bn_prod<4>	*prod = reinterpret_cast<bn_prod<4> *>(const_cast<u64 *>(product));
@@ -85,88 +85,58 @@ void vli_div_barrett(u64 *result, const u64 *product, const u64 *mu)
 }
 #endif
 
+void to_montgomery(u64 *res, const u64 *x, const montParams *pa)
+{
+	const u64	*rr = pa->rr;
+	const u64	*prime = pa->p;
+	const u64	k0 = pa->k0;
+	mont_mult<4>(res, x, rr, prime, k0);
+}
+
+void from_montgomery(u64 *res, const u64 *y, const montParams *pa)
+{
+	const u64	*prime = pa->p;
+	const u64	k0 = pa->k0;
+	mont_reduction<4>(res, y, prime, k0);
+}
+
 //static u64 montOne[]={1, 0, 0, 0};
 void mont_mod_mult(u64 *res, const u64 *x, const u64 *y, const montParams *pa)
 {
-	const u64	*rr = pa->rr;
 	const u64	*prime = pa->p;
 	const u64	k0 = pa->k0;
-#ifdef  WITH_C2GO
-	u64 *xp = res + 4;
-	u64	*yp = xp + 4;
-	u64	*r = yp + 4;
-	u64	*buff = r + 4;
-	mont_mult<4>(xp, x, rr, prime, k0, buff);
-	mont_mult<4>(yp, y, rr, prime, k0, buff);
-	mont_mult<4>(r, xp, yp, prime, k0, buff);
-	//mont_mult<4>(result, montOne, r, prime, k0, buff);
-	mont_reduction<4>(res, r, prime, k0, buff);
-#else
-	u64	xp[4];
-	u64	yp[4];
-	u64	r[4];
-	mont_mult<4>(xp, x, rr, prime, k0);
-	mont_mult<4>(yp, y, rr, prime, k0);
-	mont_mult<4>(r, xp, yp, prime, k0);
-	//mont_mult<4>(res, montOne, r, prime, k0);
-	mont_reduction<4>(res, r, prime, k0);
-#endif
+	mont_mult<4>(res, x, y, prime, k0);
 }
 
-void mont_mod_sqr(u64 *result, const u64 *x, const montParams *pa, const u64 n)
+void mont_mod_sqr(u64 *res, const u64 *x, const montParams *pa, const u64 n)
 {
-	const u64	*rr = pa->rr;
 	const u64	*prime = pa->p;
 	const u64	k0 = pa->k0;
-	u64	r[4];
-	mont_mult<4>(r, x, rr, prime, k0);
-	for (uint i=0; i < n; i++) {
-		mont_sqr<4>(r, r, prime, k0);
+	mont_sqr<4>(res, x, prime, k0);
+	for (uint i=1; i < n; i++) {
+		mont_sqr<4>(res, res, prime, k0);
 	}
-	//mont_mult<4>(result, montOne, r, prime, k0);
-	mont_reduction<4>(result, r, prime, k0);
 }
 
+#ifndef  WITH_C2GO
 void mont_mod_exp(u64 *result, const u64 *x, const u64 *y, const montParams *pa)
 {
 	const u64	*rr = pa->rr;
 	const u64	*prime = pa->p;
 	const u64	k0 = pa->k0;
-#ifdef  WITH_C2GO
-	u64	*xp = result + 4;
-	u64	*t = xp + 4;
-	u64	*buff = t + 4;
-#else
 	u64	xp[4];
 	u64	t[4];
-#endif
 	int	num_bits = vli_num_bits<4>(y);
-#ifdef	WITH_C2GO
-	mont_mult<4>(xp, x, rr, prime, k0, buff);
-	mont_reduction<4>(t, rr, prime, k0, buff);
-#else
 	mont_mult<4>(xp, x, rr, prime, k0);
 	mont_reduction<4>(t, rr, prime, k0);
-#endif
 	for (int i = num_bits - 1;i >= 0; i--) {
-#ifdef	WITH_C2GO
-		mont_mult<4>(t, t, t, prime, k0, buff);
-		if (vli_test_bit(y, i)) mont_mult<4>(t, t, xp, prime, k0, buff);
-#else
 		mont_sqr<4>(t, t, prime, k0);
 		if (vli_test_bit(y, i)) mont_mult<4>(t, t, xp, prime, k0);
-#endif
 	}
-#ifdef	WITH_C2GO
-	//mont_mult<4>(result, montOne, t, prime, k0, buff);
-	mont_reduction<4>(result, t, prime, k0, buff);
-#else
 	//mont_mult<4>(result, montOne, t, prime, k0);
 	mont_reduction<4>(result, t, prime, k0);
-#endif
 }
 
-#ifndef	WITH_C2GO
 void mont_sm2_mod_mult_p(u64 *result, const u64 *x, const u64 *y)
 {
 #ifdef	ommit
