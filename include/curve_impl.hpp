@@ -31,6 +31,7 @@
 #include "vli_bn.hpp"
 #include "ecc_impl.hpp"
 
+
 namespace vli {
 
 /**
@@ -368,7 +369,7 @@ public:
 	 */
 	void point_add_jacobian(u64 *x3, u64 *y3, u64 *z3, const u64 *x1,
 			const u64 *y1, const u64 *z1, const u64 *x2,
-			const u64 *y2, const u64 *z2) const noexcept
+			const u64 *y2, const u64 *z2 = nullptr) const noexcept
 	{
 		bignum<N>	*x3p = reinterpret_cast<bignum<N> *>(x3);
 		bignum<N>	*y3p = reinterpret_cast<bignum<N> *>(y3);
@@ -378,7 +379,7 @@ public:
 			vli_set<N>(y3, y2);
 			vli_set<N>(z3, z2);
 			return;
-		} else if (vli_is_zero<N>(z2)) {
+		} else if (z2 != nullptr && vli_is_zero<N>(z2)) {
 			vli_set<N>(x3, x1);
 			vli_set<N>(y3, y1);
 			vli_set<N>(z3, z1);
@@ -393,7 +394,7 @@ public:
 		// S1 ... l4
 		// S2 ... l5
 		bool	z1_is_one = vli_is_one<N>(z1);
-		bool	z2_is_one = vli_is_one<N>(z2);
+		bool	z2_is_one = (z2 == nullptr || vli_is_one<N>(z2));
 #ifdef	WITH_ADD_2007bl
 		bignum<N>	u1, u2, s1, s2, h, i, j, r, v;
 		bignum<N>	t1;
@@ -556,6 +557,7 @@ public:
 			}
 			this->mont_mmult(*z3p, t1, h);
 		}
+#undef	t1
 #endif
 		// montgomery reduction
 		from_montgomery(x3, *x3p);

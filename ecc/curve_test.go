@@ -85,6 +85,13 @@ func TestCurveAddJacobian(t *testing.T) {
 	}
 	if z3.Cmp(z3a) != 0 {
 		t.Logf("sm2c.AddJ step1 diff sm2.Add z:\n%s\n%s", z3.Text(16), z3a.Text(16))
+		t.Logf("sm2c.AddJ sm2c x3a: %s\ny3a: %s", x3a.Text(16), y3a.Text(16))
+		ww := x3a.Bits()
+		t.Logf("x3: %x %x %x %x", ww[0], ww[1], ww[2], ww[3])
+		ww = y3a.Bits()
+		t.Logf("y3: %x %x %x %x", ww[0], ww[1], ww[2], ww[3])
+		ww = z3a.Bits()
+		t.Logf("z3: %x %x %x %x", ww[0], ww[1], ww[2], ww[3])
 	} else {
 		t.Log("sm2c.AddJ step1 z is same")
 	}

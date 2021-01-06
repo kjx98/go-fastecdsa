@@ -32,6 +32,7 @@
 #include <endian.h>
 #include <cassert>
 #include <type_traits>
+#include <initializer_list>
 #include "cdefs.h"
 #include "vli.hpp"
 
@@ -47,7 +48,7 @@ template<const uint ndigits>
 class bignum {
 public:
 	using bn_words = u64[ndigits];
-	bignum(const bn_words& init = {}) noexcept : d{} {}
+	bignum(std::initializer_list<u64> l = {}) noexcept : d {} {}
 	bignum(const bignum &) = default;
 	explicit bignum(const u64 v) noexcept : d{v,0,0,0}
 	{
@@ -122,6 +123,15 @@ public:
 		for (int i = ndigits - 1; i >= 0; i--) {
 			if (d[i] > right.d[i]) return 1;
 			else if (d[i] < right.d[i]) return -1;
+		}
+		return 0;
+	}
+	int cmp(const u64 *right) const noexcept
+	{
+#pragma GCC unroll 4
+		for (int i = ndigits - 1; i >= 0; i--) {
+			if (d[i] > right[i]) return 1;
+			else if (d[i] < right[i]) return -1;
 		}
 		return 0;
 	}
