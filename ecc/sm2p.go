@@ -2,8 +2,8 @@
 
 package ecc
 
-// #cgo CXXFLAGS: -O3 -Wpedantic -I../vli -Wno-maybe-uninitialized -std=gnu++11
-// #cgo CFLAGS: -O3 -Wpedantic -I../vli -Wno-maybe-uninitialized -std=c11
+// #cgo CXXFLAGS: -O3 -Wpedantic -I../include -Wno-maybe-uninitialized -std=gnu++11
+// #cgo CFLAGS: -O3 -Wpedantic -I../include -Wno-maybe-uninitialized -std=c11
 // #include "sm2p.h"
 import "C"
 

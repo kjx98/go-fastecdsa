@@ -338,6 +338,14 @@ func TestMontMulMod(t *testing.T) {
 		t.Logf("MontMulMod step 1 diff:\n%s vs\n%s", m1.Text(16), m2.Text(16))
 		t.Fail()
 	}
+	/*
+		ww := x1.Bits()
+		t.Logf("x1: %x %x %x %x", ww[0], ww[1], ww[2], ww[3])
+		ww = y1.Bits()
+		t.Logf("y1: %x %x %x %x", ww[0], ww[1], ww[2], ww[3])
+		ww = m1.Bits()
+		t.Logf("xy1mod: %x %x %x %x", ww[0], ww[1], ww[2], ww[3])
+	*/
 	prod = new(big.Int).Mul(x2, y2)
 	m1 = new(big.Int).Mod(prod, c.P)
 	m2 = c.montModMul(x2, y2)
@@ -345,6 +353,14 @@ func TestMontMulMod(t *testing.T) {
 		t.Logf("MontMulMod step2 diff:\n%s vs\n%s", m1.Text(16), m2.Text(16))
 		t.Fail()
 	}
+	/*
+		ww = x2.Bits()
+		t.Logf("x2: %x %x %x %x", ww[0], ww[1], ww[2], ww[3])
+		ww = y2.Bits()
+		t.Logf("y2: %x %x %x %x", ww[0], ww[1], ww[2], ww[3])
+		ww = m1.Bits()
+		t.Logf("xy2mod: %x %x %x %x", ww[0], ww[1], ww[2], ww[3])
+	*/
 }
 
 func TestBarrettMod(t *testing.T) {

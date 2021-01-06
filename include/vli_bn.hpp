@@ -47,9 +47,8 @@ template<const uint ndigits>
 class bignum {
 public:
 	using bn_words = u64[ndigits];
-	bignum() = default;
+	bignum(const bn_words& init = {}) noexcept : d{} {}
 	bignum(const bignum &) = default;
-	explicit bignum(const bn_words& init) noexcept : d{} {}
 	explicit bignum(const u64 v) noexcept : d{v,0,0,0}
 	{
 #if	__cplusplus >= 201703L
@@ -534,13 +533,12 @@ u64 calcK0(const bignum<N>& p) noexcept
 }
 
 template<const uint N>
-bignum<N>& calcRR(const bignum<N>& p) noexcept
+bignum<N>& calcRR(bignum<N>& t, const bignum<N>& p) noexcept
 {
-	bignum<N>	t;
 	t.clear();
 	t.sub_from(p);
 	for  (uint i = 256; i<512; i++) {
-		if (t.add_to(t) || t.Cmp(p) >= 0) {
+		if (t.add_to(t) || t.cmp(p) >= 0) {
 			t.sub_from(p);
 		}
 	}
