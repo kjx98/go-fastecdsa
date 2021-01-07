@@ -48,7 +48,7 @@ template<const uint ndigits>
 class bignum {
 public:
 	using bn_words = u64[ndigits];
-	bignum(std::initializer_list<u64> l = {}) noexcept : d {} {}
+	bignum() = default;
 	bignum(const bignum &) = default;
 	explicit bignum(const u64 v) noexcept : d{v,0,0,0}
 	{

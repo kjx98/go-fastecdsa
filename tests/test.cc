@@ -9,7 +9,7 @@
 
 using namespace vli;
 
-#include "testData.h"
+#include "testData.hpp"
 
 TEST(testEcc, TestCalcK0RR)
 {
@@ -34,18 +34,41 @@ static void mont_mul(bignum<4>& res, const bignum<4>& x, const bignum<4>& y)
 TEST(testEcc, TestMontMult)
 {
 	bignum<4>	res;
+	bignum<4>	bx1(dx1), by1(dy1);
 	mont_mul(res, bx1, by1);
 	EXPECT_TRUE(res.cmp(xy1mod) == 0);
+	bignum<4>	bx2(dx2), by2(dy2);
 	mont_mul(res, bx2, by2);
 	EXPECT_TRUE(res.cmp(xy2mod) == 0);
 }
 
-TEST(testCurve, TestECADD)
+TEST(testVli, TestInverse)
+{
+	u64	res[4];
+	vli_mod_inv<4>(res, dx1, sm2_p);
+	EXPECT_EQ(vli_cmp<4>(res, x1_inv), 0);
+	vli_mod_inv<4>(res, dx2, sm2_p);
+	EXPECT_EQ(vli_cmp<4>(res, x2_inv), 0);
+}
+
+TEST(testEcc, TestECADD)
 {
 	u64		xx3[4], yy3[4], zz3[4];
-	ASSERT_TRUE(sm2_p256.init());
-	sm2_p256.point_add_jacobian(xx3, yy3, zz3, bx1.data(), by1.data(),
-						bigOne.data(), bx2.data(), by2.data(), bigOne.data());
+	bignum<4>	x3(dx3), y3(dy3), z3(dz3);
+	sm2_p256.point_add_jacobian(xx3, yy3, zz3, dx1, dy1,
+						bigOne.data(), dx2, dy2);
+	//vli_mod_inv<4>(z, z3, sm2_p256.paramP().data());
+	//sm2_p256.apply_z(xx3, yy3, z);
+	EXPECT_EQ(x3.cmp(xx3), 0);
+	EXPECT_EQ(y3.cmp(yy3), 0);
+	EXPECT_EQ(z3.cmp(zz3), 0);
+}
+
+TEST(testEcc, TestECDBL)
+{
+	u64		xx3[4], yy3[4], zz3[4];
+	bignum<4>	x3(x1x1), y3(y1y1), z3(z1z1);
+	sm2_p256.point_double_jacobian(xx3, yy3, zz3, dx1, dy1);
 	//vli_mod_inv<4>(z, z3, sm2_p256.paramP().data());
 	//sm2_p256.apply_z(xx3, yy3, z);
 	EXPECT_EQ(x3.cmp(xx3), 0);
@@ -55,7 +78,6 @@ TEST(testCurve, TestECADD)
 
 int main(int argc, char *argv[])
 {
-	initData();
 	sm2_p256.init();
     testing::InitGoogleTest(&argc, argv);//将命令行参数传递给gtest
     return RUN_ALL_TESTS();   //RUN_ALL_TESTS()运行所有测试案例

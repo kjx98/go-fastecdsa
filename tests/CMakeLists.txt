@@ -40,8 +40,7 @@ pkg_check_modules (BENCH benchmark)
 
 add_executable(ecc.test
 		test.cc
-		testData.h
-		testData.cc
+		testData.hpp
         )
 target_link_libraries(ecc.test gtest pthread)
 
@@ -49,8 +48,7 @@ if (BENCH_FOUND)
 		message(STATUS "Build benchmark for vli ECC")
 add_executable(ecc.bench
         bench.cc
-		testData.h
-		testData.cc
+		testData.hpp
         )
 if (LIBTCMALLOC_FOUND)
 	message (STATUS "Using tcmalloc...")

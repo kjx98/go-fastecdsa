@@ -87,11 +87,11 @@ func TestCurveAddJacobian(t *testing.T) {
 		t.Logf("sm2c.AddJ step1 diff sm2.Add z:\n%s\n%s", z3.Text(16), z3a.Text(16))
 		t.Logf("sm2c.AddJ sm2c x3a: %s\ny3a: %s", x3a.Text(16), y3a.Text(16))
 		ww := x3a.Bits()
-		t.Logf("x3: %x %x %x %x", ww[0], ww[1], ww[2], ww[3])
+		t.Logf("x3a: %x %x %x %x", ww[0], ww[1], ww[2], ww[3])
 		ww = y3a.Bits()
-		t.Logf("y3: %x %x %x %x", ww[0], ww[1], ww[2], ww[3])
+		t.Logf("y3a: %x %x %x %x", ww[0], ww[1], ww[2], ww[3])
 		ww = z3a.Bits()
-		t.Logf("z3: %x %x %x %x", ww[0], ww[1], ww[2], ww[3])
+		t.Logf("z3a: %x %x %x %x", ww[0], ww[1], ww[2], ww[3])
 	} else {
 		t.Log("sm2c.AddJ step1 z is same")
 	}
@@ -211,6 +211,12 @@ func TestCurveDoubleJacobian(t *testing.T) {
 	} else {
 		t.Logf("sm2c.DoubleJ step1 z: %s", z3.Text(16))
 	}
+	ww := x3a.Bits()
+	t.Logf("x3a: %x %x %x %x", ww[0], ww[1], ww[2], ww[3])
+	ww = y3a.Bits()
+	t.Logf("y3a: %x %x %x %x", ww[0], ww[1], ww[2], ww[3])
+	ww = z3a.Bits()
+	t.Logf("z3a: %x %x %x %x", ww[0], ww[1], ww[2], ww[3])
 	x3, y3, z3 = jc.DoubleJacobian(x3, y3, z3)
 	x3a, y3a, z3a = sm2c.DoubleJacobian(x3a, y3a, z3a)
 	if x3.Cmp(x3a) != 0 {
