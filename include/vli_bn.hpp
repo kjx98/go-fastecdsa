@@ -77,6 +77,7 @@ public:
 			d[i] = 0;
 	}
 	const u64* data() const noexcept { return d; }
+	u64* raw_data() noexcept { return d; }
 	bool is_zero() const noexcept
 	{
 #pragma GCC unroll 4
@@ -316,14 +317,14 @@ public:
 		return borrow;
 #endif
 	}
-	bool is_negative()  noexcept
+	bool is_negative() const noexcept
 	{
 		return (d[ndigits-1] & ((u64)1 << 63)) != 0;
 	}
-	bool is_even() noexcept {
+	bool is_even() const noexcept {
 		return (d[0] & 1) == 0;
 	}
-	bool is_odd() noexcept {
+	bool is_odd() const noexcept {
 		return (d[0] & 1) != 0;
 	}
 /* Counts the number of 64-bit "digits" in vli. */
@@ -531,6 +532,91 @@ protected:
 
 
 template<const uint N>
+class bignumz : public bignum<N>{
+public:
+	bignumz() = default;
+	bignumz(const bignumz &) = default;
+	bignumz(const bignum<N>& bn) : bignum<N>(bn), _is_neg(false) {}
+	explicit bignumz(const s64 v) noexcept : bignum<N>(v>=0?v:-v),
+		_is_neg(v < 0) {}
+	int is_negative() const noexcept { return _is_neg; }
+	bool operator==(const bignumz& bn) {
+		return this->_is_neg == bn._is_neg && vli_cmp<N>(this->d, bn.d) == 0;
+	}
+	bool operator<(const bignumz& bn) {
+		if (this->_is_neg) {
+			if (!bn._is_neg) return true;
+			return vli_cmp<N>(this->d, bn.d) > 0;
+		} else {
+			if (bn._is_neg) return false;
+			return vli_cmp<N>(this->d, bn.d) < 0;
+		}
+	}
+/* Computes result = this + right, returning carry. Can modify in place. */
+	void add(const bignumz& left, const bignum<N> &right) noexcept
+	{
+		bignumz	rt(right);
+		this->add(left, rt);
+	}
+	void sub(const bignumz& left, const bignum<N>& right) noexcept
+	{
+		bignumz	rt(right);
+		this->sub(left, rt);
+	}
+	void add(const bignumz& left, const bignumz& right) noexcept
+	{
+		if (left._is_neg) {
+			if (right._is_neg) {
+				_is_neg = true;
+				vli_add<N>(this->d, left.d, right.d);
+			} else {
+				_is_neg = vli_sub<N>(this->d, right.d, left.d);
+			}
+		} else {
+			if (right._is_neg) {
+				_is_neg = vli_sub<N>(this->d, left.d, right.d);
+			} else {
+				_is_neg = false;
+				vli_add<N>(this->d, left.d, right.d);
+			}
+		}
+	}
+	void sub(const bignumz& left, const bignumz& right) noexcept
+	{
+		if (left._is_neg) {
+			if (right._is_neg) {
+				_is_neg = vli_sub<N>(this->d, right.d, left.d);
+			} else {
+				_is_neg = true;
+				vli_add<N>(this->d, left.d, right.d);
+			}
+		} else {
+			if (right._is_neg) {
+				_is_neg = false;
+				vli_add<N>(this->d, left.d, right.d);
+			} else {
+				_is_neg = vli_sub<N>(this->d, left.d, right.d);
+			}
+		}
+	}
+/* Computes vli = vli >> 1. */
+	void rshift1() noexcept
+	{
+		u64 carry = 0;
+#pragma GCC unroll 4
+		for (int i=N - 1; i >= 0; i--) { 
+			u64 temp = this->d[i];
+			this->d[i] = (temp >> 1) | carry;
+			carry = temp << 63;
+		}
+		if (_is_neg) this->d[N-1] |= (1L << 63);
+	}	
+private:
+	bool	_is_neg = false;
+};
+
+
+template<const uint N>
 static forceinline
 u64 calcK0(const bignum<N>& p) noexcept
 {
@@ -555,18 +641,11 @@ bignum<N>& calcRR(bignum<N>& t, const bignum<N>& p) noexcept
 	return t;
 }
 
-template<uint ndigits>
+template<const uint ndigits>
 class bn_prod: public bignum<ndigits*2> {
 public:
 	using bn_words = u64[ndigits*2];
-	bn_prod(bn_words init = {}) noexcept : bignum<ndigits*2>({}) {}
 	bn_prod(const bn_prod &) = default;
-#ifdef	ommit
-	bn_prod* operator=(const u64 *src) noexcept {
-		bn_prod	*res=reinterpret_cast<bn_prod *>(src);
-		return res;
-	}
-#endif
 	// this = left * right
 	void mult(const bignum<ndigits>& left, const bignum<ndigits>& right)
 	noexcept

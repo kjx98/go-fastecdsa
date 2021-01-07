@@ -42,6 +42,27 @@ TEST(testEcc, TestMontMult)
 	EXPECT_TRUE(res.cmp(xy2mod) == 0);
 }
 
+TEST(testVli, TestBignumz)
+{
+	bignumz<4>	p2(2), p3(3);
+	bignumz<4>	n2(-2), n3(-3);
+	bignumz<4>	bn_z(0);
+	ASSERT_TRUE(p2 < p3);
+	ASSERT_TRUE(n3 < n2);
+	ASSERT_TRUE(n2 < p2);
+	ASSERT_FALSE(p2 < bn_z);
+	ASSERT_TRUE(n2 < bn_z);
+	bignumz<4>	res;
+	res.sub(p2, p3);
+	EXPECT_TRUE(res < bn_z);
+	res.sub(n2, n3);
+	EXPECT_TRUE(bn_z < res);
+	res.add(n2, p3);
+	EXPECT_TRUE(bn_z < res);
+	res.add(n2, p2);
+	EXPECT_TRUE(res == bn_z);
+}
+
 TEST(testVli, TestInverse)
 {
 	u64	res[4];
@@ -49,6 +70,16 @@ TEST(testVli, TestInverse)
 	EXPECT_EQ(vli_cmp<4>(res, x1_inv), 0);
 	vli_mod_inv<4>(res, dx2, sm2_p);
 	EXPECT_EQ(vli_cmp<4>(res, x2_inv), 0);
+}
+
+TEST(testVli, TestInverseNew)
+{
+	bignum<4>	res;
+	bignum<4>	x1(dx1), x2(dx2);
+	vli_mod_inv_new<4>(res, x1, prime);
+	EXPECT_EQ(vli_cmp<4>(res.data(), x1_inv), 0);
+	vli_mod_inv_new<4>(res, x2, prime);
+	EXPECT_EQ(vli_cmp<4>(res.data(), x2_inv), 0);
 }
 
 TEST(testEcc, TestECADD)

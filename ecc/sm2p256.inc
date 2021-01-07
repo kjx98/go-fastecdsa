@@ -2010,14 +2010,6 @@ int sm2_points_mul(Point *r, const bn_words *scalar, size_t num,
         //if (0 == Point_cmp(generator, group->generator, ctx))
             /* precomputation matches generator */
             have_pre_comp = 1;
-#ifdef	ommit
-        else
-            /*
-             * we don't have valid precomputation: treat the generator as a
-             * random point
-             */
-            num_points++;
-#endif
     }
     if (num_points > 0) {
         if (num_points >= 3) {
@@ -2045,17 +2037,6 @@ int sm2_points_mul(Point *r, const bn_words *scalar, size_t num,
         memset(secrets, 0, sizeof(*secrets) * num_points);
         memset(pre_comp, 0, sizeof(*pre_comp) * num_points);
         for (i = 0; i < num_points; ++i) {
-#ifdef	ommit
-            if (i == num)
-                /*
-                 * we didn't have a valid precomputation, so we pick the
-                 * generator
-                 */
-            {
-                p = EC_GROUP_get0_generator(group);
-                p_scalar = scalar;
-            } else
-#endif
                 /* the i^th point */
             {
                 p = points+i;

@@ -281,24 +281,14 @@ vli_mod_inv(u64 *result, const u64 *input, const u64 *mod) noexcept
  * The binary extended gcd algorithm was first described by Knuth
  */
 // not work yet
-#ifndef	ommit
+using namespace vli;
+#ifdef	ommit
 template<const uint N> forceinline
 static void
-#ifdef	WITH_C2GO
-vli_mod_inv_new(u64 *result, const u64 *n, const u64 *mod, u64 *buff) noexcept
-#else
 vli_mod_inv_new(u64 *result, const u64 *n, const u64 *mod) noexcept
-#endif
 {
-#ifdef	WITH_C2GO
-	u64	*a=buff;
-	u64 *b=a+N;
-	u64	*x=b+N;
-	u64	*y=x+N;
-#else
 	u64 a[N], b[N];
 	u64 x[N], y[N];
-#endif
 	// mod should be prime, >3 MUST BE odd
 	if ( vli_is_even(mod) ) {
 		vli_clear<N>(result);
@@ -368,85 +358,58 @@ vli_mod_inv_new(u64 *result, const u64 *n, const u64 *mod) noexcept
 // x is mod, prime
 template<const uint N> forceinline
 static void
-vli_mod_inv_new(u64 *result, const u64 *y, const u64 *x) noexcept
+vli_mod_inv_new(bignum<N>& result, const bignum<N>& y, const bignum<N>& x)
+noexcept
 {
-	u64 a[N], b[N];
-	u64 c[N], d[N];
-	u64 u[N], v[N];
+	bignumz<N>	a(1), b(0), c(0), d(1);
+	bignumz<N>	u(x), v(y);
 	// mod should be prime, >3 MUST BE odd
-	if ( vli_is_even(x) ) {
-		vli_clear<N>(result);
+	if ( x.is_even() ) {
+		result.clear();
 		return;
 	}
 
-	vli_set<N>(u, x);
-	vli_set<N>(v, y);
-	vli_clear<N>(a);
-	vli_clear<N>(b);
-	vli_clear<N>(c);
-	vli_clear<N>(d);
-	a[0] = 1;
-	d[0] = 1;
-	//int cmp_result;
-	int	b_carry=0, d_carry = 0;
-
-	while ( !vli_is_zero<N>(u) ) {
-		bool carry;
-
-		while (vli_is_even(u)) {
-			vli_rshift1<N>(u);
-			if (vli_is_even(a) && vli_is_even(b)) {
-				vli_rshift1<N>(a);
-				vli_rshift1<N>(b);
+	while ( !u.is_zero() ) {
+		while (u.is_even()) {
+			u.rshift1();
+			if (a.is_even() && b.is_even()) {
+				a.rshift1();
+				b.rshift1();
 			} else {
-				carry = vli_add_to<N>(a, y);
-				vli_rshift1<N>(a);
-				if (carry) a[N-1] |= (1L << 63);
-				if (vli_sub_from<N>(b, x)) b_carry--;
-				vli_rshift1<N>(b);
-				b[N-1] |= ((u64)(b_carry & 1) << 63);
-				b_carry >>= 1;
+				a.add(a, y);
+				a.rshift1();
+				b.sub(b, x);
+				b.rshift1();
 			}
 		}
 
-		while (vli_is_even(v)) {
-			vli_rshift1<N>(v);
-			if (vli_is_even(c) && vli_is_even(d)) {
-				vli_rshift1<N>(c);
-				vli_rshift1<N>(d);
+		while (v.is_even()) {
+			v.rshift1();
+			if (c.is_even() && d.is_even()) {
+				c.rshift1();
+				d.rshift1();
 			} else {
-				carry = vli_add_to<N>(c, y);
-				vli_rshift1<N>(c);
-				if (carry) c[N-1] |= (1L << 63);
-				if (vli_sub_from<N>(d, x)) d_carry--;
-				vli_rshift1<N>(d);
-				d[N-1] |= ((u64)(d_carry & 1) << 63);
-				d_carry >>= 1;
+				c.add(c, y);
+				c.rshift1();
+				d.sub(d, x);
+				d.rshift1();
 			}
 		}
 
-		if (vli_cmp<N>(u, v) >= 0) {
-			vli_sub_from<N>(u, v);
-			vli_sub_from<N>(a, c);
-			b_carry -= d_carry;
-			if (vli_sub_from<N>(b, d)) b_carry--;
+		if (u < v) {
+			v.sub(v, u);
+			c.sub(c, a);
+			d.sub(d, b);
 		} else {
-			vli_sub_from<N>(v, u);
-			vli_sub_from<N>(c, a);
-			d_carry -= b_carry;
-			if (vli_sub_from<N>(d, b)) d_carry--;
+			u.sub(u, v);
+			a.sub(a, c);
+			d.sub(b, d);
 		}
 	}
-	vli_set<N>(a, c);
-	vli_set<N>(b, d);
-	if (likely(vli_is_one<N>(v))) {
-		if (d_carry) vli_add<N>(result, d, x);
-		if (unlikely(vli_cmp<N>(d, x) >= 0)) {
-			vli_sub<N>(result, d, x);
-		} else vli_set<N>(result, d);
+	if (d.is_negative()) {
+		vli_sub<N>(result.raw_data(), x.data(), d.data());
 	} else {
-		// no inverse
-		vli_clear<N>(result);
+		vli_set<N>(result.raw_data(), d.data());
 	}
 }
 #endif
