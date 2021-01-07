@@ -32,7 +32,8 @@
 #include <endian.h>
 #include <cassert>
 #include <type_traits>
-#include <initializer_list>
+#include <iostream>
+//#include <iomanip>
 #include "cdefs.h"
 #include "vli.hpp"
 
@@ -76,8 +77,21 @@ public:
 		for (uint i = 0; i < ndigits; i++)
 			d[i] = 0;
 	}
+	friend std::ostream& operator<<(std::ostream& os, const bignum& x)
+	{
+		os << std::hex;
+		if (x.is_u64()) {
+			os << x.d[0];
+		} else {
+			for (uint i=0; i < ndigits; i++) {
+				os << " " << x.d[i];
+			}
+		}
+		os << std::dec;
+		return os;
+	}
 	const u64* data() const noexcept { return d; }
-	u64* raw_data() noexcept { return d; }
+	//u64* raw_data() noexcept { return d; }
 	bool is_zero() const noexcept
 	{
 #pragma GCC unroll 4
@@ -89,6 +103,14 @@ public:
 	bool is_one() const noexcept
 	{
 		if (d[0] != 1) return false;
+#pragma GCC unroll 4
+		for (uint i = 1; i < ndigits; i++) {
+			if (d[i]) return false;
+		}
+		return true;
+	}
+	bool is_u64() const noexcept
+	{
 #pragma GCC unroll 4
 		for (uint i = 1; i < ndigits; i++) {
 			if (d[i]) return false;
@@ -107,6 +129,11 @@ public:
 	{
 		if ( bit >= ndigits*64 ) return false;	// out of bound
 		return (d[bit / 64] & ((u64)1 << (bit % 64)));
+	}
+	u8 get_bit(const uint bit) const noexcept
+	{
+		if ( bit >= ndigits*64 ) return 0;	// out of bound
+		return (d[bit >> 6] >> (bit & 0x3f)) & 1;
 	}
 /**
  * cmp() - compare this and right vlis
@@ -536,68 +563,58 @@ class bignumz : public bignum<N>{
 public:
 	bignumz() = default;
 	bignumz(const bignumz &) = default;
-	bignumz(const bignum<N>& bn) : bignum<N>(bn), _is_neg(false) {}
-	explicit bignumz(const s64 v) noexcept : bignum<N>(v>=0?v:-v),
-		_is_neg(v < 0) {}
-	int is_negative() const noexcept { return _is_neg; }
+	bignumz(const bignum<N>& bn) : bignum<N>(bn), carry(0) {}
+	explicit bignumz(const s64 v) noexcept : bignum<N>(v), carry(v>=0?0:-1)
+	{
+		if (v < 0) {
+#pragma GCC unroll 4
+			for (uint i=1; i<N; i++) this->d[i] = -1;
+		}
+	}
+	explicit bignumz(const u64 *src) noexcept : bignum<N>(src), carry(0) {}
+	int is_negative() const noexcept { return carry < 0; }
 	bool operator==(const bignumz& bn) {
-		return this->_is_neg == bn._is_neg && vli_cmp<N>(this->d, bn.d) == 0;
+		return this->carry == bn.carry && vli_cmp<N>(this->d, bn.d) == 0;
 	}
 	bool operator<(const bignumz& bn) {
-		if (this->_is_neg) {
-			if (!bn._is_neg) return true;
-			return vli_cmp<N>(this->d, bn.d) > 0;
+		if (this->carry < 0) {
+			if (bn.carry >= 0) return true;
+			return vli_cmp<N>(this->d, bn.d) < 0;
 		} else {
-			if (bn._is_neg) return false;
+			if (bn.carry < 0) return false;
 			return vli_cmp<N>(this->d, bn.d) < 0;
 		}
 	}
 /* Computes result = this + right, returning carry. Can modify in place. */
 	void add(const bignumz& left, const bignum<N> &right) noexcept
 	{
-		bignumz	rt(right);
-		this->add(left, rt);
+		this->carry = left.carry;
+		if (vli_add<N>(this->d, left.d, right.d)) this->carry++;
+	}
+	void add(const bignumz& left, const u64* right) noexcept
+	{
+		this->carry = left.carry;
+		if (vli_add<N>(this->d, left.d, right)) this->carry++;
 	}
 	void sub(const bignumz& left, const bignum<N>& right) noexcept
 	{
-		bignumz	rt(right);
-		this->sub(left, rt);
+		this->carry = left.carry;
+		if (vli_sub<N>(this->d, left.d, right.d)) this->carry--;
+	}
+	void sub(const bignumz& left, const u64* right) noexcept
+	{
+		this->carry = left.carry;
+		if (vli_sub<N>(this->d, left.d, right)) this->carry--;
 	}
 	void add(const bignumz& left, const bignumz& right) noexcept
 	{
-		if (left._is_neg) {
-			if (right._is_neg) {
-				_is_neg = true;
-				vli_add<N>(this->d, left.d, right.d);
-			} else {
-				_is_neg = vli_sub<N>(this->d, right.d, left.d);
-			}
-		} else {
-			if (right._is_neg) {
-				_is_neg = vli_sub<N>(this->d, left.d, right.d);
-			} else {
-				_is_neg = false;
-				vli_add<N>(this->d, left.d, right.d);
-			}
-		}
+		this->carry = left.carry + right.carry;
+		if (vli_add<N>(this->d, left.d, right.d)) this->carry++;
 	}
 	void sub(const bignumz& left, const bignumz& right) noexcept
 	{
-		if (left._is_neg) {
-			if (right._is_neg) {
-				_is_neg = vli_sub<N>(this->d, right.d, left.d);
-			} else {
-				_is_neg = true;
-				vli_add<N>(this->d, left.d, right.d);
-			}
-		} else {
-			if (right._is_neg) {
-				_is_neg = false;
-				vli_add<N>(this->d, left.d, right.d);
-			} else {
-				_is_neg = vli_sub<N>(this->d, left.d, right.d);
-			}
-		}
+		this->carry = left.carry - right.carry;
+		if (vli_sub<N>(this->d, left.d, right.d)) this->carry--;
 	}
 /* Computes vli = vli >> 1. */
 	void rshift1() noexcept
@@ -609,10 +626,11 @@ public:
 			this->d[i] = (temp >> 1) | carry;
 			carry = temp << 63;
 		}
-		if (_is_neg) this->d[N-1] |= (1L << 63);
+		if (carry & 1) this->d[N-1] |= (1L << 63);
+		carry >>= 1;
 	}	
 private:
-	bool	_is_neg = false;
+	int		carry = 0;
 };
 
 

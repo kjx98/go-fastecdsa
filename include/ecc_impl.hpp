@@ -358,14 +358,13 @@ vli_mod_inv_new(u64 *result, const u64 *n, const u64 *mod) noexcept
 // x is mod, prime
 template<const uint N> forceinline
 static void
-vli_mod_inv_new(bignum<N>& result, const bignum<N>& y, const bignum<N>& x)
-noexcept
+vli_mod_inv_new(u64 *result, const u64 *y, const u64 *x) noexcept
 {
-	bignumz<N>	a(1), b(0), c(0), d(1);
+	bignumz<N>	a(1), b(0l), c(0l), d(1);
 	bignumz<N>	u(x), v(y);
 	// mod should be prime, >3 MUST BE odd
-	if ( x.is_even() ) {
-		result.clear();
+	if ( u.is_even() ) {
+		vli_clear<N>(result);
 		return;
 	}
 
@@ -407,9 +406,9 @@ noexcept
 		}
 	}
 	if (d.is_negative()) {
-		vli_sub<N>(result.raw_data(), x.data(), d.data());
+		vli_add<N>(result, x, d.data());
 	} else {
-		vli_set<N>(result.raw_data(), d.data());
+		vli_set<N>(result, d.data());
 	}
 }
 #endif

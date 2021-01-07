@@ -97,9 +97,18 @@ static void vli_set(u64 *dest, const u64 *src) noexcept
 }
 
 /* Returns nonzero if bit bit of vli is set. */
-static forceinline bool vli_test_bit(const u64 *vli, uint bit)
+template<const uint N> forceinline
+static bool vli_test_bit(const u64 *vli, uint bit) noexcept
 {
+	if ( bit >= N*64 ) return false;	// out of bound
 	return (vli[bit / 64] & ((u64)1 << (bit % 64)));
+}
+
+template<const uint N> forceinline
+static u8 get_bit(const u64 *vli, const uint bit) noexcept
+{
+	if ( bit >= N*64 ) return 0;	// out of bound
+	return (vli[bit >> 6] >> (bit & 0x3f)) & 1;
 }
 
 /**
@@ -397,7 +406,7 @@ static bool vli_usub_from(u64 *result, const u64 *left, u64 right) noexcept
 template<uint ndigits> forceinline
 static bool vli_is_negative(const u64 *vli)  noexcept
 {
-	return vli_test_bit(vli, ndigits * 64 - 1);
+	return vli_test_bit<ndigits>(vli, ndigits * 64 - 1);
 }
 
 forceinline static bool vli_is_even(const u64 *vli) noexcept {

@@ -246,7 +246,7 @@ void vli_from_be64(u64 *dest, const void *src, uint ndigits)
 #endif
 
 /* ------ Point operations ------ */
-
+#ifdef	ommit
 /* Returns true if p_point is the point at infinity, false otherwise. */
 template<uint ndigits> forceinline
 static bool ecc_point_is_zero(const u64 *p_x, const u64 *p_y)
@@ -458,7 +458,6 @@ static void xycz_add_c(u64 *x1, u64 *y1, u64 *x2, u64 *y2,
 	vli_set<ndigits>(x1, t7);
 }
 
-#ifdef	ommit
 template<uint ndigits> forceinline
 static void ecc_point_mult(u64 *result_x, u64 *result_y,
 			   const u64 *point_x, const u64 *point_y, const u64 *scalar,

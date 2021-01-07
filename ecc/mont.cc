@@ -131,7 +131,7 @@ void mont_mod_exp(u64 *result, const u64 *x, const u64 *y, const montParams *pa)
 	mont_reduction<4>(t, rr, prime, k0);
 	for (int i = num_bits - 1;i >= 0; i--) {
 		mont_sqr<4>(t, t, prime, k0);
-		if (vli_test_bit(y, i)) mont_mult<4>(t, t, xp, prime, k0);
+		if (vli_test_bit<4>(y, i)) mont_mult<4>(t, t, xp, prime, k0);
 	}
 	//mont_mult<4>(result, montOne, t, prime, k0);
 	mont_reduction<4>(result, t, prime, k0);

@@ -46,7 +46,7 @@ TEST(testVli, TestBignumz)
 {
 	bignumz<4>	p2(2), p3(3);
 	bignumz<4>	n2(-2), n3(-3);
-	bignumz<4>	bn_z(0);
+	bignumz<4>	bn_z(0L);
 	ASSERT_TRUE(p2 < p3);
 	ASSERT_TRUE(n3 < n2);
 	ASSERT_TRUE(n2 < p2);
@@ -72,15 +72,18 @@ TEST(testVli, TestInverse)
 	EXPECT_EQ(vli_cmp<4>(res, x2_inv), 0);
 }
 
+#ifdef	ommit
 TEST(testVli, TestInverseNew)
 {
-	bignum<4>	res;
-	bignum<4>	x1(dx1), x2(dx2);
-	vli_mod_inv_new<4>(res, x1, prime);
-	EXPECT_EQ(vli_cmp<4>(res.data(), x1_inv), 0);
-	vli_mod_inv_new<4>(res, x2, prime);
-	EXPECT_EQ(vli_cmp<4>(res.data(), x2_inv), 0);
+	u64	res[4];
+	vli_mod_inv_new<4>(res, dx1, sm2_p);
+	EXPECT_EQ(vli_cmp<4>(res, x1_inv), 0);
+	bignum<4>	xinv(res);
+	std::cout << "inv_new x1_inv: " << xinv << std::endl;
+	vli_mod_inv_new<4>(res, dx2, sm2_p);
+	EXPECT_EQ(vli_cmp<4>(res, x2_inv), 0);
 }
+#endif
 
 TEST(testEcc, TestECADD)
 {

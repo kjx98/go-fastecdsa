@@ -87,6 +87,7 @@
  * felem_bytearray.
  */
 
+//#define SM2_NO_CONST_TIME
 typedef u8 felem_bytearray[32];
 
 /*

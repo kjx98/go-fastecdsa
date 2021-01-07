@@ -44,7 +44,7 @@ namespace vli {
  * @a:		Curve parameter a.
  * @b:		Curve parameter b.
  */
-template<const uint N=4>
+template<const uint N=4, const u64 Pk0=0>
 class ecc_curve {
 public:
 	using mont1_func=std::function<void(bignum<N>&, const bignum<N>&)>;
@@ -128,7 +128,9 @@ public:
 	{
 		bignum<N>   *xx = reinterpret_cast<bignum<N> *>(const_cast<u64 *>(x));
 #if	__cplusplus >= 201703L
-		_mont_mult(res, *xx, rr_p);
+		if constexpr(Pk0 != 0) {
+			mont_mult<Pk0>(res, *xx, rr_p, p);
+		} else _mont_mult(res, *xx, rr_p);
 #else
 		res.mont_mult(*xx, rr_p, p, k0_p);
 #endif
@@ -136,7 +138,9 @@ public:
 	void to_montgomery(bignum<N>& res, const bignum<N>& x) const noexcept
 	{
 #if	__cplusplus >= 201703L
-		_mont_mult(res, x, rr_p);
+		if constexpr(Pk0 != 0) {
+			mont_mult<Pk0>(res, x, rr_p, p);
+		} else  _mont_mult(res, x, rr_p);
 #else
 		res.mont_mult(x, rr_p, p, k0_p);
 #endif
@@ -144,7 +148,9 @@ public:
 	void from_montgomery(bignum<N>& res, const bignum<N>& y) const noexcept
 	{
 #if	__cplusplus >= 201703L
-		_mont_reduction(res, y);
+		if constexpr(Pk0 != 0) {
+			mont_reduction<PK0>(res, y, p);
+		} else _mont_reduction(res, y);
 #else
 		res.mont_reduction(y, p, k0_p);
 #endif
@@ -153,7 +159,9 @@ public:
 	{
 		bignum<N>   *res = reinterpret_cast<bignum<N> *>(result);
 #if	__cplusplus >= 201703L
-		_mont_reduction(*res, y);
+		if constexpr(Pk0 != 0) {
+			mont_reduction<Pk0>(*res, y, p);
+		} else _mont_reduction(*res, y);
 #else
 		res->mont_reduction(y, p, k0_p);
 #endif
@@ -162,7 +170,9 @@ public:
 	mont_mmult(bignum<N>& res, const bignum<N>& left, const bignum<N>& right)
 	const noexcept {
 #if	__cplusplus >= 201703L
-		_mont_mult(res, left, right);
+		if constexpr(Pk0 != 0) {
+			mont_mult<Pk0>(res, left, right, p);
+		} else _mont_mult(res, left, right);
 #else
 		res.mont_mult(left, right, p, k0_p);
 #endif
@@ -170,8 +180,13 @@ public:
 	void mont_msqr(bignum<N>& res, const bignum<N> left, const uint nTimes=1)
 	const noexcept {
 #if	__cplusplus >= 201703L
-		_mont_sqr(res, left);
-		for (uint i=1; i < nTimes; i++) _mont_sqr(res, res);
+		if constexpr(Pk0 != 0) {
+			mont_sqr<Pk0>(res, left, p);
+			for (uint i=1; i < nTimes; i++) mont_sqr<Pk0>(res, res, p);
+		} else {
+			_mont_sqr(res, left);
+			for (uint i=1; i < nTimes; i++) _mont_sqr(res, res);
+		}
 #else 
 		res.mont_sqr(left, p, k0_p);
 		for (uint i=1; i < nTimes; i++) res.mont_sqr(res, p, k0_p);
