@@ -30,7 +30,7 @@
 #include "vli.hpp"
 #include "vli_bn.hpp"
 #include "ecc_impl.hpp"
-
+#include "mont.hpp"
 
 namespace vli {
 
@@ -149,7 +149,7 @@ public:
 	{
 #if	__cplusplus >= 201703L
 		if constexpr(Pk0 != 0) {
-			mont_reduction<PK0>(res, y, p);
+			mont_reduction<Pk0>(res, y, p);
 		} else _mont_reduction(res, y);
 #else
 		res.mont_reduction(y, p, k0_p);
