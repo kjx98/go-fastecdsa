@@ -277,106 +277,29 @@ vli_mod_inv(u64 *result, const u64 *input, const u64 *mod) noexcept
 	vli_set<N>(result, u);
 }
 
+using namespace vli;
 /* Computes result = (1 / p_input) % mod. All VLIs are the same size.
  * The binary extended gcd algorithm was first described by Knuth
  */
-// not work yet
-using namespace vli;
-#ifdef	ommit
-template<const uint N> forceinline
-static void
-vli_mod_inv_new(u64 *result, const u64 *n, const u64 *mod) noexcept
-{
-	u64 a[N], b[N];
-	u64 x[N], y[N];
-	// mod should be prime, >3 MUST BE odd
-	if ( vli_is_even(mod) ) {
-		vli_clear<N>(result);
-		return;
-	}
-
-	vli_set<N>(a, mod);
-	vli_set<N>(b, n);
-	vli_clear<N>(x);
-	vli_clear<N>(y);
-	x[0] = 1;
-	int cmp_result;
-	int	xc=0, yc=0;
-	int bc = 0, ac = 0;
-
-	while ( !vli_is_zero<N>(b) ) {
-
-		while (vli_is_even(b)) {
-			vli_rshift1<N>(b);
-			if ( !vli_is_even(x) ) {
-				if (vli_add_to<N>(x, mod)) xc++;
-			}
-			vli_rshift1<N>(x);
-			if (xc & 1) x[N-1] |= (1L << 63);
-			xc >>= 1;
-		}
-
-		while (vli_is_even(a)) {
-			vli_rshift1<N>(a);
-			if ( !vli_is_even(y) ) {
-				if (vli_add_to<N>(y, mod)) yc++;
-			}
-			vli_rshift1<N>(y);
-			if (yc & 1) y[N-1] |= (1L << 63);
-			yc >>= 1;
-		}
-
-		// a,b may be neg
-		if (bc) {
-			cmp_result = (ac)?vli_cmp<N>(a, b):-1;
-		} else {
-			cmp_result = (ac)?1:vli_cmp<N>(b, a);
-		}
-		if (cmp_result >= 0) {
-			xc += yc;
-			if (vli_add_to<N>(x, y)) xc++;
-			bc -= ac;
-			if (vli_sub_from<N>(b, a)) bc--;
-		} else {
-			yc += xc;
-			if (vli_add_to<N>(y, x)) yc++;
-			ac -= bc;
-			if (vli_sub_from<N>(a, b)) ac--;
-		}
-	}
-	if (likely(vli_is_one<N>(a))) {
-		if (yc) vli_add_to<N>(y, mod);
-		if (vli_cmp<N>(y, mod) >= 0) {
-			vli_sub<N>(result, y, mod);
-		} else vli_set<N>(result, y);
-	} else {
-		// no inverse
-		vli_clear<N>(result);
-	}
-}
-#else
-// x is mod, prime
+// x is mod, prime > 2
 template<const uint N> forceinline
 static void
 vli_mod_inv_new(u64 *result, const u64 *y, const u64 *x) noexcept
 {
-	bignumz<N>	a(1), b(0l), c(0l), d(1);
-	bignumz<N>	u(x), v(y);
 	// mod should be prime, >3 MUST BE odd
-	if ( u.is_even() ) {
+	if ( vli_is_even(x) ) {
 		vli_clear<N>(result);
 		return;
 	}
+	bignumz<N>	b(0l), d(1);
+	bignum<N>	u(x), v(y);
 
 	while ( !u.is_zero() ) {
 		while (u.is_even()) {
 			u.rshift1();
-			if (a.is_even() && b.is_even()) {
-				a.rshift1();
+			if (b.is_even()) {
 				b.rshift1();
 			} else {
-				a.add(a, y);
-				a.rshift1();
 				b.sub(b, x);
 				b.rshift1();
 			}
@@ -384,34 +307,30 @@ vli_mod_inv_new(u64 *result, const u64 *y, const u64 *x) noexcept
 
 		while (v.is_even()) {
 			v.rshift1();
-			if (c.is_even() && d.is_even()) {
-				c.rshift1();
+			if (d.is_even()) {
 				d.rshift1();
 			} else {
-				c.add(c, y);
-				c.rshift1();
 				d.sub(d, x);
 				d.rshift1();
 			}
 		}
 
-		if (u < v) {
-			v.sub(v, u);
-			c.sub(c, a);
-			d.sub(d, b);
+		if (u >= v) {
+			u.sub_from(v);
+			b.sub(b, d);
 		} else {
-			u.sub(u, v);
-			a.sub(a, c);
-			d.sub(b, d);
+			v.sub_from(u);
+			d.sub(d, b);
 		}
 	}
-	if (d.is_negative()) {
+	if (!v.is_one()) {
+		vli_clear<N>(result);
+	} else if (d.is_negative()) {
 		vli_add<N>(result, x, d.data());
 	} else {
 		vli_set<N>(result, d.data());
 	}
 }
-#endif
 
 
 #endif	//	__ECC_IMPL_H__

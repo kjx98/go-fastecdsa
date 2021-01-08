@@ -8,7 +8,8 @@ option(WITH_JEMALLOC	"Use jemalloc from FaceBook" OFF)
 set(CMAKE_BUILD_TYPE "Release")
 #set(CMAKE_BUILD_TYPE "Debug")
 
-add_definitions( "-g -O3 -Wpedantic -Wall -pthread -std=c++11" )
+add_definitions( "-O3 -pthread -std=c++11" )
+add_definitions( "-Wpedantic -Wall -Wmaybe-uninitialized" )
 #add_definitions( "-DWITH_ADD_2007bl" )
 
 include(FindPkgConfig)

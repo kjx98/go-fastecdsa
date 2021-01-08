@@ -61,6 +61,10 @@ TEST(testVli, TestBignumz)
 	EXPECT_TRUE(bn_z < res);
 	res.add(n2, p2);
 	EXPECT_TRUE(res == bn_z);
+	res.sub(n2, p2);
+	ASSERT_TRUE(res < n3);
+	res.rshift1();
+	ASSERT_TRUE(res == n2);
 }
 
 TEST(testVli, TestInverse)
@@ -72,7 +76,7 @@ TEST(testVli, TestInverse)
 	EXPECT_EQ(vli_cmp<4>(res, x2_inv), 0);
 }
 
-#ifdef	ommit
+#ifndef	ommit
 TEST(testVli, TestInverseNew)
 {
 	u64	res[4];

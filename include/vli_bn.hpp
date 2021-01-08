@@ -90,6 +90,25 @@ public:
 		os << std::dec;
 		return os;
 	}
+	bool operator<(const bignum& bn) {
+#pragma GCC unroll 4
+		for (int i = ndigits - 1; i >= 0; i--) {
+			if (d[i] > bn.d[i]) return false;
+			else if (d[i] < bn.d[i]) return true;
+		}
+		return false;
+	}
+	bool operator>=(const bignum& bn) {
+		return !(*this < bn);
+	}
+	bool operator==(const bignum& bn) {
+#pragma GCC unroll 4
+		for (int i = ndigits - 1; i >= 0; i--) {
+			if (d[i] > bn.d[i]) return false;
+			else if (d[i] < bn.d[i]) return false;
+		}
+		return true;
+	}
 	const u64* data() const noexcept { return d; }
 	//u64* raw_data() noexcept { return d; }
 	bool is_zero() const noexcept
@@ -619,14 +638,13 @@ public:
 /* Computes vli = vli >> 1. */
 	void rshift1() noexcept
 	{
-		u64 carry = 0;
+		u64 _rcarry = (carry & 1)?(1L<<63):0;
 #pragma GCC unroll 4
 		for (int i=N - 1; i >= 0; i--) { 
 			u64 temp = this->d[i];
-			this->d[i] = (temp >> 1) | carry;
-			carry = temp << 63;
+			this->d[i] = (temp >> 1) | _rcarry;
+			_rcarry = temp << 63;
 		}
-		if (carry & 1) this->d[N-1] |= (1L << 63);
 		carry >>= 1;
 	}	
 private:
