@@ -159,7 +159,7 @@ public:
 		auto off = bit >> 6;
 		auto rem = bit & 0x3f;
 		if (off >= ndigits) return 0;
-		u8	rr = (d[off] >> rem )& 0xff;
+		u8	rr = (d[off] >> rem) & 0xff;
 		off++;
 		if (off < ndigits && rem != 0) {
 			rr |= (d[off] << rem) & 0xff;

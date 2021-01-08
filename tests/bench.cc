@@ -21,6 +21,16 @@ static void test_montMult(benchmark::State &state)
 }
 BENCHMARK(test_montMult);
 
+static void test_montMultP(benchmark::State &state)
+{
+	bignum<4>	xp;
+	bignum<4>	bx1(dx1);
+	for (auto _ : state) {
+		mont_mult<sm2_p_k0>(xp, bx1, rr, prime);
+	}
+}
+BENCHMARK(test_montMultP);
+
 static void test_montSqr(benchmark::State &state)
 {
 	bignum<4>	xp;

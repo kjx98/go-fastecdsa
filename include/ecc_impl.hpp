@@ -282,6 +282,7 @@ using namespace vli;
  * The binary extended gcd algorithm was first described by Knuth
  */
 // x is mod, prime > 2
+#ifdef	ommit
 template<const uint N> forceinline
 static void
 vli_mod_inv_new(u64 *result, const u64 *y, const u64 *x) noexcept
@@ -331,6 +332,71 @@ vli_mod_inv_new(u64 *result, const u64 *y, const u64 *x) noexcept
 		vli_set<N>(result, d.data());
 	}
 }
+#else
+template<const uint N> forceinline
+static void
+vli_mod_inv_new(u64 *result, const u64 *y, const u64 *x) noexcept
+{
+	// mod should be prime, >3 MUST BE odd
+	if ( vli_is_even(x) ) {
+		vli_clear<N>(result);
+		return;
+	}
+	u64		b[N], d[N], u[N], v[N];
+	int		bc = 0, dc = 0;
+	vli_set<N>(u, x);
+	vli_set<N>(v, y);
+	vli_clear<N>(b);
+	vli_clear<N>(d);
+	d[0] = 1;
 
+	while ( !vli_is_zero<N>(u) ) {
+		while (vli_is_even(u)) {
+			vli_rshift1<N>(u);
+			if (vli_is_even(b)) {
+				vli_rshift1<N>(b);
+				if (bc & 1) b[N-1] |= (1L << 63);
+				bc >>= 1;
+			} else {
+				if (vli_sub_from<N>(b, x)) bc--;
+				vli_rshift1<N>(b);
+				if (bc & 1) b[N-1] |= (1L << 63);
+				bc >>= 1;
+			}
+		}
+
+		while (vli_is_even(v)) {
+			vli_rshift1<N>(v);
+			if (vli_is_even(d)) {
+				vli_rshift1<N>(d);
+				if (dc & 1) d[N-1] |= (1L << 63);
+				dc >>= 1;
+			} else {
+				if (vli_sub_from<N>(d, x)) dc--;
+				vli_rshift1<N>(d);
+				if (dc & 1) d[N-1] |= (1L << 63);
+				dc >>= 1;
+			}
+		}
+
+		if (vli_cmp<N>(u,v) >= 0) {
+			vli_sub_from<N>(u, v);
+			bc -= dc;
+			if (vli_sub_from<N>(b, d)) bc--;
+		} else {
+			vli_sub_from<N>(v, u);
+			dc -= bc;
+			if (vli_sub_from<N>(d, b)) dc--;
+		}
+	}
+	if (!vli_is_one<N>(v)) {
+		vli_clear<N>(result);
+	} else if ( dc ) {
+		vli_add<N>(result, x, d);
+	} else {
+		vli_set<N>(result, d);
+	}
+}
+#endif
 
 #endif	//	__ECC_IMPL_H__

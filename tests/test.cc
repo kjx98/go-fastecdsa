@@ -31,6 +31,15 @@ static void mont_mul(bignum<4>& res, const bignum<4>& x, const bignum<4>& y)
 	res.mont_reduction(res, prime, sm2_p_k0);
 }
 
+static void mont_mulp(bignum<4>& res, const bignum<4>& x, const bignum<4>& y)
+{
+	bignum<4>	xp, yp;
+	mont_mult<sm2_p_k0>(xp, x, rr, prime);
+	mont_mult<sm2_p_k0>(yp, y, rr, prime);
+	mont_mult<sm2_p_k0>(res, xp, yp, prime);
+	mont_reduction<sm2_p_k0>(res, res, prime);
+}
+
 TEST(testEcc, TestMontMult)
 {
 	bignum<4>	res;
@@ -39,6 +48,17 @@ TEST(testEcc, TestMontMult)
 	EXPECT_TRUE(res.cmp(xy1mod) == 0);
 	bignum<4>	bx2(dx2), by2(dy2);
 	mont_mul(res, bx2, by2);
+	EXPECT_TRUE(res.cmp(xy2mod) == 0);
+}
+
+TEST(testEcc, TestMontMultP)
+{
+	bignum<4>	res;
+	bignum<4>	bx1(dx1), by1(dy1);
+	mont_mulp(res, bx1, by1);
+	EXPECT_TRUE(res.cmp(xy1mod) == 0);
+	bignum<4>	bx2(dx2), by2(dy2);
+	mont_mulp(res, bx2, by2);
 	EXPECT_TRUE(res.cmp(xy2mod) == 0);
 }
 
