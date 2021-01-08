@@ -154,6 +154,18 @@ public:
 		if ( bit >= ndigits*64 ) return 0;	// out of bound
 		return (d[bit >> 6] >> (bit & 0x3f)) & 1;
 	}
+	u8 get_bits(const uint bit) const noexcept
+	{
+		auto off = bit >> 6;
+		auto rem = bit & 0x3f;
+		if (off >= ndigits) return 0;
+		u8	rr = (d[off] >> rem )& 0xff;
+		off++;
+		if (off < ndigits && rem != 0) {
+			rr |= (d[off] << rem) & 0xff;
+		}
+		return rr;
+	}
 /**
  * cmp() - compare this and right vlis
  *
