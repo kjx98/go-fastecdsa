@@ -121,7 +121,6 @@ TEST(testVli, TestInverse)
 	EXPECT_EQ(vli_cmp<4>(res, x2_inv), 0);
 }
 
-#ifndef	ommit
 TEST(testVli, TestInverseNew)
 {
 	u64	res[4];
@@ -132,7 +131,29 @@ TEST(testVli, TestInverseNew)
 	vli_mod_inv_new<4>(res, dx2, sm2_p);
 	EXPECT_EQ(vli_cmp<4>(res, x2_inv), 0);
 }
-#endif
+
+TEST(testEcc, TestMult248)
+{
+	bignum<4>	x3(dx3), y3(dy3), res1, res2;
+	sm2_p256.mont_mult2(res1, x3);
+	sm2_p256.mont_mult2(res1, res1);
+	res2 = x3;
+	sm2_p256.mont_mult4(res2);
+	EXPECT_EQ(res1.cmp(res2), 0);
+	sm2_p256.mont_mult2(res1, res1);
+	res2 = x3;
+	sm2_p256.mont_mult8(res2);
+	EXPECT_EQ(res1.cmp(res2), 0);
+	sm2_p256.mont_mult2(res1, y3);
+	sm2_p256.mont_mult2(res1, res1);
+	res2 = y3;
+	sm2_p256.mont_mult4(res2);
+	EXPECT_EQ(res1.cmp(res2), 0);
+	sm2_p256.mont_mult2(res1, res1);
+	res2 = y3;
+	sm2_p256.mont_mult8(res2);
+	EXPECT_EQ(res1.cmp(res2), 0);
+}
 
 TEST(testEcc, TestECADD)
 {

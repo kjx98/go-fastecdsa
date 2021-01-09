@@ -44,11 +44,9 @@ namespace vli {
  * @a:		Curve parameter a.
  * @b:		Curve parameter b.
  */
-template<const uint N=4, const u64 Pk0=0>
+template<const uint N=4>
 class ecc_curve {
 public:
-	using mont1_func=std::function<void(bignum<N>&, const bignum<N>&)>;
-	using mont2_func=std::function<void(bignum<N>&, const bignum<N>&, const bignum<N>&)>;
 	ecc_curve(const char *_name, const u64 *_gx, const u64 *_gy, const u64 *_p,
 			const u64 *_n, const u64 *_a, const u64 *_b, const bool a_n3 = true,
 			const bool bBat=false) :
@@ -127,70 +125,30 @@ public:
 	void to_montgomery(bignum<N>& res, const u64 *x) const noexcept
 	{
 		bignum<N>   *xx = reinterpret_cast<bignum<N> *>(const_cast<u64 *>(x));
-#if	__cplusplus >= 201703L
-		if constexpr(Pk0 != 0) {
-			mont_mult<Pk0>(res, *xx, rr_p, p);
-		} else _mont_mult(res, *xx, rr_p);
-#else
 		res.mont_mult(*xx, rr_p, p, k0_p);
-#endif
 	}
 	void to_montgomery(bignum<N>& res, const bignum<N>& x) const noexcept
 	{
-#if	__cplusplus >= 201703L
-		if constexpr(Pk0 != 0) {
-			mont_mult<Pk0>(res, x, rr_p, p);
-		} else  _mont_mult(res, x, rr_p);
-#else
 		res.mont_mult(x, rr_p, p, k0_p);
-#endif
 	}
 	void from_montgomery(bignum<N>& res, const bignum<N>& y) const noexcept
 	{
-#if	__cplusplus >= 201703L
-		if constexpr(Pk0 != 0) {
-			mont_reduction<Pk0>(res, y, p);
-		} else _mont_reduction(res, y);
-#else
 		res.mont_reduction(y, p, k0_p);
-#endif
 	}
 	void from_montgomery(u64* result, const bignum<N>& y) const noexcept
 	{
 		bignum<N>   *res = reinterpret_cast<bignum<N> *>(result);
-#if	__cplusplus >= 201703L
-		if constexpr(Pk0 != 0) {
-			mont_reduction<Pk0>(*res, y, p);
-		} else _mont_reduction(*res, y);
-#else
 		res->mont_reduction(y, p, k0_p);
-#endif
 	}
 	void
 	mont_mmult(bignum<N>& res, const bignum<N>& left, const bignum<N>& right)
 	const noexcept {
-#if	__cplusplus >= 201703L
-		if constexpr(Pk0 != 0) {
-			mont_mult<Pk0>(res, left, right, p);
-		} else _mont_mult(res, left, right);
-#else
 		res.mont_mult(left, right, p, k0_p);
-#endif
 	}
 	void mont_msqr(bignum<N>& res, const bignum<N> left, const uint nTimes=1)
 	const noexcept {
-#if	__cplusplus >= 201703L
-		if constexpr(Pk0 != 0) {
-			mont_sqr<Pk0>(res, left, p);
-			for (uint i=1; i < nTimes; i++) mont_sqr<Pk0>(res, res, p);
-		} else {
-			_mont_sqr(res, left);
-			for (uint i=1; i < nTimes; i++) _mont_sqr(res, res);
-		}
-#else 
 		res.mont_sqr(left, p, k0_p);
 		for (uint i=1; i < nTimes; i++) res.mont_sqr(res, p, k0_p);
-#endif
 	}
 	// left,right less than p
 	void mod_add(bignum<N>& res, const bignum<N>& left, const bignum<N>& right)
@@ -221,7 +179,7 @@ public:
 	}
 	void mont_mult2(bignum<N>& res, const bignum<N>& left) const noexcept
 	{
-#ifdef	ommit
+#ifndef	ommit
 		this->mod_add(res, left, left);
 #else
 		if (res.lshift1(left) != 0) {
@@ -231,17 +189,14 @@ public:
 	}
 	void mont_mult4(bignum<N>& res) const noexcept
 	{
-		u64	carry;
-		if ((carry=res.lshift(2)) != 0) {
-			this->carry_reduce(res, carry);
-		}
+		this->mont_mult2(res, res);
+		this->mont_mult2(res, res);
 	}
 	void mont_mult8(bignum<N>& res) const noexcept
 	{
-		u64	carry;
-		if ((carry=res.lshift(3)) != 0) {
-			this->carry_reduce(res, carry);
-		}
+		this->mont_mult2(res, res);
+		this->mont_mult2(res, res);
+		this->mont_mult2(res, res);
 	}
 /* dbl-1998-cmo-2 algorithm
  * http://hyperelliptic.org/EFD/g1p/auto-shortw-jacobian.html
@@ -593,32 +548,7 @@ public:
 		from_montgomery(y3, *y3p);
 		from_montgomery(z3, *z3p);
 	}
-private:
-#if	__cplusplus >= 201703L
-	mont1_func	_mont_reduction = [this](bignum<N> &res, const bignum<N> &y) {
-		res.mont_reduction(y, p, k0_p);
-	};
-	mont1_func	_mont_sqr = [this](bignum<N> &res, const bignum<N> &y) {
-		res.mont_sqr(y, p, k0_p);
-	};
-	mont2_func	_mont_mult = [this](bignum<N> &res, const bignum<N>& x,
-					const bignum<N>& y) {
-		res.mont_mult(x, y, p, k0_p);
-	};
-#endif
-	void carry_reduce(bignum<N>& res, const u64 carry) const noexcept
-	{
-#ifdef	SM2_CARRY
-		// carry < 2^32
-		carry &= (1L<<32) -1;
-		u64		cc[N];
-		cc[0] = carry;
-		cc[1] = (carry << 32) - carry;
-		cc[2] = 0;
-		cc[3] = carry << 32;
-		if (res.add_to(cc)) res.sub_from(p);
-#endif
-	}
+protected:
 	const std::string name;
 	const bignum<N> gx;
 	const bignum<N> gy;
@@ -641,6 +571,73 @@ private:
 	bool _a_is_zero = false;
 	const bool use_barrett = false;
 	bool _inited = false;
+};
+
+
+template<const uint N=4>
+class sm2_curve : public ecc_curve<N> {
+public:
+	sm2_curve(const char *_name, const u64 *_gx, const u64 *_gy, const u64 *_p,
+			const u64 *_n, const u64 *_a, const u64 *_b) :
+		ecc_curve<N>(_name, _gx, _gy, _p, _n, _a, _b, sm2_p_rr, sm2_n_rr,
+					sm2_p_k0, sm2_n_k0)
+	{
+		static_assert(N > 3, "curve only support 256Bits or more");
+	}
+	void to_montgomery(bignum<N>& res, const u64 *x) const noexcept
+	{
+		bignum<N>   *xx = reinterpret_cast<bignum<N> *>(const_cast<u64 *>(x));
+		mont_mult<1>(res, *xx, this->rr_p, this->p);
+	}
+	void to_montgomery(bignum<N>& res, const bignum<N>& x) const noexcept
+	{
+		mont_mult<1>(res, x, this->rr_p, this->p);
+	}
+	void from_montgomery(bignum<N>& res, const bignum<N>& y) const noexcept
+	{
+		mont_reduction<1>(res, y, this->p);
+	}
+	void from_montgomery(u64* result, const bignum<N>& y) const noexcept
+	{
+		bignum<N>   *res = reinterpret_cast<bignum<N> *>(result);
+		mont_reduction<1>(*res, y, this->p);
+	}
+	void
+	mont_mmult(bignum<N>& res, const bignum<N>& left, const bignum<N>& right)
+	const noexcept {
+		mont_mult<1>(res, left, right, this->p);
+	}
+	void mont_msqr(bignum<N>& res, const bignum<N> left, const uint nTimes=1)
+	const noexcept {
+		mont_sqr<1>(res, left, this->p);
+		for (uint i=1; i < nTimes; i++) mont_sqr<1>(res, res, this->p);
+	}
+	void mont_mult4(bignum<N>& res) const noexcept
+	{
+		u64	carry;
+		if ((carry=res.lshift(2)) != 0) {
+			this->carry_reduce(res, carry);
+		}
+	}
+	void mont_mult8(bignum<N>& res) const noexcept
+	{
+		u64	carry;
+		if ((carry=res.lshift(3)) != 0) {
+			this->carry_reduce(res, carry);
+		}
+	}
+private:
+	void carry_reduce(bignum<N>& res, const u64 carry) const noexcept
+	{
+		// carry < 2^32
+		u64		u = carry & ((1L<<32) -1);
+		u64		cc[N];
+		cc[0] = u;
+		cc[1] = (u << 32) - u;
+		cc[2] = 0;
+		cc[3] = u << 32;
+		if (res.add_to(cc)) res.sub_from(this->p);
+	}
 };
 
 

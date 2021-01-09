@@ -44,7 +44,7 @@ static vli::ecc_curve<4> nist_p256( //.name
 /* GM/T 0003.5-2012 SM2: a = p - 3 */
 /* prime following mu for Barrett's reduction */
 //			vli::build_curve<4, 1, 0x327f9e8872350975>( //.name
-static vli::ecc_curve<4,1> sm2_p256(//.name
+static vli::ecc_curve<4> sm2_p256(//.name
 	"sm2p256",
 	// .gx
 	sm2_gx,
@@ -64,6 +64,22 @@ static vli::ecc_curve<4,1> sm2_p256(//.name
 	// k0_p, k0_n
 	1, 0x327f9e8872350975, //
 	true
+	);
+
+static vli::sm2_curve<4> sm2_new(//.name
+	"sm2new",
+	// .gx
+	sm2_gx,
+	//.gy
+	sm2_gy,
+	//.p
+	sm2_p,
+	//.n
+	sm2_n,
+	//.a
+	sm2_a,
+	//.b
+	sm2_b
 	);
 
 static vli::ecc_curve<4> secp256k1( //.name

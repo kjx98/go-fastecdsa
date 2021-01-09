@@ -48,7 +48,6 @@ namespace vli {
 template<const uint ndigits>
 class bignum {
 public:
-	using bn_words = u64[ndigits];
 	bignum() = default;
 	bignum(const bignum &) = default;
 	explicit bignum(const u64 v) noexcept : d{v,0,0,0}
@@ -614,7 +613,7 @@ public:
 		} else vli_set<ndigits>(this->d, r);
 	}
 protected:
-	bn_words	d;
+	u64		d[ndigits];
 };
 
 
@@ -721,7 +720,6 @@ bignum<N>& calcRR(bignum<N>& t, const bignum<N>& p) noexcept
 template<const uint ndigits>
 class bn_prod: public bignum<ndigits*2> {
 public:
-	using bn_words = u64[ndigits*2];
 	bn_prod() = default;
 	bn_prod(const bn_prod &) = default;
 	// this = left * right

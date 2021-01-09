@@ -59,6 +59,25 @@ static void test_inverseNew(benchmark::State &state)
 }
 BENCHMARK(test_inverseNew);
 
+static void test_mult2(benchmark::State &state)
+{
+	bignum<4>	x3(dx3), res;
+	for (auto _ : state) {
+		sm2_p256.mont_mult2(res, x3);
+	}
+}
+BENCHMARK(test_mult2);
+
+static void test_mult8(benchmark::State &state)
+{
+	bignum<4>	x3(dx3), res;
+	for (auto _ : state) {
+		res = x3;
+		sm2_p256.mont_mult8(res);
+	}
+}
+BENCHMARK(test_mult8);
+
 static void test_ECADDJac(benchmark::State &state)
 {
 	u64		xx3[4], yy3[4], zz3[4];
