@@ -62,6 +62,31 @@ TEST(testEcc, TestMontMultP)
 	EXPECT_TRUE(res.cmp(xy2mod) == 0);
 }
 
+TEST(TestEcc, TestSM2MultR)
+{
+	u64		ur[4];
+	vli_sm2_multR(ur, 1);
+	bignum<4>	res;
+	res.clear();
+	res.sub_from(prime);
+	EXPECT_EQ(res.cmp(ur), 0);
+	vli_sm2_multR(ur, 8);
+	EXPECT_EQ(res.lshift(3), 0);
+	EXPECT_EQ(res.cmp(ur), 0);
+	vli_sm2_multR(ur, 64);
+	EXPECT_EQ(res.lshift(3), 0);
+	EXPECT_EQ(res.cmp(ur), 0);
+	u64		u=dx1[0] & 0xffffff;
+	vli_sm2_multR(ur, u);
+	res.clear();
+	res.sub_from(prime);
+	bn_prod<4>	prod;
+	prod.umult(res, u);
+	EXPECT_TRUE(vli_is_zero<4>(prod.data()+4));
+	EXPECT_EQ(vli_cmp<4>(prod.data(), ur), 0);
+}
+
+
 TEST(testVli, TestBignumz)
 {
 	bignumz<4>	p2(2), p3(3);

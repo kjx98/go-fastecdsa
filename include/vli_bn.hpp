@@ -154,17 +154,17 @@ public:
 		if ( bit >= ndigits*64 ) return 0;	// out of bound
 		return (d[bit >> 6] >> (bit & 0x3f)) & 1;
 	}
-	u8 get_bits(const uint bit) const noexcept
+	u8 get_bits(const uint bit, const uint cnt=5) const noexcept
 	{
 		auto off = bit >> 6;
 		auto rem = bit & 0x3f;
 		if (off >= ndigits) return 0;
 		u8	rr = (d[off] >> rem) & 0xff;
 		off++;
-		if (off < ndigits && rem != 0) {
+		if (off < ndigits && rem > (64 - cnt)) {
 			rr |= (d[off] << rem) & 0xff;
 		}
-		return rr;
+		return rr & ((1<<cnt) - 1);
 	}
 /**
  * cmp() - compare this and right vlis
@@ -202,6 +202,17 @@ public:
 			u64 temp = x.d[i];
 			this->d[i] = (temp << 1) | carry;
 			carry = temp >> 63;
+		}
+		return carry;
+	}
+	u64 lshift(const uint cnt) noexcept
+	{
+		u64 carry = 0;
+#pragma GCC unroll 4
+		for (uint i = 0; i < ndigits; i++) {
+			u64 temp = d[i];
+			d[i] = (temp << cnt) | carry;
+			carry = temp >> (64 - cnt);
 		}
 		return carry;
 	}
@@ -271,6 +282,24 @@ public:
 		for (uint i = 0; i < ndigits; i++) {
 			u64 sum;
 			auto c_carry = __builtin_uaddl_overflow(d[i], right.d[i], &sum);
+			if (unlikely(carry)) {
+				carry = c_carry | __builtin_uaddl_overflow(sum, 1, &sum);
+			} else carry = c_carry;
+			d[i] = sum;
+		}
+		return carry;
+#endif
+	}
+	bool add_to(const u64* right) noexcept
+	{
+#ifdef	NO_BUILTIN_OVERFLOW
+		return vli_add_to<ndigits>(this->d, right);
+#else
+		bool carry = false;
+#pragma GCC unroll 4
+		for (uint i = 0; i < ndigits; i++) {
+			u64 sum;
+			auto c_carry = __builtin_uaddl_overflow(d[i], right[i], &sum);
 			if (unlikely(carry)) {
 				carry = c_carry | __builtin_uaddl_overflow(sum, 1, &sum);
 			} else carry = c_carry;
@@ -693,6 +722,7 @@ template<const uint ndigits>
 class bn_prod: public bignum<ndigits*2> {
 public:
 	using bn_words = u64[ndigits*2];
+	bn_prod() = default;
 	bn_prod(const bn_prod &) = default;
 	// this = left * right
 	void mult(const bignum<ndigits>& left, const bignum<ndigits>& right)
@@ -735,7 +765,7 @@ public:
 			//if (likely(left[k] != 0))
 			{
 				//product = mul_64_64(left[k], right);
-				product.mul_64_64(left.d[k], right);
+				product.mul_64_64(left.data()[k], right);
 				//r01 = add_128_128(r01, product);
 				r01 += product;
 			}

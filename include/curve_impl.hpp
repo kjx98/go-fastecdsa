@@ -224,10 +224,24 @@ public:
 #ifdef	ommit
 		this->mod_add(res, left, left);
 #else
-		if (res.lshift1(left) != 0 || res.cmp(p) >= 0) {
+		if (res.lshift1(left) != 0) {
 			res.sub_from(p);
 		}
 #endif
+	}
+	void mont_mult4(bignum<N>& res) const noexcept
+	{
+		u64	carry;
+		if ((carry=res.lshift(2)) != 0) {
+			this->carry_reduce(res, carry);
+		}
+	}
+	void mont_mult8(bignum<N>& res) const noexcept
+	{
+		u64	carry;
+		if ((carry=res.lshift(3)) != 0) {
+			this->carry_reduce(res, carry);
+		}
 	}
 /* dbl-1998-cmo-2 algorithm
  * http://hyperelliptic.org/EFD/g1p/auto-shortw-jacobian.html
@@ -592,6 +606,19 @@ private:
 		res.mont_mult(x, y, p, k0_p);
 	};
 #endif
+	void carry_reduce(bignum<N>& res, const u64 carry) const noexcept
+	{
+#ifdef	SM2_CARRY
+		// carry < 2^32
+		carry &= (1L<<32) -1;
+		u64		cc[N];
+		cc[0] = carry;
+		cc[1] = (carry << 32) - carry;
+		cc[2] = 0;
+		cc[3] = carry << 32;
+		if (res.add_to(cc)) res.sub_from(p);
+#endif
+	}
 	const std::string name;
 	const bignum<N> gx;
 	const bignum<N> gy;

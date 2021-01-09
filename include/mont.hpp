@@ -56,6 +56,19 @@ static void vli_sm2_multP(u64 *result, const u64 u) noexcept
 	if (vli_add_to<4>(result, r)) result[4]++;
 }
 
+// u * 2^256 mod sm2 prime
+// p is 2^256 - 2^224 - 2^96 + 2^64 -1
+// R(2^256) - p = 2^224 + 2^96 - 2^64 + 1
+// u < 2^32
+forceinline
+static void vli_sm2_multR(u64 *result, const u64 u) noexcept
+{
+	result[0] = u;
+	result[1] = (u << 32) - u;
+	result[2] = 0;
+	result[3] = u << 32;
+	return;
+}
 
 template<const uint N> forceinline
 static void
