@@ -27,6 +27,7 @@
 #ifndef __CURVE_IMPL_HPP__
 #define __CURVE_IMPL_HPP__
 
+#include <string.h>
 #include "vli.hpp"
 #include "vli_bn.hpp"
 #include "ecc_impl.hpp"
@@ -37,12 +38,11 @@ namespace vli {
 
 template<const uint N>
 struct point_t {
-	u64		x[N];
-	u64		y[N];
-	u64		z[N];
+	bignum<N>	x;
+	bignum<N>	y;
+	bignum<N>	z;
 	bool operator==(const point_t& q) {
-		if (vli_cmp<N>(x, q.x) == 0 && vli_cmp<N>(y, q.y) == 0 &&
-			vli_cmp<N>(z, q.z) == 0) return true;
+		if (x ==  q.x && y == q.y && z ==  q.z) return true;
 		// affine
 		return false;
 	}
@@ -347,6 +347,7 @@ public:
 		bignum<N>	t1;
 
 		if (vli_is_one<N>(z) || vli_is_zero<N>(z)) return; 
+		vli_mod_inv<N>(z, z, this->p.data());
 		bignum<N>	*xp = reinterpret_cast<bignum<N> *>(x1);
 		bignum<N>	*yp = reinterpret_cast<bignum<N> *>(y1);
 		bignum<N>	*zp = reinterpret_cast<bignum<N> *>(z);
@@ -361,6 +362,9 @@ public:
 		// montgomery reduction
 		from_montgomery(x1, *xp);
 		from_montgomery(y1, *yp);
+		// set z to 1
+		vli_clear<N>(z);
+		z[0] = 1;
 	}
 	/* add-1998-cmo-2 algorithm
 	 * http://hyperelliptic.org/EFD/g1p/auto-shortw-jacobian-3.html
@@ -587,10 +591,10 @@ protected:
 	bool _inited = false;
 };
 
-
-class sm2_curve : public ecc_curve<4> {
+template <const u64 Pk0=1>
+class curve256 : public ecc_curve<4> {
 public:
-	sm2_curve(const char *_name, const u64 *_gx, const u64 *_gy, const u64 *_p,
+	curve256(const char *_name, const u64 *_gx, const u64 *_gy, const u64 *_p,
 			const u64 *_n, const u64 *_a, const u64 *_b) :
 		ecc_curve<4>(_name, _gx, _gy, _p, _n, _a, _b, sm2_p_rr, sm2_n_rr,
 					sm2_p_k0, sm2_n_k0)
@@ -598,33 +602,34 @@ public:
 	void to_montgomery(bignum<4>& res, const u64 *x) const noexcept
 	{
 		bignum<4>   *xx = reinterpret_cast<bignum<4> *>(const_cast<u64 *>(x));
-		mont_mult<1>(res, *xx, this->rr_p, this->p);
+		mont_mult<Pk0>(res, *xx, this->rr_p, this->p);
 	}
 	void to_montgomery(bignum<4>& res, const bignum<4>& x) const noexcept
 	{
-		mont_mult<1>(res, x, this->rr_p, this->p);
+		mont_mult<Pk0>(res, x, this->rr_p, this->p);
 	}
 	void from_montgomery(bignum<4>& res, const bignum<4>& y) const noexcept
 	{
-		mont_reduction<1>(res, y, this->p);
+		mont_reduction<Pk0>(res, y, this->p);
 	}
 	void from_montgomery(u64* result, const bignum<4>& y) const noexcept
 	{
 		bignum<4>   *res = reinterpret_cast<bignum<4> *>(result);
-		mont_reduction<1>(*res, y, this->p);
+		mont_reduction<Pk0>(*res, y, this->p);
 	}
 	void
 	mont_mmult(bignum<4>& res, const bignum<4>& left, const bignum<4>& right)
 	const noexcept {
-		mont_mult<1>(res, left, right, this->p);
+		mont_mult<Pk0>(res, left, right, this->p);
 	}
 	void mont_msqr(bignum<4>& res, const bignum<4> left, const uint nTimes=1)
 	const noexcept {
-		mont_sqr<1>(res, left, this->p);
-		for (uint i=1; i < nTimes; i++) mont_sqr<1>(res, res, this->p);
+		mont_sqr<Pk0>(res, left, this->p);
+		for (uint i=1; i < nTimes; i++) mont_sqr<Pk0>(res, res, this->p);
 	}
 	void mont_mult4(bignum<4>& res) const noexcept
 	{
+		static_assert(Pk0 == 1, "MUST be sm2");
 		u64	carry;
 		if ((carry=res.lshift(2)) != 0) {
 			this->carry_reduce(res, carry);
@@ -632,27 +637,12 @@ public:
 	}
 	void mont_mult8(bignum<4>& res) const noexcept
 	{
+		static_assert(Pk0 == 1, "MUST be sm2");
 		u64	carry;
 		if ((carry=res.lshift(3)) != 0) {
 			this->carry_reduce(res, carry);
 		}
 	}
-private:
-	void pre_compute_base() noexcept;
-	void carry_reduce(bignum<4>& res, const u64 carry) const noexcept
-	{
-		// carry < 2^32
-		u64		u = carry & ((1L<<32) -1);
-		u64		cc[4];
-		cc[0] = u;
-		cc[1] = (u << 32) - u;
-		cc[2] = 0;
-		cc[3] = u << 32;
-		if (res.add_to(cc)) res.sub_from(this->p);
-	}
-	bn_words_t	g_pre_comp[2][16][3];
-};
-
 // fast scalar Base mult for 256 Bits ECC Curve
 /*-
  * Base point pre computation
@@ -689,72 +679,72 @@ private:
  * and then another four locations using the second 16 elements.
  *
  * Tables for other points have table[i] = iG for i in 0 .. 16. */
-void sm2_curve::pre_compute_base() noexcept
-{
-	int i, j;
-	bignum<4>	x_tmp(this->gx), y_tmp(this->gy), z_tmp(1);
-	/*
-	 * compute 2^64*G, 2^128*G, 2^192*G for the first table, 2^32*G, 2^96*G,
-	 * 2^160*G, 2^224*G for the second one
-	 */
-	x_tmp.set(this->g_pre_comp[0][1][0]);
-	y_tmp.set(this->g_pre_comp[0][1][1]);
-	z_tmp.set(this->g_pre_comp[0][1][2]);
-	for (i = 1; i <= 8; i <<= 1) {
-		point_double_jacobian(g_pre_comp[1][i][0], g_pre_comp[1][i][1],
+	void pre_compute_base() noexcept
+	{
+		int i, j;
+		bignum<4>	x_tmp(this->gx), y_tmp(this->gy), z_tmp(1);
+		/*
+		 * compute 2^64*G, 2^128*G, 2^192*G for the first table, 2^32*G, 2^96*G,
+		 * 2^160*G, 2^224*G for the second one
+		 */
+		x_tmp.set(this->g_pre_comp[0][1][0]);
+		y_tmp.set(this->g_pre_comp[0][1][1]);
+		z_tmp.set(this->g_pre_comp[0][1][2]);
+		for (i = 1; i <= 8; i <<= 1) {
+			point_double_jacobian(g_pre_comp[1][i][0], g_pre_comp[1][i][1],
 							g_pre_comp[1][i][2], g_pre_comp[0][i][0],
 							g_pre_comp[0][i][1], g_pre_comp[0][i][2]);
-		for (j = 0; j < 31; ++j) {
-			point_double_jacobian(g_pre_comp[1][i][0],
-					g_pre_comp[1][i][1], g_pre_comp[1][i][2],
-					g_pre_comp[1][i][0], g_pre_comp[1][i][1],
-					g_pre_comp[1][i][2]);
-		}
-		if (i == 8) break;
-		point_double_jacobian(g_pre_comp[0][2 * i][0],
-					g_pre_comp[0][2 * i][1], g_pre_comp[0][2 * i][2],
-					g_pre_comp[1][i][0], g_pre_comp[1][i][1],
-					g_pre_comp[1][i][2]);
-		for (j = 0; j < 31; ++j) {
+			for (j = 0; j < 31; ++j) {
+				point_double_jacobian(g_pre_comp[1][i][0],
+						g_pre_comp[1][i][1], g_pre_comp[1][i][2],
+						g_pre_comp[1][i][0], g_pre_comp[1][i][1],
+						g_pre_comp[1][i][2]);
+			}
+			if (i == 8) break;
 			point_double_jacobian(g_pre_comp[0][2 * i][0],
-					g_pre_comp[0][2 * i][1], g_pre_comp[0][2 * i][2],
-					g_pre_comp[0][2 * i][0], g_pre_comp[0][2 * i][1],
-					g_pre_comp[0][2 * i][2]);
+						g_pre_comp[0][2 * i][1], g_pre_comp[0][2 * i][2],
+						g_pre_comp[1][i][0], g_pre_comp[1][i][1],
+						g_pre_comp[1][i][2]);
+			for (j = 0; j < 31; ++j) {
+				point_double_jacobian(g_pre_comp[0][2 * i][0],
+						g_pre_comp[0][2 * i][1], g_pre_comp[0][2 * i][2],
+						g_pre_comp[0][2 * i][0], g_pre_comp[0][2 * i][1],
+						g_pre_comp[0][2 * i][2]);
+			}
 		}
-	}
-	for (i = 0; i < 2; i++) {
-		/* g_pre_comp[i][0] is the point at infinity */
-		memset(g_pre_comp[i][0], 0, sizeof(g_pre_comp[i][0]));
-		/* the remaining multiples */
-		/* 2^64*G + 2^128*G resp. 2^96*G + 2^160*G */
-		point_add_jacobian(g_pre_comp[i][6][0], g_pre_comp[i][6][1],
+		for (i = 0; i < 2; i++) {
+			/* g_pre_comp[i][0] is the point at infinity */
+			memset(g_pre_comp[i][0], 0, sizeof(g_pre_comp[i][0]));
+			/* the remaining multiples */
+			/* 2^64*G + 2^128*G resp. 2^96*G + 2^160*G */
+			point_add_jacobian(g_pre_comp[i][6][0], g_pre_comp[i][6][1],
 						g_pre_comp[i][6][2], g_pre_comp[i][4][0],
 						g_pre_comp[i][4][1], g_pre_comp[i][4][2],
-                        g_pre_comp[i][2][0], g_pre_comp[i][2][1],
+               	        g_pre_comp[i][2][0], g_pre_comp[i][2][1],
 						g_pre_comp[i][2][2]);
-		/* 2^64*G + 2^192*G resp. 2^96*G + 2^224*G */
-		point_add_jacobian(g_pre_comp[i][10][0], g_pre_comp[i][10][1],
+			/* 2^64*G + 2^192*G resp. 2^96*G + 2^224*G */
+			point_add_jacobian(g_pre_comp[i][10][0], g_pre_comp[i][10][1],
 						g_pre_comp[i][10][2], g_pre_comp[i][8][0],
 						g_pre_comp[i][8][1], g_pre_comp[i][8][2],
 						g_pre_comp[i][2][0], g_pre_comp[i][2][1],
 						g_pre_comp[i][2][2]);
-		/* 2^128*G + 2^192*G resp. 2^160*G + 2^224*G */
-		point_add_jacobian(g_pre_comp[i][12][0], g_pre_comp[i][12][1],
+			/* 2^128*G + 2^192*G resp. 2^160*G + 2^224*G */
+			point_add_jacobian(g_pre_comp[i][12][0], g_pre_comp[i][12][1],
 						g_pre_comp[i][12][2], g_pre_comp[i][8][0],
 						g_pre_comp[i][8][1], g_pre_comp[i][8][2],
 						g_pre_comp[i][4][0], g_pre_comp[i][4][1],
 						g_pre_comp[i][4][2]);
-		/*
-		 * 2^64*G + 2^128*G + 2^192*G resp. 2^96*G + 2^160*G + 2^224*G
-		 */
-		point_add_jacobian(g_pre_comp[i][14][0], g_pre_comp[i][14][1],
+			/*
+			 * 2^64*G + 2^128*G + 2^192*G resp. 2^96*G + 2^160*G + 2^224*G
+			 */
+			point_add_jacobian(g_pre_comp[i][14][0], g_pre_comp[i][14][1],
 						g_pre_comp[i][14][2], g_pre_comp[i][12][0],
 						g_pre_comp[i][12][1], g_pre_comp[i][12][2],
 						g_pre_comp[i][2][0], g_pre_comp[i][2][1],
 						g_pre_comp[i][2][2]);
-		for (j = 1; j < 8; ++j) {
-			/* odd multiples: add G resp. 2^32*G */
-			point_add_jacobian(g_pre_comp[i][2 * j + 1][0],
+			for (j = 1; j < 8; ++j) {
+				/* odd multiples: add G resp. 2^32*G */
+				point_add_jacobian(g_pre_comp[i][2 * j + 1][0],
 							g_pre_comp[i][2 * j + 1][1],
 							g_pre_comp[i][2 * j + 1][2],
 							g_pre_comp[i][2 * j][0],
@@ -763,11 +753,38 @@ void sm2_curve::pre_compute_base() noexcept
 							g_pre_comp[i][1][0],
 							g_pre_comp[i][1][1],
 							g_pre_comp[i][1][2]);
+			}
 		}
+		// make_points_affine(31, &(pre->g_pre_comp[0][1]), tmp_smallfelems);
+		for(i=0;i < 2; i++) {
+			for (j = 1; j < 16; j++) {
+				apply_z(g_pre_comp[i][j][0], g_pre_comp[i][j][1],
+						g_pre_comp[i][j][2]);
+			}
+		}
+		// convert to affine jacobian
 	}
-	// make_points_affine(31, &(pre->g_pre_comp[0][1]), tmp_smallfelems);
-	// convert to affine jacobian
-}
+	bool select_base_point(point_t<4>& pt, const uint idx) {
+		if (idx >= 2 * 16) return false;
+		pt.x = bignum<4>(g_pre_comp[idx>>4][idx&0xf][0]);
+		pt.y =  bignum<4>(g_pre_comp[idx>>4][idx&0xf][1]);
+		pt.z =  bignum<4>(g_pre_comp[idx>>4][idx&0xf][2]);
+		return true;
+	}
+private:
+	void carry_reduce(bignum<4>& res, const u64 carry) const noexcept
+	{
+		// carry < 2^32
+		u64		u = carry & ((1L<<32) -1);
+		u64		cc[4];
+		cc[0] = u;
+		cc[1] = (u << 32) - u;
+		cc[2] = 0;
+		cc[3] = u << 32;
+		if (res.add_to(cc)) res.sub_from(this->p);
+	}
+	bn_words_t	g_pre_comp[2][16][3];
+};
 
 
 struct slice_t {

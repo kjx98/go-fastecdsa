@@ -58,10 +58,14 @@ u64 vli_asm_acc()
  * R. Brent, P. Zimmermann. Modern Computer Arithmetic. 2010.
  * 2.4.1 Barrett's algorithm. Algorithm 2.5.
  */
+#ifdef	WITH_C2GO
+void vli_mmod_barrett(u64 *result, const u64 *product, const u64 *mod, u64 *buff)
+#else
 void vli_mmod_barrett(u64 *result, const u64 *product, const u64 *mod)
+#endif
 {
 #ifdef	WITH_C2GO
-	vli_mmod_barrett<4>(result, product, mod);
+	vli_mmod_barrett<4>(result, product, mod, buff);
 #else
 	bn_prod<4>	*prod = reinterpret_cast<bn_prod<4> *>(const_cast<u64 *>(product));
 	bignum<4>	*res = reinterpret_cast<bignum<4> *>(result);
@@ -71,7 +75,7 @@ void vli_mmod_barrett(u64 *result, const u64 *product, const u64 *mod)
 #endif
 }
 
-#ifndef  WITH_C2GO
+#ifndef WITH_C2GO
 void vli_div_barrett(u64 *result, const u64 *product, const u64 *mu)
 {
 #ifdef	ommit

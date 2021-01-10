@@ -155,6 +155,27 @@ TEST(testEcc, TestMult248)
 	EXPECT_EQ(res1.cmp(res2), 0);
 }
 
+
+static bool select_gmul(point_t<4>& pt, const uint idx)
+{
+	if (idx >= 2 * 16) return false;
+	pt.x = bignum<4>(gmul[idx>>4][idx&0xf][0]);
+	pt.y = bignum<4>(gmul[idx>>4][idx&0xf][1]);
+	pt.z = bignum<4>(gmul[idx>>4][idx&0xf][2]);
+	return true;
+}
+
+TEST(testEcc, TestPreCompute)
+{
+	sm2_k256.pre_compute_base();
+	point_t<4>	gp, gm;
+	for(int i=0;i<32;i++) {
+		EXPECT_TRUE(sm2_k256.select_base_point(gp, i));
+		EXPECT_TRUE(select_gmul(gm, i));
+		ASSERT_TRUE(gp == gm);
+	}
+}
+
 TEST(testEcc, TestECADD)
 {
 	u64		xx3[4], yy3[4], zz3[4];

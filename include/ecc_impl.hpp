@@ -136,13 +136,13 @@ vli_mmod_special2(u64 *result, const u64 *product, const u64 *mod) noexcept
  * 2.4.1 Barrett's algorithm. Algorithm 2.5.
  */
 template<const uint ndigits> static void forceinline
-#ifdef  WITH_C2GO
+#ifdef	WITH_C2GO
 vli_mmod_barrett(u64 *result, const u64 *product, const u64 *mod, u64 *buff) noexcept
 #else
 vli_mmod_barrett(u64 *result, const u64 *product, const u64 *mod) noexcept
 #endif
 {
-#ifdef  WITH_C2GO
+#ifdef	WITH_C2GO
 	u64	*q = buff;
 	u64	*r = buff + ndigits * 2;
 #else
@@ -202,7 +202,7 @@ vli_mod_inv(u64 *result, const u64 *input, const u64 *mod) noexcept
 {
 #ifdef	WITH_C2GO
 	u64	*a=buff;
-	u64 *b=a+N;
+	u64	*b=a+N;
 	u64	*u=b+N;
 	u64	*v=u+N;
 #else
