@@ -15,13 +15,13 @@ typedef __int128_t int128_t;
 # endif
 
 
-void sm2_mod_inv(bn_words *result, const bn_words *in);
-void sm2_mod_mul(bn_words *result, const bn_words *x, const bn_words *y);
+void sm2_mod_inv(bn_words_t *result, const bn_words_t *in);
+void sm2_mod_mul(bn_words_t *result, const bn_words_t *x, const bn_words_t *y);
 void sm2_point_add(Point *result, const Point *p, const Point *q);
 void sm2_point_add_jacobian(Point *result, const Point *p, const Point *q);
 void sm2_point_double(Point *result, const Point *p);
 void sm2_point_double_jacobian(Point *result, const Point *p);
 void sm2_scalar_base_mult(Point *result, const u8 *scalar);
-void sm2_scalar_mult(Point *result,const Point *p,  const bn_words scalar);
+void sm2_scalar_mult(Point *result,const Point *p,  const bn_words_t scalar);
 
 #endif	//	__SM2P_H__

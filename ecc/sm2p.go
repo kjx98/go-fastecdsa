@@ -22,7 +22,7 @@ func sm2ModMult(x, y []big.Word) *big.Int {
 	var r [4]big.Word
 	xb := fromWordSlice(x)
 	yb := fromWordSlice(y)
-	C.sm2_mod_mul((*C.bn_words)(unsafe.Pointer(&r[0])),
+	C.sm2_mod_mul((*C.bn_words_t)(unsafe.Pointer(&r[0])),
 		(*[4]C.u64)(unsafe.Pointer(xb)), (*[4]C.u64)(unsafe.Pointer(yb)))
 	return new(big.Int).SetBits(r[:4])
 }
@@ -41,7 +41,7 @@ func newPoint(x, y, z *big.Int) *C.Point {
 func sm2ModInv(x []big.Word) *big.Int {
 	var r [4]big.Word
 	in := fromWordSlice(x)
-	C.sm2_mod_inv((*C.bn_words)(unsafe.Pointer(&r[0])), (*[4]C.u64)(unsafe.Pointer(in)))
+	C.sm2_mod_inv((*C.bn_words_t)(unsafe.Pointer(&r[0])), (*[4]C.u64)(unsafe.Pointer(in)))
 	return new(big.Int).SetBits(r[:4])
 }
 

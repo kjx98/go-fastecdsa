@@ -4,7 +4,7 @@
 
 #include "sm2p256.inc"
 
-static forceinline void bn_to_felem(felem out, const bn_words in)
+static forceinline void bn_to_felem(felem out, const bn_words_t in)
 {
 	out[0] = in[0];
 	out[1] = in[1];
@@ -12,7 +12,7 @@ static forceinline void bn_to_felem(felem out, const bn_words in)
 	out[3] = in[3];
 }
 
-void sm2_mod_inv(bn_words *result, const bn_words *in)
+void sm2_mod_inv(bn_words_t *result, const bn_words_t *in)
 {
 	felem tmp;
 	smallfelem *out=(smallfelem*)result;
@@ -22,7 +22,7 @@ void sm2_mod_inv(bn_words *result, const bn_words *in)
 	felem_contract(*out, tmp);
 }
 
-void sm2_mod_mul(bn_words *result, const bn_words *x, const bn_words *y)
+void sm2_mod_mul(bn_words_t *result, const bn_words_t *x, const bn_words_t *y)
 {
 }
 
@@ -92,7 +92,7 @@ void sm2_scalar_base_mult(Point *result, const u8 *scalar)
 				felem_x3, felem_y3, felem_z3);
 }
 
-void sm2_scalar_mult(Point *result,const Point *p,  const bn_words scalar)
+void sm2_scalar_mult(Point *result,const Point *p,  const bn_words_t scalar)
 {
 	felem felem_x3, felem_y3, felem_z3;
 	u64	(*scalars)[4]={scalar};

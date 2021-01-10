@@ -44,7 +44,7 @@
 #endif
 
 using namespace vli;
-using curve_t = vli::ecc_curve<4,1>;
+using curve_t = vli::ecc_curve<4>;
 
 static forceinline const curve_t *ecc_get_curve(uint curve_id) noexcept
 {
@@ -166,7 +166,7 @@ void	point_mult(Point *pt, const Point *p, const u64 *scalar,
 #endif
 
 
-using felem = bn_words;
+using felem = bn_words_t;
 
 /*-
  * Base point pre computation
@@ -598,7 +598,7 @@ int points_mul(Point *r, const felem *scalar, size_t num,
     int ret = 0;
     int j;
     int mixed = 0;
-    bn_words *x, *y, *z, *tmp_scalar;
+    bn_words_t *x, *y, *z, *tmp_scalar;
     felem_bytearray g_secret;
     felem_bytearray *secrets = NULL;
     smallfelem (*pre_comp)[17][3] = NULL;
@@ -612,7 +612,7 @@ int points_mul(Point *r, const felem *scalar, size_t num,
     const smallfelem(*g_pre_comp)[16][3] = gmul;
     Point *generator = NULL;
     const Point *p = NULL;
-    const bn_words *p_scalar = NULL;
+    const bn_words_t *p_scalar = NULL;
 
     if (scalar != NULL) {
         //if (0 == Point_cmp(generator, group->generator, ctx))

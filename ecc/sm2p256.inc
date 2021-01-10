@@ -1985,13 +1985,13 @@ static int point_get_affine_jacobian(smallfelem x_out, smallfelem y_out,
  * Computes scalar*generator + \sum scalars[i]*points[i], ignoring NULL
  * values Result is stored in r (r can equal one of the inputs).
  */
-int sm2_points_mul(Point *r, const bn_words *scalar, size_t num,
+int sm2_points_mul(Point *r, const bn_words_t *scalar, size_t num,
 						const Point *points, const u64 (*scalars)[4])
 {
     int ret = 0;
     int j;
     int mixed = 0;
-    bn_words *x, *y, *z, *tmp_scalar;
+    bn_words_t *x, *y, *z, *tmp_scalar;
     felem_bytearray g_secret;
     felem_bytearray *secrets = NULL;
     smallfelem (*pre_comp)[17][3] = NULL;
@@ -2005,7 +2005,7 @@ int sm2_points_mul(Point *r, const bn_words *scalar, size_t num,
     const smallfelem(*g_pre_comp)[16][3] = gmul;
     Point *generator = NULL;
     const Point *p = NULL;
-    const bn_words *p_scalar = NULL;
+    const bn_words_t *p_scalar = NULL;
 
     if (scalar != NULL) {
         //if (0 == Point_cmp(generator, group->generator, ctx))

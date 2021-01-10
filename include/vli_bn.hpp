@@ -153,7 +153,7 @@ public:
 	void set(u64 *dest) const noexcept
 	{
 		auto	*res=reinterpret_cast<bignum<ndigits> *>(dest);
-		*dest = *this;
+		*res = *this;
 #ifdef	ommit
 #pragma GCC unroll 4
 		for (uint i = 0; i < ndigits; i++)
@@ -548,8 +548,21 @@ public:
 	friend void mont_mult(bignum& res, const u64 *x, const bignum& y,
 					const bignum& prime) noexcept
 	{
-		auto	*xx=reinterpret_cast<const bignum<ndigits> *>(x);
-		mont_mult<k0>(res, *xx, y, prime);
+		u64	s[ndigits*2];
+		u64	r[ndigits+2];
+		vli_clear<ndigits + 2>(r);
+#pragma GCC unroll 4
+		for (uint i=0; i < ndigits;i++) {
+			u64	u = (r[0] + y.d[i]*x[0]) * k0;
+			vli_umult<ndigits>(s, prime.d, u);
+			vli_add_to<ndigits + 2>(r, s);
+			vli_umult<ndigits>(s, x, y.d[i]);
+			vli_add_to<ndigits + 2>(r, s);
+			vli_rshift1w<ndigits + 2>(r);	
+		}
+		if (r[ndigits] != 0 || vli_cmp<ndigits>(r, prime.d) >= 0) {
+			vli_sub<ndigits>(res.d, r, prime.d);
+		} else vli_set<ndigits>(res.d, r);
 	}
 	void mont_mult(const bignum& x, const bignum& y, const bignum& prime,
 					const u64 k0) noexcept

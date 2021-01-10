@@ -21,15 +21,15 @@ func vliTestFMA() bool {
 	return C.vli_asm_acc() != 0
 }
 
-func toWordSlice(x C.bn_words) []big.Word {
+func toWordSlice(x C.bn_words_t) []big.Word {
 	pt := *(*[4]big.Word)(unsafe.Pointer(&x))
 	return pt[:]
 }
 
-func fromWordSlice(bits []big.Word) *C.bn_words {
+func fromWordSlice(bits []big.Word) *C.bn_words_t {
 	var bb [4]big.Word
 	copy(bb[:], bits)
-	return (*C.bn_words)(unsafe.Pointer(&bb[0]))
+	return (*C.bn_words_t)(unsafe.Pointer(&bb[0]))
 }
 
 func fillMontParams(mod []big.Word, rr []uint64, k0 uint64) *C.montParams {
@@ -49,7 +49,7 @@ func fillMontParams(mod []big.Word, rr []uint64, k0 uint64) *C.montParams {
 // Functions implemented in ecc_asm_*64.s
 // Montgomery inverse modulo P256
 func vliModInv(in, mod []big.Word) (result []big.Word) {
-	var res C.bn_words
+	var res C.bn_words_t
 	C.vli_mod_inv((*C.u64)(unsafe.Pointer(&res)),
 		(*C.u64)(unsafe.Pointer(fromWordSlice(in))),
 		(*C.u64)(unsafe.Pointer(fromWordSlice(mod))))
