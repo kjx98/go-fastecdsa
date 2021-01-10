@@ -40,9 +40,9 @@ constexpr u64 sm2_n[] = { 0x53bbf40939d54123ull, 0x7203df6b21c6052bull,
 				0xFFFFFFFFFFFFFFFFull, 0xfffffffeffffffffull };
 constexpr u64 sm2_n_mu[] = {0x12AC6361F15149A0ull, 0x8DFC2096FA323C01ull,
 				0x100000001ull, 0x100000001ull, 1 };
-constexpr bn_words sm2_p_rr = { 0x200000003ull, 0x2ffffffffull,
+constexpr u64 sm2_p_rr[] = { 0x200000003ull, 0x2ffffffffull,
 				0x100000001ull, 0x400000002ull };
-constexpr bn_words sm2_n_rr = {0x901192AF7C114F20ull, 0x3464504ADE6FA2FAull,
+constexpr u64 sm2_n_rr[] = {0x901192AF7C114F20ull, 0x3464504ADE6FA2FAull,
 	   			0x620FC84C3AFFE0D4ull, 0x1EB5E412A22B3D3Bull };
 constexpr u64 sm2_p_k0 = 1;
 constexpr u64 sm2_n_k0 = 0x327f9e8872350975;

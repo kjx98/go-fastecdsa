@@ -34,6 +34,14 @@
 
 namespace vli {
 
+
+template<const uint N>
+struct point_t {
+	u64		x[N];
+	u64		y[N];
+	u64		z[N];
+};
+
 /**
  * struct ecc_curve - definition of elliptic curve
  *
@@ -179,7 +187,7 @@ public:
 	}
 	void mont_mult2(bignum<N>& res, const bignum<N>& left) const noexcept
 	{
-#ifndef	ommit
+#ifdef	ommit
 		this->mod_add(res, left, left);
 #else
 		if (res.lshift1(left) != 0) {
@@ -638,14 +646,6 @@ private:
 		cc[3] = u << 32;
 		if (res.add_to(cc)) res.sub_from(this->p);
 	}
-};
-
-
-template<const uint N>
-struct point_t {
-	u64		x[N];
-	u64		y[N];
-	u64		z[N];
 };
 
 

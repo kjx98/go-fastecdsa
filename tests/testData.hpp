@@ -70,7 +70,7 @@ bignum<4>	bigOne(1);
  * Tables for other points have table[i] = iG for i in 0 .. 16. */
 
 /* gmul is the table of precomputed base points */
-constexpr bn_words gmul[2][16][3] = {
+constexpr bn_words<4> gmul[2][16][3] = {
     {{{0, 0, 0, 0},
       {0, 0, 0, 0},
       {0, 0, 0, 0}},

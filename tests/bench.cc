@@ -99,9 +99,31 @@ static void test_ECDBLJac(benchmark::State &state)
 }
 BENCHMARK(test_ECDBLJac);
 
+static void test_ECADDJacK(benchmark::State &state)
+{
+	u64		xx3[4], yy3[4], zz3[4];
+	for (auto _ : state) {
+		sm2_k256.point_add_jacobian(xx3, yy3, zz3, dx1, dy1,
+						bigOne.data(), dx2, dy2);
+	}
+}
+BENCHMARK(test_ECADDJacK);
+
+static void test_ECDBLJacK(benchmark::State &state)
+{
+	bignum<4>	bigOne(1);
+	u64		xx3[4], yy3[4], zz3[4];
+	for (auto _ : state) {
+		//sm2_k256.point_double_jacobian(xx3, yy3, zz3, dx3, dy3, dz3);
+		sm2_k256.point_double_jacobian(xx3, yy3, zz3, dx1, dy1);
+	}
+}
+BENCHMARK(test_ECDBLJacK);
+
 
 int main(int argc, char ** argv) {
 	sm2_p256.init();
+	sm2_k256.init();
 	benchmark::Initialize(&argc, argv);
 	benchmark::RunSpecifiedBenchmarks();
 }

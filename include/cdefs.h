@@ -52,12 +52,12 @@ typedef	unsigned int	uint;
 # define likely(cond)	__builtin_expect (!!(cond), 1)
 # define forceinline __inline__ __attribute__((always_inline))
 
-typedef u64	bn_words[4];
+typedef u64	bn_words_t[4];
 
 typedef	struct {
-	bn_words	x;
-	bn_words	y;
-	bn_words	z;
+	bn_words_t	x;
+	bn_words_t	y;
+	bn_words_t	z;
 }	Point;
 
 #endif	//	__CDEFS_H__

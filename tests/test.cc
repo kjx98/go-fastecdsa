@@ -180,9 +180,35 @@ TEST(testEcc, TestECDBL)
 	EXPECT_EQ(z3.cmp(zz3), 0);
 }
 
+TEST(testEcc, TestECADDk256)
+{
+	u64		xx3[4], yy3[4], zz3[4];
+	bignum<4>	x3(dx3), y3(dy3), z3(dz3);
+	sm2_k256.point_add_jacobian(xx3, yy3, zz3, dx1, dy1,
+						bigOne.data(), dx2, dy2);
+	//vli_mod_inv<4>(z, z3, sm2_p256.paramP().data());
+	//sm2_p256.apply_z(xx3, yy3, z);
+	EXPECT_EQ(x3.cmp(xx3), 0);
+	EXPECT_EQ(y3.cmp(yy3), 0);
+	EXPECT_EQ(z3.cmp(zz3), 0);
+}
+
+TEST(testEcc, TestECDBLk256)
+{
+	u64		xx3[4], yy3[4], zz3[4];
+	bignum<4>	x3(x1x1), y3(y1y1), z3(z1z1);
+	sm2_k256.point_double_jacobian(xx3, yy3, zz3, dx1, dy1);
+	//vli_mod_inv<4>(z, z3, sm2_p256.paramP().data());
+	//sm2_p256.apply_z(xx3, yy3, z);
+	EXPECT_EQ(x3.cmp(xx3), 0);
+	EXPECT_EQ(y3.cmp(yy3), 0);
+	EXPECT_EQ(z3.cmp(zz3), 0);
+}
+
 int main(int argc, char *argv[])
 {
 	sm2_p256.init();
+	sm2_k256.init();
     testing::InitGoogleTest(&argc, argv);//将命令行参数传递给gtest
     return RUN_ALL_TESTS();   //RUN_ALL_TESTS()运行所有测试案例
 }

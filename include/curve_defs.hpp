@@ -66,8 +66,8 @@ static vli::ecc_curve<4> sm2_p256(//.name
 	true
 	);
 
-static vli::sm2_curve<4> sm2_new(//.name
-	"sm2new",
+static vli::sm2_curve<4> sm2_k256(//.name
+	"sm2k256",
 	// .gx
 	sm2_gx,
 	//.gy
