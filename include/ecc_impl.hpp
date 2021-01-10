@@ -322,7 +322,7 @@ vli_mod_inv_new(u64 *result, const u64 *y, const u64 *x) noexcept
 		} else {
 			v.sub_from(u);
 			d.sub(d, b);
-		}
+		
 	}
 	if (!v.is_one()) {
 		vli_clear<N>(result);
