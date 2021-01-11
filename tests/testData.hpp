@@ -29,6 +29,10 @@ constexpr u64 x1_inv[] = {0xc8e6f24a12b6be53ull, 0xd38d81d6e013b90aull,
 				0x9c1cb188f2a91d75ull, 0xb8936229cd327d3aull};
 constexpr u64 x2_inv[] = {0xe258fda37352c178ull, 0x3e87218e3e2cfd07ull,
 				0xfa88a9e1fabcd344ull, 0x9bab218bea302819ull};
+constexpr u64 d1d[] = {0x3f53eddad6d9c892ull, 0xa4e68fd3a5be28adull,
+				0xe7fdfc0c48f4ac1dull, 0x44960d13c3ae7889ull};
+constexpr u64 d2d[] = {0x5573bb6ec8c5d96full, 0x49602ebaa885202aull,
+				0x47d7d0eddd094949ull, 0xb68c5c25852521c6ull};
 bignum<4>	prime(sm2_p);
 bignum<4>	rr(sm2_p_rr);
 bignum<4>	bigOne(1);

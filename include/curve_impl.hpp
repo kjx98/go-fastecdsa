@@ -41,6 +41,17 @@ struct point_t {
 	bignum<N>	x;
 	bignum<N>	y;
 	bignum<N>	z;
+	u64 *xd() { return const_cast<u64 *>(x.data()); }
+	u64 *yd() { return const_cast<u64 *>(y.data()); }
+	u64 *zd() { return const_cast<u64 *>(z.data()); }
+	point_t() = default;
+	point_t(const point_t &) = default;
+	explicit point_t(const bignum<N>& xx, const bignum<N>& yy,
+		const bignum<N>& zz) : x(xx), y(yy), z(zz) {}
+	explicit point_t(const u64 *xx, const u64 *yy, const u64 *zz) :
+		x(xx), y(yy), z(zz)
+	{
+	}
 	bool operator==(const point_t& q) {
 		if (x ==  q.x && y == q.y && z ==  q.z) return true;
 		// affine
@@ -80,6 +91,8 @@ public:
 	{
 		static_assert(N > 3, "curve only support 256Bits or more");
 	}
+	static constexpr int W=4;
+	static constexpr int wSize=1<<W;
 	ecc_curve(ecc_curve &&) = default;
 	const uint ndigits() const { return N; }
 	explicit operator bool() const noexcept {
@@ -366,6 +379,10 @@ public:
 		vli_clear<N>(z);
 		z[0] = 1;
 	}
+	void apply_z(point_t<N>& p) const noexcept
+	{
+		apply_z(p.xd(), p.yd(), p.zd());
+	}
 	/* add-1998-cmo-2 algorithm
 	 * http://hyperelliptic.org/EFD/g1p/auto-shortw-jacobian-3.html
 	 */
@@ -566,7 +583,72 @@ public:
 		from_montgomery(y3, *y3p);
 		from_montgomery(z3, *z3p);
 	}
+	void scalar_mul(point_t<N>& q, const point_t<N>& p, const bignum<N>& scalar)
+	noexcept {
+		point_t<N>	tmp;
+		point_t<N>	pre_comps[wSize+1];
+		uint	nbits = scalar.num_bits();
+		memset(&q, 0, sizeof(q));
+		this->pre_compute(pre_comps, p);
+		bool	skip = true;
+		for (int i = nbits-1; i >= 0; --i) {
+			if (!skip) point_double(q, q);
+			u64		bits;
+			u8		sign, digit;
+			if (i > 0) bits = scalar.get_bits(i-1, W+2); else {
+				bits = scalar.get_bits(i, W+1) << 1;
+			}
+			recode_scalar_bits(&sign, &digit, bits);
+			select_point(tmp, digit, pre_comps);
+			if (sign-1) tmp.y.sub(this->p, tmp.y);
+			if (!skip) point_add(q, q, tmp); else {
+				q = tmp;
+				skip =false;
+			}
+		}
+		this->apply_z(q);
+	}
 protected:
+	void recode_scalar_bits(u8 *sign, u8 *digit, u8 in)
+	{
+	    unsigned char s, d;
+		s = ~((in >> 5) - 1);	/* sets all bits to MSB(in), 'in' seen as
+								 * 6-bit value */
+		d = (1 << 6) - in - 1;
+		d = (d & s) | (in & ~s);
+		d = (d >> 1) + (d & 1);
+
+		*sign = s & 1;
+		*digit = d;
+	}
+	void point_add(point_t<N>& q, const point_t<N>& p1, const point_t<N>& p2)
+	const noexcept {
+		point_add_jacobian(q.xd(), q.yd(), q.zd(), p1.x.data(), p1.y.data(),
+						p1.z.data(), p2.x.data(), p2.y.data(), p2.z.data());
+	}
+	void point_double(point_t<N>& q, const point_t<N>& p) const noexcept {
+		point_double_jacobian(q.xd(), q.yd(), q.zd(),
+						p.x.data(), p.y.data(), p.z.data());
+	}
+	void pre_compute(point_t<N> pre_comp[wSize + 1], const point_t<N>& p)
+	noexcept {
+		memset(&pre_comp[0], 0, sizeof(pre_comp[0]));
+		pre_comp[1] = p;
+		for (int i = 2; i <= wSize; ++i) {
+			if (i & 1) {
+				point_add(pre_comp[i], pre_comp[i-1], p);
+			} else {
+				point_double(pre_comp[i], pre_comp[i >> 1]);
+			}
+		}
+	}
+	bool select_point(point_t<N>& pt, const uint idx,
+				const point_t<N> pre_comps[wSize+1]) const noexcept
+	{
+		if (idx > wSize) return false;
+		pt = pre_comps[idx];
+		return true;
+	}
 	const std::string name;
 	const bignum<N> gx;
 	const bignum<N> gy;
@@ -682,94 +764,91 @@ public:
 	void pre_compute_base() noexcept
 	{
 		int i, j;
-		bignum<4>	x_tmp(this->gx), y_tmp(this->gy), z_tmp(1);
+		point_t<4>	G{this->gx, this->gy, bignum<4>(1)};
 		/*
 		 * compute 2^64*G, 2^128*G, 2^192*G for the first table, 2^32*G, 2^96*G,
 		 * 2^160*G, 2^224*G for the second one
 		 */
-		x_tmp.set(this->g_pre_comp[0][1][0]);
-		y_tmp.set(this->g_pre_comp[0][1][1]);
-		z_tmp.set(this->g_pre_comp[0][1][2]);
+		this->g_pre_comp[0][1] = G;
 		for (i = 1; i <= 8; i <<= 1) {
-			point_double_jacobian(g_pre_comp[1][i][0], g_pre_comp[1][i][1],
-							g_pre_comp[1][i][2], g_pre_comp[0][i][0],
-							g_pre_comp[0][i][1], g_pre_comp[0][i][2]);
+			point_double(g_pre_comp[1][i], g_pre_comp[0][i]);
 			for (j = 0; j < 31; ++j) {
-				point_double_jacobian(g_pre_comp[1][i][0],
-						g_pre_comp[1][i][1], g_pre_comp[1][i][2],
-						g_pre_comp[1][i][0], g_pre_comp[1][i][1],
-						g_pre_comp[1][i][2]);
+				point_double(g_pre_comp[1][i], g_pre_comp[1][i]);
 			}
 			if (i == 8) break;
-			point_double_jacobian(g_pre_comp[0][2 * i][0],
-						g_pre_comp[0][2 * i][1], g_pre_comp[0][2 * i][2],
-						g_pre_comp[1][i][0], g_pre_comp[1][i][1],
-						g_pre_comp[1][i][2]);
+			point_double(g_pre_comp[0][2 * i], g_pre_comp[1][i]);
 			for (j = 0; j < 31; ++j) {
-				point_double_jacobian(g_pre_comp[0][2 * i][0],
-						g_pre_comp[0][2 * i][1], g_pre_comp[0][2 * i][2],
-						g_pre_comp[0][2 * i][0], g_pre_comp[0][2 * i][1],
-						g_pre_comp[0][2 * i][2]);
+				point_double(g_pre_comp[0][2 * i], g_pre_comp[0][2 * i]);
 			}
 		}
 		for (i = 0; i < 2; i++) {
 			/* g_pre_comp[i][0] is the point at infinity */
-			memset(g_pre_comp[i][0], 0, sizeof(g_pre_comp[i][0]));
+			memset(&g_pre_comp[i][0], 0, sizeof(g_pre_comp[i][0]));
 			/* the remaining multiples */
 			/* 2^64*G + 2^128*G resp. 2^96*G + 2^160*G */
-			point_add_jacobian(g_pre_comp[i][6][0], g_pre_comp[i][6][1],
-						g_pre_comp[i][6][2], g_pre_comp[i][4][0],
-						g_pre_comp[i][4][1], g_pre_comp[i][4][2],
-               	        g_pre_comp[i][2][0], g_pre_comp[i][2][1],
-						g_pre_comp[i][2][2]);
+			point_add(g_pre_comp[i][6], g_pre_comp[i][4], g_pre_comp[i][2]);
 			/* 2^64*G + 2^192*G resp. 2^96*G + 2^224*G */
-			point_add_jacobian(g_pre_comp[i][10][0], g_pre_comp[i][10][1],
-						g_pre_comp[i][10][2], g_pre_comp[i][8][0],
-						g_pre_comp[i][8][1], g_pre_comp[i][8][2],
-						g_pre_comp[i][2][0], g_pre_comp[i][2][1],
-						g_pre_comp[i][2][2]);
+			point_add(g_pre_comp[i][10], g_pre_comp[i][8], g_pre_comp[i][2]);
 			/* 2^128*G + 2^192*G resp. 2^160*G + 2^224*G */
-			point_add_jacobian(g_pre_comp[i][12][0], g_pre_comp[i][12][1],
-						g_pre_comp[i][12][2], g_pre_comp[i][8][0],
-						g_pre_comp[i][8][1], g_pre_comp[i][8][2],
-						g_pre_comp[i][4][0], g_pre_comp[i][4][1],
-						g_pre_comp[i][4][2]);
+			point_add(g_pre_comp[i][12], g_pre_comp[i][8], g_pre_comp[i][4]);
 			/*
 			 * 2^64*G + 2^128*G + 2^192*G resp. 2^96*G + 2^160*G + 2^224*G
 			 */
-			point_add_jacobian(g_pre_comp[i][14][0], g_pre_comp[i][14][1],
-						g_pre_comp[i][14][2], g_pre_comp[i][12][0],
-						g_pre_comp[i][12][1], g_pre_comp[i][12][2],
-						g_pre_comp[i][2][0], g_pre_comp[i][2][1],
-						g_pre_comp[i][2][2]);
+			point_add(g_pre_comp[i][14], g_pre_comp[i][12], g_pre_comp[i][2]);
 			for (j = 1; j < 8; ++j) {
 				/* odd multiples: add G resp. 2^32*G */
-				point_add_jacobian(g_pre_comp[i][2 * j + 1][0],
-							g_pre_comp[i][2 * j + 1][1],
-							g_pre_comp[i][2 * j + 1][2],
-							g_pre_comp[i][2 * j][0],
-							g_pre_comp[i][2 * j][1],
-							g_pre_comp[i][2 * j][2],
-							g_pre_comp[i][1][0],
-							g_pre_comp[i][1][1],
-							g_pre_comp[i][1][2]);
+				point_add(g_pre_comp[i][2 * j + 1], g_pre_comp[i][2 * j],
+							g_pre_comp[i][1]);
 			}
 		}
 		// make_points_affine(31, &(pre->g_pre_comp[0][1]), tmp_smallfelems);
 		for(i=0;i < 2; i++) {
 			for (j = 1; j < 16; j++) {
-				apply_z(g_pre_comp[i][j][0], g_pre_comp[i][j][1],
-						g_pre_comp[i][j][2]);
+				apply_z(g_pre_comp[i][j]);
 			}
 		}
 		// convert to affine jacobian
 	}
-	bool select_base_point(point_t<4>& pt, const uint idx) {
+	bool select_base_point(point_t<4>& pt, const uint idx) const noexcept {
 		if (idx >= 2 * 16) return false;
-		pt.x = bignum<4>(g_pre_comp[idx>>4][idx&0xf][0]);
-		pt.y =  bignum<4>(g_pre_comp[idx>>4][idx&0xf][1]);
-		pt.z =  bignum<4>(g_pre_comp[idx>>4][idx&0xf][2]);
+		pt = g_pre_comp[idx>>4][idx&0xf];
 		return true;
+	}
+	bool select_base_point(point_t<4>& pt, const uint idx, const uint ba)
+	const noexcept {
+		if (idx >= 16 || ba >= 2) return false;
+		pt = g_pre_comp[ba][idx];
+		return true;
+	}
+	void scalar_mult_base(point_t<4>& q, const bignum<4>& scalar) noexcept
+	{
+		bool	skip = true;
+		point_t<4>	p;
+		memset(&q, 0, sizeof(q));
+		for (int i = 31; i >= 0; --i) {
+			/* double */
+			if (!skip) point_double(q, q);
+
+			/* add multiples of the generator */
+			u64	bits = scalar.get_bit(i + 224) << 3;
+			bits |= scalar.get_bit(i + 160) << 2;
+			bits |= scalar.get_bit(i + 96) << 1;
+			bits |= scalar.get_bit(i + 32);
+			select_base_point(p, bits, 1);
+			if (!skip) point_add(q, q, p); else {
+				q = p;
+				skip = false;
+			}
+
+			/* second, look at the current position */
+			bits = scalar.get_bit(i + 192) << 3;
+			bits |= scalar.get_bit(i + 128) << 2;
+			bits |= scalar.get_bit(i + 64) << 1;
+			bits |= scalar.get_bit(i);
+			select_base_point(p, bits, 0);
+			point_add(q, q, p);
+		}
+		this->apply_z(q);
 	}
 private:
 	void carry_reduce(bignum<4>& res, const u64 carry) const noexcept
@@ -783,7 +862,7 @@ private:
 		cc[3] = u << 32;
 		if (res.add_to(cc)) res.sub_from(this->p);
 	}
-	bn_words_t	g_pre_comp[2][16][3];
+	point_t<4>	g_pre_comp[2][16];
 };
 
 

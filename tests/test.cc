@@ -226,6 +226,39 @@ TEST(testEcc, TestECDBLk256)
 	EXPECT_EQ(z3.cmp(zz3), 0);
 }
 
+TEST(testEcc, TestScalartBase)
+{
+	bignum<4>	d1(d1d), d2(d2d);
+	point_t<4>	res;
+	point_t<4>	gg(sm2_gx, sm2_gy, bigOne.data());
+	sm2_p256.scalar_mul(res, gg, d1);
+	ASSERT_TRUE(res.z.is_one());
+	EXPECT_EQ(res.x.cmp(dx1), 0);
+	EXPECT_EQ(res.y.cmp(dy1), 0);
+	sm2_p256.scalar_mul(res, gg, d2);
+	ASSERT_TRUE(res.z.is_one());
+	EXPECT_EQ(res.x.cmp(dx2), 0);
+	EXPECT_EQ(res.y.cmp(dy2), 0);
+}
+
+// not work yet
+#ifdef	ommit
+TEST(testEcc, TestScalarMultBase)
+{
+	bignum<4>	d1(d1d), d2(d2d);
+	point_t<4>	res;
+	sm2_k256.pre_compute_base();
+	sm2_k256.scalar_mult_base(res, d1);
+	ASSERT_TRUE(res.z.is_one());
+	EXPECT_EQ(res.x.cmp(dx1), 0);
+	EXPECT_EQ(res.y.cmp(dy1), 0);
+	sm2_k256.scalar_mult_base(res, d2);
+	ASSERT_TRUE(res.z.is_one());
+	EXPECT_EQ(res.x.cmp(dx2), 0);
+	EXPECT_EQ(res.y.cmp(dy2), 0);
+}
+#endif
+
 int main(int argc, char *argv[])
 {
 	sm2_p256.init();

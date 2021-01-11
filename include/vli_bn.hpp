@@ -429,7 +429,7 @@ public:
 		return (this->d[0] & 1) != 0;
 	}
 /* Counts the number of 64-bit "digits" in vli. */
-	uint num_digits() noexcept
+	uint num_digits() const noexcept
 	{
 		/* Search from the end until we find a non-zero digit.
 		 * We do it in reverse because we expect that most digits will
@@ -439,7 +439,7 @@ public:
 		for (i = ndigits - 1; i >= 0 && this->d[i] == 0; i--);
 		return (i + 1);
 	}
-	uint vli_num_bits() noexcept
+	uint num_bits() const noexcept
 	{
 		auto _ndigits = num_digits();
 		if (_ndigits == 0) return 0;
