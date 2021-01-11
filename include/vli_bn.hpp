@@ -46,7 +46,21 @@
 namespace vli {
 
 template<const uint N>
-struct bn_words {
+class bn_words {
+public:
+	bn_words() = default;
+	bn_words(const bn_words &) = default;
+	explicit bn_words(const u64 v) : d{v, 0, 0, 0}
+	{
+#if	__cplusplus >= 201703L
+		if constexpr(ndigits > 4) {
+#pragma GCC unroll 4
+			for (uint i = 4; i < ndigits; i++)
+				this->d[i] = 0;
+		}
+#endif
+	}
+protected:
 	u64		d[N];
 };
 
@@ -57,16 +71,7 @@ public:
 	bignum(const bignum &) = default;
 	constexpr bignum(bn_words<ndigits> init) noexcept :
 		bn_words<ndigits>{init} {}
-	explicit bignum(const u64 v) noexcept : bn_words<ndigits>{v,0,0,0}
-	{
-#if	__cplusplus >= 201703L
-		if constexpr(ndigits > 4) {
-#pragma GCC unroll 4
-			for (uint i = 4; i < ndigits; i++)
-				this->d[i] = 0;
-		}
-#endif
-	}
+	explicit bignum(const u64 v) noexcept : bn_words<ndigits>(v) {}
 	explicit bignum(const u64 *src) {
 		auto	*ss=reinterpret_cast<const bignum<ndigits> *>(src);
 		*this = *ss;
