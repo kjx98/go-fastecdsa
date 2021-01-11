@@ -112,6 +112,16 @@ TEST(testVli, TestBignumz)
 	ASSERT_TRUE(res == n2);
 }
 
+TEST(testvli, TestGetBits)
+{
+	bignum<4>	d1(d1d);
+	EXPECT_EQ(d1.get_bits(0, 4), 2);
+	EXPECT_EQ(d1.get_bits(20, 4), 0xd);
+	EXPECT_EQ(d1.get_bits(64, 4), 0xd);
+	EXPECT_EQ(d1.get_bits(124, 4), 0xa);
+	EXPECT_EQ(d1.get_bits(188, 4), 0xe);
+}
+
 TEST(testVli, TestInverse)
 {
 	u64	res[4];
@@ -226,7 +236,8 @@ TEST(testEcc, TestECDBLk256)
 	EXPECT_EQ(z3.cmp(zz3), 0);
 }
 
-TEST(testEcc, TestScalartBase)
+// not work yet
+TEST(testEcc, TestScalarMult)
 {
 	bignum<4>	d1(d1d), d2(d2d);
 	point_t<4>	res;
@@ -235,14 +246,17 @@ TEST(testEcc, TestScalartBase)
 	ASSERT_TRUE(res.z.is_one());
 	EXPECT_EQ(res.x.cmp(dx1), 0);
 	EXPECT_EQ(res.y.cmp(dy1), 0);
+	std::cout << "res x1: " << res.x << std::endl;
+	std::cout << "res y1: " << res.y << std::endl;
 	sm2_p256.scalar_mul(res, gg, d2);
 	ASSERT_TRUE(res.z.is_one());
 	EXPECT_EQ(res.x.cmp(dx2), 0);
 	EXPECT_EQ(res.y.cmp(dy2), 0);
+	std::cout << "res x2: " << res.x << std::endl;
+	std::cout << "res y2: " << res.y << std::endl;
 }
 
 // not work yet
-#ifdef	ommit
 TEST(testEcc, TestScalarMultBase)
 {
 	bignum<4>	d1(d1d), d2(d2d);
@@ -257,7 +271,6 @@ TEST(testEcc, TestScalarMultBase)
 	EXPECT_EQ(res.x.cmp(dx2), 0);
 	EXPECT_EQ(res.y.cmp(dy2), 0);
 }
-#endif
 
 int main(int argc, char *argv[])
 {

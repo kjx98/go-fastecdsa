@@ -589,18 +589,25 @@ public:
 		point_t<N>	pre_comps[wSize+1];
 		uint	nbits = scalar.num_bits();
 		memset(&q, 0, sizeof(q));
+		if (nbits == 0) return;
 		this->pre_compute(pre_comps, p);
 		bool	skip = true;
-		for (int i = nbits-1; i >= 0; --i) {
+		--nbits;
+		uint	mask=nbits % (W+1);
+		if (mask == W) {
+			q = pre_comps[wSize];
+			nbits -= mask;
+			skip = false;
+		}
+		for (int i = nbits; i >= 0; --i) {
 			if (!skip) point_double(q, q);
+			if (i % (W+1) != 0) continue;
 			u64		bits;
-			u8		sign, digit;
-			if (i > 0) bits = scalar.get_bits(i-1, W+2); else {
-				bits = scalar.get_bits(i, W+1) << 1;
-			}
-			recode_scalar_bits(&sign, &digit, bits);
-			select_point(tmp, digit, pre_comps);
-			if (sign-1) tmp.y.sub(this->p, tmp.y);
+			bits = scalar.get_bits(i, W+1);
+			bool	sign = (bits & (1<<W));
+			bits &= (1 << W) -1 ;
+			select_point(tmp, bits, pre_comps);
+			if ( sign ) tmp.y.sub(this->p, tmp.y);
 			if (!skip) point_add(q, q, tmp); else {
 				q = tmp;
 				skip =false;
@@ -609,18 +616,6 @@ public:
 		this->apply_z(q);
 	}
 protected:
-	void recode_scalar_bits(u8 *sign, u8 *digit, u8 in)
-	{
-	    unsigned char s, d;
-		s = ~((in >> 5) - 1);	/* sets all bits to MSB(in), 'in' seen as
-								 * 6-bit value */
-		d = (1 << 6) - in - 1;
-		d = (d & s) | (in & ~s);
-		d = (d >> 1) + (d & 1);
-
-		*sign = s & 1;
-		*digit = d;
-	}
 	void point_add(point_t<N>& q, const point_t<N>& p1, const point_t<N>& p2)
 	const noexcept {
 		point_add_jacobian(q.xd(), q.yd(), q.zd(), p1.x.data(), p1.y.data(),
@@ -814,12 +809,14 @@ public:
 		pt = g_pre_comp[idx>>4][idx&0xf];
 		return true;
 	}
+#ifdef	ommit
 	bool select_base_point(point_t<4>& pt, const uint idx, const uint ba)
 	const noexcept {
 		if (idx >= 16 || ba >= 2) return false;
 		pt = g_pre_comp[ba][idx];
 		return true;
 	}
+#endif
 	void scalar_mult_base(point_t<4>& q, const bignum<4>& scalar) noexcept
 	{
 		bool	skip = true;
@@ -834,7 +831,7 @@ public:
 			bits |= scalar.get_bit(i + 160) << 2;
 			bits |= scalar.get_bit(i + 96) << 1;
 			bits |= scalar.get_bit(i + 32);
-			select_base_point(p, bits, 1);
+			select_base_point(p, bits | 16);
 			if (!skip) point_add(q, q, p); else {
 				q = p;
 				skip = false;
@@ -845,7 +842,7 @@ public:
 			bits |= scalar.get_bit(i + 128) << 2;
 			bits |= scalar.get_bit(i + 64) << 1;
 			bits |= scalar.get_bit(i);
-			select_base_point(p, bits, 0);
+			select_base_point(p, bits);
 			point_add(q, q, p);
 		}
 		this->apply_z(q);

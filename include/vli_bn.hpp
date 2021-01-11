@@ -173,20 +173,31 @@ public:
 	}
 	u8 get_bit(const uint bit) const noexcept
 	{
-		if ( bit >= ndigits*64 ) return 0;	// out of bound
-		return (this->d[bit >> 6] >> (bit & 0x3f)) & 1;
+		auto off = bit >> 6;
+		if ( off >= ndigits ) return 0;	// out of bound
+		auto rem = bit & 0x3f;
+		return (this->d[off] >> rem) & 1;
 	}
 	u8 get_bits(const uint bit, const uint cnt=5) const noexcept
 	{
 		auto off = bit >> 6;
-		auto rem = bit & 0x3f;
 		if (off >= ndigits) return 0;
+		auto rem = bit & 0x3f;
 		u8	rr = (this->d[off] >> rem) & 0xff;
 		off++;
 		if (off < ndigits && rem > (64 - cnt)) {
-			rr |= (this->d[off] << rem) & 0xff;
+			rr |= (this->d[off] << (64 - rem)) & 0xff;
 		}
 		return rr & ((1<<cnt) - 1);
+	}
+	/* copy_conditional copies in to out iff mask is all ones. */
+	void copy_conditional(const bignum& in, u64 mask)
+	{
+#pragma GCC unroll 4
+		for (uint i = 0; i < ndigits; ++i) {
+			const u64 tmp = mask & (in.d[i] ^ this->d[i]);
+			this->d[i] ^= tmp;
+		}
 	}
 /**
  * cmp() - compare this and right vlis
