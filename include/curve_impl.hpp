@@ -913,7 +913,7 @@ public:
 			bits |= scalar.get_bit(i + 32);
 			if (bits != 0) {
 				select_base_point(p, bits | 16);
-				if (!skip) point_add(q, q, p); else {
+				if (!skip) point_add(q, q, p.x, p.y); else {
 					q = p;
 					skip = false;
 				}
@@ -926,7 +926,7 @@ public:
 			bits |= scalar.get_bit(i);
 			if (bits == 0) continue;
 			select_base_point(p, bits);
-			if (!skip) point_add(q, q, p); else {
+			if (!skip) point_add(q, q, p.x, p.y); else {
 				q = p;
 				skip = false;
 			}
