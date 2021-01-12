@@ -375,7 +375,12 @@ public:
 	{
 		bignum<N>	t1;
 
-		if (vli_is_one<N>(z) || vli_is_zero<N>(z)) return; 
+		if (vli_is_one<N>(z)) return;
+		if (vli_is_zero<N>(z)) {
+			vli_clear<N>(x1);
+			vli_clear<N>(y1);
+			return;
+		}
 		vli_mod_inv<N>(z, z, this->p.data());
 		bignum<N>	*xp = reinterpret_cast<bignum<N> *>(x1);
 		bignum<N>	*yp = reinterpret_cast<bignum<N> *>(y1);
@@ -395,9 +400,25 @@ public:
 		vli_clear<N>(z);
 		z[0] = 1;
 	}
+	void apply_z(u64* x, u64 *y, const point_t<N>& p) const noexcept
+	{
+		p.x.set(x);
+		p.y.set(y);
+		u64	z[N];
+		p.z.set(z);
+		apply_z(x, y, z);
+	}
 	void apply_z(point_t<N>& p) const noexcept
 	{
 		apply_z(p.xd(), p.yd(), p.zd());
+	}
+	bool point_eq(const point_t<N>& p, const point_t<N>& q) const noexcept
+	{
+		if (p == q) return true;
+		u64		x1[N], x2[N], y1[N], y2[N];
+		this->apply_z(x1, y1, p);
+		this->apply_z(x2, y2, q);
+		return vli_cmp<N>(x1, x2) == 0 && vli_cmp<N>(y1, y2) == 0;
 	}
 	void point_neg(point_t<N>& q, const point_t<N>p) const noexcept
 	{
@@ -611,11 +632,16 @@ public:
 		point_t<N>	tmp;
 		point_t<N>	pre_comps[wSize+1];
 		uint	nbits = scalar.num_bits();
-		memset(&q, 0, sizeof(q));
+		//memset(&q, 0, sizeof(q));
+		q.clear();
 		if (nbits == 0) return;
 		this->pre_compute(pre_comps, p);
 		bool	skip = true;
 		--nbits;
+		if (nbits % (W+1) == 0) {
+			q = p;
+			skip = false;
+		}
 		for (int i = nbits; i >= 0; --i) {
 			if (!skip) point_double(q, q);
 			if (i % (W+1) != 0) continue;
@@ -625,8 +651,9 @@ public:
 			bool	sign = (bits & (1<<W));
 			digit = (sign)?((wNAFsize-bits) & wMask):bits;
 			if (digit == 0) continue;
-			select_point(tmp, digit, pre_comps);
-			if ( sign ) tmp.y.sub(this->p, tmp.y);
+			if ( sign ) {
+				point_neg(tmp, pre_comps[digit]);
+			} else tmp = pre_comps[digit];
 			if (!skip) point_add(q, q, tmp); else {
 				q = tmp;
 				skip =false;
@@ -643,15 +670,17 @@ public:
 		if (nbits == 0) return;
 		bool	skip = true;
 		--nbits;
+		if (nbits & 1) {
+			q = p;
+			skip = false;
+		}
 		for (int i = nbits; i >= 0; --i) {
 			if (!skip) point_double(q, q);
 			if ((i & 1) != 0) continue;
 			u8		bits;
-			u8		digit;
 			bits = scalar.get_bits(i, 2);
+			if ((bits & 1) == 0) continue;
 			bool	sign = (bits & 2);
-			digit = (sign)?((4-bits) & 1):bits;
-			if (digit == 0) continue;
 			if (sign) point_neg(tmp, p); else tmp =p;
 			if (!skip) point_add(q, q, tmp); else {
 				q = tmp;
@@ -680,8 +709,9 @@ public:
 	}
 	void point_add(point_t<N>& q, const point_t<N>& p1, const point_t<N>& p2)
 	const noexcept {
-		point_add_jacobian(q.xd(), q.yd(), q.zd(), p1.x.data(), p1.y.data(),
-						p1.z.data(), p2.x.data(), p2.y.data(), p2.z.data());
+		point_add_jacobian(q.xd(), q.yd(), q.zd(),
+						p1.x.data(), p1.y.data(), p1.z.data(),
+						p2.x.data(), p2.y.data(), p2.z.data());
 	}
 protected:
 	void point_add(point_t<N>& q, const point_t<N>& p1, const bignum<N>& x2,
@@ -690,6 +720,7 @@ protected:
 		point_add_jacobian(q.xd(), q.yd(), q.zd(), p1.x.data(), p1.y.data(),
 						p1.z.data(), x2.data(), y2.data());
 	}
+#ifdef	ommit
 	bool select_point(point_t<N>& pt, const uint idx,
 				const point_t<N> pre_comps[wSize+1]) const noexcept
 	{
@@ -697,6 +728,7 @@ protected:
 		pt = pre_comps[idx];
 		return true;
 	}
+#endif
 	const std::string name;
 	const bignum<N> gx;
 	const bignum<N> gy;

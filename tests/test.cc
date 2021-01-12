@@ -112,13 +112,24 @@ TEST(testVli, TestBignumz)
 	ASSERT_TRUE(res == n2);
 }
 
+TEST(testvli, TestNumBits)
+{
+	ASSERT_EQ(prime.num_bits(), 256);
+	EXPECT_EQ(bigOne.num_bits(), 1);
+	EXPECT_EQ(rr.num_bits(), 227);
+	bignum<4> d1(d1d);
+	EXPECT_EQ(d1.num_bits(), 255);
+}
+
 TEST(testvli, TestGetBits)
 {
 	bignum<4>	d1(d1d);
 	EXPECT_EQ(d1.get_bits(0, 4), 2);
 	EXPECT_EQ(d1.get_bits(20, 4), 0xd);
+	EXPECT_EQ(d1.get_bits(20, 2), 1);
 	EXPECT_EQ(d1.get_bits(64, 4), 0xd);
 	EXPECT_EQ(d1.get_bits(124, 4), 0xa);
+	EXPECT_EQ(d1.get_bits(124, 2), 2);
 	EXPECT_EQ(d1.get_bits(188, 4), 0xe);
 }
 
@@ -200,7 +211,7 @@ TEST(testEcc, TestBasePreCompute)
 
 TEST(testEcc, TestPreCompute)
 {
-	point_t<4>	res;
+	point_t<4>	res, res1;
 	point_t<4>	gg(sm2_gx, sm2_gy);
 	point_t<4>	pre_comps[wSize+1];
 	sm2_p256.pre_compute(pre_comps, gg);
@@ -210,10 +221,14 @@ TEST(testEcc, TestPreCompute)
 	EXPECT_TRUE(pre_comps[1] == res);
 	sm2_p256.point_double(res, res);
 	EXPECT_TRUE(pre_comps[2] == res);
+	sm2_p256.point_add(res1, res, gg);
+	EXPECT_TRUE(pre_comps[3] == res1);
 	sm2_p256.point_double(res, res);
 	EXPECT_TRUE(pre_comps[4] == res);
 	sm2_p256.point_double(res, res);
 	EXPECT_TRUE(pre_comps[8] == res);
+	sm2_p256.point_add(res1, res, gg);
+	EXPECT_TRUE(pre_comps[9] == res1);
 	sm2_p256.point_double(res, res);
 	EXPECT_TRUE(pre_comps[16] == res);
 }
@@ -293,6 +308,13 @@ TEST(testEcc, TestScalarMultNAF2)
 	bignum<4>	d1(d1d), d2(d2d);
 	point_t<4>	res;
 	point_t<4>	gg(sm2_gx, sm2_gy);
+	point_t<4>	pre_comps[wSize+1];
+	sm2_p256.pre_compute(pre_comps, gg);
+	for(uint i=1; i<=wSize; ++i) {
+		bignum<4>	ss(i);
+		sm2_p256.scalar_multNAF2(res, gg, ss);
+		EXPECT_TRUE(res == pre_comps[i]);
+	}
 	sm2_p256.scalar_multNAF2(res, gg, d1);
 	ASSERT_TRUE(res.z.is_one());
 	EXPECT_EQ(res.x.cmp(dx1), 0);

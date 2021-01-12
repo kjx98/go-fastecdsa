@@ -186,6 +186,7 @@ public:
 		u8	rr = (this->d[off] >> rem) & 0xff;
 		off++;
 		if (off < ndigits && rem > (64 - cnt)) {
+			rr &= (1 << (64-rem)) - 1;
 			rr |= (this->d[off] << (64 - rem)) & 0xff;
 		}
 		return rr & ((1<<cnt) - 1);
