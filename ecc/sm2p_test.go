@@ -240,6 +240,10 @@ func TestCurveBaseMult(t *testing.T) {
 		t.Logf("BaseMult step1 Y diff:\n%s\n%s", gy.Text(16), ay.Text(16))
 		t.Fail()
 	}
+	ww := gx.Bits()
+	t.Logf("d1G x: %x %x %x %x", ww[0], ww[1], ww[2], ww[3])
+	ww = gy.Bits()
+	t.Logf("d1G y: %x %x %x %x", ww[0], ww[1], ww[2], ww[3])
 	gx, gy = goCurve.ScalarBaseMult(d2.Bytes())
 	ax, ay = sm2ScalarBaseMult(d2.Bytes())
 	if ax.Cmp(gx) != 0 {
@@ -250,6 +254,10 @@ func TestCurveBaseMult(t *testing.T) {
 		t.Logf("BaseMult step2 Y diff:\n%s\n%s", gy.Text(16), ay.Text(16))
 		t.Fail()
 	}
+	ww = gx.Bits()
+	t.Logf("d1G x: %x %x %x %x", ww[0], ww[1], ww[2], ww[3])
+	ww = gy.Bits()
+	t.Logf("d1G y: %x %x %x %x", ww[0], ww[1], ww[2], ww[3])
 }
 
 func TestCurveMult(t *testing.T) {

@@ -630,29 +630,23 @@ public:
 					const bignum<N>& scalar) const noexcept
 	{
 		point_t<N>	tmp;
-		point_t<N>	pre_comps[wSize+1];
+		point_t<N>	pres[wSize+1];
 		uint	nbits = scalar.num_bits();
 		q.clear();
 		if (nbits == 0) return;
-		this->pre_compute(pre_comps, p);
+		this->pre_compute(pres, p);
 		bool	skip = true;
-		--nbits;
-		if (nbits % (W+1) == 0) {
-			q = p;
-			skip = false;
-		}
+		if (nbits % (W+1) != 0) --nbits;
 		for (int i = nbits; i >= 0; --i) {
 			if (!skip) point_double(q, q);
 			if (i % (W+1) != 0) continue;
-			u64		bits;
-			u8		digit;
+			uint	bits;
 			bits = scalar.get_bits(i, W+1);
 			bool	sign = (bits & (1<<W));
-			digit = (sign)?((wNAFsize-bits) & wMask):bits;
+			int digit = (sign)?(bits - wNAFsize):bits;
+			if (i > 0 && scalar.get_bit(i-1)) ++digit;
 			if (digit == 0) continue;
-			if ( sign ) {
-				point_neg(tmp, pre_comps[digit]);
-			} else tmp = pre_comps[digit];
+			if ( sign ) point_neg(tmp, pres[-digit]); else tmp = pres[digit];
 			if (!skip) point_add(q, q, tmp); else {
 				q = tmp;
 				skip =false;
@@ -671,25 +665,18 @@ public:
 		pres[0].clear();
 		pres[1] = p;
 		point_double(pres[2], p);
-		--nbits;
 		bool	skip = true;
-		if (nbits & 1) {
-			q = p;
-			skip = false;
-		}
+		if (nbits & 1) --nbits;
 		for (int i = nbits; i >= 0; --i) {
 			if (!skip) point_double(q, q);
 			if (i & 1) continue;
-			u8		bits;
+			uint	bits;
 			bits = scalar.get_bits(i, 2);
-			u8	sign = ~((bits >> 1) -1);
-			u8	digit = (1 << 2) - bits;
-			digit = (digit & sign) | (bits & ~sign);
-			if (i > 0 && scalar.get_bit(i-1) != 0) {
-				if (sign) --digit; else ++digit;
-			}
+			bool	sign = (bits & 2);
+			int digit = (sign)?(bits - 4):bits;
+			if (i > 0 && scalar.get_bit(i-1)) ++digit;
 			if (digit == 0) continue;
-			if (sign) point_neg(tmp, pres[digit]); else tmp = pres[digit];
+			if (sign) point_neg(tmp, pres[-digit]); else tmp = pres[digit];
 			if (likely(!skip)) point_add(q, q, tmp); else {
 				q = tmp;
 				skip = false;
@@ -914,7 +901,7 @@ public:
 	{
 		bool	skip = true;
 		point_t<4>	p;
-		memset(&q, 0, sizeof(q));
+		q.clear();
 		for (int i = 31; i >= 0; --i) {
 			/* double */
 			if (!skip) point_double(q, q);
@@ -924,10 +911,12 @@ public:
 			bits |= scalar.get_bit(i + 160) << 2;
 			bits |= scalar.get_bit(i + 96) << 1;
 			bits |= scalar.get_bit(i + 32);
-			select_base_point(p, bits | 16);
-			if (!skip) point_add(q, q, p); else {
-				q = p;
-				skip = false;
+			if (bits != 0) {
+				select_base_point(p, bits | 16);
+				if (!skip) point_add(q, q, p); else {
+					q = p;
+					skip = false;
+				}
 			}
 
 			/* second, look at the current position */
@@ -935,8 +924,12 @@ public:
 			bits |= scalar.get_bit(i + 128) << 2;
 			bits |= scalar.get_bit(i + 64) << 1;
 			bits |= scalar.get_bit(i);
+			if (bits == 0) continue;
 			select_base_point(p, bits);
-			point_add(q, q, p);
+			if (!skip) point_add(q, q, p); else {
+				q = p;
+				skip = false;
+			}
 		}
 		this->apply_z(q);
 	}

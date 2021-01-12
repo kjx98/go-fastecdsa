@@ -33,6 +33,14 @@ constexpr u64 d1d[] = {0x3f53eddad6d9c892ull, 0xa4e68fd3a5be28adull,
 				0xe7fdfc0c48f4ac1dull, 0x44960d13c3ae7889ull};
 constexpr u64 d2d[] = {0x5573bb6ec8c5d96full, 0x49602ebaa885202aull,
 				0x47d7d0eddd094949ull, 0xb68c5c25852521c6ull};
+constexpr u64 d1Gx[] = {0x68e8ded5dbec39caull, 0x3c3c6c2f18c0e55bull,
+				0xf7f9188477f6086aull, 0xafe524a88091d6daull};
+constexpr u64 d1Gy[] = {0x6f18b74046a55994ull, 0xaf60d71184a4ca53ull,
+				0xf176066831aad5c2ull, 0x8d837895a7dc179eull};
+constexpr u64 d2Gx[] = {0xca9ad478f1770dadull, 0x6c0a05bb2f2c9125ull,
+				0x8baaa8adfa83e460ull, 0x684446fbee5167efull};
+constexpr u64 d2Gy[] = {0xf28e513642bf309ull, 0x4f8d6bfa6a6846cull,
+				0xf9965b00c6d87affull, 0xc7337843bdb886bfull};
 bignum<4>	prime(sm2_p);
 bignum<4>	rr(sm2_p_rr);
 bignum<4>	bigOne(1);

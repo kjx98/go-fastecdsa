@@ -35,8 +35,8 @@ typedef	__uint32_t u32;
 typedef	__uint64_t u64;
 typedef __uint64_t be64;
 typedef __uint8_t u8;
-typedef __int64_t i64;
-typedef __int8_t i8;
+typedef __int64_t s64;
+typedef __int8_t s8;
 typedef	unsigned int	uint;
 
 // gcc before 6 w/out builtin_usubl_overflow...

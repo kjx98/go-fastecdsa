@@ -171,14 +171,14 @@ public:
 		if ( bit >= ndigits*64 ) return false;	// out of bound
 		return (this->d[bit >> 6] & ((u64)1 << (bit & 0x3f)));
 	}
-	u8 get_bit(const uint bit) const noexcept
+	uint get_bit(const uint bit) const noexcept
 	{
 		auto off = bit >> 6;
 		if ( off >= ndigits ) return 0;	// out of bound
 		auto rem = bit & 0x3f;
 		return (this->d[off] >> rem) & 1;
 	}
-	u8 get_bits(const uint bit, const uint cnt=5) const noexcept
+	uint get_bits(const uint bit, const uint cnt=5) const noexcept
 	{
 		auto off = bit >> 6;
 		if (off >= ndigits) return 0;
@@ -652,7 +652,7 @@ public:
 	bignumz() = default;
 	bignumz(const bignumz &) = default;
 	bignumz(const bignum<N>& bn) : bignum<N>(bn), carry(0) {}
-	explicit bignumz(const i64 v) noexcept : bignum<N>(v), carry(v>=0?0:-1)
+	explicit bignumz(const s64 v) noexcept : bignum<N>(v), carry(v>=0?0:-1)
 	{
 		if (v < 0) {
 #pragma GCC unroll 4

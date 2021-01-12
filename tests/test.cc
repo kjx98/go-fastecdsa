@@ -229,6 +229,7 @@ TEST(testEcc, TestPreCompute)
 	EXPECT_TRUE(pre_comps[4] == res);
 	sm2_p256.point_double(res, res);
 	EXPECT_TRUE(pre_comps[8] == res);
+	if (wSize < 16) return;
 	sm2_p256.point_add(res1, res, gg);
 	EXPECT_TRUE(pre_comps[9] == res1);
 	sm2_p256.point_double(res, res);
@@ -293,16 +294,20 @@ TEST(testEcc, TestScalarMult)
 	point_t<4>	gg(sm2_gx, sm2_gy);
 	sm2_p256.scalar_mult(res, gg, d1);
 	ASSERT_TRUE(res.z.is_one());
-	EXPECT_EQ(res.x.cmp(dx1), 0);
-	EXPECT_EQ(res.y.cmp(dy1), 0);
+	EXPECT_EQ(res.x.cmp(d1Gx), 0);
+	EXPECT_EQ(res.y.cmp(d1Gy), 0);
+#ifdef	ommit
 	std::cout << "res x1: " << res.x << std::endl;
 	std::cout << "res y1: " << res.y << std::endl;
+#endif
 	sm2_p256.scalar_mult(res, gg, d2);
 	ASSERT_TRUE(res.z.is_one());
-	EXPECT_EQ(res.x.cmp(dx2), 0);
-	EXPECT_EQ(res.y.cmp(dy2), 0);
+	EXPECT_EQ(res.x.cmp(d2Gx), 0);
+	EXPECT_EQ(res.y.cmp(d2Gy), 0);
+#ifdef	ommit
 	std::cout << "res x2: " << res.x << std::endl;
 	std::cout << "res y2: " << res.y << std::endl;
+#endif
 }
 
 TEST(testEcc, TestScalarMultNAF2)
@@ -334,17 +339,19 @@ TEST(testEcc, TestScalarMultNAF2)
 		if (!bCheck) std::cerr << "diff multNAF2 index: " << i << std::endl;
 		EXPECT_TRUE(sm2_p256.point_eq(res, pre_comps[i]));
 	}
-#ifdef	ommit
 	sm2_p256.scalar_multNAF2(res, gg, d1);
 	ASSERT_TRUE(res.z.is_one());
-	EXPECT_EQ(res.x.cmp(dx1), 0);
-	EXPECT_EQ(res.y.cmp(dy1), 0);
+	EXPECT_EQ(res.x.cmp(d1Gx), 0);
+	EXPECT_EQ(res.y.cmp(d1Gy), 0);
+#ifdef	ommit
 	std::cout << "res x1: " << res.x << std::endl;
 	std::cout << "res y1: " << res.y << std::endl;
+#endif
 	sm2_p256.scalar_multNAF2(res, gg, d2);
 	ASSERT_TRUE(res.z.is_one());
-	EXPECT_EQ(res.x.cmp(dx2), 0);
-	EXPECT_EQ(res.y.cmp(dy2), 0);
+	EXPECT_EQ(res.x.cmp(d2Gx), 0);
+	EXPECT_EQ(res.y.cmp(d2Gy), 0);
+#ifdef	ommit
 	std::cout << "res x2: " << res.x << std::endl;
 	std::cout << "res y2: " << res.y << std::endl;
 #endif
@@ -358,12 +365,20 @@ TEST(testEcc, TestScalarMultBase)
 	sm2_k256.pre_compute_base();
 	sm2_k256.scalar_mult_base(res, d1);
 	ASSERT_TRUE(res.z.is_one());
-	EXPECT_EQ(res.x.cmp(dx1), 0);
-	EXPECT_EQ(res.y.cmp(dy1), 0);
+	EXPECT_EQ(res.x.cmp(d1Gx), 0);
+	EXPECT_EQ(res.y.cmp(d1Gy), 0);
+#ifdef	ommit
+	std::cout << "res x1: " << res.x << std::endl;
+	std::cout << "res y1: " << res.y << std::endl;
+#endif
 	sm2_k256.scalar_mult_base(res, d2);
 	ASSERT_TRUE(res.z.is_one());
-	EXPECT_EQ(res.x.cmp(dx2), 0);
-	EXPECT_EQ(res.y.cmp(dy2), 0);
+	EXPECT_EQ(res.x.cmp(d2Gx), 0);
+	EXPECT_EQ(res.y.cmp(d2Gy), 0);
+#ifdef	ommit
+	std::cout << "res x1: " << res.x << std::endl;
+	std::cout << "res y1: " << res.y << std::endl;
+#endif
 }
 
 int main(int argc, char *argv[])
