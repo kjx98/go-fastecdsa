@@ -105,7 +105,7 @@ public:
 		os << std::dec;
 		return os;
 	}
-	bool operator<(const bignum& bn) {
+	bool operator<(const bignum& bn) const noexcept {
 #pragma GCC unroll 4
 		for (int i = ndigits - 1; i >= 0; i--) {
 			if (this->d[i] > bn.d[i]) return false;
@@ -113,10 +113,10 @@ public:
 		}
 		return false;
 	}
-	bool operator>=(const bignum& bn) {
+	bool operator>=(const bignum& bn) const noexcept {
 		return !(*this < bn);
 	}
-	bool operator==(const bignum& bn) {
+	bool operator==(const bignum& bn) const noexcept {
 #pragma GCC unroll 4
 		for (int i = ndigits - 1; i >= 0; i--) {
 			if (this->d[i] > bn.d[i]) return false;

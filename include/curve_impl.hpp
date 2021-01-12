@@ -61,7 +61,7 @@ struct point_t {
 		y.clear();
 		z.clear();
 	}
-	bool operator==(const point_t& q) {
+	bool operator==(const point_t& q) const noexcept {
 		if (x ==  q.x && y == q.y && z ==  q.z) return true;
 		// affine
 		return false;
@@ -632,7 +632,6 @@ public:
 		point_t<N>	tmp;
 		point_t<N>	pre_comps[wSize+1];
 		uint	nbits = scalar.num_bits();
-		//memset(&q, 0, sizeof(q));
 		q.clear();
 		if (nbits == 0) return;
 		this->pre_compute(pre_comps, p);
@@ -665,26 +664,35 @@ public:
 				const bignum<N>& scalar) const noexcept
 	{
 		point_t<N>	tmp;
-		uint	nbits = scalar.num_bits();
+		int	nbits = scalar.num_bits();
 		q.clear();
 		if (nbits == 0) return;
-		bool	skip = true;
+		point_t<N>	pres[3];
+		pres[0].clear();
+		pres[1] = p;
+		point_double(pres[2], p);
 		--nbits;
+		bool	skip = true;
 		if (nbits & 1) {
 			q = p;
 			skip = false;
 		}
 		for (int i = nbits; i >= 0; --i) {
 			if (!skip) point_double(q, q);
-			if ((i & 1) != 0) continue;
+			if (i & 1) continue;
 			u8		bits;
 			bits = scalar.get_bits(i, 2);
-			if ((bits & 1) == 0) continue;
-			bool	sign = (bits & 2);
-			if (sign) point_neg(tmp, p); else tmp =p;
-			if (!skip) point_add(q, q, tmp); else {
+			u8	sign = ~((bits >> 1) -1);
+			u8	digit = (1 << 2) - bits;
+			digit = (digit & sign) | (bits & ~sign);
+			if (i > 0 && scalar.get_bit(i-1) != 0) {
+				if (sign) --digit; else ++digit;
+			}
+			if (digit == 0) continue;
+			if (sign) point_neg(tmp, pres[digit]); else tmp = pres[digit];
+			if (likely(!skip)) point_add(q, q, tmp); else {
 				q = tmp;
-				skip =false;
+				skip = false;
 			}
 		}
 		this->apply_z(q);
