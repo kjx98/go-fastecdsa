@@ -651,7 +651,7 @@ public:
 	bignumz() = default;
 	bignumz(const bignumz &) = default;
 	bignumz(const bignum<N>& bn) : bignum<N>(bn), carry(0) {}
-	explicit bignumz(const s64 v) noexcept : bignum<N>(v), carry(v>=0?0:-1)
+	explicit bignumz(const i64 v) noexcept : bignum<N>(v), carry(v>=0?0:-1)
 	{
 		if (v < 0) {
 #pragma GCC unroll 4

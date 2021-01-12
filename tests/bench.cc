@@ -134,12 +134,23 @@ static void test_ECScalarMult(benchmark::State &state)
 {
 	bignum<4>	d1(d1d);
 	point_t<4>	res;
-	point_t<4>	gg(sm2_gx, sm2_gy, bigOne.data());
+	point_t<4>	gg(sm2_gx, sm2_gy);
 	for (auto _ : state) {
-		sm2_k256.scalar_mul(res, gg, d1);
+		sm2_p256.scalar_mult(res, gg, d1);
 	}
 }
 BENCHMARK(test_ECScalarMult);
+
+static void test_ECScalarMultNAF2(benchmark::State &state)
+{
+	bignum<4>	d1(d1d);
+	point_t<4>	res;
+	point_t<4>	gg(sm2_gx, sm2_gy);
+	for (auto _ : state) {
+		sm2_p256.scalar_multNAF2(res, gg, d1);
+	}
+}
+BENCHMARK(test_ECScalarMultNAF2);
 
 
 int main(int argc, char ** argv) {

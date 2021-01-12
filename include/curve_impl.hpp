@@ -47,17 +47,35 @@ struct point_t {
 	point_t() = default;
 	point_t(const point_t &) = default;
 	explicit point_t(const bignum<N>& xx, const bignum<N>& yy,
-		const bignum<N>& zz) : x(xx), y(yy), z(zz) {}
+		const bignum<N>& zz=bignum<N>(1)) : x(xx), y(yy), z(zz) {}
 	explicit point_t(const u64 *xx, const u64 *yy, const u64 *zz) :
 		x(xx), y(yy), z(zz)
 	{
+	}
+	explicit point_t(const u64 *xx, const u64 *yy) :
+		x(xx), y(yy), z(1)
+	{
+	}
+	void clear() {
+		x.clear();
+		y.clear();
+		z.clear();
 	}
 	bool operator==(const point_t& q) {
 		if (x ==  q.x && y == q.y && z ==  q.z) return true;
 		// affine
 		return false;
 	}
+	bool is_zero() const noexcept {
+		return z.is_zero(); // || y.is_zero();
+	}
 };
+
+
+constexpr int W = 4;
+constexpr int wSize = 1<<W;
+constexpr int wMask = (1<<W) - 1;
+constexpr int wNAFsize = 1<<(W +1);
 
 /**
  * struct ecc_curve - definition of elliptic curve
@@ -91,8 +109,6 @@ public:
 	{
 		static_assert(N > 3, "curve only support 256Bits or more");
 	}
-	static constexpr int W=4;
-	static constexpr int wSize=1<<W;
 	ecc_curve(ecc_curve &&) = default;
 	const uint ndigits() const { return N; }
 	explicit operator bool() const noexcept {
@@ -383,6 +399,12 @@ public:
 	{
 		apply_z(p.xd(), p.yd(), p.zd());
 	}
+	void point_neg(point_t<N>& q, const point_t<N>p) const noexcept
+	{
+		q.x = p.x;
+		q.y.sub(this->p, p.y);
+		q.z = p.z;
+	}
 	/* add-1998-cmo-2 algorithm
 	 * http://hyperelliptic.org/EFD/g1p/auto-shortw-jacobian-3.html
 	 */
@@ -583,8 +605,9 @@ public:
 		from_montgomery(y3, *y3p);
 		from_montgomery(z3, *z3p);
 	}
-	void scalar_mul(point_t<N>& q, const point_t<N>& p, const bignum<N>& scalar)
-	noexcept {
+	void scalar_mult(point_t<N>& q, const point_t<N>& p,
+					const bignum<N>& scalar) const noexcept
+	{
 		point_t<N>	tmp;
 		point_t<N>	pre_comps[wSize+1];
 		uint	nbits = scalar.num_bits();
@@ -593,20 +616,16 @@ public:
 		this->pre_compute(pre_comps, p);
 		bool	skip = true;
 		--nbits;
-		uint	mask=nbits % (W+1);
-		if (mask == W) {
-			q = pre_comps[wSize];
-			nbits -= mask;
-			skip = false;
-		}
 		for (int i = nbits; i >= 0; --i) {
 			if (!skip) point_double(q, q);
 			if (i % (W+1) != 0) continue;
 			u64		bits;
+			u8		digit;
 			bits = scalar.get_bits(i, W+1);
 			bool	sign = (bits & (1<<W));
-			bits &= (1 << W) -1 ;
-			select_point(tmp, bits, pre_comps);
+			digit = (sign)?((wNAFsize-bits) & wMask):bits;
+			if (digit == 0) continue;
+			select_point(tmp, digit, pre_comps);
 			if ( sign ) tmp.y.sub(this->p, tmp.y);
 			if (!skip) point_add(q, q, tmp); else {
 				q = tmp;
@@ -615,19 +634,37 @@ public:
 		}
 		this->apply_z(q);
 	}
-protected:
-	void point_add(point_t<N>& q, const point_t<N>& p1, const point_t<N>& p2)
-	const noexcept {
-		point_add_jacobian(q.xd(), q.yd(), q.zd(), p1.x.data(), p1.y.data(),
-						p1.z.data(), p2.x.data(), p2.y.data(), p2.z.data());
-	}
-	void point_double(point_t<N>& q, const point_t<N>& p) const noexcept {
-		point_double_jacobian(q.xd(), q.yd(), q.zd(),
-						p.x.data(), p.y.data(), p.z.data());
+	void scalar_multNAF2(point_t<N>& q, const point_t<N>& p,
+				const bignum<N>& scalar) const noexcept
+	{
+		point_t<N>	tmp;
+		uint	nbits = scalar.num_bits();
+		q.clear();
+		if (nbits == 0) return;
+		bool	skip = true;
+		--nbits;
+		for (int i = nbits; i >= 0; --i) {
+			if (!skip) point_double(q, q);
+			if ((i & 1) != 0) continue;
+			u8		bits;
+			u8		digit;
+			bits = scalar.get_bits(i, 2);
+			bool	sign = (bits & 2);
+			digit = (sign)?((4-bits) & 1):bits;
+			if (digit == 0) continue;
+			if (sign) point_neg(tmp, p); else tmp =p;
+			if (!skip) point_add(q, q, tmp); else {
+				q = tmp;
+				skip =false;
+			}
+		}
+		this->apply_z(q);
 	}
 	void pre_compute(point_t<N> pre_comp[wSize + 1], const point_t<N>& p)
-	noexcept {
-		memset(&pre_comp[0], 0, sizeof(pre_comp[0]));
+	const noexcept
+	{
+		pre_comp[0].clear();
+		//memset(&pre_comp[0], 0, sizeof(pre_comp[0]));
 		pre_comp[1] = p;
 		for (int i = 2; i <= wSize; ++i) {
 			if (i & 1) {
@@ -636,6 +673,22 @@ protected:
 				point_double(pre_comp[i], pre_comp[i >> 1]);
 			}
 		}
+	}
+	void point_double(point_t<N>& q, const point_t<N>& p) const noexcept {
+		point_double_jacobian(q.xd(), q.yd(), q.zd(),
+						p.x.data(), p.y.data(), p.z.data());
+	}
+	void point_add(point_t<N>& q, const point_t<N>& p1, const point_t<N>& p2)
+	const noexcept {
+		point_add_jacobian(q.xd(), q.yd(), q.zd(), p1.x.data(), p1.y.data(),
+						p1.z.data(), p2.x.data(), p2.y.data(), p2.z.data());
+	}
+protected:
+	void point_add(point_t<N>& q, const point_t<N>& p1, const bignum<N>& x2,
+			const bignum<N>& y2) const noexcept
+	{
+		point_add_jacobian(q.xd(), q.yd(), q.zd(), p1.x.data(), p1.y.data(),
+						p1.z.data(), x2.data(), y2.data());
 	}
 	bool select_point(point_t<N>& pt, const uint idx,
 				const point_t<N> pre_comps[wSize+1]) const noexcept
