@@ -303,7 +303,6 @@ TEST(testEcc, TestECDBLk256)
 	EXPECT_EQ(z3.cmp(zz3), 0);
 }
 
-// not work yet
 TEST(testEcc, TestScalarMult)
 {
 	bignum<4>	d1(d1d), d2(d2d);
@@ -333,7 +332,15 @@ TEST(testEcc, TestScalarMultNAF2)
 	point_t<4>	res;
 	point_t<4>	gg(sm2_gx, sm2_gy);
 	point_t<4>	pre_comps[wSize+1];
-	pre_compute<4>(sm2_p256, pre_comps, gg);
+	sm2_p256.to_montgomery(res.x, gg.x);
+	sm2_p256.to_montgomery(res.y, gg.y);
+	sm2_p256.to_montgomery(res.z, gg.z);
+	pre_compute<4>(sm2_p256, pre_comps, res);
+	for (int i=1; i<=wSize; ++i) {
+		sm2_p256.from_montgomery(pre_comps[i].x, pre_comps[i].x);
+		sm2_p256.from_montgomery(pre_comps[i].y, pre_comps[i].y);
+		sm2_p256.from_montgomery(pre_comps[i].z, pre_comps[i].z);
+	}
 	{
 		bignum<4>	ss(3);
 		sm2_p256.scalar_multNAF2(res, gg, ss);
@@ -374,7 +381,6 @@ TEST(testEcc, TestScalarMultNAF2)
 #endif
 }
 
-// not work yet
 TEST(testEcc, TestScalarMultBase)
 {
 	bignum<4>	d1(d1d), d2(d2d);

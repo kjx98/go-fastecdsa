@@ -432,6 +432,95 @@ void point_add_jacob(const curveT& curve, bnT& x3, bnT& y3, bnT& z3,
 #endif
 }
 
+template<typename bnT, typename curveT>
+void point_addz_jacob(const curveT& curve, bnT& x3, bnT& y3, bnT& z3,
+			const bnT& x1, const bnT& y1, const bnT& z1, const bnT& x2,
+			const bnT& y2) noexcept
+{
+	if (z1.is_zero()) {
+		x3 = x2;
+		y3 = y2;
+		z3 = curve.mont_one();
+		return;
+	}
+	bool	z1_is_one = (z1 == curve.mont_one());
+	bnT	u1, u2, s1, s2, h, hh, hhh, r, v;
+#define	t1		z1z1
+	bnT	z1z1;
+
+	/* u1 = x1 z2^2  */
+	/* u2 = x2 z1^2  */
+	u1 = x1;
+	if (unlikely(z1_is_one)) {
+		u2 = x2;
+	} else {
+		// z1z1 = z1^2
+		curve.mont_msqr(z1z1, z1);
+		// u2 = x2 z1^2
+		curve.mont_mmult(u2, x2, z1z1);
+	}
+
+	/* h = u2 - u1 */
+	curve.mod_sub(h, u2, u1);
+	/* s1 = y1 z2^3  */
+	// s1 = y1
+	s1 = y1;
+
+	/* s2 = y2 z1^3  */
+	// s2 = y2
+	s2 = y2;
+	if ( likely(!z1_is_one) ) {
+		// s2 = y2 z1^3
+		curve.mont_mmult(s2, s2, z1z1);
+		curve.mont_mmult(s2, s2, z1);
+	}
+	/* r = s2 - s1  */
+	curve.mod_sub(r, s2, s1);
+
+	if (h.is_zero()) {
+		if (r.is_zero()) {
+			/* P1 and P2 are the same - use duplicate function. */
+			point_doublez_jacob(curve, x3, y3, z3, x2, y2);
+			return;
+		}
+		/* P1 is the inverse of P2.  */
+		x3 = bnT(1);
+		y3 = bnT(1);
+		z3.clear();
+		return;
+	}
+	// hh = h^2
+	curve.mont_msqr(hh, h);
+	// hhh = h * hh
+	curve.mont_mmult(hhh, hh, h);
+	// v = u1 * hh
+	curve.mont_mmult(v, u1, hh);
+
+	// x3 = r^2 - hhh - 2*v
+	curve.mont_msqr(x3, r);
+	curve.mod_sub_from(x3, hhh);
+	curve.mod_sub_from(x3, v);
+	curve.mod_sub_from(x3, v);
+
+	// y3 = v - x3
+	curve.mod_sub(y3, v, x3);
+	// y3 = r * (v - x3)
+	curve.mont_mmult(y3, r, y3);
+	// t1 = s1 * hhh
+	curve.mont_mmult(t1, s1, hhh);
+	// y3 = r * (v - x3) - s1 *hhh
+	curve.mod_sub_from(y3, t1);
+
+	// z3 = z1 * z2 * h
+	// z3 = z1 h
+	if (z1_is_one) {
+		z3 = h;
+	} else {
+		curve.mont_mmult(z3, z1, h);
+	}
+#undef	t1
+}
+
 }
 
 

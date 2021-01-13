@@ -617,8 +617,11 @@ public:
 		point_t<N>	pres[wSize+1];
 		uint	nbits = scalar.num_bits();
 		q.clear();
-		if (nbits == 0) return;
-		pre_compute<N>(*this, pres, p);
+		if ( unlikely(nbits == 0) ) return;
+		to_montgomery(tmp.x, p.x);
+		to_montgomery(tmp.y, p.y);
+		to_montgomery(tmp.z, p.z);
+		pre_compute<N>(*this, pres, tmp);
 		bool	skip = true;
 		if (nbits % W != 0) --nbits;
 		for (int i = nbits; i >= 0; --i) {
@@ -652,6 +655,10 @@ public:
 				skip =false;
 			}
 		}
+		// montgomery reduction
+		from_montgomery(q.x, q.x);
+		from_montgomery(q.y, q.y);
+		from_montgomery(q.z, q.z);
 		this->apply_z(q);
 	}
 	void scalar_multNAF2(point_t<N>& q, const point_t<N>& p,
@@ -662,9 +669,12 @@ public:
 		q.clear();
 		if (nbits == 0) return;
 		point_t<N>	pres[3];
+		to_montgomery(tmp.x, p.x);
+		to_montgomery(tmp.y, p.y);
+		to_montgomery(tmp.z, p.z);
 		pres[0].clear();
-		pres[1] = p;
-		point_double(pres[2], p);
+		pres[1] = tmp;
+		point_double(pres[2], tmp);
 		bool	skip = true;
 		if (nbits & 1) --nbits;
 		for (int i = nbits; i >= 0; --i) {
@@ -682,25 +692,21 @@ public:
 				skip = false;
 			}
 		}
+		// montgomery reduction
+		from_montgomery(q.x, q.x);
+		from_montgomery(q.y, q.y);
+		from_montgomery(q.z, q.z);
 		this->apply_z(q);
 	}
 	void point_double(point_t<N>& q, const point_t<N>& p) const noexcept {
-		point_double_jacobian(q.xd(), q.yd(), q.zd(),
-						p.x.data(), p.y.data(), p.z.data());
+		point_double_jacob(*this, q.x, q.y, q.z, p.x, p.y, p.z);
 	}
 	void point_add(point_t<N>& q, const point_t<N>& p1, const point_t<N>& p2)
 	const noexcept {
-		point_add_jacobian(q.xd(), q.yd(), q.zd(),
-						p1.x.data(), p1.y.data(), p1.z.data(),
-						p2.x.data(), p2.y.data(), p2.z.data());
+		point_add_jacob(*this, q.x, q.y, q.z, p1.x, p1.y, p1.z,
+						p2.x, p2.y, p2.z);
 	}
 protected:
-	void point_add(point_t<N>& q, const point_t<N>& p1, const felem_t& x2,
-			const felem_t& y2) const noexcept
-	{
-		point_add_jacobian(q.xd(), q.yd(), q.zd(), p1.x.data(), p1.y.data(),
-						p1.z.data(), x2.data(), y2.data());
-	}
 	const std::string name;
 	const felem_t gx;
 	const felem_t gy;
@@ -867,14 +873,6 @@ public:
 		pt = g_pre_comp[idx>>4][idx&0xf];
 		return true;
 	}
-#ifdef	ommit
-	bool select_base_point(point_t<4>& pt, const uint idx, const uint ba)
-	const noexcept {
-		if (idx >= 16 || ba >= 2) return false;
-		pt = g_pre_comp[ba][idx];
-		return true;
-	}
-#endif
 	void scalar_mult_base(point_t<4>& q, const felem_t& scalar) noexcept
 	{
 		bool	skip = true;
@@ -930,9 +928,7 @@ public:
 		felem_t	*z3p = reinterpret_cast<felem_t *>(z3);
 		to_montgomery(xp, x1);
 		to_montgomery(yp, y1);
-		if (z_is_one) {
-			zp = mont_one();
-		} else {
+		if (!z_is_one) {
 			to_montgomery(zp, z1);
 		}
 		if (z_is_one) point_doublez_jacob(*this, *x3p, *y3p, *z3p, xp, yp); else
@@ -978,10 +974,12 @@ public:
 		} else {
 			to_montgomery(z2p, z2);
 		}
-#ifdef	ommit
-		if (z_is_one) point_doublez_jacob(*this, *x3p, *y3p, *z3p, xp, yp); else
-#endif
-		point_add_jacob(*this, *x3p, *y3p, *z3p, x1p, y1p, z1p, x2p, y2p, z2p);
+		if (z2_is_one) {
+			point_addz_jacob(*this, *x3p, *y3p, *z3p, x1p, y1p, z1p, x2p, y2p);
+		} else {
+			point_add_jacob(*this, *x3p, *y3p, *z3p, x1p, y1p, z1p,
+							x2p, y2p, z2p);
+		}
 		// montgomery reduction
 		from_montgomery(x3, *x3p);
 		from_montgomery(y3, *y3p);
