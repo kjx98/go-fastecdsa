@@ -72,10 +72,9 @@ struct point_t {
 };
 
 
-constexpr int W = 4;
-constexpr int wSize = 1<<W;
-constexpr int wMask = (1<<W) - 1;
-constexpr int wNAFsize = 1<<(W +1);
+constexpr int W = 5;
+constexpr int wSize = 1<<(W-1);
+constexpr int wNAFsize = 1<<W;
 
 /**
  * struct ecc_curve - definition of elliptic curve
@@ -636,17 +635,33 @@ public:
 		if (nbits == 0) return;
 		this->pre_compute(pres, p);
 		bool	skip = true;
-		if (nbits % (W+1) != 0) --nbits;
+		if (nbits % W != 0) --nbits;
 		for (int i = nbits; i >= 0; --i) {
 			if (!skip) point_double(q, q);
-			if (i % (W+1) != 0) continue;
+			if (i % W != 0) continue;
 			uint	bits;
-			bits = scalar.get_bits(i, W+1);
-			bool	sign = (bits & (1<<W));
+#ifdef	ommit
+			bits = vli_get_bits<N, W>(scalar.data(), i);
+			bool	sign = (bits & (1<<(W-1)));
 			int digit = (sign)?(bits - wNAFsize):bits;
 			if (i > 0 && scalar.get_bit(i-1)) ++digit;
 			if (digit == 0) continue;
 			if ( sign ) point_neg(tmp, pres[-digit]); else tmp = pres[digit];
+#else
+			uint	digit;
+			bits = vli_get_bits<N, W+1>(scalar.data(), i-1);
+			auto sign = recode_scalar_bits<W>(digit, bits);
+			if (digit == 0) continue;
+#ifdef	WITH_CONDITIONAL_COPY
+			tmp = pres[digit];
+			bignum<N>	ny;
+			ny.sub(this->p, tmp.y);
+			ny.copy_conditional(tmp.y, sign-1);
+			tmp.y = ny;
+#else
+			if ( sign ) point_neg(tmp, pres[digit]); else tmp = pres[digit];
+#endif
+#endif
 			if (!skip) point_add(q, q, tmp); else {
 				q = tmp;
 				skip =false;
@@ -671,7 +686,7 @@ public:
 			if (!skip) point_double(q, q);
 			if (i & 1) continue;
 			uint	bits;
-			bits = scalar.get_bits(i, 2);
+			bits = vli_get_bits<N, 2>(scalar.data(), i);
 			bool	sign = (bits & 2);
 			int digit = (sign)?(bits - 4):bits;
 			if (i > 0 && scalar.get_bit(i-1)) ++digit;

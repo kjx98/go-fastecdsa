@@ -105,10 +105,32 @@ static bool vli_test_bit(const u64 *vli, uint bit) noexcept
 }
 
 template<const uint N> forceinline
-static u8 get_bit(const u64 *vli, const uint bit) noexcept
+static u8 vli_get_bit(const u64 *vli, const uint bit) noexcept
 {
 	if ( bit >= N*64 ) return 0;	// out of bound
 	return (vli[bit >> 6] >> (bit & 0x3f)) & 1;
+}
+
+// -1 <= bit < 64*N, cnt <= 8
+template<const uint N, const uint cnt=5> forceinline
+static uint vli_get_bits(const u64 *vli, const int bit) noexcept
+{
+	static_assert(cnt <= 8, "w of wNAF MUST no larger than 8");
+	uint	rr;
+	if (unlikely(bit < 0)) {
+		rr = vli[0] << 1;
+		return rr & ((1<<cnt) - 1);
+	}
+	auto off = (uint)bit >> 6;
+	if (off >= N) return 0;
+	auto rem = (uint)bit & 0x3f;
+	rr = (vli[off] >> rem) & 0xff;
+	if (off < N-1 && rem > (64 - cnt)) {
+		off++;
+		rr &= (1 << (64-rem)) - 1;
+		rr |= (vli[off] << (64 - rem));
+	}
+	return rr & ((1<<cnt) - 1);
 }
 
 /**

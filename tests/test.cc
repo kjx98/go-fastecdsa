@@ -125,14 +125,16 @@ TEST(testvli, TestNumBits)
 
 TEST(testvli, TestGetBits)
 {
-	bignum<4>	d1(d1d);
-	EXPECT_EQ(d1.get_bits(0, 4), 2);
-	EXPECT_EQ(d1.get_bits(20, 4), 0xd);
-	EXPECT_EQ(d1.get_bits(20, 2), 1);
-	EXPECT_EQ(d1.get_bits(64, 4), 0xd);
-	EXPECT_EQ(d1.get_bits(124, 4), 0xa);
-	EXPECT_EQ(d1.get_bits(124, 2), 2);
-	EXPECT_EQ(d1.get_bits(188, 4), 0xe);
+	uint	res;
+	res = vli_get_bits<4,4>(d1d, 0);
+	EXPECT_EQ(res, 2);
+	res = vli_get_bits<4,4>(d1d, 20);
+	EXPECT_EQ(res, 0xd);
+	EXPECT_EQ((vli_get_bits<4, 2>(d1d, 20)), 1);
+	EXPECT_EQ((vli_get_bits<4, 4>(d1d, 64)), 0xd);
+	EXPECT_EQ((vli_get_bits<4, 4>(d1d, 124)), 0xa);
+	EXPECT_EQ((vli_get_bits<4, 2>(d1d, 124)), 2);
+	EXPECT_EQ((vli_get_bits<4, 4>(d1d, 188)), 0xe);
 }
 
 TEST(testVli, TestInverse)

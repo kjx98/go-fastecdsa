@@ -64,41 +64,35 @@ protected:
 	u64		d[N];
 };
 
-template<const uint ndigits>
-class bignum : public bn_words<ndigits> {
+template<const uint N>
+class bignum : public bn_words<N> {
 public:
 	bignum() = default;
 	bignum(const bignum &) = default;
-	constexpr bignum(bn_words<ndigits> init) noexcept :
-		bn_words<ndigits>{init} {}
-	explicit bignum(const u64 v) noexcept : bn_words<ndigits>(v) {}
+	constexpr bignum(bn_words<N> init) noexcept : bn_words<N>{init} {}
+	explicit bignum(const u64 v) noexcept : bn_words<N>(v) {}
 	explicit bignum(const u64 *src) {
-		auto	*ss=reinterpret_cast<const bignum<ndigits> *>(src);
+		auto	*ss=reinterpret_cast<const bignum<N> *>(src);
 		*this = *ss;
-#ifdef	ommit
-#pragma GCC unroll 4
-		for (uint i = 0; i < ndigits; i++)
-			this->d[i] = src[i];
-#endif
 	}
 	bignum<4>& bn256() noexcept {
-		static_assert(ndigits >= 4, "ndigits >= 4 required.");
+		static_assert(N >= 4, "ndigits >= 4 required.");
 		bignum<4>	*res=reinterpret_cast<bignum<4> *>(this->d);
 		return *res;
 	}
 	void clear() noexcept
 	{
 #pragma GCC unroll 4
-		for (uint i = 0; i < ndigits; i++)
+		for (uint i = 0; i < N; i++)
 			this->d[i] = 0;
 	}
-	friend std::ostream& operator<<(std::ostream& os, const bignum& x)
+	friend std::ostream& operator<<(std::ostream& os, const bignum& x) noexcept
 	{
 		os << std::hex;
 		if (x.is_u64()) {
 			os << x.d[0];
 		} else {
-			for (uint i=0; i < ndigits; i++) {
+			for (uint i=0; i < N; i++) {
 				os << " " << x.d[i];
 			}
 		}
@@ -107,7 +101,7 @@ public:
 	}
 	bool operator<(const bignum& bn) const noexcept {
 #pragma GCC unroll 4
-		for (int i = ndigits - 1; i >= 0; i--) {
+		for (int i = N - 1; i >= 0; i--) {
 			if (this->d[i] > bn.d[i]) return false;
 			else if (this->d[i] < bn.d[i]) return true;
 		}
@@ -118,9 +112,8 @@ public:
 	}
 	bool operator==(const bignum& bn) const noexcept {
 #pragma GCC unroll 4
-		for (int i = ndigits - 1; i >= 0; i--) {
-			if (this->d[i] > bn.d[i]) return false;
-			else if (this->d[i] < bn.d[i]) return false;
+		for (int i = N - 1; i >= 0; i--) {
+			if (this->d[i] != bn.d[i]) return false;
 		}
 		return true;
 	}
@@ -129,8 +122,8 @@ public:
 	bool is_zero() const noexcept
 	{
 #pragma GCC unroll 4
-		for (uint i = 0; i < ndigits; i++) {
-			if (this->d[i]) return false;
+		for (uint i = 0; i < N; i++) {
+			if (this->d[i] != 0) return false;
 		}
 		return true;
 	}
@@ -141,7 +134,7 @@ public:
 	{
 		if (this->d[0] != 1) return false;
 #pragma GCC unroll 4
-		for (uint i = 1; i < ndigits; i++) {
+		for (uint i = 1; i < N; i++) {
 			if (this->d[i]) return false;
 		}
 		return true;
@@ -149,53 +142,35 @@ public:
 	bool is_u64() const noexcept
 	{
 #pragma GCC unroll 4
-		for (uint i = 1; i < ndigits; i++) {
-			if (this->d[i]) return false;
+		for (uint i = 1; i < N; i++) {
+			if (this->d[i] != 0) return false;
 		}
 		return true;
 	}
 	/* Sets dest = this, copyout */
 	void set(u64 *dest) const noexcept
 	{
-		auto	*res=reinterpret_cast<bignum<ndigits> *>(dest);
+		auto	*res=reinterpret_cast<bignum<N> *>(dest);
 		*res = *this;
-#ifdef	ommit
-#pragma GCC unroll 4
-		for (uint i = 0; i < ndigits; i++)
-			dest[i] = this->d[i];
-#endif
 	}
 	/* Returns nonzero if bit bit of vli is set. */
 	bool test_bit(const uint bit) const noexcept
 	{
-		if ( bit >= ndigits*64 ) return false;	// out of bound
+		if ( bit >= N*64 ) return false;	// out of bound
 		return (this->d[bit >> 6] & ((u64)1 << (bit & 0x3f)));
 	}
 	uint get_bit(const uint bit) const noexcept
 	{
 		auto off = bit >> 6;
-		if ( off >= ndigits ) return 0;	// out of bound
+		if ( off >= N ) return 0;	// out of bound
 		auto rem = bit & 0x3f;
 		return (this->d[off] >> rem) & 1;
-	}
-	uint get_bits(const uint bit, const uint cnt=5) const noexcept
-	{
-		auto off = bit >> 6;
-		if (off >= ndigits) return 0;
-		auto rem = bit & 0x3f;
-		u8	rr = (this->d[off] >> rem) & 0xff;
-		off++;
-		if (off < ndigits && rem > (64 - cnt)) {
-			rr &= (1 << (64-rem)) - 1;
-			rr |= (this->d[off] << (64 - rem)) & 0xff;
-		}
-		return rr & ((1<<cnt) - 1);
 	}
 	/* copy_conditional copies in to out iff mask is all ones. */
 	void copy_conditional(const bignum& in, u64 mask)
 	{
 #pragma GCC unroll 4
-		for (uint i = 0; i < ndigits; ++i) {
+		for (uint i = 0; i < N; ++i) {
 			const u64 tmp = mask & (in.d[i] ^ this->d[i]);
 			this->d[i] ^= tmp;
 		}
@@ -205,7 +180,6 @@ public:
  *
  * @left:		vli
  * @right:		vli
- * @ndigits:		length of both vlis
  *
  * Returns sign of @left - @right, i.e. -1 if @left < @right,
  * 0 if @left == @right, 1 if @left > @right.
@@ -213,7 +187,7 @@ public:
 	int cmp(const bignum& right) const noexcept
 	{
 #pragma GCC unroll 4
-		for (int i = ndigits - 1; i >= 0; i--) {
+		for (int i = N - 1; i >= 0; i--) {
 			if (this->d[i] > right.d[i]) return 1;
 			else if (this->d[i] < right.d[i]) return -1;
 		}
@@ -221,11 +195,12 @@ public:
 	}
 	int cmp(const u64 *right) const noexcept
 	{
-		auto	*rt=reinterpret_cast<const bignum<ndigits> *>(right);
+#ifndef	ommit
+		auto	*rt=reinterpret_cast<const bignum<N> *>(right);
 		return this->cmp(*rt);
-#ifdef	ommit
+#else
 #pragma GCC unroll 4
-		for (int i = ndigits - 1; i >= 0; i--) {
+		for (int i = N - 1; i >= 0; i--) {
 			if (this->d[i] > right[i]) return 1;
 			else if (this->d[i] < right[i]) return -1;
 		}
@@ -236,7 +211,7 @@ public:
 	{
 		u64 carry = 0;
 #pragma GCC unroll 4
-		for (uint i = 0; i < ndigits; i++) {
+		for (uint i = 0; i < N; i++) {
 			u64 temp = x.d[i];
 			this->d[i] = (temp << 1) | carry;
 			carry = temp >> 63;
@@ -247,7 +222,7 @@ public:
 	{
 		u64 carry = 0;
 #pragma GCC unroll 4
-		for (uint i = 0; i < ndigits; i++) {
+		for (uint i = 0; i < N; i++) {
 			u64 temp = this->d[i];
 			this->d[i] = (temp << cnt) | carry;
 			carry = temp >> (64 - cnt);
@@ -259,7 +234,7 @@ public:
 	{
 		u64 carry = 0;
 #pragma GCC unroll 4
-		for (int i=ndigits - 1; i >= 0; i--) { 
+		for (int i=N - 1; i >= 0; i--) { 
 			u64 temp = this->d[i];
 			this->d[i] = (temp >> 1) | carry;
 			carry = temp << 63;
@@ -269,20 +244,20 @@ public:
 	void rshift1w() noexcept
 	{
 #pragma GCC unroll 4
-		for (uint i = 1; i < ndigits; i++) {
+		for (uint i = 1; i < N; i++) {
 			this->d[i-1] = this->d[i];
 		}
-		this->d[ndigits-1] = 0;
+		this->d[N-1] = 0;
 	}
 /* Computes result = this + right, returning carry. Can modify in place. */
 	bool add(const bignum& left, const bignum &right) noexcept
 	{
 #ifdef	NO_BUILTIN_OVERFLOW
-		return vli_add<ndigits>(this->d, left.d, right.d);
+		return vli_add<N>(this->d, left.d, right.d);
 #else
 		bool carry = false;
 #pragma GCC unroll 4
-		for (uint i = 0; i < ndigits; i++) {
+		for (uint i = 0; i < N; i++) {
 			u64 sum;
 			auto c_carry = __builtin_uaddl_overflow(left.d[i],right.d[i],&sum);
 			if (unlikely(carry)) {
@@ -297,11 +272,11 @@ public:
 	bool uadd(const bignum& left, const u64 right) noexcept
 	{
 #ifdef	NO_BUILTIN_OVERFLOW
-		return vli_uadd<ndigits>(this->d, left.d, right);
+		return vli_uadd<N>(this->d, left.d, right);
 #else
 		auto carry = __builtin_uaddl_overflow(left.d[0], right, this->d);
 #pragma GCC unroll 4
-		for (uint i = 1; i < ndigits; i++) {
+		for (uint i = 1; i < N; i++) {
 			if (unlikely(carry)) {
 				carry = __builtin_uaddl_overflow(left.d[i], 1, this->d+i);
 			} else this->d[i] = left.d[i];
@@ -313,11 +288,11 @@ public:
 	bool add_to(const bignum& right) noexcept
 	{
 #ifdef	NO_BUILTIN_OVERFLOW
-		return vli_add_to<ndigits>(this->d, right.d);
+		return vli_add_to<N>(this->d, right.d);
 #else
 		bool carry = false;
 #pragma GCC unroll 4
-		for (uint i = 0; i < ndigits; i++) {
+		for (uint i = 0; i < N; i++) {
 			u64 sum;
 			auto c_carry = __builtin_uaddl_overflow(this->d[i],right.d[i],&sum);
 			if (unlikely(carry)) {
@@ -330,18 +305,18 @@ public:
 	}
 	bool add_to(const u64* right) noexcept
 	{
-		auto	*rt=reinterpret_cast<const bignum<ndigits> *>(right);
+		auto	*rt=reinterpret_cast<const bignum<N> *>(right);
 		return this->add_to(*rt);
 	}
 /* Computes this = this + right, returning carry. Can modify in place. */
 	bool uadd_to(const u64 right) noexcept
 	{
 #ifdef	NO_BUILTIN_OVERFLOW
-		return vli_uadd_to<ndigits>(this->d, right);
+		return vli_uadd_to<N>(this->d, right);
 #else
 		auto carry = __builtin_uaddl_overflow(this->d[0], right, this->d);
 #pragma GCC unroll 4
-		for (uint i = 1; i < ndigits; i++) {
+		for (uint i = 1; i < N; i++) {
 			if (unlikely(carry)) {
 				carry = __builtin_uaddl_overflow(this->d[i], 1, this->d+i);
 			} else break;
@@ -355,7 +330,6 @@ public:
  * @result:		where to write result(this)
  * @left:		vli
  * @right		vli
- * @ndigits:		length of all vlis
  *
  * Note: can modify in-place.
  *
@@ -364,11 +338,11 @@ public:
 	bool sub(const bignum& left, const bignum& right) noexcept
 	{
 #ifdef	NO_BUILTIN_OVERFLOW
-		return vli_sub<ndigits>(this->d, left.d, right.d);
+		return vli_sub<N>(this->d, left.d, right.d);
 #else
 		bool borrow = false;
 #pragma GCC unroll 4
-		for (uint i = 0; i < ndigits; i++) {
+		for (uint i = 0; i < N; i++) {
 			u64 diff;
 			auto c_borrow=__builtin_usubl_overflow(left.d[i],right.d[i],&diff);
 			if (unlikely(borrow)) {
@@ -383,11 +357,11 @@ public:
 	bool usub(const bignum& left, const u64 right) noexcept
 	{
 #ifdef	NO_BUILTIN_OVERFLOW
-		return vli_usub<ndigits>(this->d, left.d, right);
+		return vli_usub<N>(this->d, left.d, right);
 #else
 		auto borrow = __builtin_usubl_overflow(left.d[0], right, this->d);
 #pragma GCC unroll 4
-		for (uint i = 1; i < ndigits; i++) {
+		for (uint i = 1; i < N; i++) {
 			if (unlikely(borrow)) {
 				borrow = __builtin_usubl_overflow(left.d[i], 1, this->d+i);
 			} else this->d[i] = left.d[i];
@@ -398,11 +372,11 @@ public:
 	bool sub_from(const bignum& right) noexcept
 	{
 #ifdef	NO_BUILTIN_OVERFLOW
-		return vli_sub_from<ndigits>(this->d, right.d);
+		return vli_sub_from<N>(this->d, right.d);
 #else
 		bool borrow = false;
 #pragma GCC unroll 4
-		for (uint i = 0; i < ndigits; i++) {
+		for (uint i = 0; i < N; i++) {
 			u64 diff;
 			auto c_borrow = __builtin_usubl_overflow(this->d[i], right.d[i],
 									&diff);
@@ -418,11 +392,11 @@ public:
 	bool usub_from(const u64 right) noexcept
 	{
 #ifdef	NO_BUILTIN_OVERFLOW
-		return vli_usub_from<ndigits>(this->d, right);
+		return vli_usub_from<N>(this->d, right);
 #else
 		auto borrow = __builtin_usubl_overflow(this->d[0], right, this->d);
 #pragma GCC unroll 4
-		for (uint i = 1; i < ndigits; i++) {
+		for (uint i = 1; i < N; i++) {
 			if (unlikely(borrow)) {
 				borrow = __builtin_usubl_overflow(this->d[i], 1, this->d+i);
 			} else break;
@@ -430,10 +404,12 @@ public:
 		return borrow;
 #endif
 	}
+#ifdef	ommit
 	bool is_negative() const noexcept
 	{
-		return (this->d[ndigits-1] & ((u64)1 << 63)) != 0;
+		return (this->d[N-1] & ((u64)1 << 63)) != 0;
 	}
+#endif
 	bool is_even() const noexcept {
 		return (this->d[0] & 1) == 0;
 	}
@@ -448,7 +424,7 @@ public:
 		 * be nonzero.
 		 */
 		int i;
-		for (i = ndigits - 1; i >= 0 && this->d[i] == 0; i--);
+		for (i = N - 1; i >= 0 && this->d[i] == 0; i--);
 		return (i + 1);
 	}
 	uint num_bits() const noexcept
@@ -463,14 +439,13 @@ public:
  *
  * @dest:		destination vli
  * @src:		source array of u64 BE values
- * @ndigits:		length of both vli and array
  */
 	void from_be64(const void *src) noexcept
 	{
 		const u64 *from = (const u64 *)src;
 #pragma GCC unroll 4
-		for (uint i = 0; i < ndigits; i++)
-			this->d[i] = be64toh(from[ndigits - 1 - i]);
+		for (uint i = 0; i < N; i++)
+			this->d[i] = be64toh(from[N - 1 - i]);
 	}
 /* Computes this = (left + right) % mod.
  * Assumes that left < mod and right < mod, result != mod.
@@ -501,147 +476,143 @@ public:
 			this->add_to(mod);
 	}
 
-	template<const u64 k0>
-	forceinline
+	template<const u64 k0> forceinline
 	friend void mont_reduction(bignum& res,  const bignum& y,
 					const bignum& prime) noexcept
 	{
-		u64	s[ndigits*2];
-		u64	r[ndigits+2];
-		vli_clear<ndigits + 2>(r);
+		u64	s[N*2];
+		u64	r[N+2];
+		vli_clear<N + 2>(r);
 #pragma GCC unroll 4
-		for (uint i=0; i < ndigits; i++) {
+		for (uint i=0; i < N; i++) {
 			u64	u = (r[0] + y.d[i]) * k0;
-			vli_umult<ndigits>(s, prime.d, u);
-			vli_uadd_to<ndigits + 2>(r, y.d[i]);
-			vli_add_to<ndigits + 2>(r, s);
-			vli_rshift1w<ndigits + 2>(r);	
+			vli_umult<N>(s, prime.d, u);
+			vli_uadd_to<N + 2>(r, y.d[i]);
+			vli_add_to<N + 2>(r, s);
+			vli_rshift1w<N + 2>(r);	
 		}
-		if (r[ndigits] !=0 || vli_cmp<ndigits>(r, prime.d) >= 0) {
-			vli_sub<ndigits>(res.d, r, prime.d);
-		} else vli_set<ndigits>(res.d, r);
+		if (r[N] !=0 || vli_cmp<N>(r, prime.d) >= 0) {
+			vli_sub<N>(res.d, r, prime.d);
+		} else vli_set<N>(res.d, r);
 	}
 	void mont_reduction(const bignum& y, const bignum& prime, const u64 k0)
 	noexcept
 	{
-		u64	s[ndigits*2];
-		u64	r[ndigits+2];
-		vli_clear<ndigits + 2>(r);
+		u64	s[N*2];
+		u64	r[N+2];
+		vli_clear<N + 2>(r);
 #pragma GCC unroll 4
-		for (uint i=0; i < ndigits; i++) {
+		for (uint i=0; i < N; i++) {
 			u64	u = (r[0] + y.d[i]) * k0;
-			vli_umult<ndigits>(s, prime.d, u);
-			vli_uadd_to<ndigits + 2>(r, y.d[i]);
-			vli_add_to<ndigits + 2>(r, s);
-			vli_rshift1w<ndigits + 2>(r);	
+			vli_umult<N>(s, prime.d, u);
+			vli_uadd_to<N + 2>(r, y.d[i]);
+			vli_add_to<N + 2>(r, s);
+			vli_rshift1w<N + 2>(r);	
 		}
-		if (r[ndigits] !=0 || vli_cmp<ndigits>(r, prime.d) >= 0) {
-			vli_sub<ndigits>(this->d, r, prime.d);
-		} else vli_set<ndigits>(this->d, r);
+		if (r[N] !=0 || vli_cmp<N>(r, prime.d) >= 0) {
+			vli_sub<N>(this->d, r, prime.d);
+		} else vli_set<N>(this->d, r);
 	}
-	template<const u64 k0>
-	forceinline
+	template<const u64 k0> forceinline
 	friend void mont_mult(bignum& res, const bignum& x, const bignum& y,
 					const bignum& prime) noexcept
 	{
-		u64	s[ndigits*2];
-		u64	r[ndigits+2];
-		vli_clear<ndigits + 2>(r);
+		u64	s[N*2];
+		u64	r[N+2];
+		vli_clear<N + 2>(r);
 #pragma GCC unroll 4
-		for (uint i=0; i < ndigits;i++) {
+		for (uint i=0; i < N;i++) {
 			u64	u = (r[0] + y.d[i]*x.d[0]) * k0;
-			vli_umult<ndigits>(s, prime.d, u);
-			vli_add_to<ndigits + 2>(r, s);
-			vli_umult<ndigits>(s, x.d, y.d[i]);
-			vli_add_to<ndigits + 2>(r, s);
-			vli_rshift1w<ndigits + 2>(r);	
+			vli_umult<N>(s, prime.d, u);
+			vli_add_to<N + 2>(r, s);
+			vli_umult<N>(s, x.d, y.d[i]);
+			vli_add_to<N + 2>(r, s);
+			vli_rshift1w<N + 2>(r);	
 		}
-		if (r[ndigits] != 0 || vli_cmp<ndigits>(r, prime.d) >= 0) {
-			vli_sub<ndigits>(res.d, r, prime.d);
-		} else vli_set<ndigits>(res.d, r);
+		if (r[N] != 0 || vli_cmp<N>(r, prime.d) >= 0) {
+			vli_sub<N>(res.d, r, prime.d);
+		} else vli_set<N>(res.d, r);
 	}
-	template<const u64 k0>
-	forceinline
+	template<const u64 k0> forceinline
 	friend void mont_mult(bignum& res, const u64 *x, const bignum& y,
 					const bignum& prime) noexcept
 	{
-		u64	s[ndigits*2];
-		u64	r[ndigits+2];
-		vli_clear<ndigits + 2>(r);
+		u64	s[N*2];
+		u64	r[N+2];
+		vli_clear<N + 2>(r);
 #pragma GCC unroll 4
-		for (uint i=0; i < ndigits;i++) {
+		for (uint i=0; i < N;i++) {
 			u64	u = (r[0] + y.d[i]*x[0]) * k0;
-			vli_umult<ndigits>(s, prime.d, u);
-			vli_add_to<ndigits + 2>(r, s);
-			vli_umult<ndigits>(s, x, y.d[i]);
-			vli_add_to<ndigits + 2>(r, s);
-			vli_rshift1w<ndigits + 2>(r);	
+			vli_umult<N>(s, prime.d, u);
+			vli_add_to<N + 2>(r, s);
+			vli_umult<N>(s, x, y.d[i]);
+			vli_add_to<N + 2>(r, s);
+			vli_rshift1w<N + 2>(r);	
 		}
-		if (r[ndigits] != 0 || vli_cmp<ndigits>(r, prime.d) >= 0) {
-			vli_sub<ndigits>(res.d, r, prime.d);
-		} else vli_set<ndigits>(res.d, r);
+		if (r[N] != 0 || vli_cmp<N>(r, prime.d) >= 0) {
+			vli_sub<N>(res.d, r, prime.d);
+		} else vli_set<N>(res.d, r);
 	}
 	void mont_mult(const bignum& x, const bignum& y, const bignum& prime,
 					const u64 k0) noexcept
 	{
-		u64	s[ndigits*2];
-		u64	r[ndigits+2];
-		vli_clear<ndigits + 2>(r);
+		u64	s[N*2];
+		u64	r[N+2];
+		vli_clear<N + 2>(r);
 #pragma GCC unroll 4
-		for (uint i=0; i < ndigits;i++) {
+		for (uint i=0; i < N;i++) {
 			u64	u = (r[0] + y.d[i]*x.d[0]) * k0;
-			vli_umult<ndigits>(s, prime.d, u);
-			vli_add_to<ndigits + 2>(r, s);
-			vli_umult<ndigits>(s, x.d, y.d[i]);
-			vli_add_to<ndigits + 2>(r, s);
-			vli_rshift1w<ndigits + 2>(r);	
+			vli_umult<N>(s, prime.d, u);
+			vli_add_to<N + 2>(r, s);
+			vli_umult<N>(s, x.d, y.d[i]);
+			vli_add_to<N + 2>(r, s);
+			vli_rshift1w<N + 2>(r);	
 		}
-		if (r[ndigits] != 0 || vli_cmp<ndigits>(r, prime.d) >= 0) {
-			vli_sub<ndigits>(this->d, r, prime.d);
-		} else vli_set<ndigits>(this->d, r);
+		if (r[N] != 0 || vli_cmp<N>(r, prime.d) >= 0) {
+			vli_sub<N>(this->d, r, prime.d);
+		} else vli_set<N>(this->d, r);
 	}
-	template<const u64 k0>
-	forceinline
+	template<const u64 k0> forceinline
 	friend void mont_sqr(bignum& res, const bignum& x, const bignum& prime)
 	noexcept
 	{
-		u64	s[ndigits*2];
-		u64	r[ndigits+2];
-		vli_clear<ndigits + 2>(r);
+		u64	s[N*2];
+		u64	r[N+2];
+		vli_clear<N + 2>(r);
 #pragma GCC unroll 4
-		for (uint i=0; i < ndigits;i++) {
+		for (uint i=0; i < N;i++) {
 			u64	u = (r[0] + x.d[i]*x.d[0]) * k0;
-			vli_umult<ndigits>(s, prime.d, u);
-			vli_add_to<ndigits + 2>(r, s);
-			vli_umult<ndigits>(s, x.d, x.d[i]);
-			vli_add_to<ndigits + 2>(r, s);
-			vli_rshift1w<ndigits + 2>(r);	
+			vli_umult<N>(s, prime.d, u);
+			vli_add_to<N + 2>(r, s);
+			vli_umult<N>(s, x.d, x.d[i]);
+			vli_add_to<N + 2>(r, s);
+			vli_rshift1w<N + 2>(r);	
 		}
-		if (r[ndigits] != 0 || vli_cmp<ndigits>(r, prime.d) >= 0) {
-			vli_sub<ndigits>(res.d, r, prime.d);
-		} else vli_set<ndigits>(res.d, r);
+		if (r[N] != 0 || vli_cmp<N>(r, prime.d) >= 0) {
+			vli_sub<N>(res.d, r, prime.d);
+		} else vli_set<N>(res.d, r);
 	}
 	void mont_sqr(const bignum& x, const bignum& prime, const u64 k0) noexcept
 	{
-		u64	s[ndigits*2];
-		u64	r[ndigits+2];
-		vli_clear<ndigits + 2>(r);
+		u64	s[N*2];
+		u64	r[N+2];
+		vli_clear<N + 2>(r);
 #pragma GCC unroll 4
-		for (uint i=0; i < ndigits;i++) {
+		for (uint i=0; i < N;i++) {
 			u64	u = (r[0] + x.d[i]*x.d[0]) * k0;
-			vli_umult<ndigits>(s, prime.d, u);
-			vli_add_to<ndigits + 2>(r, s);
-			vli_umult<ndigits>(s, x.d, x.d[i]);
-			vli_add_to<ndigits + 2>(r, s);
-			vli_rshift1w<ndigits + 2>(r);	
+			vli_umult<N>(s, prime.d, u);
+			vli_add_to<N + 2>(r, s);
+			vli_umult<N>(s, x.d, x.d[i]);
+			vli_add_to<N + 2>(r, s);
+			vli_rshift1w<N + 2>(r);	
 		}
-		if (r[ndigits] != 0 || vli_cmp<ndigits>(r, prime.d) >= 0) {
-			vli_sub<ndigits>(this->d, r, prime.d);
-		} else vli_set<ndigits>(this->d, r);
+		if (r[N] != 0 || vli_cmp<N>(r, prime.d) >= 0) {
+			vli_sub<N>(this->d, r, prime.d);
+		} else vli_set<N>(this->d, r);
 	}
 #ifdef	ommit
 protected:
-	u64		d[ndigits];
+	u64		d[N];
 #endif
 };
 
@@ -746,13 +717,13 @@ bignum<N>& calcRR(bignum<N>& t, const bignum<N>& p) noexcept
 	return t;
 }
 
-template<const uint ndigits>
-class bn_prod: public bignum<ndigits*2> {
+template<const uint N>
+class bn_prod: public bignum<N*2> {
 public:
 	bn_prod() = default;
 	bn_prod(const bn_prod &) = default;
 	// this = left * right
-	void mult(const bignum<ndigits>& left, const bignum<ndigits>& right)
+	void mult(const bignum<N>& left, const bignum<N>& right)
 	noexcept
 	{
 		uint128_t r01( 0, 0 );
@@ -760,11 +731,11 @@ public:
 	 * carries.
 	 */
 #pragma GCC unroll 8
-		for (uint k = 0; k < ndigits * 2 - 1; k++) {
+		for (uint k = 0; k < N * 2 - 1; k++) {
 			u64 r2 = 0;
 			unsigned int min;
-			if (k < ndigits) min = 0; else min = (k + 1) - ndigits;
-			for (uint i = min; i <= k && i < ndigits; i++) {
+			if (k < N) min = 0; else min = (k + 1) - N;
+			for (uint i = min; i <= k && i < N; i++) {
 				uint128_t product;
 				//product = mul_64_64(left[i], right[k - i]);
 				product.mul_64_64(left.d[i], right.d[k - i]);
@@ -778,16 +749,16 @@ public:
 			//r01.m_high = r2;
 			r2 = 0;
 		}
-		this->d[ndigits * 2 - 1] = r01.m_low();
+		this->d[N * 2 - 1] = r01.m_low();
 	}
 
 	/* Compute product = left * right, for a small right value. */
-	void umult(const bignum<ndigits>&left, const u64 right) noexcept
+	void umult(const bignum<N>&left, const u64 right) noexcept
 	{
 		uint128_t r01( 0, 0 );
 		unsigned int k;
 #pragma GCC unroll 4
-		for (k = 0; k < ndigits; k++) {
+		for (k = 0; k < N; k++) {
 			uint128_t product;
 			//if (likely(left[k] != 0))
 			{
@@ -802,19 +773,19 @@ public:
 			//r01.m_low = r01.m_high;
 			//r01.m_high = 0;
 		}
-		this->d[ndigits] = r01.m_low();
+		this->d[N] = r01.m_low();
 #pragma GCC unroll 4
-		for (k = ndigits+1; k < ndigits * 2; k++) this->d[k] = 0;
+		for (k = N+1; k < N * 2; k++) this->d[k] = 0;
 	}
 
-	void square(const bignum<ndigits>& left) noexcept
+	void square(const bignum<N>& left) noexcept
 	{
 		uint128_t r01( 0, 0 );
 #pragma GCC unroll 8
-		for (uint k = 0; k < ndigits * 2 - 1; k++) {
+		for (uint k = 0; k < N * 2 - 1; k++) {
 			unsigned int min;
 			u64 r2 = 0;
-			if (k < ndigits) min = 0; else min = (k + 1) - ndigits;
+			if (k < N) min = 0; else min = (k + 1) - N;
 			for (uint i = min; i <= k && i <= k - i; i++) {
 				uint128_t product;
 				//product = mul_64_64(left[i], left[k - i]);
@@ -834,51 +805,53 @@ public:
 			//r01.m_high = r2;
 			r01 = uint128_t(r01.m_high(), r2);
 		}
-		this->d[ndigits * 2 - 1] = r01.m_low();
+		this->d[N * 2 - 1] = r01.m_low();
 	}
-	void div_barrett(bignum<ndigits>& result, const bignum<ndigits+1>& mu)
+#ifdef	ommit
+	void div_barrett(bignum<N>& result, const bignum<N+1>& mu)
 	noexcept
 	{
-		u64	q[ndigits*2];
-		u64	r[ndigits];
-		vli_mult<ndigits>(q, this->d + ndigits, mu.data());
-		if (mu.data()[ndigits])
-			vli_add_to<ndigits>(q + ndigits, this->d + ndigits);
+		u64	q[N*2];
+		u64	r[N];
+		vli_mult<N>(q, this->d + N, mu.data());
+		if (mu.data()[N])
+			vli_add_to<N>(q + N, this->d + N);
 		// add remain * mod
-		vli_set<ndigits>(r, q+ndigits);
-		vli_umult<ndigits>(q, mu.data(), this->d[ndigits-1]);
-		if (mu.data()[ndigits])
-			vli_uadd_to<ndigits>(q + ndigits, this->d[ndigits-1]);
-		vli_rshift1w<ndigits>(q+ndigits);
-		vli_add_to<ndigits>(r, q+ndigits);
-		vli_set<ndigits>(const_cast<u64 *>(result.data()), r);
-		//result = bignum<ndigits>(r);
+		vli_set<N>(r, q+N);
+		vli_umult<N>(q, mu.data(), this->d[N-1]);
+		if (mu.data()[N])
+			vli_uadd_to<N>(q + N, this->d[N-1]);
+		vli_rshift1w<N>(q+N);
+		vli_add_to<N>(r, q+N);
+		vli_set<N>(const_cast<u64 *>(result.data()), r);
+		//result = bignum<N>(r);
 	}
-	void mmod_barrett(bignum<ndigits>& result, const bignum<ndigits>& prime,
-			const bignum<ndigits+1>& mu) noexcept
+	void mmod_barrett(bignum<N>& result, const bignum<N>& prime,
+			const bignum<N+1>& mu) noexcept
 	{
-		u64	q[ndigits*2];
-		u64	r[ndigits];
-		vli_mult<ndigits>(q, this->d + ndigits, mu.data());
-		if (mu.data()[ndigits])
-			vli_add_to<ndigits>(q + ndigits, this->d + ndigits);
+		u64	q[N*2];
+		u64	r[N];
+		vli_mult<N>(q, this->d + N, mu.data());
+		if (mu.data()[N])
+			vli_add_to<N>(q + N, this->d + N);
 		// add remain * mod
-		vli_set<ndigits>(r, q+ndigits);
-		vli_umult<ndigits>(q, mu.data(), this->d[ndigits-1]);
-		if (mu.data()[ndigits])
-			vli_uadd_to<ndigits>(q + ndigits, this->d[ndigits-1]);
-		vli_rshift1w<ndigits>(q+ndigits);
-		vli_add_to<ndigits>(r, q+ndigits);
-		vli_mult<ndigits>(q, prime.data(), r);
-		vli_sub<ndigits*2>(q, this->d, q);
-		if (!vli_is_zero<ndigits>(q + ndigits) ||
-			vli_cmp<ndigits>(q, prime.data()) >= 0)
+		vli_set<N>(r, q+N);
+		vli_umult<N>(q, mu.data(), this->d[N-1]);
+		if (mu.data()[N])
+			vli_uadd_to<N>(q + N, this->d[N-1]);
+		vli_rshift1w<N>(q+N);
+		vli_add_to<N>(r, q+N);
+		vli_mult<N>(q, prime.data(), r);
+		vli_sub<N*2>(q, this->d, q);
+		if (!vli_is_zero<N>(q + N) ||
+			vli_cmp<N>(q, prime.data()) >= 0)
 		{
-			vli_sub_from<ndigits>(q, prime.data());
+			vli_sub_from<N>(q, prime.data());
 		}
-		vli_set<ndigits>(const_cast<u64 *>(result.data()), q);
-		//result = bignum<ndigits>(q);
+		vli_set<N>(const_cast<u64 *>(result.data()), q);
+		//result = bignum<N>(q);
 	}
+#endif
 };
 
 }
