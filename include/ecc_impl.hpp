@@ -83,16 +83,16 @@ struct point_t {
 // x,y,z in montgomery field
 template<typename bnT, typename curveT>
 void point_double_jacob(const curveT& curve, bnT& x3, bnT& y3, bnT& z3,
-		const bnT *x1, const bnT *y1, const bnT *z1 = nullptr) noexcept
+		const bnT &x1, const bnT &y1, const bnT &z1) noexcept
 {
-	if ((z1 != nullptr && z1->is_zero()) || y1->is_zero()) {
+	if (z1.is_zero() || y1.is_zero()) {
 		/* P_y == 0 || P_z == 0 => [1:1:0] */
 		x3 = bnT(1);
 		y3 = bnT(1);
 		z3.clear();
 		return;
 	}
-	bool	z_is_one = (z1 == nullptr || curve.mont_one() == *z1);
+	bool	z_is_one = (curve.mont_one() == z1);
 	bnT	t1, t2, l1, l2;
 	if (curve.a_is_pminus3()) {
 		/* Use the faster case.  */
@@ -101,28 +101,28 @@ void point_double_jacob(const curveT& curve, bnT& x3, bnT& y3, bnT& z3,
 		/*						T2: used for the right term. */
 		if (z_is_one) {
 			// l1 = X - Z^2
-			curve.mod_sub(l1, *x1, curve.mont_one());
+			curve.mod_sub(l1, x1, curve.mont_one());
 			// 3(X - Z^2) = 2(X - Z^2) + (X - Z^2)
 			// t1 = 2 * l1
 			curve.mont_mult2(t1, l1);
 			// l1 = 2 * l1 + l1 = 3(X - Z^2)
 			curve.mod_add_to(l1, t1);
 			// t1 = X + Z^2
-			curve.mod_add(t1, *x1, curve.mont_one());
+			curve.mod_add(t1, x1, curve.mont_one());
 			// l1 = 3(X - Z^2)(X + Z^2)
 			curve.mont_mmult(l1, l1, t1);
 		} else {
 			// t1 = Z^2
-			curve.mont_msqr(t1, *z1);
+			curve.mont_msqr(t1, z1);
 			// l1 = X - Z^2
-			curve.mod_sub(l1, *x1, t1);
+			curve.mod_sub(l1, x1, t1);
 			// 3(X - Z^2) = 2(X - Z^2) + (X - Z^2)
 			// t2 = 2 * l1
 			curve.mont_mult2(t2, l1);
 			// l1 = l1 + 2 * l1 = 3(X - Z^2)
 			curve.mod_add_to(l1, t2);
 			// t2 = X + Z^2
-			curve.mod_add(t2, *x1, t1);
+			curve.mod_add(t2, x1, t1);
 			// l1 = 3(X - Z^2)(X + Z^2)
 			curve.mont_mmult(l1, l1, t2);
 		}
@@ -131,7 +131,7 @@ void point_double_jacob(const curveT& curve, bnT& x3, bnT& y3, bnT& z3,
 		/* L1 = 3X^2 + aZ^4 */
 		/*					T1: used for aZ^4. */
 		// l1 = X^2
-		curve.mont_msqr(l1, *x1);
+		curve.mont_msqr(l1, x1);
 		curve.mont_mult2(t1, l1);
 		// l1 = 3X^2
 		curve.mod_add_to(l1, t1);
@@ -144,7 +144,7 @@ void point_double_jacob(const curveT& curve, bnT& x3, bnT& y3, bnT& z3,
 			curve.mod_add_to(l1, curve.montParamA());
 		} else {
 			// t1 = Z^4
-			curve.mont_msqr(t1, *z1, 2);
+			curve.mont_msqr(t1, z1, 2);
 			// t1 = a * Z^4
 			curve.mont_mmult(t1, t1, curve.montParamA());
 			// l1 = 3 X^2 + a Z^4
@@ -154,26 +154,78 @@ void point_double_jacob(const curveT& curve, bnT& x3, bnT& y3, bnT& z3,
 
 	/* Z3 = 2YZ */
 	if (z_is_one) {
-		curve.mont_mult2(z3, *y1);
+		curve.mont_mult2(z3, y1);
 	} else {
 		// Z3 = YZ
-		curve.mont_mmult(z3, *y1, *z1);
+		curve.mont_mmult(z3, y1, z1);
 		// Z3 *= 2
 		curve.mont_mult2(z3, z3);
 	}
 
 	/* L2 = 4XY^2 */
 	/* t2 = Y^2 */
-	curve.mont_msqr(t2, *y1);
+	curve.mont_msqr(t2, y1);
 	// t2 = 2 Y^2
 	curve.mont_mult2(t2, t2);
 	// l2 =  2 XY^2
-	curve.mont_mmult(l2, t2, *x1);
+	curve.mont_mmult(l2, t2, x1);
 	// l2 = 4 X Y^2
 	curve.mont_mult2(l2, l2);
 
 	/* X3 = L1^2 - 2L2 */
 	/*						T1: used for 2L2. */
+	curve.mont_msqr(x3, l1);
+	curve.mont_mult2(t1, l2);
+	curve.mod_sub_from(x3, t1);
+
+	/* L3 = 8Y^4 */
+	/*   L3 reuse t2, t2: taken from above. */
+	curve.mont_msqr(t2, t2);	// t2 = t2^2 = 4Y^4
+	curve.mont_mult2(t2, t2);	// t2 *= 2, t2 = 8Y^4
+
+	/* Y3 = L1(L2 - X3) - L3 */
+	curve.mod_sub(y3, l2, x3);
+	curve.mont_mmult(y3, l1, y3);
+	curve.mod_sub_from(y3, t2);
+}
+
+// x,y in montgomery field
+template<typename bnT, typename curveT>
+void point_doublez_jacob(const curveT& curve, bnT& x3, bnT& y3, bnT& z3,
+		const bnT &x1, const bnT &y1) noexcept
+{
+	bnT	t1, t2, l1, l2;
+	/* Use the faster case.  */
+	/* L1 = 3(X - Z^2)(X + Z^2) */
+	/*						T1: used for Z^2. */
+	/*						T2: used for the right term. */
+	// l1 = X - Z^2
+	curve.mod_sub(l1, x1, curve.mont_one());
+	// 3(X - Z^2) = 2(X - Z^2) + (X - Z^2)
+	// t1 = 2 * l1
+	curve.mont_mult2(t1, l1);
+	// l1 = 2 * l1 + l1 = 3(X - Z^2)
+	curve.mod_add_to(l1, t1);
+	// t1 = X + Z^2
+	curve.mod_add(t1, x1, curve.mont_one());
+	// l1 = 3(X - Z^2)(X + Z^2)
+	curve.mont_mmult(l1, l1, t1);
+
+	/* Z3 = 2YZ */
+	curve.mont_mult2(z3, y1);
+
+	/* L2 = 4XY^2 */
+	/* t2 = Y^2 */
+	curve.mont_msqr(t2, y1);
+	// t2 = 2 Y^2
+	curve.mont_mult2(t2, t2);
+	// l2 =  2 XY^2
+	curve.mont_mmult(l2, t2, x1);
+	// l2 = 4 X Y^2
+	curve.mont_mult2(l2, l2);
+
+	/* X3 = L1^2 - 2L2 */
+	/*					T1: used for 2L2. */
 	curve.mont_msqr(x3, l1);
 	curve.mont_mult2(t1, l2);
 	curve.mod_sub_from(x3, t1);
@@ -196,15 +248,15 @@ void point_double_jacob(const curveT& curve, bnT& x3, bnT& y3, bnT& z3,
 // x,y,z in montgomery field
 template<typename bnT, typename curveT>
 void point_add_jacob(const curveT& curve, bnT& x3, bnT& y3, bnT& z3,
-			const bnT& x1, const bnT& y1, const bnT& z1, const bnT *x2,
-			const bnT *y2, const bnT *z2 = nullptr) noexcept
+			const bnT& x1, const bnT& y1, const bnT& z1, const bnT& x2,
+			const bnT& y2, const bnT& z2) noexcept
 {
 	if (z1.is_zero()) {
-		x3 = *x2;
-		y3 = *y2;
-		if (z2 == nullptr) z3.clear(); else z3 = *z2;
+		x3 = x2;
+		y3 = y2;
+		z3 = z2;
 		return;
-	} else if (z2 != nullptr && z2->is_zero()) {
+	} else if (z2.is_zero()) {
 		x3 = x1;
 		y3 = y1;
 		z3 = z1;
@@ -219,7 +271,7 @@ void point_add_jacob(const curveT& curve, bnT& x3, bnT& y3, bnT& z3,
 	// S1 ... l4
 	// S2 ... l5
 	bool	z1_is_one = (z1 == curve.mont_one());
-	bool	z2_is_one = (z2 == nullptr || *z2 == curve.mont_one());
+	bool	z2_is_one = (z2 == curve.mont_one());
 #ifdef	WITH_ADD_2007bl
 	bnT	u1, u2, s1, s2, h, i, j, r, v;
 	bnT	t1;
@@ -236,17 +288,17 @@ void point_add_jacob(const curveT& curve, bnT& x3, bnT& y3, bnT& z3,
 		u1 = x1;
 	} else {
 		// z2z2 = z2^2
-		curve.mont_msqr(z2z2, *z2);
+		curve.mont_msqr(z2z2, z2);
 		// u1 = x1 z2^2
 		curve.mont_mmult(u1, x1, z2z2);
 	}
 	if (z1_is_one) {
-		u2 = *x2;
+		u2 = x2;
 	} else {
 		// z1z1 = z1^2
 		curve.mont_msqr(z1z1, z1);
 		// u2 = x2 z1^2
-		curve.mont_mmult(u2, *x2, z1z1);
+		curve.mont_mmult(u2, x2, z1z1);
 	}
 
 	/* h = u2 - u1 */
@@ -257,7 +309,7 @@ void point_add_jacob(const curveT& curve, bnT& x3, bnT& y3, bnT& z3,
 	if ( ! z2_is_one ) {
 		// s1 = y1 z2^3
 		curve.mont_mmult(s1, s1, z2z2);
-		curve.mont_mmult(s1, s1, *z2);
+		curve.mont_mmult(s1, s1, z2);
 	}
 
 	/* s2 = y2 z1^3  */
@@ -274,7 +326,7 @@ void point_add_jacob(const curveT& curve, bnT& x3, bnT& y3, bnT& z3,
 	if (h.is_zero()) {
 		if (r.is_zero()) {
 			/* P1 and P2 are the same - use duplicate function. */
-			point_double_jacob(curve, x3, y3, z3, &x1, &y1, &z1);
+			point_double_jacob(curve, x3, y3, z3, x1, y1, z1);
 			return;
 		}
 		/* P1 is the inverse of P2.  */
@@ -324,10 +376,10 @@ void point_add_jacob(const curveT& curve, bnT& x3, bnT& y3, bnT& z3,
 		if (z1_is_one) {
 			// t1 = 2 * z2
 			// z3 = t1 * h = 2 * z2 * h
-			curve.mont_mult2(t1, *z2);
+			curve.mont_mult2(t1, z2);
 		} else {
 			// t1 = (z1 + z2)^2 -z1z1 - z2z2
-			curve.mod_add(t1, z1, *z2);
+			curve.mod_add(t1, z1, z2);
 			curve.mont_msqr(t1, t1);
 			curve.mod_sub_from(t1, z1z1);
 			curve.mod_sub_from(t1, z2z2);
@@ -372,7 +424,7 @@ void point_add_jacob(const curveT& curve, bnT& x3, bnT& y3, bnT& z3,
 			t1 =  z2;
 		} else {
 			// t1 = z1 * z2
-			curve.mont_mmult(t1, z1, *z2);
+			curve.mont_mmult(t1, z1, z2);
 		}
 		curve.mont_mmult(z3, t1, h);
 	}

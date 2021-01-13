@@ -69,6 +69,7 @@ void pre_compute(const curveT& curve, point_t<N> pre_comp[wSize + 1],
 template<const uint N=4>
 class ecc_curve {
 public:
+	using felem_t = bignum<N>;
 	ecc_curve(const char *_name, const u64 *_gx, const u64 *_gy, const u64 *_p,
 			const u64 *_n, const u64 *_a, const u64 *_b, const bool a_n3 = true,
 			const bool bBat=false) :
@@ -100,8 +101,8 @@ public:
 	void getB(u64 *v) const noexcept { b.set(v); }
 	void getGx(u64 *v) const noexcept { gx.set(v); }
 	void getGy(u64 *v) const noexcept { gy.set(v); }
-	const bignum<N>& montParamA() const noexcept { return _mont_a; }
-	const bignum<N>& paramP() const noexcept { return p; }
+	const felem_t& montParamA() const noexcept { return _mont_a; }
+	const felem_t& paramP() const noexcept { return p; }
 	bool init(const u64 *muP=nullptr, const u64 *muN=nullptr) noexcept {
 		if (_inited) return _inited;
 #ifdef	WITH_BARRETT
@@ -120,7 +121,7 @@ public:
 			// no calc k0 and rr after instantiation
 			return false;
 		}
-		bignum<N>	t1;
+		felem_t	t1;
 		t1.clear();
 		_mont_one.sub(t1, p);
 		if (unlikely( !_a_is_neg3 )) {
@@ -134,7 +135,7 @@ public:
 	const bool a_is_pminus3() const noexcept { return _a_is_neg3; }
 	const bool a_is_zero() const noexcept { return _a_is_zero; }
 #ifdef	WITH_BARRETT
-	void mmod_barrett(bignum<N>& res, const bn_prod<N>& prod) const noexcept
+	void mmod_barrett(felem_t& res, const bn_prod<N>& prod) const noexcept
 	{
 		if (use_barrett) {
 			// res = barrettmod
@@ -143,63 +144,63 @@ public:
 		return;
 	}
 #endif
-	const bignum<N>& mont_one() const noexcept { return _mont_one; }
-	void to_montgomery(bignum<N>& res, const u64 *x) const noexcept
+	const felem_t& mont_one() const noexcept { return _mont_one; }
+	void to_montgomery(felem_t& res, const u64 *x) const noexcept
 	{
-		bignum<N>   *xx = reinterpret_cast<bignum<N> *>(const_cast<u64 *>(x));
+		felem_t   *xx = reinterpret_cast<felem_t *>(const_cast<u64 *>(x));
 		res.mont_mult(*xx, rr_p, p, k0_p);
 	}
-	void to_montgomery(bignum<N>& res, const bignum<N>& x) const noexcept
+	void to_montgomery(felem_t& res, const felem_t& x) const noexcept
 	{
 		res.mont_mult(x, rr_p, p, k0_p);
 	}
-	void from_montgomery(bignum<N>& res, const bignum<N>& y) const noexcept
+	void from_montgomery(felem_t& res, const felem_t& y) const noexcept
 	{
 		res.mont_reduction(y, p, k0_p);
 	}
-	void from_montgomery(u64* result, const bignum<N>& y) const noexcept
+	void from_montgomery(u64* result, const felem_t& y) const noexcept
 	{
-		bignum<N>   *res = reinterpret_cast<bignum<N> *>(result);
+		felem_t   *res = reinterpret_cast<felem_t *>(result);
 		res->mont_reduction(y, p, k0_p);
 	}
 	void
-	mont_mmult(bignum<N>& res, const bignum<N>& left, const bignum<N>& right)
+	mont_mmult(felem_t& res, const felem_t& left, const felem_t& right)
 	const noexcept {
 		res.mont_mult(left, right, p, k0_p);
 	}
-	void mont_msqr(bignum<N>& res, const bignum<N> left, const uint nTimes=1)
+	void mont_msqr(felem_t& res, const felem_t left, const uint nTimes=1)
 	const noexcept {
 		res.mont_sqr(left, p, k0_p);
 		for (uint i=1; i < nTimes; i++) res.mont_sqr(res, p, k0_p);
 	}
 	// left,right less than p
-	void mod_add(bignum<N>& res, const bignum<N>& left, const bignum<N>& right)
+	void mod_add(felem_t& res, const felem_t& left, const felem_t& right)
 	const noexcept {
 		if (res.add(left, right)) {
 			res.sub_from(p);
 		}
 	}
 	// left,right less than p
-	void mod_add_to(bignum<N>& res, const bignum<N>& right) const noexcept
+	void mod_add_to(felem_t& res, const felem_t& right) const noexcept
 	{
 		if (res.add_to(right)) {
 			res.sub_from(p);
 		}
 	}
 	// left,right less than p
-	void mod_sub(bignum<N>& res, const bignum<N>& left, const bignum<N>& right)
+	void mod_sub(felem_t& res, const felem_t& left, const felem_t& right)
 	const noexcept {
 		if (res.sub(left, right)) {
 			res.add_to(p);
 		}
 	}
-	void mod_sub_from(bignum<N>& res, const bignum<N>& right) const noexcept
+	void mod_sub_from(felem_t& res, const felem_t& right) const noexcept
 	{
 		if (res.sub_from(right)) {
 			res.add_to(p);
 		}
 	}
-	void mont_mult2(bignum<N>& res, const bignum<N>& left) const noexcept
+	void mont_mult2(felem_t& res, const felem_t& left) const noexcept
 	{
 #ifdef	ommit
 		this->mod_add(res, left, left);
@@ -209,12 +210,12 @@ public:
 		}
 #endif
 	}
-	void mont_mult4(bignum<N>& res) const noexcept
+	void mont_mult4(felem_t& res) const noexcept
 	{
 		this->mont_mult2(res, res);
 		this->mont_mult2(res, res);
 	}
-	void mont_mult8(bignum<N>& res) const noexcept
+	void mont_mult8(felem_t& res) const noexcept
 	{
 		this->mont_mult2(res, res);
 		this->mont_mult2(res, res);
@@ -239,11 +240,10 @@ public:
 			return;
 		}
 		bool	z_is_one = (z1 == nullptr || vli_is_one<N>(z1));
-		bignum<N>	t1, t2, l1, l2;
-		bignum<N>	xp, yp, zp;
-		bignum<N>	*x3p = reinterpret_cast<bignum<N> *>(x3);
-		bignum<N>	*y3p = reinterpret_cast<bignum<N> *>(y3);
-		bignum<N>	*z3p = reinterpret_cast<bignum<N> *>(z3);
+		felem_t	xp, yp, zp;
+		felem_t	*x3p = reinterpret_cast<felem_t *>(x3);
+		felem_t	*y3p = reinterpret_cast<felem_t *>(y3);
+		felem_t	*z3p = reinterpret_cast<felem_t *>(z3);
 		to_montgomery(xp, x1);
 		to_montgomery(yp, y1);
 		if (z_is_one) {
@@ -251,6 +251,8 @@ public:
 		} else {
 			to_montgomery(zp, z1);
 		}
+#ifdef	ommit
+		felem_t	t1, t2, l1, l2;
 		if (a_is_pminus3()) {
 			/* Use the faster case.  */
 			/* L1 = 3(X - Z^2)(X + Z^2) */
@@ -344,7 +346,10 @@ public:
 		mod_sub(*y3p, l2, *x3p);
 		this->mont_mmult(*y3p, l1, *y3p);
 		mod_sub_from(*y3p, t2);
-
+#else
+		if (z_is_one) point_doublez_jacob(*this, *x3p, *y3p, *z3p, xp, yp); else
+			point_double_jacob(*this, *x3p, *y3p, *z3p, xp, yp, zp);
+#endif
 		// montgomery reduction
 		from_montgomery(x3, *x3p);
 		from_montgomery(y3, *y3p);
@@ -352,7 +357,7 @@ public:
 	}
 	void apply_z(u64 *x1, u64 *y1, u64 *z) const noexcept
 	{
-		bignum<N>	t1;
+		felem_t	t1;
 
 		if (vli_is_one<N>(z)) return;
 		if (vli_is_zero<N>(z)) {
@@ -361,9 +366,9 @@ public:
 			return;
 		}
 		vli_mod_inv<N>(z, z, this->p.data());
-		bignum<N>	*xp = reinterpret_cast<bignum<N> *>(x1);
-		bignum<N>	*yp = reinterpret_cast<bignum<N> *>(y1);
-		bignum<N>	*zp = reinterpret_cast<bignum<N> *>(z);
+		felem_t	*xp = reinterpret_cast<felem_t *>(x1);
+		felem_t	*yp = reinterpret_cast<felem_t *>(y1);
+		felem_t	*zp = reinterpret_cast<felem_t *>(z);
 		to_montgomery(*zp, z);
 		this->mont_msqr(t1, *zp);	// t1 = z^2
 		to_montgomery(*xp, x1);
@@ -412,9 +417,9 @@ public:
 			const u64 *y1, const u64 *z1, const u64 *x2,
 			const u64 *y2, const u64 *z2 = nullptr) const noexcept
 	{
-		bignum<N>	*x3p = reinterpret_cast<bignum<N> *>(x3);
-		bignum<N>	*y3p = reinterpret_cast<bignum<N> *>(y3);
-		bignum<N>	*z3p = reinterpret_cast<bignum<N> *>(z3);
+		felem_t	*x3p = reinterpret_cast<felem_t *>(x3);
+		felem_t	*y3p = reinterpret_cast<felem_t *>(y3);
+		felem_t	*z3p = reinterpret_cast<felem_t *>(z3);
 		if (z1 != nullptr && vli_is_zero<N>(z1)) {
 			vli_set<N>(x3, x2);
 			vli_set<N>(y3, y2);
@@ -437,14 +442,14 @@ public:
 		bool	z1_is_one = (z1 == nullptr || vli_is_one<N>(z1));
 		bool	z2_is_one = (z2 == nullptr || vli_is_one<N>(z2));
 #ifdef	WITH_ADD_2007bl
-		bignum<N>	u1, u2, s1, s2, h, i, j, r, v;
-		bignum<N>	t1;
+		felem_t	u1, u2, s1, s2, h, i, j, r, v;
+		felem_t	t1;
 #else
-		bignum<N>	u1, u2, s1, s2, h, hh, hhh, r, v;
+		felem_t	u1, u2, s1, s2, h, hh, hhh, r, v;
 #define	t1		z1z1
 #endif
-		bignum<N>	z1z1, z1p;
-		bignum<N>	z2z2, z2p;
+		felem_t	z1z1, z1p;
+		felem_t	z2z2, z2p;
 
 		/* u1 = x1 z2^2  */
 		/* u2 = x2 z1^2  */
@@ -606,7 +611,7 @@ public:
 		from_montgomery(z3, *z3p);
 	}
 	void scalar_mult(point_t<N>& q, const point_t<N>& p,
-					const bignum<N>& scalar) const noexcept
+					const felem_t& scalar) const noexcept
 	{
 		point_t<N>	tmp;
 		point_t<N>	pres[wSize+1];
@@ -634,7 +639,7 @@ public:
 			if (digit == 0) continue;
 #ifdef	WITH_CONDITIONAL_COPY
 			tmp = pres[digit];
-			bignum<N>	ny;
+			felem_t	ny;
 			ny.sub(this->p, tmp.y);
 			ny.copy_conditional(tmp.y, sign-1);
 			tmp.y = ny;
@@ -650,7 +655,7 @@ public:
 		this->apply_z(q);
 	}
 	void scalar_multNAF2(point_t<N>& q, const point_t<N>& p,
-				const bignum<N>& scalar) const noexcept
+				const felem_t& scalar) const noexcept
 	{
 		point_t<N>	tmp;
 		int	nbits = scalar.num_bits();
@@ -690,27 +695,27 @@ public:
 						p2.x.data(), p2.y.data(), p2.z.data());
 	}
 protected:
-	void point_add(point_t<N>& q, const point_t<N>& p1, const bignum<N>& x2,
-			const bignum<N>& y2) const noexcept
+	void point_add(point_t<N>& q, const point_t<N>& p1, const felem_t& x2,
+			const felem_t& y2) const noexcept
 	{
 		point_add_jacobian(q.xd(), q.yd(), q.zd(), p1.x.data(), p1.y.data(),
 						p1.z.data(), x2.data(), y2.data());
 	}
 	const std::string name;
-	const bignum<N> gx;
-	const bignum<N> gy;
-	const bignum<N> p;
-	const bignum<N> n;
-	const bignum<N> a;
-	const bignum<N> b;
-	const bignum<N> rr_p = {};
-	const bignum<N> rr_n = {};
+	const felem_t gx;
+	const felem_t gy;
+	const felem_t p;
+	const felem_t n;
+	const felem_t a;
+	const felem_t b;
+	const felem_t rr_p = {};
+	const felem_t rr_n = {};
 #ifdef	WITH_BARRETT
 	bignum<N+1> mu_p;
 	bignum<N+1> mu_n;
 #endif
-	bignum<N> _mont_one;
-	bignum<N> _mont_a;
+	felem_t _mont_one;
+	felem_t _mont_a;
 	const u64	k0_p = 0;
 	const u64	k0_n = 0;
 	const uint _ndigits = N;
@@ -723,40 +728,41 @@ protected:
 template <const u64 Pk0=1>
 class curve256 : public ecc_curve<4> {
 public:
+	using felem_t = bignum<4>;
 	curve256(const char *_name, const u64 *_gx, const u64 *_gy, const u64 *_p,
 			const u64 *_n, const u64 *_a, const u64 *_b) :
 		ecc_curve<4>(_name, _gx, _gy, _p, _n, _a, _b, sm2_p_rr, sm2_n_rr,
 					sm2_p_k0, sm2_n_k0)
 	{ }
-	void to_montgomery(bignum<4>& res, const u64 *x) const noexcept
+	void to_montgomery(felem_t& res, const u64 *x) const noexcept
 	{
-		bignum<4>   *xx = reinterpret_cast<bignum<4> *>(const_cast<u64 *>(x));
+		felem_t   *xx = reinterpret_cast<felem_t *>(const_cast<u64 *>(x));
 		mont_mult<Pk0>(res, *xx, this->rr_p, this->p);
 	}
-	void to_montgomery(bignum<4>& res, const bignum<4>& x) const noexcept
+	void to_montgomery(felem_t& res, const felem_t& x) const noexcept
 	{
 		mont_mult<Pk0>(res, x, this->rr_p, this->p);
 	}
-	void from_montgomery(bignum<4>& res, const bignum<4>& y) const noexcept
+	void from_montgomery(felem_t& res, const felem_t& y) const noexcept
 	{
 		mont_reduction<Pk0>(res, y, this->p);
 	}
-	void from_montgomery(u64* result, const bignum<4>& y) const noexcept
+	void from_montgomery(u64* result, const felem_t& y) const noexcept
 	{
-		bignum<4>   *res = reinterpret_cast<bignum<4> *>(result);
+		felem_t   *res = reinterpret_cast<felem_t *>(result);
 		mont_reduction<Pk0>(*res, y, this->p);
 	}
 	void
-	mont_mmult(bignum<4>& res, const bignum<4>& left, const bignum<4>& right)
+	mont_mmult(felem_t& res, const felem_t& left, const felem_t& right)
 	const noexcept {
 		mont_mult<Pk0>(res, left, right, this->p);
 	}
-	void mont_msqr(bignum<4>& res, const bignum<4> left, const uint nTimes=1)
+	void mont_msqr(felem_t& res, const felem_t left, const uint nTimes=1)
 	const noexcept {
 		mont_sqr<Pk0>(res, left, this->p);
 		for (uint i=1; i < nTimes; i++) mont_sqr<Pk0>(res, res, this->p);
 	}
-	void mont_mult4(bignum<4>& res) const noexcept
+	void mont_mult4(felem_t& res) const noexcept
 	{
 		static_assert(Pk0 == 1, "MUST be sm2");
 		u64	carry;
@@ -764,7 +770,7 @@ public:
 			this->carry_reduce(res, carry);
 		}
 	}
-	void mont_mult8(bignum<4>& res) const noexcept
+	void mont_mult8(felem_t& res) const noexcept
 	{
 		static_assert(Pk0 == 1, "MUST be sm2");
 		u64	carry;
@@ -811,7 +817,7 @@ public:
 	void pre_compute_base() noexcept
 	{
 		int i, j;
-		point_t<4>	G{this->gx, this->gy, bignum<4>(1)};
+		point_t<4>	G{this->gx, this->gy, felem_t(1)};
 		/*
 		 * compute 2^64*G, 2^128*G, 2^192*G for the first table, 2^32*G, 2^96*G,
 		 * 2^160*G, 2^224*G for the second one
@@ -869,7 +875,7 @@ public:
 		return true;
 	}
 #endif
-	void scalar_mult_base(point_t<4>& q, const bignum<4>& scalar) noexcept
+	void scalar_mult_base(point_t<4>& q, const felem_t& scalar) noexcept
 	{
 		bool	skip = true;
 		point_t<4>	p;
@@ -905,8 +911,100 @@ public:
 		}
 		this->apply_z(q);
 	}
+	void point_double_jacobian(u64 *x3, u64 *y3, u64 *z3, const u64 *x1,
+					const u64 *y1, const u64 *z1 = nullptr) const noexcept
+	{
+		if ((z1 != nullptr && vli_is_zero<4>(z1)) || vli_is_zero<4>(y1)) {
+			/* P_y == 0 || P_z == 0 => [1:1:0] */
+			vli_clear<4>(x3);
+			vli_clear<4>(y3);
+			vli_clear<4>(z3);
+			x3[0] = 1;
+			y3[0] = 1;
+			return;
+		}
+		bool	z_is_one = (z1 == nullptr || vli_is_one<4>(z1));
+		felem_t	xp, yp, zp;
+		felem_t	*x3p = reinterpret_cast<felem_t *>(x3);
+		felem_t	*y3p = reinterpret_cast<felem_t *>(y3);
+		felem_t	*z3p = reinterpret_cast<felem_t *>(z3);
+		to_montgomery(xp, x1);
+		to_montgomery(yp, y1);
+		if (z_is_one) {
+			zp = mont_one();
+		} else {
+			to_montgomery(zp, z1);
+		}
+		if (z_is_one) point_doublez_jacob(*this, *x3p, *y3p, *z3p, xp, yp); else
+			point_double_jacob(*this, *x3p, *y3p, *z3p, xp, yp, zp);
+		// montgomery reduction
+		from_montgomery(x3, *x3p);
+		from_montgomery(y3, *y3p);
+		from_montgomery(z3, *z3p);
+	}
+	void point_add_jacobian(u64 *x3, u64 *y3, u64 *z3, const u64 *x1,
+			const u64 *y1, const u64 *z1, const u64 *x2,
+			const u64 *y2, const u64 *z2 = nullptr) const noexcept
+	{
+		felem_t	*x3p = reinterpret_cast<felem_t *>(x3);
+		felem_t	*y3p = reinterpret_cast<felem_t *>(y3);
+		felem_t	*z3p = reinterpret_cast<felem_t *>(z3);
+		if (z1 != nullptr && vli_is_zero<4>(z1)) {
+			vli_set<4>(x3, x2);
+			vli_set<4>(y3, y2);
+			vli_set<4>(z3, z2);
+			return;
+		} else if (z2 != nullptr && vli_is_zero<4>(z2)) {
+			vli_set<4>(x3, x1);
+			vli_set<4>(y3, y1);
+			vli_set<4>(z3, z1);
+			return;
+		}
+		bool	z1_is_one = (z1 == nullptr || vli_is_one<4>(z1));
+		bool	z2_is_one = (z2 == nullptr || vli_is_one<4>(z2));
+		felem_t	x1p, y1p, z1p;
+		felem_t	x2p, y2p, z2p;
+		to_montgomery(x1p, x1);
+		to_montgomery(y1p, y1);
+		if (z1_is_one) {
+			z1p = mont_one();
+		} else {
+			to_montgomery(z1p, z1);
+		}
+		to_montgomery(x2p, x2);
+		to_montgomery(y2p, y2);
+		if (z2_is_one) {
+			z2p = mont_one();
+		} else {
+			to_montgomery(z2p, z2);
+		}
+#ifdef	ommit
+		if (z_is_one) point_doublez_jacob(*this, *x3p, *y3p, *z3p, xp, yp); else
+#endif
+		point_add_jacob(*this, *x3p, *y3p, *z3p, x1p, y1p, z1p, x2p, y2p, z2p);
+		// montgomery reduction
+		from_montgomery(x3, *x3p);
+		from_montgomery(y3, *y3p);
+		from_montgomery(z3, *z3p);
+	}
+	void point_double(point_t<4>& q, const point_t<4>& p) const noexcept {
+		point_double_jacobian(q.xd(), q.yd(), q.zd(),
+						p.x.data(), p.y.data(), p.z.data());
+	}
+	void point_add(point_t<4>& q, const point_t<4>& p1, const point_t<4>& p2)
+	const noexcept {
+		point_add_jacobian(q.xd(), q.yd(), q.zd(),
+						p1.x.data(), p1.y.data(), p1.z.data(),
+						p2.x.data(), p2.y.data(), p2.z.data());
+	}
+	void point_add(point_t<4>& q, const point_t<4>& p1, const felem_t& x2,
+			const felem_t& y2) const noexcept
+	{
+		point_add_jacobian(q.xd(), q.yd(), q.zd(), p1.x.data(), p1.y.data(),
+						p1.z.data(), x2.data(), y2.data());
+	}
 private:
-	void carry_reduce(bignum<4>& res, const u64 carry) const noexcept
+	void carry_reduce(felem_t& res, const u64 carry) const noexcept
 	{
 		// carry < 2^32
 		u64		u = carry & ((1L<<32) -1);
