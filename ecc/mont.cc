@@ -37,6 +37,7 @@
 
 
 using namespace vli;
+using namespace ecc;
 
 u64 vli_asm_acc()
 {

@@ -44,7 +44,8 @@
 #endif
 
 using namespace vli;
-using curve_t = vli::ecc_curve<4>;
+using namespace ecc;
+using curve_t = ecc::ecc_curve<4>;
 
 static forceinline const curve_t *ecc_get_curve(uint curve_id) noexcept
 {

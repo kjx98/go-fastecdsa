@@ -807,9 +807,7 @@ public:
 		}
 		this->d[N * 2 - 1] = r01.m_low();
 	}
-#ifdef	ommit
-	void div_barrett(bignum<N>& result, const bignum<N+1>& mu)
-	noexcept
+	void div_barrett(bignum<N>& result, const bignum<N+1>& mu) noexcept
 	{
 		u64	q[N*2];
 		u64	r[N];
@@ -851,7 +849,6 @@ public:
 		vli_set<N>(const_cast<u64 *>(result.data()), q);
 		//result = bignum<N>(q);
 	}
-#endif
 };
 
 }
