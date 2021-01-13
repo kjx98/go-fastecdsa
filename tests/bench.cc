@@ -8,6 +8,7 @@
 #include "mont.hpp"
 
 using namespace vli;
+using namespace ecc;
 
 #include "testData.hpp"
 

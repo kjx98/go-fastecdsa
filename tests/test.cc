@@ -1,5 +1,6 @@
 #include <stdlib.h>
 #include <string>
+#include <chrono>
 #include <gtest/gtest.h>
 #include "vli_bn.hpp"
 #include "curve_const.hpp"
@@ -8,6 +9,8 @@
 
 
 using namespace vli;
+using namespace ecc;
+using namespace std::chrono;
 
 #include "testData.hpp"
 
@@ -204,7 +207,13 @@ static bool select_gmul(point_t<4>& pt, const uint idx)
 
 TEST(testEcc, TestBasePreCompute)
 {
+	steady_clock::time_point t1 = steady_clock::now();
 	sm2_k256.pre_compute_base();
+	steady_clock::time_point t2 = steady_clock::now();
+	std::chrono::duration<double> time_span1;
+	time_span1 = (t2 - t1);
+	std::cerr << "pre_compute_base() cost " << time_span1.count() * 1000000
+			<< " us" << std::endl;
 	point_t<4>	gp, gm;
 	for(int i=0;i<32;i++) {
 		EXPECT_TRUE(sm2_k256.select_base_point(gp, i));
@@ -218,7 +227,13 @@ TEST(testEcc, TestPreCompute)
 	point_t<4>	res, res1;
 	point_t<4>	gg(sm2_gx, sm2_gy);
 	point_t<4>	pre_comps[wSize+1];
-	sm2_p256.pre_compute(pre_comps, gg);
+	steady_clock::time_point t1 = steady_clock::now();
+	pre_compute<4>(sm2_p256, pre_comps, gg);
+	steady_clock::time_point t2 = steady_clock::now();
+	std::chrono::duration<double> time_span1;
+	time_span1 = (t2 - t1);
+	std::cerr << "pre_compute<4>() cost " << time_span1.count() * 1e6
+			<< " us" << std::endl;
 	res.clear();
 	EXPECT_TRUE(pre_comps[0] == res);
 	res = gg;
@@ -318,7 +333,7 @@ TEST(testEcc, TestScalarMultNAF2)
 	point_t<4>	res;
 	point_t<4>	gg(sm2_gx, sm2_gy);
 	point_t<4>	pre_comps[wSize+1];
-	sm2_p256.pre_compute(pre_comps, gg);
+	pre_compute<4>(sm2_p256, pre_comps, gg);
 	{
 		bignum<4>	ss(3);
 		sm2_p256.scalar_multNAF2(res, gg, ss);

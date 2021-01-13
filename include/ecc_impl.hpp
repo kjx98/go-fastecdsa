@@ -35,6 +35,354 @@
 #include "vli_bn.hpp"
 
 
+namespace ecc {
+
+using namespace vli;
+template<const uint N>
+struct point_t {
+	bignum<N>	x;
+	bignum<N>	y;
+	bignum<N>	z;
+	u64 *xd() { return const_cast<u64 *>(x.data()); }
+	u64 *yd() { return const_cast<u64 *>(y.data()); }
+	u64 *zd() { return const_cast<u64 *>(z.data()); }
+	point_t() = default;
+	point_t(const point_t &) = default;
+	explicit point_t(const bignum<N>& xx, const bignum<N>& yy,
+		const bignum<N>& zz=bignum<N>(1)) : x(xx), y(yy), z(zz) {}
+	explicit point_t(const u64 *xx, const u64 *yy, const u64 *zz) :
+		x(xx), y(yy), z(zz)
+	{
+	}
+	explicit point_t(const u64 *xx, const u64 *yy) :
+		x(xx), y(yy), z(1)
+	{
+	}
+	void clear() {
+		x.clear();
+		y.clear();
+		z.clear();
+	}
+	bool operator==(const point_t& q) const noexcept {
+		if (x ==  q.x && y == q.y && z ==  q.z) return true;
+		// affine
+		return false;
+	}
+	bool is_zero() const noexcept {
+		return z.is_zero(); // || y.is_zero();
+	}
+};
+
+// point add & double template
+/* dbl-1998-cmo-2 algorithm
+ * http://hyperelliptic.org/EFD/g1p/auto-shortw-jacobian.html
+ * M ... l1
+ * S ... l2
+ * T ... x3
+ */
+// x,y,z in montgomery field
+template<typename bnT, typename curveT>
+void point_double_jacob(const curveT& curve, bnT& x3, bnT& y3, bnT& z3,
+		const bnT *x1, const bnT *y1, const bnT *z1 = nullptr) noexcept
+{
+	if ((z1 != nullptr && z1->is_zero()) || y1->is_zero()) {
+		/* P_y == 0 || P_z == 0 => [1:1:0] */
+		x3 = bnT(1);
+		y3 = bnT(1);
+		z3.clear();
+		return;
+	}
+	bool	z_is_one = (z1 == nullptr || curve.mont_one() == *z1);
+	bnT	t1, t2, l1, l2;
+	if (curve.a_is_pminus3()) {
+		/* Use the faster case.  */
+		/* L1 = 3(X - Z^2)(X + Z^2) */
+		/*						T1: used for Z^2. */
+		/*						T2: used for the right term. */
+		if (z_is_one) {
+			// l1 = X - Z^2
+			curve.mod_sub(l1, *x1, curve.mont_one());
+			// 3(X - Z^2) = 2(X - Z^2) + (X - Z^2)
+			// t1 = 2 * l1
+			curve.mont_mult2(t1, l1);
+			// l1 = 2 * l1 + l1 = 3(X - Z^2)
+			curve.mod_add_to(l1, t1);
+			// t1 = X + Z^2
+			curve.mod_add(t1, *x1, curve.mont_one());
+			// l1 = 3(X - Z^2)(X + Z^2)
+			curve.mont_mmult(l1, l1, t1);
+		} else {
+			// t1 = Z^2
+			curve.mont_msqr(t1, *z1);
+			// l1 = X - Z^2
+			curve.mod_sub(l1, *x1, t1);
+			// 3(X - Z^2) = 2(X - Z^2) + (X - Z^2)
+			// t2 = 2 * l1
+			curve.mont_mult2(t2, l1);
+			// l1 = l1 + 2 * l1 = 3(X - Z^2)
+			curve.mod_add_to(l1, t2);
+			// t2 = X + Z^2
+			curve.mod_add(t2, *x1, t1);
+			// l1 = 3(X - Z^2)(X + Z^2)
+			curve.mont_mmult(l1, l1, t2);
+		}
+	} else {
+		/* Standard case. */
+		/* L1 = 3X^2 + aZ^4 */
+		/*					T1: used for aZ^4. */
+		// l1 = X^2
+		curve.mont_msqr(l1, *x1);
+		curve.mont_mult2(t1, l1);
+		// l1 = 3X^2
+		curve.mod_add_to(l1, t1);
+		if (curve.a_is_zero()) {
+			/* Use the faster case.  */
+			/* L1 = 3X^2 */
+			// do nothing
+		} else if (z_is_one) {
+			// should be mont_paramA
+			curve.mod_add_to(l1, curve.montParamA());
+		} else {
+			// t1 = Z^4
+			curve.mont_msqr(t1, *z1, 2);
+			// t1 = a * Z^4
+			curve.mont_mmult(t1, t1, curve.montParamA());
+			// l1 = 3 X^2 + a Z^4
+			curve.mod_add_to(l1, t1);
+		}
+	}
+
+	/* Z3 = 2YZ */
+	if (z_is_one) {
+		curve.mont_mult2(z3, *y1);
+	} else {
+		// Z3 = YZ
+		curve.mont_mmult(z3, *y1, *z1);
+		// Z3 *= 2
+		curve.mont_mult2(z3, z3);
+	}
+
+	/* L2 = 4XY^2 */
+	/* t2 = Y^2 */
+	curve.mont_msqr(t2, *y1);
+	// t2 = 2 Y^2
+	curve.mont_mult2(t2, t2);
+	// l2 =  2 XY^2
+	curve.mont_mmult(l2, t2, *x1);
+	// l2 = 4 X Y^2
+	curve.mont_mult2(l2, l2);
+
+	/* X3 = L1^2 - 2L2 */
+	/*						T1: used for 2L2. */
+	curve.mont_msqr(x3, l1);
+	curve.mont_mult2(t1, l2);
+	curve.mod_sub_from(x3, t1);
+
+	/* L3 = 8Y^4 */
+	/*   L3 reuse t2, t2: taken from above. */
+	curve.mont_msqr(t2, t2);	// t2 = t2^2 = 4Y^4
+	curve.mont_mult2(t2, t2);	// t2 *= 2, t2 = 8Y^4
+
+	/* Y3 = L1(L2 - X3) - L3 */
+	curve.mod_sub(y3, l2, x3);
+	curve.mont_mmult(y3, l1, y3);
+	curve.mod_sub_from(y3, t2);
+}
+
+
+/* add-1998-cmo-2 algorithm
+ * http://hyperelliptic.org/EFD/g1p/auto-shortw-jacobian-3.html
+ */
+// x,y,z in montgomery field
+template<typename bnT, typename curveT>
+void point_add_jacob(const curveT& curve, bnT& x3, bnT& y3, bnT& z3,
+			const bnT& x1, const bnT& y1, const bnT& z1, const bnT *x2,
+			const bnT *y2, const bnT *z2 = nullptr) noexcept
+{
+	if (z1.is_zero()) {
+		x3 = *x2;
+		y3 = *y2;
+		if (z2 == nullptr) z3.clear(); else z3 = *z2;
+		return;
+	} else if (z2 != nullptr && z2->is_zero()) {
+		x3 = x1;
+		y3 = y1;
+		z3 = z1;
+		return;
+	}
+	// add-2007-bl
+	/* add-2007-bl algorithm
+	 * http://hyperelliptic.org/EFD/g1p/auto-shortw-jacobian-3.html
+	 */
+	// U1 ... l1
+	// U2 ... l2
+	// S1 ... l4
+	// S2 ... l5
+	bool	z1_is_one = (z1 == curve.mont_one());
+	bool	z2_is_one = (z2 == nullptr || *z2 == curve.mont_one());
+#ifdef	WITH_ADD_2007bl
+	bnT	u1, u2, s1, s2, h, i, j, r, v;
+	bnT	t1;
+#else
+	bnT	u1, u2, s1, s2, h, hh, hhh, r, v;
+#define	t1		z1z1
+#endif
+	bnT	z1z1;
+	bnT	z2z2;
+
+	/* u1 = x1 z2^2  */
+	/* u2 = x2 z1^2  */
+	if (z2_is_one) {
+		u1 = x1;
+	} else {
+		// z2z2 = z2^2
+		curve.mont_msqr(z2z2, *z2);
+		// u1 = x1 z2^2
+		curve.mont_mmult(u1, x1, z2z2);
+	}
+	if (z1_is_one) {
+		u2 = *x2;
+	} else {
+		// z1z1 = z1^2
+		curve.mont_msqr(z1z1, z1);
+		// u2 = x2 z1^2
+		curve.mont_mmult(u2, *x2, z1z1);
+	}
+
+	/* h = u2 - u1 */
+	curve.mod_sub(h, u2, u1);
+	/* s1 = y1 z2^3  */
+	// s1 = y1
+	s1 = y1;
+	if ( ! z2_is_one ) {
+		// s1 = y1 z2^3
+		curve.mont_mmult(s1, s1, z2z2);
+		curve.mont_mmult(s1, s1, *z2);
+	}
+
+	/* s2 = y2 z1^3  */
+	// s2 = y2
+	s2 = y2;
+	if ( !z1_is_one ) {
+		// s2 = y2 z1^3
+		curve.mont_mmult(s2, s2, z1z1);
+		curve.mont_mmult(s2, s2, z1);
+	}
+	/* r = s2 - s1  */
+	curve.mod_sub(r, s2, s1);
+
+	if (h.is_zero()) {
+		if (r.is_zero()) {
+			/* P1 and P2 are the same - use duplicate function. */
+			point_double_jacob(curve, x3, y3, z3, &x1, &y1, &z1);
+			return;
+		}
+		/* P1 is the inverse of P2.  */
+		x3 = bnT(1);
+		y3 = bnT(1);
+		z3.clear();
+		return;
+	}
+#ifdef	WITH_ADD_2007bl
+	// r = 2 * (s2 -s1)
+	curve.mont_mult2(r, r);
+	// i = (2*h)^2
+	curve.mont_mult2(i, h);
+	curve.mont_msqr(i, i);
+
+	// j = h * i
+	curve.mont_mmult(j, h, i);
+	// v = u1 * i
+	curve.mont_mmult(v, u1, i);
+
+	// x3 = r^2 - j - 2*v
+	curve.mont_msqr(x3, r);
+	curve.mod_sub_from(x3, j);
+	curve.mod_sub_from(x3, v);
+	curve.mod_sub_from(x3, v);
+
+	// y3 = v - x3
+	curve.mod_sub(y3, v, x3);
+	// y3 = r * (v - x3)
+	curve.mont_mmult(y3, r, y3);
+	// t1 = 2 * s1 * j
+	curve.mont_mmult(t1, s1, j);
+	curve.mont_mult2(t1, t1);
+	// y3 = r * (v - x3) - 2 * s1 *j
+	curve.mod_sub_from(y3, t1);
+
+	if (z2_is_one) {
+		// z3 = 2 z1 h
+		if (z1_is_one) {
+			curve.mont_mult2(z3, h);
+		} else {
+			curve.mont_mult2(t1, z1);
+			curve.mont_mmult(z3, t1, h);
+		}
+	} else {
+		// z3 = ((z1 + z2)^2 -z1z1 - z2z2) * h
+		if (z1_is_one) {
+			// t1 = 2 * z2
+			// z3 = t1 * h = 2 * z2 * h
+			curve.mont_mult2(t1, *z2);
+		} else {
+			// t1 = (z1 + z2)^2 -z1z1 - z2z2
+			curve.mod_add(t1, z1, *z2);
+			curve.mont_msqr(t1, t1);
+			curve.mod_sub_from(t1, z1z1);
+			curve.mod_sub_from(t1, z2z2);
+		}
+		curve.mont_mmult(z3, t1, h);
+	}
+#else
+	// hh = h^2
+	curve.mont_msqr(hh, h);
+	// hhh = h * hh
+	curve.mont_mmult(hhh, hh, h);
+	// v = u1 * hh
+	curve.mont_mmult(v, u1, hh);
+
+	// x3 = r^2 - hhh - 2*v
+	curve.mont_msqr(x3, r);
+	curve.mod_sub_from(x3, hhh);
+	curve.mod_sub_from(x3, v);
+	curve.mod_sub_from(x3, v);
+
+	// y3 = v - x3
+	curve.mod_sub(y3, v, x3);
+	// y3 = r * (v - x3)
+	curve.mont_mmult(y3, r, y3);
+	// t1 = s1 * hhh
+	curve.mont_mmult(t1, s1, hhh);
+	// y3 = r * (v - x3) - s1 *hhh
+	curve.mod_sub_from(y3, t1);
+
+	// z3 = z1 * z2 * h
+	if (z2_is_one) {
+		// z3 = z1 h
+		if (z1_is_one) {
+			z3 = h;
+		} else {
+			curve.mont_mmult(z3, z1, h);
+		}
+	} else {
+		// z3 = z1 * z2 * h
+		if (z1_is_one) {
+			// t1 = z2
+			t1 =  z2;
+		} else {
+			// t1 = z1 * z2
+			curve.mont_mmult(t1, z1, *z2);
+		}
+		curve.mont_mmult(z3, t1, h);
+	}
+#undef	t1
+#endif
+}
+
+}
+
+
 /*
  * Computes result = product % mod
  * for special form moduli: p = 2^k-c, for small c (note the minus sign)

@@ -33,48 +33,28 @@
 #include "ecc_impl.hpp"
 #include "mont.hpp"
 
-namespace vli {
+namespace ecc {
 
-
-template<const uint N>
-struct point_t {
-	bignum<N>	x;
-	bignum<N>	y;
-	bignum<N>	z;
-	u64 *xd() { return const_cast<u64 *>(x.data()); }
-	u64 *yd() { return const_cast<u64 *>(y.data()); }
-	u64 *zd() { return const_cast<u64 *>(z.data()); }
-	point_t() = default;
-	point_t(const point_t &) = default;
-	explicit point_t(const bignum<N>& xx, const bignum<N>& yy,
-		const bignum<N>& zz=bignum<N>(1)) : x(xx), y(yy), z(zz) {}
-	explicit point_t(const u64 *xx, const u64 *yy, const u64 *zz) :
-		x(xx), y(yy), z(zz)
-	{
-	}
-	explicit point_t(const u64 *xx, const u64 *yy) :
-		x(xx), y(yy), z(1)
-	{
-	}
-	void clear() {
-		x.clear();
-		y.clear();
-		z.clear();
-	}
-	bool operator==(const point_t& q) const noexcept {
-		if (x ==  q.x && y == q.y && z ==  q.z) return true;
-		// affine
-		return false;
-	}
-	bool is_zero() const noexcept {
-		return z.is_zero(); // || y.is_zero();
-	}
-};
-
-
+using namespace vli;
 constexpr int W = 5;
 constexpr int wSize = 1<<(W-1);
 constexpr int wNAFsize = 1<<W;
+
+template<const uint N, typename curveT> forceinline
+void pre_compute(const curveT& curve, point_t<N> pre_comp[wSize + 1],
+		const point_t<N>& p) noexcept
+{
+	pre_comp[0].clear();
+	//memset(&pre_comp[0], 0, sizeof(pre_comp[0]));
+	pre_comp[1] = p;
+	for (int i = 2; i <= wSize; ++i) {
+		if (i & 1) {
+			curve.point_add(pre_comp[i], pre_comp[i-1], p);
+		} else {
+			curve.point_double(pre_comp[i], pre_comp[i >> 1]);
+		}
+	}
+}
 
 /**
  * struct ecc_curve - definition of elliptic curve
@@ -633,7 +613,7 @@ public:
 		uint	nbits = scalar.num_bits();
 		q.clear();
 		if (nbits == 0) return;
-		this->pre_compute(pres, p);
+		pre_compute<N>(*this, pres, p);
 		bool	skip = true;
 		if (nbits % W != 0) --nbits;
 		for (int i = nbits; i >= 0; --i) {
@@ -699,20 +679,6 @@ public:
 		}
 		this->apply_z(q);
 	}
-	void pre_compute(point_t<N> pre_comp[wSize + 1], const point_t<N>& p)
-	const noexcept
-	{
-		pre_comp[0].clear();
-		//memset(&pre_comp[0], 0, sizeof(pre_comp[0]));
-		pre_comp[1] = p;
-		for (int i = 2; i <= wSize; ++i) {
-			if (i & 1) {
-				point_add(pre_comp[i], pre_comp[i-1], p);
-			} else {
-				point_double(pre_comp[i], pre_comp[i >> 1]);
-			}
-		}
-	}
 	void point_double(point_t<N>& q, const point_t<N>& p) const noexcept {
 		point_double_jacobian(q.xd(), q.yd(), q.zd(),
 						p.x.data(), p.y.data(), p.z.data());
@@ -730,15 +696,6 @@ protected:
 		point_add_jacobian(q.xd(), q.yd(), q.zd(), p1.x.data(), p1.y.data(),
 						p1.z.data(), x2.data(), y2.data());
 	}
-#ifdef	ommit
-	bool select_point(point_t<N>& pt, const uint idx,
-				const point_t<N> pre_comps[wSize+1]) const noexcept
-	{
-		if (idx > wSize) return false;
-		pt = pre_comps[idx];
-		return true;
-	}
-#endif
 	const std::string name;
 	const bignum<N> gx;
 	const bignum<N> gy;
@@ -992,6 +949,6 @@ struct slice_t {
 };
 
 
-}	// namespace vli
+}	// namespace ecc
 
 #endif	//	__CURVE_IMPL_HPP__
