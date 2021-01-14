@@ -11,6 +11,7 @@ set(CMAKE_BUILD_TYPE "Release")
 add_definitions( "-O3 -pthread -std=c++11" )
 add_definitions( "-Wpedantic -Wall -Wmaybe-uninitialized" )
 #add_definitions( "-DWITH_ADD_2007bl" )
+#add_definitions( "-DNO_BUILTIN_OVERFLOW" )
 
 include(FindPkgConfig)
 
