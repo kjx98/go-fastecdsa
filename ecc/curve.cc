@@ -52,9 +52,11 @@ static forceinline const curve_t *ecc_get_curve(uint curve_id) noexcept
 	curve_t	*ret=nullptr;
 	switch (curve_id) {
 	/* In FIPS mode only allow P256 and higher */
+#ifdef	ommit
 	case ECC_CURVE_SECP256K1:
 		ret =  &secp256k1;
 		break;
+#endif
 	case ECC_CURVE_NIST_P256:
 		ret =  &nist_p256;
 		break;

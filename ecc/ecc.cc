@@ -309,7 +309,7 @@ void ecc_swap_digits(const u64 *in, u64 *out, uint ndigits)
 {
 	const be64 *src = (be64 *)in;
 	uint i;
-#pragma GCC unroll 4
+//#pragma GCC unroll 4
 	for (i = 0; i < ndigits; i++)
 		out[i] = be64toh(src[ndigits - 1 - i]);
 }
