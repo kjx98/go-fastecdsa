@@ -56,6 +56,99 @@ void pre_compute(const curveT& curve, point_t<N> pre_comp[wSize + 1],
 	}
 }
 
+// fast scalar Base mult for 256 Bits ECC Curve
+/*-
+ * Base point pre computation
+ * --------------------------
+ *
+ * Two different sorts of precomputed tables are used in the following code.
+ * Each contain various points on the curve, where each point is three field
+ * elements (x, y, z).
+ *
+ * For the base point table, z is usually 1 (0 for the point at infinity).
+ * This table has 2 * 16 elements, starting with the following:
+ * index | bits    | point
+ * ------+---------+------------------------------
+ *     0 | 0 0 0 0 | 0G
+ *     1 | 0 0 0 1 | 1G
+ *     2 | 0 0 1 0 | 2^64G
+ *     3 | 0 0 1 1 | (2^64 + 1)G
+ *     4 | 0 1 0 0 | 2^128G
+ *     5 | 0 1 0 1 | (2^128 + 1)G
+ *     6 | 0 1 1 0 | (2^128 + 2^64)G
+ *     7 | 0 1 1 1 | (2^128 + 2^64 + 1)G
+ *     8 | 1 0 0 0 | 2^192G
+ *     9 | 1 0 0 1 | (2^192 + 1)G
+ *    10 | 1 0 1 0 | (2^192 + 2^64)G
+ *    11 | 1 0 1 1 | (2^192 + 2^64 + 1)G
+ *    12 | 1 1 0 0 | (2^192 + 2^128)G
+ *    13 | 1 1 0 1 | (2^192 + 2^128 + 1)G
+ *    14 | 1 1 1 0 | (2^192 + 2^128 + 2^64)G
+ *    15 | 1 1 1 1 | (2^192 + 2^128 + 2^64 + 1)G
+ * followed by a copy of this with each element multiplied by 2^32.
+ *
+ * The reason for this is so that we can clock bits into four different
+ * locations when doing simple scalar multiplies against the base point,
+ * and then another four locations using the second 16 elements.
+ *
+ * Tables for other points have table[i] = iG for i in 0 .. 16. */
+template<const uint N, typename curveT> forceinline void
+pre_compute_base(const curveT& curve, point_t<N>  pre_comps[2][16]) noexcept
+{
+	int i, j;
+	point_t<N>	G;
+	curve.to_montgomery(G.x, curve.getGx());
+	curve.to_montgomery(G.y, curve.getGy());
+	G.z = curve.mont_one();
+	/*
+	 * compute 2^64*G, 2^128*G, 2^192*G for the first table, 2^32*G, 2^96*G,
+	 * 2^160*G, 2^224*G for the second one
+	 */
+	pre_comps[0][1] = G;
+	for (i = 1; i <= 8; i <<= 1) {
+		curve.point_double(pre_comps[1][i], pre_comps[0][i]);
+		for (j = 0; j < 31; ++j) {
+			curve.point_double(pre_comps[1][i], pre_comps[1][i]);
+		}
+		if (i == 8) break;
+		curve.point_double(pre_comps[0][2 * i], pre_comps[1][i]);
+		for (j = 0; j < 31; ++j) {
+			curve.point_double(pre_comps[0][2 * i], pre_comps[0][2 * i]);
+		}
+	}
+	for (i = 0; i < 2; i++) {
+		/* pre_comps[i][0] is the point at infinity */
+		//memset(&pre_comps[i][0], 0, sizeof(pre_comps[i][0]));
+		pre_comps[i][0].clear();
+		/* the remaining multiples */
+		/* 2^64*G + 2^128*G resp. 2^96*G + 2^160*G */
+		curve.point_add(pre_comps[i][6], pre_comps[i][4], pre_comps[i][2]);
+		/* 2^64*G + 2^192*G resp. 2^96*G + 2^224*G */
+		curve.point_add(pre_comps[i][10], pre_comps[i][8], pre_comps[i][2]);
+		/* 2^128*G + 2^192*G resp. 2^160*G + 2^224*G */
+		curve.point_add(pre_comps[i][12], pre_comps[i][8], pre_comps[i][4]);
+		/*
+		 * 2^64*G + 2^128*G + 2^192*G resp. 2^96*G + 2^160*G + 2^224*G
+		 */
+		curve.point_add(pre_comps[i][14], pre_comps[i][12], pre_comps[i][2]);
+		for (j = 1; j < 8; ++j) {
+			/* odd multiples: add G resp. 2^32*G */
+			curve.point_add(pre_comps[i][2 * j + 1], pre_comps[i][2 * j],
+							pre_comps[i][1]);
+		}
+	}
+	// make_points_affine(31, &(pre->pre_comps[0][1]), tmp_smallfelems);
+	for(i=0;i < 2; i++) {
+		for (j = 1; j < 16; j++) {
+			curve.from_montgomery(pre_comps[i][j].x, pre_comps[i][j].x);
+			curve.from_montgomery(pre_comps[i][j].y, pre_comps[i][j].y);
+			curve.from_montgomery(pre_comps[i][j].z, pre_comps[i][j].z);
+			curve.apply_z_mont(pre_comps[i][j]);
+		}
+	}
+	// convert to affine jacobian
+}
+
 /**
  * struct ecc_curve - definition of elliptic curve
  *
@@ -101,6 +194,8 @@ public:
 	void getB(u64 *v) const noexcept { b.set(v); }
 	void getGx(u64 *v) const noexcept { gx.set(v); }
 	void getGy(u64 *v) const noexcept { gy.set(v); }
+	const felem_t& getGx() const noexcept { return gx; }
+	const felem_t& getGy() const noexcept { return gy; }
 	const felem_t& montParamA() const noexcept { return _mont_a; }
 	const felem_t& paramP() const noexcept { return p; }
 	bool init(const u64 *muP=nullptr, const u64 *muN=nullptr) noexcept {
@@ -128,6 +223,7 @@ public:
 			if (likely(a.is_zero())) _a_is_zero = true;
 		}
 		// should verify calc K0 and RR
+		pre_compute_base<N>(*this, g_pre_comp);	// precompute g_pre_comp
 		_inited = true;
 		return true;
 #endif
@@ -393,6 +489,10 @@ public:
 		apply_z(x, y, z);
 	}
 	void apply_z(point_t<N>& p) const noexcept
+	{
+		apply_z(p.xd(), p.yd(), p.zd());
+	}
+	void apply_z_mont(point_t<N>& p) const noexcept
 	{
 		apply_z(p.xd(), p.yd(), p.zd());
 	}
@@ -698,6 +798,11 @@ public:
 		from_montgomery(q.z, q.z);
 		this->apply_z(q);
 	}
+	bool select_base_point(point_t<N>& pt, const uint idx) const noexcept {
+		if (idx >= 2 * 16) return false;
+		pt = g_pre_comp[idx>>4][idx&0xf];
+		return true;
+	}
 	void point_double(point_t<N>& q, const point_t<N>& p) const noexcept {
 		point_double_jacob(*this, q.x, q.y, q.z, p.x, p.y, p.z);
 	}
@@ -725,6 +830,7 @@ protected:
 	const u64	k0_p = 0;
 	const u64	k0_n = 0;
 	const uint _ndigits = N;
+	point_t<N>	g_pre_comp[2][16];
 	const bool _a_is_neg3 = false;
 	bool _a_is_zero = false;
 	const bool use_barrett = false;
@@ -783,95 +889,6 @@ public:
 		if ((carry=res.lshift(3)) != 0) {
 			this->carry_reduce(res, carry);
 		}
-	}
-// fast scalar Base mult for 256 Bits ECC Curve
-/*-
- * Base point pre computation
- * --------------------------
- *
- * Two different sorts of precomputed tables are used in the following code.
- * Each contain various points on the curve, where each point is three field
- * elements (x, y, z).
- *
- * For the base point table, z is usually 1 (0 for the point at infinity).
- * This table has 2 * 16 elements, starting with the following:
- * index | bits    | point
- * ------+---------+------------------------------
- *     0 | 0 0 0 0 | 0G
- *     1 | 0 0 0 1 | 1G
- *     2 | 0 0 1 0 | 2^64G
- *     3 | 0 0 1 1 | (2^64 + 1)G
- *     4 | 0 1 0 0 | 2^128G
- *     5 | 0 1 0 1 | (2^128 + 1)G
- *     6 | 0 1 1 0 | (2^128 + 2^64)G
- *     7 | 0 1 1 1 | (2^128 + 2^64 + 1)G
- *     8 | 1 0 0 0 | 2^192G
- *     9 | 1 0 0 1 | (2^192 + 1)G
- *    10 | 1 0 1 0 | (2^192 + 2^64)G
- *    11 | 1 0 1 1 | (2^192 + 2^64 + 1)G
- *    12 | 1 1 0 0 | (2^192 + 2^128)G
- *    13 | 1 1 0 1 | (2^192 + 2^128 + 1)G
- *    14 | 1 1 1 0 | (2^192 + 2^128 + 2^64)G
- *    15 | 1 1 1 1 | (2^192 + 2^128 + 2^64 + 1)G
- * followed by a copy of this with each element multiplied by 2^32.
- *
- * The reason for this is so that we can clock bits into four different
- * locations when doing simple scalar multiplies against the base point,
- * and then another four locations using the second 16 elements.
- *
- * Tables for other points have table[i] = iG for i in 0 .. 16. */
-	void pre_compute_base() noexcept
-	{
-		int i, j;
-		point_t<4>	G{this->gx, this->gy, felem_t(1)};
-		/*
-		 * compute 2^64*G, 2^128*G, 2^192*G for the first table, 2^32*G, 2^96*G,
-		 * 2^160*G, 2^224*G for the second one
-		 */
-		this->g_pre_comp[0][1] = G;
-		for (i = 1; i <= 8; i <<= 1) {
-			point_double(g_pre_comp[1][i], g_pre_comp[0][i]);
-			for (j = 0; j < 31; ++j) {
-				point_double(g_pre_comp[1][i], g_pre_comp[1][i]);
-			}
-			if (i == 8) break;
-			point_double(g_pre_comp[0][2 * i], g_pre_comp[1][i]);
-			for (j = 0; j < 31; ++j) {
-				point_double(g_pre_comp[0][2 * i], g_pre_comp[0][2 * i]);
-			}
-		}
-		for (i = 0; i < 2; i++) {
-			/* g_pre_comp[i][0] is the point at infinity */
-			memset(&g_pre_comp[i][0], 0, sizeof(g_pre_comp[i][0]));
-			/* the remaining multiples */
-			/* 2^64*G + 2^128*G resp. 2^96*G + 2^160*G */
-			point_add(g_pre_comp[i][6], g_pre_comp[i][4], g_pre_comp[i][2]);
-			/* 2^64*G + 2^192*G resp. 2^96*G + 2^224*G */
-			point_add(g_pre_comp[i][10], g_pre_comp[i][8], g_pre_comp[i][2]);
-			/* 2^128*G + 2^192*G resp. 2^160*G + 2^224*G */
-			point_add(g_pre_comp[i][12], g_pre_comp[i][8], g_pre_comp[i][4]);
-			/*
-			 * 2^64*G + 2^128*G + 2^192*G resp. 2^96*G + 2^160*G + 2^224*G
-			 */
-			point_add(g_pre_comp[i][14], g_pre_comp[i][12], g_pre_comp[i][2]);
-			for (j = 1; j < 8; ++j) {
-				/* odd multiples: add G resp. 2^32*G */
-				point_add(g_pre_comp[i][2 * j + 1], g_pre_comp[i][2 * j],
-							g_pre_comp[i][1]);
-			}
-		}
-		// make_points_affine(31, &(pre->g_pre_comp[0][1]), tmp_smallfelems);
-		for(i=0;i < 2; i++) {
-			for (j = 1; j < 16; j++) {
-				apply_z(g_pre_comp[i][j]);
-			}
-		}
-		// convert to affine jacobian
-	}
-	bool select_base_point(point_t<4>& pt, const uint idx) const noexcept {
-		if (idx >= 2 * 16) return false;
-		pt = g_pre_comp[idx>>4][idx&0xf];
-		return true;
 	}
 	void scalar_mult_base(point_t<4>& q, const felem_t& scalar) noexcept
 	{
@@ -1013,7 +1030,6 @@ private:
 		cc[3] = u << 32;
 		if (res.add_to(cc)) res.sub_from(this->p);
 	}
-	point_t<4>	g_pre_comp[2][16];
 };
 
 

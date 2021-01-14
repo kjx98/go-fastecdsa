@@ -94,7 +94,7 @@ void point_double_jacob(const curveT& curve, bnT& x3, bnT& y3, bnT& z3,
 	}
 	bool	z_is_one = (curve.mont_one() == z1);
 	bnT	t1, t2, l1, l2;
-	if (curve.a_is_pminus3()) {
+	if ( likely(curve.a_is_pminus3()) ) {
 		/* Use the faster case.  */
 		/* L1 = 3(X - Z^2)(X + Z^2) */
 		/*						T1: used for Z^2. */

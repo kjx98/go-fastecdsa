@@ -207,13 +207,6 @@ static bool select_gmul(point_t<4>& pt, const uint idx)
 
 TEST(testEcc, TestBasePreCompute)
 {
-	steady_clock::time_point t1 = steady_clock::now();
-	sm2_k256.pre_compute_base();
-	steady_clock::time_point t2 = steady_clock::now();
-	std::chrono::duration<double> time_span1;
-	time_span1 = (t2 - t1);
-	std::cerr << "pre_compute_base() cost " << time_span1.count() * 1000000
-			<< " us" << std::endl;
 	point_t<4>	gp, gm;
 	for(int i=0;i<32;i++) {
 		EXPECT_TRUE(sm2_k256.select_base_point(gp, i));
@@ -385,7 +378,6 @@ TEST(testEcc, TestScalarMultBase)
 {
 	bignum<4>	d1(d1d), d2(d2d);
 	point_t<4>	res;
-	sm2_k256.pre_compute_base();
 	sm2_k256.scalar_mult_base(res, d1);
 	ASSERT_TRUE(res.z.is_one());
 	EXPECT_EQ(res.x.cmp(d1Gx), 0);
@@ -407,7 +399,13 @@ TEST(testEcc, TestScalarMultBase)
 int main(int argc, char *argv[])
 {
 	sm2_p256.init();
+	steady_clock::time_point t1 = steady_clock::now();
 	sm2_k256.init();
+	steady_clock::time_point t2 = steady_clock::now();
+	std::chrono::duration<double> time_span1;
+	time_span1 = (t2 - t1);
+	std::cerr << "pre_compute_base() cost " << time_span1.count() * 1000000
+			<< " us" << std::endl;
     testing::InitGoogleTest(&argc, argv);//将命令行参数传递给gtest
     return RUN_ALL_TESTS();   //RUN_ALL_TESTS()运行所有测试案例
 }

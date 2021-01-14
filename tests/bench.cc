@@ -157,7 +157,6 @@ BENCHMARK(test_ECScalarMultNAF2);
 int main(int argc, char ** argv) {
 	sm2_p256.init();
 	sm2_k256.init();
-	sm2_k256.pre_compute_base();
 	benchmark::Initialize(&argc, argv);
 	benchmark::RunSpecifiedBenchmarks();
 }
