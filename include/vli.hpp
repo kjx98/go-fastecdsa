@@ -437,10 +437,12 @@ static uint vli_num_bits(const u64 *vli) noexcept
 	return ((num_digits - 1) * 64 + i);
 }
 
+#ifdef	ommit
 #define ECC_DIGITS_TO_BYTES_SHIFT 3
 forceinline static uint vli_bytes(uint ndigits) {
 	return ndigits << ECC_DIGITS_TO_BYTES_SHIFT;
 }
+#endif
 
 /**
  * vli_from_be64() - Load vli from big-endian u64 array
@@ -514,13 +516,13 @@ void vli_mult(u64 *result, const u64 *left, const u64 *right) noexcept
 }
 
 /* Compute product = left * right, for a small right value. */
-template<uint ndigits> forceinline
+template<const uint N> forceinline
 static void vli_umult(u64 *result, const u64 *left, u64 right) noexcept
 {
 	uint128_t r01( 0, 0 );
 	unsigned int k;
 
-	for (k = 0; k < ndigits; k++) {
+	for (k = 0; k < N; k++) {
 		uint128_t product;
 
 		//if (likely(left[k] != 0))
@@ -536,25 +538,25 @@ static void vli_umult(u64 *result, const u64 *left, u64 right) noexcept
 		//r01.m_low = r01.m_high;
 		//r01.m_high = 0;
 	}
-	result[ndigits] = r01.m_low();
-	for (k = ndigits+1; k < ndigits * 2; k++)
+	result[N] = r01.m_low();
+	for (k = N+1; k < N * 2; k++)
 		result[k] = 0;
 }
 
-template<uint ndigits> forceinline
+template<const uint N> forceinline
 static void vli_square(u64 *result, const u64 *left) noexcept
 {
 	uint128_t r01( 0, 0 );
 	u64 r2 = 0;
 	uint i, k;
 
-	for (k = 0; k < ndigits * 2 - 1; k++) {
+	for (k = 0; k < N * 2 - 1; k++) {
 		unsigned int min;
 
-		if (k < ndigits)
+		if (k < N)
 			min = 0;
 		else
-			min = (k + 1) - ndigits;
+			min = (k + 1) - N;
 
 		for (i = min; i <= k && i <= k - i; i++) {
 			uint128_t product;
@@ -581,40 +583,40 @@ static void vli_square(u64 *result, const u64 *left) noexcept
 		r2 = 0;
 	}
 
-	result[ndigits * 2 - 1] = r01.m_low();
+	result[N * 2 - 1] = r01.m_low();
 }
 
 /* Computes result = (left + right) % mod.
  * Assumes that left < mod and right < mod, result != mod.
  */
-template<uint ndigits> forceinline
+template<uint N> forceinline
 static void vli_mod_add(u64 *result, const u64 *left, const u64 *right,
 			const u64 *mod) noexcept
 {
-	auto carry = vli_add<ndigits>(result, left, right);
+	auto carry = vli_add<N>(result, left, right);
 
 	/* result > mod (result = mod + remainder), so subtract mod to
 	 * get remainder.
 	 */
-	if (carry || vli_cmp<ndigits>(result, mod) >= 0)
-		vli_sub_from<ndigits>(result, mod);
+	if (carry || vli_cmp<N>(result, mod) >= 0)
+		vli_sub_from<N>(result, mod);
 }
 
 /* Computes result = (left - right) % mod.
  * Assumes that left < mod and right < mod, result != mod.
  */
-template<uint ndigits> forceinline
+template<uint N> forceinline
 static void vli_mod_sub(u64 *result, const u64 *left, const u64 *right,
 			const u64 *mod) noexcept
 {
-	auto borrow = vli_sub<ndigits>(result, left, right);
+	auto borrow = vli_sub<N>(result, left, right);
 
 	/* In this case, p_result == -diff == (max int) - diff.
 	 * Since -x % d == d - x, we can get the correct result from
 	 * result + mod (with overflow).
 	 */
 	if (borrow)
-		vli_add_to<ndigits>(result, mod);
+		vli_add_to<N>(result, mod);
 }
 
 #endif	//	__VLI_HPP__

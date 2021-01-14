@@ -244,14 +244,14 @@ TEST(testEcc, TestPreCompute)
 	EXPECT_TRUE(pre_comps[1] == res);
 	sm2_p256.point_double(res, res);
 	EXPECT_TRUE(pre_comps[2] == res);
-	sm2_p256.point_add(res1, res, gg);
+	sm2_p256.point_add(res1, res, gg.x, gg.y);
 	EXPECT_TRUE(pre_comps[3] == res1);
 	sm2_p256.point_double(res, res);
 	EXPECT_TRUE(pre_comps[4] == res);
 	sm2_p256.point_double(res, res);
 	EXPECT_TRUE(pre_comps[8] == res);
 	if (wSize < 16) return;
-	sm2_p256.point_add(res1, res, gg);
+	sm2_p256.point_add(res1, res, gg.x, gg.y);
 	EXPECT_TRUE(pre_comps[9] == res1);
 	sm2_p256.point_double(res, res);
 	EXPECT_TRUE(pre_comps[16] == res);

@@ -162,7 +162,7 @@ public:
 		auto rem = bit & 0x3f;
 		return (this->d[off] >> rem) & 1;
 	}
-	/* copy_conditional copies in to out iff mask is all ones. */
+	/* copy_conditional copies in to out if mask is all ones. */
 	void copy_conditional(const bignum& in, u64 mask)
 	{
 		for (uint i = 0; i < N; ++i) {
@@ -583,10 +583,6 @@ public:
 			vli_sub<N>(this->d, r, prime.d);
 		} else vli_set<N>(this->d, r);
 	}
-#ifdef	ommit
-protected:
-	u64		d[N];
-#endif
 };
 
 

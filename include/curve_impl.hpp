@@ -49,7 +49,7 @@ void pre_compute(const curveT& curve, point_t<N> pre_comp[wSize + 1],
 	pre_comp[1] = p;
 	for (int i = 2; i <= wSize; ++i) {
 		if (i & 1) {
-			curve.point_add(pre_comp[i], pre_comp[i-1], p);
+			curve.point_add(pre_comp[i], pre_comp[i-1], p.x, p.y);
 		} else {
 			curve.point_double(pre_comp[i], pre_comp[i >> 1]);
 		}
@@ -298,7 +298,7 @@ public:
 	}
 	void mont_mult2(felem_t& res, const felem_t& left) const noexcept
 	{
-#ifdef	ommit
+#ifndef	ommit
 		this->mod_add(res, left, left);
 #else
 		if (res.lshift1(left) != 0) {
@@ -336,19 +336,15 @@ public:
 		felem_t	*z3p = reinterpret_cast<felem_t *>(z3);
 		to_montgomery(xp, x1);
 		to_montgomery(yp, y1);
-		if (z_is_one) {
+		if ( z_is_one ) {
 			zp = mont_one();
 		} else {
 			to_montgomery(zp, z1);
 		}
-#if	__cplusplus >= 201703L
 		if (z_is_one)
 			point_doublez_jacob<A_is_n3>(*this, *x3p, *y3p, *z3p, xp, yp);
 		else
 			point_double_jacob<A_is_n3>(*this, *x3p, *y3p, *z3p, xp, yp, zp);
-#else
-		point_double_jacob<A_is_n3>(*this, *x3p, *y3p, *z3p, xp, yp, zp);
-#endif
 		// montgomery reduction
 		from_montgomery(x3, *x3p);
 		from_montgomery(y3, *y3p);
@@ -407,8 +403,7 @@ public:
 		this->mont_mmult(p.x, p.x, t1);	// x1 * z^2
 		this->mont_mmult(t1, t1, zp);	// t1 = z^3
 		this->mont_mmult(p.y, p.y, t1);	// y1 * z^3
-		//p.z = this->mont_one();
-		p.z = _mont_one;
+		p.z = this->mont_one();
 	}
 	bool point_eq(const point_t<N>& p, const point_t<N>& q) const noexcept
 	{
@@ -574,6 +569,11 @@ public:
 		point_add_jacob<A_is_n3>(*this, q.x, q.y, q.z, p1.x, p1.y, p1.z,
 						p2.x, p2.y, p2.z);
 	}
+	void point_add(point_t<N>& q, const point_t<N>& p1, const felem_t& x2,
+					const felem_t& y2) const noexcept
+	{
+		point_addz_jacob<A_is_n3>(*this, q.x, q.y, q.z, p1.x, p1.y, p1.z, x2, y2);
+	}
 protected:
 	const std::string name;
 	const felem_t gx;
@@ -628,8 +628,21 @@ public:
 		felem_t   *res = reinterpret_cast<felem_t *>(result);
 		mont_reduction<Pk0>(*res, y, this->p);
 	}
-	void
-	mont_mmult(felem_t& res, const felem_t& left, const felem_t& right)
+	void apply_z_mont(point_t<4>& p) const noexcept
+	{
+		if (p.z.is_zero() || p.z == mont_one()) return;
+		felem_t	t1, zp;
+		u64		z1[4];
+		from_montgomery(z1, p.z);
+		vli_mod_inv<4>(z1, z1, this->p.data());
+		to_montgomery(zp, z1);		// z = p.z^-1
+		this->mont_msqr(t1, zp);	// t1 = z^2
+		this->mont_mmult(p.x, p.x, t1);	// x1 * z^2
+		this->mont_mmult(t1, t1, zp);	// t1 = z^3
+		this->mont_mmult(p.y, p.y, t1);	// y1 * z^3
+		p.z = this->mont_one();
+	}
+	void mont_mmult(felem_t& res, const felem_t& left, const felem_t& right)
 	const noexcept {
 		mont_mult<Pk0>(res, left, right, this->p);
 	}
@@ -689,17 +702,7 @@ public:
 			}
 		}
 		if ( unlikely(q.z.is_zero()) ) return;
-		if ( q.z != this->mont_one() ) {
-			felem_t	t1, zp;
-			u64		z1[4];
-			from_montgomery(z1, q.z);
-			vli_mod_inv<4>(z1, z1, this->p.data());
-			to_montgomery(zp, z1);		// z = p.z^-1
-			this->mont_msqr(t1, zp);	// t1 = z^2
-			this->mont_mmult(q.x, q.x, t1);	// x1 * z^2
-			this->mont_mmult(t1, t1, zp);	// t1 = z^3
-			this->mont_mmult(q.y, q.y, t1);	// y1 * z^3
-		}
+		this->apply_z_mont(q);
 		this->from_montgomery(q.x, q.x);
 		this->from_montgomery(q.y, q.y);
 		q.z = bignum<4>(1);
@@ -783,6 +786,81 @@ public:
 		from_montgomery(x3, *x3p);
 		from_montgomery(y3, *y3p);
 		from_montgomery(z3, *z3p);
+	}
+	// scalar MUST not zero, g_scalar may be zero
+	void combined_mult(point_t<4>& q, const point_t<4>& p, const felem_t& scalar,
+					const felem_t& g_scalar) const noexcept
+	{
+		point_t<4>	tmp;
+		point_t<4>	pres[wSize+1];
+		uint	nbits = scalar.num_bits();
+		q.clear();
+		if ( unlikely(nbits == 0) ) return;
+		bool	b_gscalar = !g_scalar.is_zero();
+		to_montgomery(tmp.x, p.x);
+		to_montgomery(tmp.y, p.y);
+		if ( likely(p.z.is_one()) ) tmp.z = this->mont_one(); else
+			to_montgomery(tmp.z, p.z);
+		pre_compute<4>(*this, pres, tmp);
+		bool	skip = true;
+		if (nbits % W != 0) --nbits;
+		if (b_gscalar && nbits < 31) nbits = 31;
+		for (int i = nbits; i >= 0; --i) {
+			if (!skip) point_double(q, q);
+
+			if (b_gscalar && nbits < 32) {
+				/* add multiples of the generator */
+				u64	bits = scalar.get_bit(i + 224) << 3;
+				bits |= scalar.get_bit(i + 160) << 2;
+				bits |= scalar.get_bit(i + 96) << 1;
+				bits |= scalar.get_bit(i + 32);
+				if ( likely(bits != 0) ) {
+					this->select_base_point(p, bits | 16);
+					if (!skip) point_add(q, q, p.x, p.y); else {
+						q = p;
+						skip = false;
+					}
+				}
+
+				/* second, look at the current position */
+				bits = scalar.get_bit(i + 192) << 3;
+				bits |= scalar.get_bit(i + 128) << 2;
+				bits |= scalar.get_bit(i + 64) << 1;
+				bits |= scalar.get_bit(i);
+				if ( likely(bits != 0) ) {
+					this->select_base_point(p, bits);
+					if (!skip) point_add(q, q, p.x, p.y); else {
+						q = p;
+						skip = false;
+					}
+				}
+			}
+			if (i % W != 0) continue;
+			uint	bits;
+			uint	digit;
+			bits = vli_get_bits<4, W+1>(scalar.data(), i-1);
+			auto sign = recode_scalar_bits<W>(digit, bits);
+			if (digit == 0) continue;
+#ifndef	NO_CONDITIONAL_COPY
+			tmp = pres[digit];
+			felem_t	ny;
+			ny.sub(this->p, tmp.y);
+			ny.copy_conditional(tmp.y, sign-1);
+			tmp.y = ny;
+#else
+			if ( sign ) point_neg(tmp, pres[digit]); else tmp = pres[digit];
+#endif
+			if (!skip) point_add(q, q, tmp); else {
+				q = tmp;
+				skip =false;
+			}
+		}
+		// montgomery reduction
+		if ( unlikely(q.z.is_zero()) ) return;
+		this->apply_z_mont(q);
+		this->from_montgomery(q.x, q.x);
+		this->from_montgomery(q.y, q.y);
+		q.z = bignum<4>(1);
 	}
 	void point_double(point_t<4>& q, const point_t<4>& p) const noexcept {
 		if ( p.z == this->mont_one() )
