@@ -344,8 +344,12 @@ public:
 		} else {
 			to_montgomery(zp, z1);
 		}
+#if	__cplusplus >= 201703L
 		if (z_is_one) point_doublez_jacob(*this, *x3p, *y3p, *z3p, xp, yp); else
 			point_double_jacob(*this, *x3p, *y3p, *z3p, xp, yp, zp);
+#else
+		point_double_jacob(*this, *x3p, *y3p, *z3p, xp, yp, zp);
+#endif
 		// montgomery reduction
 		from_montgomery(x3, *x3p);
 		from_montgomery(y3, *y3p);
@@ -718,11 +722,16 @@ public:
 		felem_t	*z3p = reinterpret_cast<felem_t *>(z3);
 		to_montgomery(xp, x1);
 		to_montgomery(yp, y1);
+		zp = this->mont_one();
 		if (!z_is_one) {
 			to_montgomery(zp, z1);
 		}
+#if	__cplusplus >= 201703L
 		if (z_is_one) point_doublez_jacob(*this, *x3p, *y3p, *z3p, xp, yp); else
 			point_double_jacob(*this, *x3p, *y3p, *z3p, xp, yp, zp);
+#else
+		point_double_jacob(*this, *x3p, *y3p, *z3p, xp, yp, zp);
+#endif
 		// montgomery reduction
 		from_montgomery(x3, *x3p);
 		from_montgomery(y3, *y3p);
@@ -776,10 +785,14 @@ public:
 		from_montgomery(z3, *z3p);
 	}
 	void point_double(point_t<4>& q, const point_t<4>& p) const noexcept {
+#if	__cplusplus >= 201703L
 		if ( p.z == this->mont_one() )
 			point_doublez_jacob(*this, q.x, q.y, q.z, p.x, p.y);
 		else
 			point_double_jacob(*this, q.x, q.y, q.z, p.x, p.y, p.z);
+#else
+		point_double_jacob(*this, q.x, q.y, q.z, p.x, p.y, p.z);
+#endif
 	}
 	void point_add(point_t<4>& q, const point_t<4>& p1, const point_t<4>& p2)
 	const noexcept {

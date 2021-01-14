@@ -85,6 +85,7 @@ template<typename bnT, typename curveT>
 void point_double_jacob(const curveT& curve, bnT& x3, bnT& y3, bnT& z3,
 		const bnT &x1, const bnT &y1, const bnT &z1) noexcept
 {
+#ifdef	ommit
 	if (z1.is_zero() || y1.is_zero()) {
 		/* P_y == 0 || P_z == 0 => [1:1:0] */
 		x3 = bnT(1);
@@ -92,6 +93,7 @@ void point_double_jacob(const curveT& curve, bnT& x3, bnT& y3, bnT& z3,
 		z3.clear();
 		return;
 	}
+#endif
 	bool	z_is_one = (curve.mont_one() == z1);
 	bnT	t1, t2, l1, l2;
 	if ( likely(curve.a_is_pminus3()) ) {
@@ -246,11 +248,13 @@ void point_doublez_jacob(const curveT& curve, bnT& x3, bnT& y3, bnT& z3,
  * http://hyperelliptic.org/EFD/g1p/auto-shortw-jacobian-3.html
  */
 // x,y,z in montgomery field
+// point 1, point 2 not zero
 template<typename bnT, typename curveT>
 void point_add_jacob(const curveT& curve, bnT& x3, bnT& y3, bnT& z3,
 			const bnT& x1, const bnT& y1, const bnT& z1, const bnT& x2,
 			const bnT& y2, const bnT& z2) noexcept
 {
+#ifdef	ommit
 	if (z1.is_zero()) {
 		x3 = x2;
 		y3 = y2;
@@ -262,6 +266,7 @@ void point_add_jacob(const curveT& curve, bnT& x3, bnT& y3, bnT& z3,
 		z3 = z1;
 		return;
 	}
+#endif
 	// add-2007-bl
 	/* add-2007-bl algorithm
 	 * http://hyperelliptic.org/EFD/g1p/auto-shortw-jacobian-3.html
@@ -284,21 +289,19 @@ void point_add_jacob(const curveT& curve, bnT& x3, bnT& y3, bnT& z3,
 
 	/* u1 = x1 z2^2  */
 	/* u2 = x2 z1^2  */
-	if (z2_is_one) {
-		u1 = x1;
-	} else {
+	u1 = x1;
+	if ( likely(!z2_is_one) ) {
 		// z2z2 = z2^2
 		curve.mont_msqr(z2z2, z2);
 		// u1 = x1 z2^2
-		curve.mont_mmult(u1, x1, z2z2);
+		curve.mont_mmult(u1, u1, z2z2);
 	}
-	if (z1_is_one) {
-		u2 = x2;
-	} else {
+	u2 = x2;
+	if ( likely(!z1_is_one) ) {
 		// z1z1 = z1^2
 		curve.mont_msqr(z1z1, z1);
 		// u2 = x2 z1^2
-		curve.mont_mmult(u2, x2, z1z1);
+		curve.mont_mmult(u2, u2, z1z1);
 	}
 
 	/* h = u2 - u1 */
@@ -306,7 +309,7 @@ void point_add_jacob(const curveT& curve, bnT& x3, bnT& y3, bnT& z3,
 	/* s1 = y1 z2^3  */
 	// s1 = y1
 	s1 = y1;
-	if ( ! z2_is_one ) {
+	if ( likely(!z2_is_one) ) {
 		// s1 = y1 z2^3
 		curve.mont_mmult(s1, s1, z2z2);
 		curve.mont_mmult(s1, s1, z2);
@@ -315,7 +318,7 @@ void point_add_jacob(const curveT& curve, bnT& x3, bnT& y3, bnT& z3,
 	/* s2 = y2 z1^3  */
 	// s2 = y2
 	s2 = y2;
-	if ( !z1_is_one ) {
+	if ( likely(!z1_is_one) ) {
 		// s2 = y2 z1^3
 		curve.mont_mmult(s2, s2, z1z1);
 		curve.mont_mmult(s2, s2, z1);
@@ -323,10 +326,17 @@ void point_add_jacob(const curveT& curve, bnT& x3, bnT& y3, bnT& z3,
 	/* r = s2 - s1  */
 	curve.mod_sub(r, s2, s1);
 
-	if (h.is_zero()) {
+	if ( unlikely(h.is_zero()) ) {
 		if (r.is_zero()) {
 			/* P1 and P2 are the same - use duplicate function. */
+#if	__cplusplus >= 201703L
+			if ( z1_is_one )
+				point_doublez_jacob(curve, x3, y3, z3, x1, y1);
+			else
+				point_double_jacob(curve, x3, y3, z3, x1, y1, z1);
+#else
 			point_double_jacob(curve, x3, y3, z3, x1, y1, z1);
+#endif
 			return;
 		}
 		/* P1 is the inverse of P2.  */
@@ -451,13 +461,12 @@ void point_addz_jacob(const curveT& curve, bnT& x3, bnT& y3, bnT& z3,
 	/* u1 = x1 z2^2  */
 	/* u2 = x2 z1^2  */
 	u1 = x1;
-	if (unlikely(z1_is_one)) {
-		u2 = x2;
-	} else {
+	u2 = x2;
+	if ( likely(!z1_is_one) ) {
 		// z1z1 = z1^2
 		curve.mont_msqr(z1z1, z1);
 		// u2 = x2 z1^2
-		curve.mont_mmult(u2, x2, z1z1);
+		curve.mont_mmult(u2, u2, z1z1);
 	}
 
 	/* h = u2 - u1 */
@@ -477,7 +486,7 @@ void point_addz_jacob(const curveT& curve, bnT& x3, bnT& y3, bnT& z3,
 	/* r = s2 - s1  */
 	curve.mod_sub(r, s2, s1);
 
-	if (h.is_zero()) {
+	if ( unlikely(h.is_zero()) ) {
 		if (r.is_zero()) {
 			/* P1 and P2 are the same - use duplicate function. */
 			point_doublez_jacob(curve, x3, y3, z3, x2, y2);
