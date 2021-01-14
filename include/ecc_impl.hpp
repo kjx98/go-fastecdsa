@@ -81,6 +81,7 @@ struct point_t {
  */
 // x,y,z in montgomery field
 template<const bool A_is_n3=true, typename bnT, typename curveT>
+forceinline static
 void point_double_jacob(const curveT& curve, bnT& x3, bnT& y3, bnT& z3,
 		const bnT &x1, const bnT &y1, const bnT &z1) noexcept
 {
@@ -198,6 +199,7 @@ void point_double_jacob(const curveT& curve, bnT& x3, bnT& y3, bnT& z3,
 
 // x,y in montgomery field
 template<const bool A_is_n3=true, typename bnT, typename curveT>
+forceinline static
 void point_doublez_jacob(const curveT& curve, bnT& x3, bnT& y3, bnT& z3,
 		const bnT &x1, const bnT &y1) noexcept
 {
@@ -281,6 +283,7 @@ void point_doublez_jacob(const curveT& curve, bnT& x3, bnT& y3, bnT& z3,
 // x,y,z in montgomery field
 // point 1, point 2 not zero
 template<const bool A_is_n3=true, typename bnT, typename curveT>
+forceinline static
 void point_add_jacob(const curveT& curve, bnT& x3, bnT& y3, bnT& z3,
 			const bnT& x1, const bnT& y1, const bnT& z1, const bnT& x2,
 			const bnT& y2, const bnT& z2) noexcept
@@ -470,6 +473,7 @@ void point_add_jacob(const curveT& curve, bnT& x3, bnT& y3, bnT& z3,
 }
 
 template<const bool A_is_n3=true, typename bnT, typename curveT>
+forceinline static
 void point_addz_jacob(const curveT& curve, bnT& x3, bnT& y3, bnT& z3,
 			const bnT& x1, const bnT& y1, const bnT& z1, const bnT& x2,
 			const bnT& y2) noexcept

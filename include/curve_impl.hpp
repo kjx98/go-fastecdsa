@@ -413,7 +413,7 @@ public:
 		this->apply_z(x2, y2, q);
 		return vli_cmp<N>(x1, x2) == 0 && vli_cmp<N>(y1, y2) == 0;
 	}
-	void point_neg(point_t<N>& q, const point_t<N>p) const noexcept
+	void point_neg(point_t<N>& q, const point_t<N>& p) const noexcept
 	{
 		q.x = p.x;
 		q.y.sub(this->p, p.y);
@@ -467,14 +467,18 @@ public:
 		from_montgomery(y3, *y3p);
 		from_montgomery(z3, *z3p);
 	}
-	void scalar_mult(point_t<N>& q, const point_t<N>& p,
-					const felem_t& scalar) const noexcept
+	void scalar_mult(point_t<N>& q, const point_t<N>& p, const felem_t& scalar)
+			const noexcept
 	{
 		point_t<N>	tmp;
-		point_t<N>	pres[wSize+1];
 		uint	nbits = scalar.num_bits();
 		q.clear();
 		if ( unlikely(nbits == 0) ) return;
+#ifdef	PRECOMPUTE_INSTACK
+		point_t<N>	pres[wSize+1];
+#else
+		auto pres = new(point_t<N>[wSize+1]);
+#endif
 		to_montgomery(tmp.x, p.x);
 		to_montgomery(tmp.y, p.y);
 		if ( likely(p.z.is_one()) ) tmp.z = this->mont_one(); else
@@ -513,11 +517,15 @@ public:
 				skip =false;
 			}
 		}
+#ifndef	PRECOMPUTE_INSTACK
+		delete []pres;
+#endif
 		// montgomery reduction
-		from_montgomery(q.x, q.x);
-		from_montgomery(q.y, q.y);
-		from_montgomery(q.z, q.z);
-		this->apply_z(q);
+		if ( unlikely(q.z.is_zero()) ) return;
+		this->apply_z_mont(q);
+		this->from_montgomery(q.x, q.x);
+		this->from_montgomery(q.y, q.y);
+		q.z = felem_t(1);
 	}
 	void scalar_multNAF2(point_t<N>& q, const point_t<N>& p,
 				const felem_t& scalar) const noexcept
@@ -551,10 +559,11 @@ public:
 			}
 		}
 		// montgomery reduction
-		from_montgomery(q.x, q.x);
-		from_montgomery(q.y, q.y);
-		from_montgomery(q.z, q.z);
-		this->apply_z(q);
+		if ( unlikely(q.z.is_zero()) ) return;
+		this->apply_z_mont(q);
+		this->from_montgomery(q.x, q.x);
+		this->from_montgomery(q.y, q.y);
+		q.z = felem_t(1);
 	}
 	bool select_base_point(point_t<N>& pt, const uint idx) const noexcept {
 		if (idx >= 2 * 16) return false;
@@ -572,7 +581,8 @@ public:
 	void point_add(point_t<N>& q, const point_t<N>& p1, const felem_t& x2,
 					const felem_t& y2) const noexcept
 	{
-		point_addz_jacob<A_is_n3>(*this, q.x, q.y, q.z, p1.x, p1.y, p1.z, x2, y2);
+		point_addz_jacob<A_is_n3>(*this, q.x, q.y, q.z, p1.x, p1.y, p1.z,
+						x2, y2);
 	}
 protected:
 	const std::string name;
@@ -705,7 +715,7 @@ public:
 		this->apply_z_mont(q);
 		this->from_montgomery(q.x, q.x);
 		this->from_montgomery(q.y, q.y);
-		q.z = bignum<4>(1);
+		q.z = felem_t(1);
 	}
 	void point_double_jacobian(u64 *x3, u64 *y3, u64 *z3, const u64 *x1,
 					const u64 *y1, const u64 *z1 = nullptr) const noexcept
@@ -788,15 +798,15 @@ public:
 		from_montgomery(z3, *z3p);
 	}
 	// scalar MUST not zero, g_scalar may be zero
-	void combined_mult(point_t<4>& q, const point_t<4>& p, const felem_t& scalar,
-					const felem_t& g_scalar) const noexcept
+	void combined_mult(point_t<4>& q, const point_t<4>& p,
+				const felem_t& scalar, const felem_t& g_scalar) const noexcept
 	{
 		point_t<4>	tmp;
-		point_t<4>	pres[wSize+1];
 		uint	nbits = scalar.num_bits();
 		q.clear();
 		if ( unlikely(nbits == 0) ) return;
-		bool	b_gscalar = !g_scalar.is_zero();
+		point_t<4>	pres[wSize+1];
+		bool	b_gscalar = !(g_scalar.is_zero());
 		to_montgomery(tmp.x, p.x);
 		to_montgomery(tmp.y, p.y);
 		if ( likely(p.z.is_one()) ) tmp.z = this->mont_one(); else
@@ -808,6 +818,7 @@ public:
 		for (int i = nbits; i >= 0; --i) {
 			if (!skip) point_double(q, q);
 
+			// G multiples with 0..31 32 bits
 			if (b_gscalar && nbits < 32) {
 				/* add multiples of the generator */
 				u64	bits = scalar.get_bit(i + 224) << 3;
@@ -815,9 +826,9 @@ public:
 				bits |= scalar.get_bit(i + 96) << 1;
 				bits |= scalar.get_bit(i + 32);
 				if ( likely(bits != 0) ) {
-					this->select_base_point(p, bits | 16);
-					if (!skip) point_add(q, q, p.x, p.y); else {
-						q = p;
+					this->select_base_point(tmp, bits | 16);
+					if (!skip) point_add(q, q, tmp.x, tmp.y); else {
+						q = tmp;
 						skip = false;
 					}
 				}
@@ -828,9 +839,9 @@ public:
 				bits |= scalar.get_bit(i + 64) << 1;
 				bits |= scalar.get_bit(i);
 				if ( likely(bits != 0) ) {
-					this->select_base_point(p, bits);
-					if (!skip) point_add(q, q, p.x, p.y); else {
-						q = p;
+					this->select_base_point(tmp, bits);
+					if (!skip) point_add(q, q, tmp.x, tmp.y); else {
+						q = tmp;
 						skip = false;
 					}
 				}
@@ -860,7 +871,7 @@ public:
 		this->apply_z_mont(q);
 		this->from_montgomery(q.x, q.x);
 		this->from_montgomery(q.y, q.y);
-		q.z = bignum<4>(1);
+		q.z = felem_t(1);
 	}
 	void point_double(point_t<4>& q, const point_t<4>& p) const noexcept {
 		if ( p.z == this->mont_one() )
