@@ -115,7 +115,6 @@ void    point_double(Point *pt, const Point *p, CURVE_HND curveH)
 	auto	*curve=(curve_t *)curveH;
 	if (!(*curve) || curve->ndigits() != 4) return;
 	curve->point_double_jacobian(pt->x, pt->y, pt->z, p->x, p->y, p->z);
-	u64 z[4];
 	curve->apply_z(pt->x, pt->y, pt->z);
 }
 

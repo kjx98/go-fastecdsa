@@ -95,6 +95,6 @@ void sm2_scalar_base_mult(Point *result, const u8 *scalar)
 void sm2_scalar_mult(Point *result,const Point *p,  const bn_words_t scalar)
 {
 	felem felem_x3, felem_y3, felem_z3;
-	u64	(*scalars)[4]={scalar};
+	const u64 (*scalars)[4]={(const u64 (*)[4])scalar};
 	sm2_points_mul(result, NULL, 1, p, scalars);
 }
