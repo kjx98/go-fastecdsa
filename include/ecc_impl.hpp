@@ -81,7 +81,7 @@ struct point_t {
  * T ... x3
  */
 // x,y,z in montgomery field
-template<typename bnT, typename curveT>
+template<const bool A_is_n3=true, typename bnT, typename curveT>
 void point_double_jacob(const curveT& curve, bnT& x3, bnT& y3, bnT& z3,
 		const bnT &x1, const bnT &y1, const bnT &z1) noexcept
 {
@@ -96,7 +96,13 @@ void point_double_jacob(const curveT& curve, bnT& x3, bnT& y3, bnT& z3,
 #endif
 	bool	z_is_one = (curve.mont_one() == z1);
 	bnT	t1, t2, l1, l2;
-	if ( likely(curve.a_is_pminus3()) ) {
+	//if ( likely(curve.a_is_pminus3()) )
+#if	__cplusplus >= 201703L
+	if constexpr(A_is_n3)
+#else
+	if ( likely(A_is_n3) )
+#endif
+	{
 		/* Use the faster case.  */
 		/* L1 = 3(X - Z^2)(X + Z^2) */
 		/*						T1: used for Z^2. */
@@ -192,26 +198,52 @@ void point_double_jacob(const curveT& curve, bnT& x3, bnT& y3, bnT& z3,
 }
 
 // x,y in montgomery field
-template<typename bnT, typename curveT>
+template<const bool A_is_n3=true, typename bnT, typename curveT>
 void point_doublez_jacob(const curveT& curve, bnT& x3, bnT& y3, bnT& z3,
 		const bnT &x1, const bnT &y1) noexcept
 {
 	bnT	t1, t2, l1, l2;
 	/* Use the faster case.  */
 	/* L1 = 3(X - Z^2)(X + Z^2) */
-	/*						T1: used for Z^2. */
-	/*						T2: used for the right term. */
-	// l1 = X - Z^2
-	curve.mod_sub(l1, x1, curve.mont_one());
-	// 3(X - Z^2) = 2(X - Z^2) + (X - Z^2)
-	// t1 = 2 * l1
-	curve.mont_mult2(t1, l1);
-	// l1 = 2 * l1 + l1 = 3(X - Z^2)
-	curve.mod_add_to(l1, t1);
-	// t1 = X + Z^2
-	curve.mod_add(t1, x1, curve.mont_one());
-	// l1 = 3(X - Z^2)(X + Z^2)
-	curve.mont_mmult(l1, l1, t1);
+#if	__cplusplus >= 201703L
+	if constexpr(A_is_n3)
+#else
+	if ( likely(A_is_n3) )
+#endif
+	{
+		/* Use the faster case.  */
+		/* L1 = 3(X - Z^2)(X + Z^2) */
+		/*						T1: used for Z^2. */
+		/*						T2: used for the right term. */
+		// l1 = X - Z^2
+		curve.mod_sub(l1, x1, curve.mont_one());
+		// 3(X - Z^2) = 2(X - Z^2) + (X - Z^2)
+		// t1 = 2 * l1
+		curve.mont_mult2(t1, l1);
+		// l1 = 2 * l1 + l1 = 3(X - Z^2)
+		curve.mod_add_to(l1, t1);
+		// t1 = X + Z^2
+		curve.mod_add(t1, x1, curve.mont_one());
+		// l1 = 3(X - Z^2)(X + Z^2)
+		curve.mont_mmult(l1, l1, t1);
+	} else {
+		/* Standard case. */
+		/* L1 = 3X^2 + aZ^4 */
+		/*					T1: used for aZ^4. */
+		// l1 = X^2
+		curve.mont_msqr(l1, x1);
+		curve.mont_mult2(t1, l1);
+		// l1 = 3X^2
+		curve.mod_add_to(l1, t1);
+		if (curve.a_is_zero()) {
+			/* Use the faster case.  */
+			/* L1 = 3X^2 */
+			// do nothing
+		} else {
+			// should be mont_paramA
+			curve.mod_add_to(l1, curve.montParamA());
+		}
+	}
 
 	/* Z3 = 2YZ */
 	curve.mont_mult2(z3, y1);
@@ -249,7 +281,7 @@ void point_doublez_jacob(const curveT& curve, bnT& x3, bnT& y3, bnT& z3,
  */
 // x,y,z in montgomery field
 // point 1, point 2 not zero
-template<typename bnT, typename curveT>
+template<const bool A_is_n3=true, typename bnT, typename curveT>
 void point_add_jacob(const curveT& curve, bnT& x3, bnT& y3, bnT& z3,
 			const bnT& x1, const bnT& y1, const bnT& z1, const bnT& x2,
 			const bnT& y2, const bnT& z2) noexcept
@@ -329,14 +361,10 @@ void point_add_jacob(const curveT& curve, bnT& x3, bnT& y3, bnT& z3,
 	if ( unlikely(h.is_zero()) ) {
 		if (r.is_zero()) {
 			/* P1 and P2 are the same - use duplicate function. */
-#if	__cplusplus >= 201703L
 			if ( z1_is_one )
-				point_doublez_jacob(curve, x3, y3, z3, x1, y1);
+				point_doublez_jacob<A_is_n3>(curve, x3, y3, z3, x1, y1);
 			else
-				point_double_jacob(curve, x3, y3, z3, x1, y1, z1);
-#else
-			point_double_jacob(curve, x3, y3, z3, x1, y1, z1);
-#endif
+				point_double_jacob<A_is_n3>(curve, x3, y3, z3, x1, y1, z1);
 			return;
 		}
 		/* P1 is the inverse of P2.  */
@@ -442,7 +470,7 @@ void point_add_jacob(const curveT& curve, bnT& x3, bnT& y3, bnT& z3,
 #endif
 }
 
-template<typename bnT, typename curveT>
+template<const bool A_is_n3=true, typename bnT, typename curveT>
 void point_addz_jacob(const curveT& curve, bnT& x3, bnT& y3, bnT& z3,
 			const bnT& x1, const bnT& y1, const bnT& z1, const bnT& x2,
 			const bnT& y2) noexcept
@@ -489,11 +517,7 @@ void point_addz_jacob(const curveT& curve, bnT& x3, bnT& y3, bnT& z3,
 	if ( unlikely(h.is_zero()) ) {
 		if (r.is_zero()) {
 			/* P1 and P2 are the same - use duplicate function. */
-#if	__cplusplus >= 201703L
-			point_doublez_jacob(curve, x3, y3, z3, x2, y2);
-#else
-			point_double_jacob(curve, x3, y3, z3, x1, y1, z1);
-#endif
+			point_doublez_jacob<A_is_n3>(curve, x3, y3, z3, x2, y2);
 			return;
 		}
 		/* P1 is the inverse of P2.  */

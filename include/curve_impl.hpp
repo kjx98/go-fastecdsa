@@ -156,26 +156,23 @@ pre_compute_base(const curveT& curve, point_t<N>  pre_comps[2][16]) noexcept
  * @a:		Curve parameter a.
  * @b:		Curve parameter b.
  */
-template<const uint N=4>
+template<const uint N=4, const bool A_is_n3=true>
 class ecc_curve {
 public:
 	using felem_t = bignum<N>;
 	ecc_curve(const char *_name, const u64 *_gx, const u64 *_gy, const u64 *_p,
-			const u64 *_n, const u64 *_a, const u64 *_b, const bool a_n3 = true,
-			const bool bBat=false) :
-		name(_name), gx(_gx), gy(_gy),
-		p(_p), n(_n), a(_a), b(_b), _a_is_neg3(a_n3),
-		use_barrett(bBat)
+			const u64 *_n, const u64 *_a, const u64 *_b, const bool bBat=false)
+		: name(_name), gx(_gx), gy(_gy), p(_p), n(_n),
+		a(_a), b(_b), _a_is_neg3(A_is_n3), use_barrett(bBat)
 	{
 		static_assert(N > 3, "curve only support 256Bits or more");
 	}
 	ecc_curve(const char *_name, const u64 *_gx, const u64 *_gy, const u64 *_p,
 			const u64 *_n, const u64 *_a, const u64 *_b, const u64* rrP,
-			const u64* rrN, const u64 k0P, const u64 k0N,
-			const bool a_n3 = true):
+			const u64* rrN, const u64 k0P, const u64 k0N):
 		name(_name), gx(_gx), gy(_gy),
 		p(_p), n(_n), a(_a), b(_b), rr_p(rrP), rr_n(rrN), k0_p(k0P), k0_n(k0N),
-		_a_is_neg3(a_n3), use_barrett(false)
+		_a_is_neg3(A_is_n3), use_barrett(false)
 	{
 		static_assert(N > 3, "curve only support 256Bits or more");
 	}
@@ -345,10 +342,12 @@ public:
 			to_montgomery(zp, z1);
 		}
 #if	__cplusplus >= 201703L
-		if (z_is_one) point_doublez_jacob(*this, *x3p, *y3p, *z3p, xp, yp); else
-			point_double_jacob(*this, *x3p, *y3p, *z3p, xp, yp, zp);
+		if (z_is_one)
+			point_doublez_jacob<A_is_n3>(*this, *x3p, *y3p, *z3p, xp, yp);
+		else
+			point_double_jacob<A_is_n3>(*this, *x3p, *y3p, *z3p, xp, yp, zp);
 #else
-		point_double_jacob(*this, *x3p, *y3p, *z3p, xp, yp, zp);
+		point_double_jacob<A_is_n3>(*this, *x3p, *y3p, *z3p, xp, yp, zp);
 #endif
 		// montgomery reduction
 		from_montgomery(x3, *x3p);
@@ -462,9 +461,10 @@ public:
 			to_montgomery(z2p, z2);
 		}
 		if (z2_is_one) {
-			point_addz_jacob(*this, *x3p, *y3p, *z3p, x1p, y1p, z1p, x2p, y2p);
+			point_addz_jacob<A_is_n3>(*this, *x3p, *y3p, *z3p, x1p, y1p, z1p,
+							x2p, y2p);
 		} else {
-			point_add_jacob(*this, *x3p, *y3p, *z3p, x1p, y1p, z1p,
+			point_add_jacob<A_is_n3>(*this, *x3p, *y3p, *z3p, x1p, y1p, z1p,
 							x2p, y2p, z2p);
 		}
 		// montgomery reduction
@@ -567,11 +567,11 @@ public:
 		return true;
 	}
 	void point_double(point_t<N>& q, const point_t<N>& p) const noexcept {
-		point_double_jacob(*this, q.x, q.y, q.z, p.x, p.y, p.z);
+		point_double_jacob<A_is_n3>(*this, q.x, q.y, q.z, p.x, p.y, p.z);
 	}
 	void point_add(point_t<N>& q, const point_t<N>& p1, const point_t<N>& p2)
 	const noexcept {
-		point_add_jacob(*this, q.x, q.y, q.z, p1.x, p1.y, p1.z,
+		point_add_jacob<A_is_n3>(*this, q.x, q.y, q.z, p1.x, p1.y, p1.z,
 						p2.x, p2.y, p2.z);
 	}
 protected:
@@ -600,8 +600,8 @@ protected:
 	bool _inited = false;
 };
 
-template <const u64 Pk0=1>
-class curve256 : public ecc_curve<4> {
+template <const u64 Pk0=1, const bool A_is_n3=true>
+class curve256 : public ecc_curve<4,A_is_n3> {
 public:
 	using felem_t = bignum<4>;
 	curve256(const char *_name, const u64 *_gx, const u64 *_gy, const u64 *_p,
@@ -609,6 +609,7 @@ public:
 		ecc_curve<4>(_name, _gx, _gy, _p, _n, _a, _b, sm2_p_rr, sm2_n_rr,
 					sm2_p_k0, sm2_n_k0)
 	{ }
+	const felem_t& mont_one() const noexcept { return this->_mont_one; }
 	void to_montgomery(felem_t& res, const u64 *x) const noexcept
 	{
 		felem_t   *xx = reinterpret_cast<felem_t *>(const_cast<u64 *>(x));
@@ -668,7 +669,7 @@ public:
 			bits |= scalar.get_bit(i + 96) << 1;
 			bits |= scalar.get_bit(i + 32);
 			if ( likely(bits != 0) ) {
-				select_base_point(p, bits | 16);
+				this->select_base_point(p, bits | 16);
 				if (!skip) point_add(q, q, p.x, p.y); else {
 					q = p;
 					skip = false;
@@ -681,7 +682,7 @@ public:
 			bits |= scalar.get_bit(i + 64) << 1;
 			bits |= scalar.get_bit(i);
 			if (bits == 0) continue;
-			select_base_point(p, bits);
+			this->select_base_point(p, bits);
 			if (!skip) point_add(q, q, p.x, p.y); else {
 				q = p;
 				skip = false;
@@ -726,12 +727,10 @@ public:
 		if (!z_is_one) {
 			to_montgomery(zp, z1);
 		}
-#if	__cplusplus >= 201703L
-		if (z_is_one) point_doublez_jacob(*this, *x3p, *y3p, *z3p, xp, yp); else
-			point_double_jacob(*this, *x3p, *y3p, *z3p, xp, yp, zp);
-#else
-		point_double_jacob(*this, *x3p, *y3p, *z3p, xp, yp, zp);
-#endif
+		if (z_is_one)
+			point_doublez_jacob<A_is_n3>(*this, *x3p, *y3p, *z3p, xp, yp);
+		else
+			point_double_jacob<A_is_n3>(*this, *x3p, *y3p, *z3p, xp, yp, zp);
 		// montgomery reduction
 		from_montgomery(x3, *x3p);
 		from_montgomery(y3, *y3p);
@@ -774,9 +773,10 @@ public:
 			to_montgomery(z2p, z2);
 		}
 		if (z2_is_one) {
-			point_addz_jacob(*this, *x3p, *y3p, *z3p, x1p, y1p, z1p, x2p, y2p);
+			point_addz_jacob<A_is_n3>(*this, *x3p, *y3p, *z3p, x1p, y1p, z1p,
+							x2p, y2p);
 		} else {
-			point_add_jacob(*this, *x3p, *y3p, *z3p, x1p, y1p, z1p,
+			point_add_jacob<A_is_n3>(*this, *x3p, *y3p, *z3p, x1p, y1p, z1p,
 							x2p, y2p, z2p);
 		}
 		// montgomery reduction
@@ -785,24 +785,20 @@ public:
 		from_montgomery(z3, *z3p);
 	}
 	void point_double(point_t<4>& q, const point_t<4>& p) const noexcept {
-#if	__cplusplus >= 201703L
 		if ( p.z == this->mont_one() )
-			point_doublez_jacob(*this, q.x, q.y, q.z, p.x, p.y);
+			point_doublez_jacob<A_is_n3>(*this, q.x, q.y, q.z, p.x, p.y);
 		else
-			point_double_jacob(*this, q.x, q.y, q.z, p.x, p.y, p.z);
-#else
-		point_double_jacob(*this, q.x, q.y, q.z, p.x, p.y, p.z);
-#endif
+			point_double_jacob<A_is_n3>(*this, q.x, q.y, q.z, p.x, p.y, p.z);
 	}
 	void point_add(point_t<4>& q, const point_t<4>& p1, const point_t<4>& p2)
 	const noexcept {
-		point_add_jacob(*this, q.x, q.y, q.z, p1.x, p1.y, p1.z,
+		point_add_jacob<A_is_n3>(*this, q.x, q.y, q.z, p1.x, p1.y, p1.z,
 						p2.x, p2.y, p2.z);
 	}
 	void point_add(point_t<4>& q, const point_t<4>& p1, const felem_t& x2,
 			const felem_t& y2) const noexcept
 	{
-		point_addz_jacob(*this, q.x, q.y, q.z, p1.x, p1.y, p1.z, x2, y2);
+		point_addz_jacob<A_is_n3>(*this, q.x, q.y, q.z, p1.x, p1.y, p1.z, x2, y2);
 	}
 private:
 	void carry_reduce(felem_t& res, const u64 carry) const noexcept

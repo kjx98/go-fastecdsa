@@ -62,8 +62,7 @@ static ecc::ecc_curve<4> sm2_p256(//.name
 	sm2_p_rr,
 	sm2_n_rr,
 	// k0_p, k0_n
-	1, 0x327f9e8872350975, //
-	true
+	1, 0x327f9e8872350975 //
 	);
 
 static ecc::curve256<1> sm2_k256(//.name
@@ -82,7 +81,7 @@ static ecc::curve256<1> sm2_k256(//.name
 	sm2_b
 	);
 
-static ecc::ecc_curve<4> secp256k1( //.name
+static ecc::ecc_curve<4,false> secp256k1( //.name
 	"secp256k1",
 	//.gx
 	secp256k1_gx,
@@ -95,7 +94,7 @@ static ecc::ecc_curve<4> secp256k1( //.name
 	//.a
 	secp256k1_a,
 	//.b, a_is_pminus3
-	secp256k1_b, false
+	secp256k1_b
 	);
 
 #endif	//__CURVE_DEFS_HPP__
