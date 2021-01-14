@@ -489,7 +489,11 @@ void point_addz_jacob(const curveT& curve, bnT& x3, bnT& y3, bnT& z3,
 	if ( unlikely(h.is_zero()) ) {
 		if (r.is_zero()) {
 			/* P1 and P2 are the same - use duplicate function. */
+#if	__cplusplus >= 201703L
 			point_doublez_jacob(curve, x3, y3, z3, x2, y2);
+#else
+			point_double_jacob(curve, x3, y3, z3, x1, y1, z1);
+#endif
 			return;
 		}
 		/* P1 is the inverse of P2.  */

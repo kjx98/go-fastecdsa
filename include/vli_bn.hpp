@@ -53,9 +53,9 @@ public:
 	explicit bn_words(const u64 v) : d{v, 0, 0, 0}
 	{
 #if	__cplusplus >= 201703L
-		if constexpr(ndigits > 4) {
+		if constexpr(N > 4) {
 #pragma GCC unroll 4
-			for (uint i = 4; i < ndigits; i++)
+			for (uint i = 4; i < N; i++)
 				this->d[i] = 0;
 		}
 #endif
