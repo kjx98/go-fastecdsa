@@ -211,7 +211,18 @@ TEST(testEcc, TestBasePreCompute)
 	for(int i=0;i<32;i++) {
 		EXPECT_TRUE(sm2_k256.select_base_point(gp, i));
 		EXPECT_TRUE(select_gmul(gm, i));
-		ASSERT_TRUE(gp == gm);
+		if ( !gp.z.is_zero() ) {
+			if ( gp.z != sm2_k256.mont_one()) {
+				std::cerr << "base_pre_compute diff idx: " << i << std::endl;
+			}
+			sm2_k256.from_montgomery(gp.x, gp.x);
+			sm2_k256.from_montgomery(gp.y, gp.y);
+			EXPECT_TRUE(gp.z == sm2_k256.mont_one());
+			gp.z = bignum<4>(1);
+		}
+		EXPECT_TRUE(gp.x == gm.x);
+		EXPECT_TRUE(gp.y == gm.y);
+		EXPECT_TRUE(gp.z == gm.z);
 	}
 }
 

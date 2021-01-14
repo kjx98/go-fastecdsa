@@ -117,6 +117,9 @@ public:
 		}
 		return true;
 	}
+	bool operator!=(const bignum& bn) const noexcept {
+		return ! (*this == bn);
+	}
 	const u64* data() const noexcept { return this->d; }
 	//u64* raw_data() noexcept { return this->d; }
 	bool is_zero() const noexcept
