@@ -8,8 +8,8 @@ option(WITH_JEMALLOC	"Use jemalloc from FaceBook" OFF)
 set(CMAKE_BUILD_TYPE "Release")
 #set(CMAKE_BUILD_TYPE "Debug")
 
-add_definitions( "-O3 -pthread -std=c++11" )
-add_definitions( "-Wpedantic -Wall -Wmaybe-uninitialized" )
+add_definitions( "-O3 -pthread -std=c++11 -funroll-loops" )
+add_definitions( "-Wpedantic -Wall -Wuninitialized" )
 #add_definitions( "-DWITH_ADD_2007bl" )
 #add_definitions( "-DNO_BUILTIN_OVERFLOW" )
 

@@ -88,7 +88,7 @@ mont_reduction(u64 *result, const u64 *y, const u64 *prime,
 	u64	r[N + 2];
 #endif
 	vli_clear<N + 2>(r);
-#pragma GCC unroll 4
+//#pragma GCC unroll 4
 	for (uint i=0; i < N; i++) {
 		u64	u = (r[0] + y[i]) * k0;
 		vli_umult<N>(s, prime, u);
@@ -119,7 +119,7 @@ mont_mult(u64 *result, const u64 *x, const u64 *y, const u64 *prime,
 	u64	r[N + 2];
 #endif
 	vli_clear<N + 2>(r);
-#pragma GCC unroll 4
+//#pragma GCC unroll 4
 	for (uint i=0; i < N;i++) {
 		u64	u = (r[0] + y[i]*x[0]) * k0;
 		vli_umult<N>(s, prime, u);
@@ -149,7 +149,7 @@ mont_sqr(u64 *result, const u64 *x, const u64 *prime, const u64 k0) noexcept
 	u64	r[N + 2];
 #endif
 	vli_clear<N + 2>(r);
-#pragma GCC unroll 4
+//#pragma GCC unroll 4
 	for (uint i=0; i < N;i++) {
 		u64	u = (r[0] + x[i]*x[0]) * k0;
 		vli_umult<N>(s, prime, u);
@@ -170,7 +170,7 @@ mont_reduction(u64 *result, const u64 *y, const u64 *prime) noexcept
 	u64	s[N * 2];
 	u64	r[N + 2];
 	vli_clear<N + 2>(r);
-#pragma GCC unroll 4
+//#pragma GCC unroll 4
 	for (uint i=0; i < N; i++) {
 		u64	u = (r[0] + y[i]) * k0;
 		vli_umult<N>(s, prime, u);
@@ -190,7 +190,7 @@ mont_mult(u64 *result, const u64 *x, const u64 *y, const u64 *prime) noexcept
 	u64	s[N * 2];
 	u64	r[N + 2];
 	vli_clear<N + 2>(r);
-#pragma GCC unroll 4
+//#pragma GCC unroll 4
 	for (uint i=0; i < N;i++) {
 		u64	u = (r[0] + y[i]*x[0]) * k0;
 		vli_umult<N>(s, prime, u);
@@ -211,7 +211,7 @@ mont_sqr(u64 *result, const u64 *x, const u64 *prime) noexcept
 	u64	s[N * 2];
 	u64	r[N + 2];
 	vli_clear<N + 2>(r);
-#pragma GCC unroll 4
+//#pragma GCC unroll 4
 	for (uint i=0; i < N;i++) {
 		u64	u = (r[0] + x[i]*x[0]) * k0;
 		vli_umult<N>(s, prime, u);
