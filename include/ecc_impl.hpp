@@ -65,7 +65,6 @@ struct point_t {
 	}
 	bool operator==(const point_t& q) const noexcept {
 		if (x ==  q.x && y == q.y && z ==  q.z) return true;
-		// affine
 		return false;
 	}
 	bool is_zero() const noexcept {
@@ -107,7 +106,7 @@ void point_double_jacob(const curveT& curve, bnT& x3, bnT& y3, bnT& z3,
 		/* L1 = 3(X - Z^2)(X + Z^2) */
 		/*						T1: used for Z^2. */
 		/*						T2: used for the right term. */
-		if (z_is_one) {
+		if ( unlikely(z_is_one) ) {
 			// l1 = X - Z^2
 			curve.mod_sub(l1, x1, curve.mont_one());
 			// 3(X - Z^2) = 2(X - Z^2) + (X - Z^2)
@@ -143,11 +142,11 @@ void point_double_jacob(const curveT& curve, bnT& x3, bnT& y3, bnT& z3,
 		curve.mont_mult2(t1, l1);
 		// l1 = 3X^2
 		curve.mod_add_to(l1, t1);
-		if (curve.a_is_zero()) {
+		if ( likely(curve.a_is_zero()) ) {
 			/* Use the faster case.  */
 			/* L1 = 3X^2 */
 			// do nothing
-		} else if (z_is_one) {
+		} else if ( unlikely(z_is_one) ) {
 			// should be mont_paramA
 			curve.mod_add_to(l1, curve.montParamA());
 		} else {
@@ -161,7 +160,7 @@ void point_double_jacob(const curveT& curve, bnT& x3, bnT& y3, bnT& z3,
 	}
 
 	/* Z3 = 2YZ */
-	if (z_is_one) {
+	if ( unlikely(z_is_one) ) {
 		curve.mont_mult2(z3, y1);
 	} else {
 		// Z3 = YZ
@@ -235,7 +234,7 @@ void point_doublez_jacob(const curveT& curve, bnT& x3, bnT& y3, bnT& z3,
 		curve.mont_mult2(t1, l1);
 		// l1 = 3X^2
 		curve.mod_add_to(l1, t1);
-		if (curve.a_is_zero()) {
+		if ( likely(curve.a_is_zero()) ) {
 			/* Use the faster case.  */
 			/* L1 = 3X^2 */
 			// do nothing
@@ -361,7 +360,7 @@ void point_add_jacob(const curveT& curve, bnT& x3, bnT& y3, bnT& z3,
 	if ( unlikely(h.is_zero()) ) {
 		if (r.is_zero()) {
 			/* P1 and P2 are the same - use duplicate function. */
-			if ( z1_is_one )
+			if ( unlikely(z1_is_one) )
 				point_doublez_jacob<A_is_n3>(curve, x3, y3, z3, x1, y1);
 			else
 				point_double_jacob<A_is_n3>(curve, x3, y3, z3, x1, y1, z1);
@@ -448,7 +447,7 @@ void point_add_jacob(const curveT& curve, bnT& x3, bnT& y3, bnT& z3,
 	curve.mod_sub_from(y3, t1);
 
 	// z3 = z1 * z2 * h
-	if (z2_is_one) {
+	if ( unlikely(z2_is_one) ) {
 		// z3 = z1 h
 		if (z1_is_one) {
 			z3 = h;
@@ -475,12 +474,14 @@ void point_addz_jacob(const curveT& curve, bnT& x3, bnT& y3, bnT& z3,
 			const bnT& x1, const bnT& y1, const bnT& z1, const bnT& x2,
 			const bnT& y2) noexcept
 {
-	if (z1.is_zero()) {
+#ifdef	ommit
+	if ( unlikely(z1.is_zero()) ) {
 		x3 = x2;
 		y3 = y2;
 		z3 = curve.mont_one();
 		return;
 	}
+#endif
 	bool	z1_is_one = (z1 == curve.mont_one());
 	bnT	u1, u2, s1, s2, h, hh, hhh, r, v;
 #define	t1		z1z1
@@ -550,7 +551,7 @@ void point_addz_jacob(const curveT& curve, bnT& x3, bnT& y3, bnT& z3,
 
 	// z3 = z1 * z2 * h
 	// z3 = z1 h
-	if (z1_is_one) {
+	if ( unlikely(z1_is_one) ) {
 		z3 = h;
 	} else {
 		curve.mont_mmult(z3, z1, h);

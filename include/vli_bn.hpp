@@ -54,7 +54,6 @@ public:
 	{
 #if	__cplusplus >= 201703L
 		if constexpr(N > 4) {
-//#pragma GCC unroll 4
 			for (uint i = 4; i < N; i++)
 				this->d[i] = 0;
 		}
@@ -82,7 +81,6 @@ public:
 	}
 	void clear() noexcept
 	{
-//#pragma GCC unroll 4
 		for (uint i = 0; i < N; i++)
 			this->d[i] = 0;
 	}
@@ -100,7 +98,6 @@ public:
 		return os;
 	}
 	bool operator<(const bignum& bn) const noexcept {
-//#pragma GCC unroll 4
 		for (int i = N - 1; i >= 0; i--) {
 			if (this->d[i] > bn.d[i]) return false;
 			else if (this->d[i] < bn.d[i]) return true;
@@ -111,7 +108,6 @@ public:
 		return !(*this < bn);
 	}
 	bool operator==(const bignum& bn) const noexcept {
-//#pragma GCC unroll 4
 		for (int i = N - 1; i >= 0; i--) {
 			if (this->d[i] != bn.d[i]) return false;
 		}
@@ -124,7 +120,6 @@ public:
 	//u64* raw_data() noexcept { return this->d; }
 	bool is_zero() const noexcept
 	{
-//#pragma GCC unroll 4
 		for (uint i = 0; i < N; i++) {
 			if (this->d[i] != 0) return false;
 		}
@@ -136,7 +131,6 @@ public:
 	bool is_one() const noexcept
 	{
 		if (this->d[0] != 1) return false;
-//#pragma GCC unroll 4
 		for (uint i = 1; i < N; i++) {
 			if (this->d[i]) return false;
 		}
@@ -144,7 +138,6 @@ public:
 	}
 	bool is_u64() const noexcept
 	{
-//#pragma GCC unroll 4
 		for (uint i = 1; i < N; i++) {
 			if (this->d[i] != 0) return false;
 		}
@@ -172,7 +165,6 @@ public:
 	/* copy_conditional copies in to out iff mask is all ones. */
 	void copy_conditional(const bignum& in, u64 mask)
 	{
-//#pragma GCC unroll 4
 		for (uint i = 0; i < N; ++i) {
 			const u64 tmp = mask & (in.d[i] ^ this->d[i]);
 			this->d[i] ^= tmp;
@@ -189,7 +181,6 @@ public:
  */
 	int cmp(const bignum& right) const noexcept
 	{
-//#pragma GCC unroll 4
 		for (int i = N - 1; i >= 0; i--) {
 			if (this->d[i] > right.d[i]) return 1;
 			else if (this->d[i] < right.d[i]) return -1;
@@ -202,7 +193,6 @@ public:
 		auto	*rt=reinterpret_cast<const bignum<N> *>(right);
 		return this->cmp(*rt);
 #else
-//#pragma GCC unroll 4
 		for (int i = N - 1; i >= 0; i--) {
 			if (this->d[i] > right[i]) return 1;
 			else if (this->d[i] < right[i]) return -1;
@@ -213,7 +203,6 @@ public:
 	u64 lshift1(const bignum& x) noexcept
 	{
 		u64 carry = 0;
-//#pragma GCC unroll 4
 		for (uint i = 0; i < N; i++) {
 			u64 temp = x.d[i];
 			this->d[i] = (temp << 1) | carry;
@@ -224,7 +213,6 @@ public:
 	u64 lshift(const uint cnt) noexcept
 	{
 		u64 carry = 0;
-//#pragma GCC unroll 4
 		for (uint i = 0; i < N; i++) {
 			u64 temp = this->d[i];
 			this->d[i] = (temp << cnt) | carry;
@@ -236,7 +224,6 @@ public:
 	void rshift1() noexcept
 	{
 		u64 carry = 0;
-//#pragma GCC unroll 4
 		for (int i=N - 1; i >= 0; i--) { 
 			u64 temp = this->d[i];
 			this->d[i] = (temp >> 1) | carry;
@@ -246,7 +233,6 @@ public:
 /* Computes vli = vli >> 1 word (64 Bits). */
 	void rshift1w() noexcept
 	{
-//#pragma GCC unroll 4
 		for (uint i = 1; i < N; i++) {
 			this->d[i-1] = this->d[i];
 		}
@@ -259,7 +245,6 @@ public:
 		return vli_add<N>(this->d, left.d, right.d);
 #else
 		bool carry = false;
-//#pragma GCC unroll 4
 		for (uint i = 0; i < N; i++) {
 			u64 sum;
 			auto c_carry = __builtin_uaddl_overflow(left.d[i],right.d[i],&sum);
@@ -278,7 +263,6 @@ public:
 		return vli_uadd<N>(this->d, left.d, right);
 #else
 		auto carry = __builtin_uaddl_overflow(left.d[0], right, this->d);
-//#pragma GCC unroll 4
 		for (uint i = 1; i < N; i++) {
 			if (unlikely(carry)) {
 				carry = __builtin_uaddl_overflow(left.d[i], 1, this->d+i);
@@ -294,7 +278,6 @@ public:
 		return vli_add_to<N>(this->d, right.d);
 #else
 		bool carry = false;
-//#pragma GCC unroll 4
 		for (uint i = 0; i < N; i++) {
 			u64 sum;
 			auto c_carry = __builtin_uaddl_overflow(this->d[i],right.d[i],&sum);
@@ -318,7 +301,6 @@ public:
 		return vli_uadd_to<N>(this->d, right);
 #else
 		auto carry = __builtin_uaddl_overflow(this->d[0], right, this->d);
-//#pragma GCC unroll 4
 		for (uint i = 1; i < N; i++) {
 			if (unlikely(carry)) {
 				carry = __builtin_uaddl_overflow(this->d[i], 1, this->d+i);
@@ -344,7 +326,6 @@ public:
 		return vli_sub<N>(this->d, left.d, right.d);
 #else
 		bool borrow = false;
-//#pragma GCC unroll 4
 		for (uint i = 0; i < N; i++) {
 			u64 diff;
 			auto c_borrow=__builtin_usubl_overflow(left.d[i],right.d[i],&diff);
@@ -363,7 +344,6 @@ public:
 		return vli_usub<N>(this->d, left.d, right);
 #else
 		auto borrow = __builtin_usubl_overflow(left.d[0], right, this->d);
-//#pragma GCC unroll 4
 		for (uint i = 1; i < N; i++) {
 			if (unlikely(borrow)) {
 				borrow = __builtin_usubl_overflow(left.d[i], 1, this->d+i);
@@ -378,7 +358,6 @@ public:
 		return vli_sub_from<N>(this->d, right.d);
 #else
 		bool borrow = false;
-//#pragma GCC unroll 4
 		for (uint i = 0; i < N; i++) {
 			u64 diff;
 			auto c_borrow = __builtin_usubl_overflow(this->d[i], right.d[i],
@@ -398,7 +377,6 @@ public:
 		return vli_usub_from<N>(this->d, right);
 #else
 		auto borrow = __builtin_usubl_overflow(this->d[0], right, this->d);
-//#pragma GCC unroll 4
 		for (uint i = 1; i < N; i++) {
 			if (unlikely(borrow)) {
 				borrow = __builtin_usubl_overflow(this->d[i], 1, this->d+i);
@@ -446,7 +424,6 @@ public:
 	void from_be64(const void *src) noexcept
 	{
 		const u64 *from = (const u64 *)src;
-//#pragma GCC unroll 4
 		for (uint i = 0; i < N; i++)
 			this->d[i] = be64toh(from[N - 1 - i]);
 	}
@@ -486,7 +463,6 @@ public:
 		u64	s[N*2];
 		u64	r[N+2];
 		vli_clear<N + 2>(r);
-//#pragma GCC unroll 4
 		for (uint i=0; i < N; i++) {
 			u64	u = (r[0] + y.d[i]) * k0;
 			vli_umult<N>(s, prime.d, u);
@@ -504,7 +480,6 @@ public:
 		u64	s[N*2];
 		u64	r[N+2];
 		vli_clear<N + 2>(r);
-//#pragma GCC unroll 4
 		for (uint i=0; i < N; i++) {
 			u64	u = (r[0] + y.d[i]) * k0;
 			vli_umult<N>(s, prime.d, u);
@@ -523,7 +498,6 @@ public:
 		u64	s[N*2];
 		u64	r[N+2];
 		vli_clear<N + 2>(r);
-//#pragma GCC unroll 4
 		for (uint i=0; i < N;i++) {
 			u64	u = (r[0] + y.d[i]*x.d[0]) * k0;
 			vli_umult<N>(s, prime.d, u);
@@ -543,7 +517,6 @@ public:
 		u64	s[N*2];
 		u64	r[N+2];
 		vli_clear<N + 2>(r);
-//#pragma GCC unroll 4
 		for (uint i=0; i < N;i++) {
 			u64	u = (r[0] + y.d[i]*x[0]) * k0;
 			vli_umult<N>(s, prime.d, u);
@@ -562,7 +535,6 @@ public:
 		u64	s[N*2];
 		u64	r[N+2];
 		vli_clear<N + 2>(r);
-//#pragma GCC unroll 4
 		for (uint i=0; i < N;i++) {
 			u64	u = (r[0] + y.d[i]*x.d[0]) * k0;
 			vli_umult<N>(s, prime.d, u);
@@ -582,7 +554,6 @@ public:
 		u64	s[N*2];
 		u64	r[N+2];
 		vli_clear<N + 2>(r);
-//#pragma GCC unroll 4
 		for (uint i=0; i < N;i++) {
 			u64	u = (r[0] + x.d[i]*x.d[0]) * k0;
 			vli_umult<N>(s, prime.d, u);
@@ -600,7 +571,6 @@ public:
 		u64	s[N*2];
 		u64	r[N+2];
 		vli_clear<N + 2>(r);
-//#pragma GCC unroll 4
 		for (uint i=0; i < N;i++) {
 			u64	u = (r[0] + x.d[i]*x.d[0]) * k0;
 			vli_umult<N>(s, prime.d, u);
@@ -629,7 +599,6 @@ public:
 	explicit bignumz(const s64 v) noexcept : bignum<N>(v), carry(v>=0?0:-1)
 	{
 		if (v < 0) {
-//#pragma GCC unroll 4
 			for (uint i=1; i<N; i++) this->d[i] = -1;
 		}
 	}
@@ -682,7 +651,6 @@ public:
 	void rshift1() noexcept
 	{
 		u64 _rcarry = (carry & 1)?(1L<<63):0;
-//#pragma GCC unroll 4
 		for (int i=N - 1; i >= 0; i--) { 
 			u64 temp = this->d[i];
 			this->d[i] = (temp >> 1) | _rcarry;
@@ -733,7 +701,6 @@ public:
 	/* Compute each digit of result in sequence, maintaining the
 	 * carries.
 	 */
-//#pragma GCC unroll 8
 		for (uint k = 0; k < N * 2 - 1; k++) {
 			u64 r2 = 0;
 			unsigned int min;
@@ -760,7 +727,6 @@ public:
 	{
 		uint128_t r01( 0, 0 );
 		unsigned int k;
-//#pragma GCC unroll 4
 		for (k = 0; k < N; k++) {
 			uint128_t product;
 			//if (likely(left[k] != 0))
@@ -777,14 +743,12 @@ public:
 			//r01.m_high = 0;
 		}
 		this->d[N] = r01.m_low();
-//#pragma GCC unroll 4
 		for (k = N+1; k < N * 2; k++) this->d[k] = 0;
 	}
 
 	void square(const bignum<N>& left) noexcept
 	{
 		uint128_t r01( 0, 0 );
-//#pragma GCC unroll 8
 		for (uint k = 0; k < N * 2 - 1; k++) {
 			unsigned int min;
 			u64 r2 = 0;
