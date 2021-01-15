@@ -165,6 +165,17 @@ static void test_ECScalarMult256(benchmark::State &state)
 }
 BENCHMARK(test_ECScalarMult256);
 
+static void test_ECScalarCMult(benchmark::State &state)
+{
+	point_t<4>	pt1(dx1, dy1);
+	bignum<4>	d1(d1d), d2(d2d);
+	point_t<4>	res;
+	for (auto _ : state) {
+		sm2_k256.combined_mult(res, pt1, d1, d2);
+	}
+}
+BENCHMARK(test_ECScalarCMult);
+
 
 int main(int argc, char ** argv) {
 	sm2_p256.init();
