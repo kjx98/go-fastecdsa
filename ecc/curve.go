@@ -147,7 +147,6 @@ func (c eccCurve) Double(x, y *big.Int) (rx, ry *big.Int) {
 	return
 }
 
-/*
 func (c eccCurve) ScalarMult(x, y *big.Int, k []byte) (rx, ry *big.Int) {
 	pt1 := c.newPoint(x, y, nil)
 	var pt C.Point
@@ -159,7 +158,6 @@ func (c eccCurve) ScalarMult(x, y *big.Int, k []byte) (rx, ry *big.Int) {
 	ry = new(big.Int).SetBits(toWordSlice(pt.y))
 	return
 }
-*/
 
 func (c eccCurve) AffineFromJacobian(x, y, z *big.Int) (xOut, yOut *big.Int) {
 	var xb, yb [4]big.Word

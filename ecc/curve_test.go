@@ -270,7 +270,6 @@ func TestCurveDoubleJacobian(t *testing.T) {
 	}
 }
 
-/*
 func TestCurveMult(t *testing.T) {
 	goCurve := sm2.SM2go()
 	cCurve := sm2c
@@ -289,7 +288,6 @@ func TestCurveMult(t *testing.T) {
 		t.Fail()
 	}
 }
-*/
 
 func BenchmarkMontMultModP(b *testing.B) {
 	for i := 0; i < b.N; i++ {
@@ -345,7 +343,6 @@ func BenchmarkECDBLJac(b *testing.B) {
 	})
 }
 
-/*
 func BenchmarkECMULT(b *testing.B) {
 	b.ResetTimer()
 	curve := sm2c
@@ -359,4 +356,3 @@ func BenchmarkECMULT(b *testing.B) {
 		}
 	})
 }
-*/

@@ -154,13 +154,14 @@ void    affine_from_jacobian(u64 *x, u64 *y, const Point *pt, CURVE_HND curveH)
 	curve->apply_z(x, y, z);
 }
 
-#ifdef	ommit
 void	point_mult(Point *pt, const Point *p, const u64 *scalar,
 				CURVE_HND curveH)
 {
 	if (curveH == nullptr) return;
-	ecc_curve	*curve=(ecc_curve *)curveH;
-	if (curve->name[0] == 0 || curve->ndigits != 4) return;
-	ecc_point_mult<4>(pt->x, pt->y, p->x, p->y, scalar, nullptr, *curve);
+	auto	*curve=(curve_t *)curveH;
+	if (!(*curve) || curve->ndigits() != 4) return;
+	point_t<4> *q=reinterpret_cast<point_t<4> *>(pt);
+	const point_t<4> *pp = reinterpret_cast<const point_t<4> *>(p);
+	const bignum<4>	*sp = reinterpret_cast<const bignum<4> *>(scalar);
+	curve->scalar_mult(*q, *pp, *sp);
 }
-#endif

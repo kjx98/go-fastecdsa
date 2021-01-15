@@ -677,39 +677,47 @@ public:
 			this->carry_reduce(res, carry);
 		}
 	}
-	void scalar_mult_base(point_t<4>& q, const felem_t& scalar) noexcept
+	// G multiples with 0..31 32 bits, process one bit
+	bool base_mult_bit(point_t<4>& q, const felem_t& scalar, const uint bit,
+			const bool _skip) const noexcept
+	{
+		point_t<4>	p;
+		bool skip = _skip;
+		if ( unlikely(bit >= 32) ) return skip;
+		/* add multiples of the generator */
+		u64	bits = scalar.get_bit(bit + 224) << 3;
+		bits |= scalar.get_bit(bit + 160) << 2;
+		bits |= scalar.get_bit(bit + 96) << 1;
+		bits |= scalar.get_bit(bit + 32);
+		if ( likely(bits != 0) ) {
+			this->select_base_point(p, bits | 16);
+			if (!skip) point_add(q, q, p.x, p.y); else {
+				q = p;
+				skip = false;
+			}
+		}
+		/* second, look at the current position */
+		bits = scalar.get_bit(bit + 192) << 3;
+		bits |= scalar.get_bit(bit + 128) << 2;
+		bits |= scalar.get_bit(bit + 64) << 1;
+		bits |= scalar.get_bit(bit);
+		if (bits == 0) return skip;
+		this->select_base_point(p, bits);
+		if (!skip) point_add(q, q, p.x, p.y); else {
+			q = p;
+			skip = false;
+		}
+		return skip;
+	}
+	void scalar_mult_base(point_t<4>& q, const felem_t& scalar) const noexcept
 	{
 		bool	skip = true;
-		point_t<4>	p;
 		q.clear();
 		for (int i = 31; i >= 0; --i) {
 			/* double */
 			if (!skip) point_double(q, q);
 
-			/* add multiples of the generator */
-			u64	bits = scalar.get_bit(i + 224) << 3;
-			bits |= scalar.get_bit(i + 160) << 2;
-			bits |= scalar.get_bit(i + 96) << 1;
-			bits |= scalar.get_bit(i + 32);
-			if ( likely(bits != 0) ) {
-				this->select_base_point(p, bits | 16);
-				if (!skip) point_add(q, q, p.x, p.y); else {
-					q = p;
-					skip = false;
-				}
-			}
-
-			/* second, look at the current position */
-			bits = scalar.get_bit(i + 192) << 3;
-			bits |= scalar.get_bit(i + 128) << 2;
-			bits |= scalar.get_bit(i + 64) << 1;
-			bits |= scalar.get_bit(i);
-			if (bits == 0) continue;
-			this->select_base_point(p, bits);
-			if (!skip) point_add(q, q, p.x, p.y); else {
-				q = p;
-				skip = false;
-			}
+			skip = this->base_mult_bit(q, scalar, i, skip);
 		}
 		if ( unlikely(q.z.is_zero()) ) return;
 		this->apply_z_mont(q);
@@ -797,7 +805,7 @@ public:
 		from_montgomery(y3, *y3p);
 		from_montgomery(z3, *z3p);
 	}
-	// scalar MUST not zero, g_scalar may be zero
+	// scalar may be zero, g_scalar may be zero
 	void combined_mult(point_t<4>& q, const point_t<4>& p,
 				const felem_t& scalar, const felem_t& g_scalar) const noexcept
 	{
@@ -821,34 +829,8 @@ public:
 		for (int i = cntBits; i >= 0; --i) {
 			if (!skip) point_double(q, q);
 
-			// G multiples with 0..31 32 bits
-			if (b_gscalar && i < 32) {
-				/* add multiples of the generator */
-				uint	bits = g_scalar.get_bit(i + 224) << 3;
-				bits |= g_scalar.get_bit(i + 160) << 2;
-				bits |= g_scalar.get_bit(i + 96) << 1;
-				bits |= g_scalar.get_bit(i + 32);
-				if ( likely(bits != 0) ) {
-					this->select_base_point(tmp, bits | 16);
-					if (!skip) point_add(q, q, tmp.x, tmp.y); else {
-						q = tmp;
-						skip = false;
-					}
-				}
-
-				/* second, look at the current position */
-				bits = g_scalar.get_bit(i + 192) << 3;
-				bits |= g_scalar.get_bit(i + 128) << 2;
-				bits |= g_scalar.get_bit(i + 64) << 1;
-				bits |= g_scalar.get_bit(i);
-				if ( likely(bits != 0) ) {
-					this->select_base_point(tmp, bits);
-					if (!skip) point_add(q, q, tmp.x, tmp.y); else {
-						q = tmp;
-						skip = false;
-					}
-				}
-			}
+			/* add multiples of the generator */
+			skip = this->base_mult_bit(q, g_scalar, i, skip);
 			if (nbits == 0) continue;
 			if ((i % W) == 0) {
 				uint	bits;

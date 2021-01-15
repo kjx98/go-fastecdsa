@@ -260,7 +260,7 @@ func TestCurveBaseMult(t *testing.T) {
 	t.Logf("d1G y: %x %x %x %x", ww[0], ww[1], ww[2], ww[3])
 }
 
-func TestCurveMult(t *testing.T) {
+func TestSM2CurveMult(t *testing.T) {
 	goCurve := sm2.SM2go()
 	gx, gy := goCurve.ScalarMult(x1, y1, d1.Bytes())
 	ax, ay := sm2ScalarMult(x1, y1, d1.Bytes())
@@ -322,7 +322,7 @@ func BenchmarkSM2ECDBLJac(b *testing.B) {
 	})
 }
 
-func BenchmarkECMULT(b *testing.B) {
+func BenchmarkSM2ECMULT(b *testing.B) {
 	b.RunParallel(func(pb *testing.PB) {
 		for pb.Next() {
 			_, _ = sm2ScalarMult(x1, y1, d1.Bytes())
@@ -330,7 +330,7 @@ func BenchmarkECMULT(b *testing.B) {
 	})
 }
 
-func BenchmarkECGMULT(b *testing.B) {
+func BenchmarkSM2ECGMULT(b *testing.B) {
 	b.RunParallel(func(pb *testing.PB) {
 		for pb.Next() {
 			_, _ = sm2ScalarBaseMult(d1.Bytes())
