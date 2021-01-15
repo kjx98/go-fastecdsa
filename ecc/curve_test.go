@@ -289,6 +289,31 @@ func TestCurveMult(t *testing.T) {
 	}
 }
 
+func TestCurveBaseMult(t *testing.T) {
+	goCurve := sm2.SM2go()
+	cCurve := sm2c
+	gx, gy := goCurve.ScalarBaseMult(d1.Bytes())
+	ax, ay := cCurve.ScalarBaseMult(d1.Bytes())
+	if ax.Cmp(gx) != 0 {
+		t.Log("d1 basemult X diff")
+		t.Fail()
+	}
+	if ay.Cmp(gy) != 0 {
+		t.Log("d1 basemult Y diff")
+		t.Fail()
+	}
+	gx, gy = goCurve.ScalarBaseMult(d2.Bytes())
+	ax, ay = cCurve.ScalarBaseMult(d2.Bytes())
+	if ax.Cmp(gx) != 0 {
+		t.Log("d2 basemult X diff")
+		t.Fail()
+	}
+	if ay.Cmp(gy) != 0 {
+		t.Log("d2 basemult Y diff")
+		t.Fail()
+	}
+}
+
 func BenchmarkMontMultModP(b *testing.B) {
 	for i := 0; i < b.N; i++ {
 		_ = vliModMultMontP(x1.Bits(), y1.Bits())
@@ -353,6 +378,18 @@ func BenchmarkECMULT(b *testing.B) {
 	b.RunParallel(func(pb *testing.PB) {
 		for pb.Next() {
 			_, _ = curve.ScalarMult(aGx, aGy, d1.Bytes())
+		}
+	})
+}
+
+func BenchmarkECGMULT(b *testing.B) {
+	b.ResetTimer()
+	curve := sm2c
+
+	b.ResetTimer()
+	b.RunParallel(func(pb *testing.PB) {
+		for pb.Next() {
+			_, _ = curve.ScalarBaseMult(d1.Bytes())
 		}
 	})
 }

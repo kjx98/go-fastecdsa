@@ -228,7 +228,7 @@ func TestSM2DoubleJacobian(t *testing.T) {
 	}
 }
 
-func TestCurveBaseMult(t *testing.T) {
+func TestSM2CurveBaseMult(t *testing.T) {
 	goCurve := sm2.SM2go()
 	gx, gy := goCurve.ScalarBaseMult(d1.Bytes())
 	ax, ay := sm2ScalarBaseMult(d1.Bytes())

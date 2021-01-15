@@ -45,13 +45,18 @@
 
 using namespace vli;
 using namespace ecc;
+#ifdef	WITH_NIST
 using curve_t = ecc::ecc_curve<4>;
+#else
+using curve_t = ecc::curve256<1>;
+#endif
 
 static forceinline const curve_t *ecc_get_curve(uint curve_id) noexcept
 {
 	curve_t	*ret=nullptr;
 	switch (curve_id) {
 	/* In FIPS mode only allow P256 and higher */
+#ifdef	WITH_NIST
 #ifdef	ommit
 	case ECC_CURVE_SECP256K1:
 		ret =  &secp256k1;
@@ -63,6 +68,11 @@ static forceinline const curve_t *ecc_get_curve(uint curve_id) noexcept
 	case ECC_CURVE_SM2:
 		ret =  &sm2_p256;
 		break;
+#else
+	case ECC_CURVE_SM2:
+		ret =  &sm2_k256;
+		break;
+#endif
 	}
 	if (ret != nullptr && !ret->init()) ret = nullptr;
 	return ret;
@@ -164,4 +174,26 @@ void	point_mult(Point *pt, const Point *p, const u64 *scalar,
 	const point_t<4> *pp = reinterpret_cast<const point_t<4> *>(p);
 	const bignum<4>	*sp = reinterpret_cast<const bignum<4> *>(scalar);
 	curve->scalar_mult(*q, *pp, *sp);
+}
+
+void	point_cmult(Point *pt, const Point *p, const u64 *scalar,
+				const u64 *gscalar, CURVE_HND curveH)
+{
+	if (curveH == nullptr) return;
+	auto	*curve=(curve_t *)curveH;
+	if (!(*curve) || curve->ndigits() != 4) return;
+	if (gscalar == nullptr && scalar == nullptr) return;
+#ifndef	WITH_NIST
+	if (scalar == nullptr) {
+		point_t<4> *q=reinterpret_cast<point_t<4> *>(pt);
+		const bignum<4>	*sp = reinterpret_cast<const bignum<4> *>(gscalar);
+		curve->scalar_mult_base(*q, *sp);
+	} else {
+		point_t<4> *q=reinterpret_cast<point_t<4> *>(pt);
+		const point_t<4> *pp = reinterpret_cast<const point_t<4> *>(p);
+		const bignum<4>	*sp = reinterpret_cast<const bignum<4> *>(scalar);
+		const bignum<4>	*gsp = reinterpret_cast<const bignum<4> *>(gscalar);
+		curve->combined_mult(*q, *pp, *sp, *gsp);
+	}
+#endif
 }

@@ -147,6 +147,17 @@ func (c eccCurve) Double(x, y *big.Int) (rx, ry *big.Int) {
 	return
 }
 
+func (c eccCurve) ScalarBaseMult(k []byte) (rx, ry *big.Int) {
+	var pt C.Point
+	scal := new(big.Int).SetBytes(k)
+	var ss [4]big.Word
+	copy(ss[:], scal.Bits())
+	C.point_cmult(&pt, nil, nil, (*C.u64)(unsafe.Pointer(&ss[0])), c.hnd)
+	rx = new(big.Int).SetBits(toWordSlice(pt.x))
+	ry = new(big.Int).SetBits(toWordSlice(pt.y))
+	return
+}
+
 func (c eccCurve) ScalarMult(x, y *big.Int, k []byte) (rx, ry *big.Int) {
 	pt1 := c.newPoint(x, y, nil)
 	var pt C.Point
@@ -154,6 +165,21 @@ func (c eccCurve) ScalarMult(x, y *big.Int, k []byte) (rx, ry *big.Int) {
 	var ss [4]big.Word
 	copy(ss[:], scal.Bits())
 	C.point_mult(&pt, pt1, (*C.u64)(unsafe.Pointer(&ss[0])), c.hnd)
+	rx = new(big.Int).SetBits(toWordSlice(pt.x))
+	ry = new(big.Int).SetBits(toWordSlice(pt.y))
+	return
+}
+
+func (c eccCurve) CombinedMult(x, y *big.Int, k, gk []byte) (rx, ry *big.Int) {
+	pt1 := c.newPoint(x, y, nil)
+	var pt C.Point
+	scal := new(big.Int).SetBytes(k)
+	var ss [4]big.Word
+	copy(ss[:], scal.Bits())
+	scal.SetBytes(gk)
+	var gs [4]big.Word
+	copy(gs[:], scal.Bits())
+	C.point_cmult(&pt, pt1, (*C.u64)(unsafe.Pointer(&ss[0])), (*C.u64)(unsafe.Pointer(&gs[0])), c.hnd)
 	rx = new(big.Int).SetBits(toWordSlice(pt.x))
 	ry = new(big.Int).SetBits(toWordSlice(pt.y))
 	return
