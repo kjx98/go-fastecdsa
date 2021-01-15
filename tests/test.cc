@@ -344,7 +344,7 @@ TEST(testEcc, TestScalar256Mult)
 	std::cout << "res x1: " << res.x << std::endl;
 	std::cout << "res y1: " << res.y << std::endl;
 #endif
-	sm2_k256.combined_mult(res, gg, d1, bn_zero);
+	sm2_k256.combined_mult(res, gg, d2, bn_zero);
 	ASSERT_TRUE(res.z.is_one());
 	EXPECT_EQ(res.x.cmp(d2Gx), 0);
 	EXPECT_EQ(res.y.cmp(d2Gy), 0);

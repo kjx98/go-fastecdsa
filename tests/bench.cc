@@ -153,6 +153,18 @@ static void test_ECScalarMultNAF2(benchmark::State &state)
 }
 BENCHMARK(test_ECScalarMultNAF2);
 
+static void test_ECScalarMult256(benchmark::State &state)
+{
+	bignum<4>	d1(d1d);
+	point_t<4>	res;
+	point_t<4>	gg(sm2_gx, sm2_gy);
+	bignum<4>	bn_zero(0ul);
+	for (auto _ : state) {
+		sm2_k256.combined_mult(res, gg, d1, bn_zero);
+	}
+}
+BENCHMARK(test_ECScalarMult256);
+
 
 int main(int argc, char ** argv) {
 	sm2_p256.init();
