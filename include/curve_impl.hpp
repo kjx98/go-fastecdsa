@@ -803,28 +803,31 @@ public:
 	{
 		point_t<4>	tmp;
 		uint	nbits = scalar.num_bits();
-		q.clear();
-		if ( unlikely(nbits == 0) ) return;
-		point_t<4>	pres[wSize+1];
 		bool	b_gscalar = !(g_scalar.is_zero());
-		to_montgomery(tmp.x, p.x);
-		to_montgomery(tmp.y, p.y);
-		if ( likely(p.z.is_one()) ) tmp.z = this->mont_one(); else
-			to_montgomery(tmp.z, p.z);
-		pre_compute<4>(*this, pres, tmp);
+		q.clear();
+		if ( unlikely(nbits == 0) && !b_gscalar) return;
+		point_t<4>	pres[wSize+1];
+		if (nbits > 0) {
+			to_montgomery(tmp.x, p.x);
+			to_montgomery(tmp.y, p.y);
+			if ( likely(p.z.is_one()) ) tmp.z = this->mont_one(); else
+				to_montgomery(tmp.z, p.z);
+			pre_compute<4>(*this, pres, tmp);
+		}
 		bool	skip = true;
 		if (nbits % W != 0) --nbits;
+		int	cntBits = (b_gscalar && nbits < 31)?31:nbits;
 		if (b_gscalar && nbits < 31) nbits = 31;
-		for (int i = nbits; i >= 0; --i) {
+		for (int i = cntBits; i >= 0; --i) {
 			if (!skip) point_double(q, q);
 
 			// G multiples with 0..31 32 bits
-			if (b_gscalar && nbits < 32) {
+			if (b_gscalar && i < 32) {
 				/* add multiples of the generator */
-				u64	bits = scalar.get_bit(i + 224) << 3;
-				bits |= scalar.get_bit(i + 160) << 2;
-				bits |= scalar.get_bit(i + 96) << 1;
-				bits |= scalar.get_bit(i + 32);
+				uint	bits = g_scalar.get_bit(i + 224) << 3;
+				bits |= g_scalar.get_bit(i + 160) << 2;
+				bits |= g_scalar.get_bit(i + 96) << 1;
+				bits |= g_scalar.get_bit(i + 32);
 				if ( likely(bits != 0) ) {
 					this->select_base_point(tmp, bits | 16);
 					if (!skip) point_add(q, q, tmp.x, tmp.y); else {
@@ -834,10 +837,10 @@ public:
 				}
 
 				/* second, look at the current position */
-				bits = scalar.get_bit(i + 192) << 3;
-				bits |= scalar.get_bit(i + 128) << 2;
-				bits |= scalar.get_bit(i + 64) << 1;
-				bits |= scalar.get_bit(i);
+				bits = g_scalar.get_bit(i + 192) << 3;
+				bits |= g_scalar.get_bit(i + 128) << 2;
+				bits |= g_scalar.get_bit(i + 64) << 1;
+				bits |= g_scalar.get_bit(i);
 				if ( likely(bits != 0) ) {
 					this->select_base_point(tmp, bits);
 					if (!skip) point_add(q, q, tmp.x, tmp.y); else {
@@ -846,24 +849,26 @@ public:
 					}
 				}
 			}
-			if (i % W != 0) continue;
-			uint	bits;
-			uint	digit;
-			bits = vli_get_bits<4, W+1>(scalar.data(), i-1);
-			auto sign = recode_scalar_bits<W>(digit, bits);
-			if (digit == 0) continue;
+			if (nbits == 0) continue;
+			if ((i % W) == 0) {
+				uint	bits;
+				uint	digit;
+				bits = vli_get_bits<4, W+1>(scalar.data(), i-1);
+				auto sign = recode_scalar_bits<W>(digit, bits);
+				if (digit == 0) continue;
 #ifndef	NO_CONDITIONAL_COPY
-			tmp = pres[digit];
-			felem_t	ny;
-			ny.sub(this->p, tmp.y);
-			ny.copy_conditional(tmp.y, sign-1);
-			tmp.y = ny;
+				tmp = pres[digit];
+				felem_t	ny;
+				ny.sub(this->p, tmp.y);
+				ny.copy_conditional(tmp.y, sign-1);
+				tmp.y = ny;
 #else
-			if ( sign ) point_neg(tmp, pres[digit]); else tmp = pres[digit];
+				if ( sign ) point_neg(tmp, pres[digit]); else tmp = pres[digit];
 #endif
-			if (!skip) point_add(q, q, tmp); else {
-				q = tmp;
-				skip =false;
+				if (!skip) point_add(q, q, tmp); else {
+					q = tmp;
+					skip =false;
+				}
 			}
 		}
 		// montgomery reduction

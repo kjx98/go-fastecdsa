@@ -352,6 +352,22 @@ TEST(testEcc, TestScalar256Mult)
 	std::cout << "res x2: " << res.x << std::endl;
 	std::cout << "res y2: " << res.y << std::endl;
 #endif
+	sm2_k256.combined_mult(res, gg, bn_zero, d1);
+	ASSERT_TRUE(res.z.is_one());
+	EXPECT_EQ(res.x.cmp(d1Gx), 0);
+	EXPECT_EQ(res.y.cmp(d1Gy), 0);
+#ifdef	ommit
+	std::cout << "res x1: " << res.x << std::endl;
+	std::cout << "res y1: " << res.y << std::endl;
+#endif
+	sm2_k256.combined_mult(res, gg, bn_zero, d2);
+	ASSERT_TRUE(res.z.is_one());
+	EXPECT_EQ(res.x.cmp(d2Gx), 0);
+	EXPECT_EQ(res.y.cmp(d2Gy), 0);
+#ifdef	ommit
+	std::cout << "res x2: " << res.x << std::endl;
+	std::cout << "res y2: " << res.y << std::endl;
+#endif
 }
 
 TEST(testEcc, TestScalarMultNAF2)
