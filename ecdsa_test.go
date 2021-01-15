@@ -13,6 +13,7 @@ import (
 	"crypto/sha256"
 	"crypto/sha512"
 	"encoding/hex"
+	"gitee.com/jkuang/go-fastecdsa/ecc"
 	"gitee.com/jkuang/go-fastecdsa/sm2"
 	"hash"
 	"io"
@@ -47,6 +48,7 @@ func TestKeyGeneration(t *testing.T) {
 	testKeyGeneration(t, elliptic.P384(), "p384")
 	testKeyGeneration(t, sm2.P256(), "sm2")
 	testKeyGeneration(t, sm2.SM2go(), "sm2go")
+	testKeyGeneration(t, ecc.SM2C(), "sm2c")
 	//testKeyGeneration(t, sm2.SM2(), "sm2asm")
 }
 
@@ -80,6 +82,21 @@ func BenchmarkSignSM2(b *testing.B) {
 	})
 }
 
+func BenchmarkSignSM2C(b *testing.B) {
+	b.ResetTimer()
+	p256 := ecc.SM2C()
+	hashed := []byte("testing")
+	priv, _ := GenerateKey(p256, rand.Reader)
+
+	b.ReportAllocs()
+	b.ResetTimer()
+	b.RunParallel(func(pb *testing.PB) {
+		for pb.Next() {
+			_, _, _ = Sign(rand.Reader, priv, hashed)
+		}
+	})
+}
+
 func BenchmarkVerifyP256(b *testing.B) {
 	b.ResetTimer()
 	p256 := elliptic.P256()
@@ -99,6 +116,22 @@ func BenchmarkVerifyP256(b *testing.B) {
 func BenchmarkVerifySM2(b *testing.B) {
 	b.ResetTimer()
 	p256 := sm2.P256()
+	hashed := []byte("testing")
+	priv, _ := GenerateKey(p256, rand.Reader)
+	r, s, _ := Sign(rand.Reader, priv, hashed)
+
+	b.ReportAllocs()
+	b.ResetTimer()
+	b.RunParallel(func(pb *testing.PB) {
+		for pb.Next() {
+			Verify(&priv.PublicKey, hashed, r, s)
+		}
+	})
+}
+
+func BenchmarkVerifySM2C(b *testing.B) {
+	b.ResetTimer()
+	p256 := ecc.SM2C()
 	hashed := []byte("testing")
 	priv, _ := GenerateKey(p256, rand.Reader)
 	r, s, _ := Sign(rand.Reader, priv, hashed)

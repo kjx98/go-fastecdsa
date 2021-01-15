@@ -1,5 +1,3 @@
-// +build curve sm2p
-
 package ecc
 
 // #cgo CXXFLAGS: -O3 -Wpedantic -I../include -Wno-maybe-uninitialized -std=gnu++11
@@ -105,6 +103,11 @@ func (c eccCurve) newPoint(x, y, z *big.Int) *C.Point {
 	pt.y = *fromWordSlice(y.Bits())
 	pt.z = *fromWordSlice(z.Bits())
 	return &pt
+}
+
+func (c eccCurve) Inverse(k *big.Int) *big.Int {
+	bnInv := vliModInv(k.Bits(), c.Params().N.Bits())
+	return new(big.Int).SetBits(bnInv)
 }
 
 func (c eccCurve) Add(x1, y1, x2, y2 *big.Int) (rx, ry *big.Int) {

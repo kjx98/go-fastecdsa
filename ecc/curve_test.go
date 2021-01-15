@@ -1,5 +1,3 @@
-// +build curve sm2p
-
 package ecc
 
 import (
