@@ -44,7 +44,9 @@ typedef	unsigned int	uint;
 // has buildin_usubl_overflow...
 #elif defined(__GNUC__) && (__GNUC__ > 3 || (__GNUC__ == 3 && __GNUC_MINOR__ >= 1))
   /* even with gcc, the typedef won't work for 32-bit platforms */
+# ifndef	NO_BUILTIN_OVERFLOW
 # define	NO_BUILTIN_OVERFLOW
+# endif
 #else
 #  error "Need GCC 3.1 or later to define type uint128_t"
 #endif
