@@ -1004,6 +1004,7 @@ vli_mod_inv_new(u64 *result, const u64 *y, const u64 *x) noexcept
  * has to be b_4 b_3 b_2 b_1 b_0 0.
  *
  */
+// boothW
 template<const uint W> forceinline
 static int recode_scalar_bits(uint& digit, const uint in)
 {

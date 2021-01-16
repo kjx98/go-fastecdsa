@@ -116,6 +116,21 @@ TEST(testVli, TestBignumz)
 	ASSERT_TRUE(res == n2);
 }
 
+TEST(testvli, TestIsZero)
+{
+	ASSERT_EQ(u64IsZero(0), 1);
+	ASSERT_EQ(u64IsZero(1), 0);
+	EXPECT_EQ(u64IsZero(176453), 0);
+}
+
+TEST(testvli, TestIsOne)
+{
+	ASSERT_EQ(u64IsOne(0), 0);
+	ASSERT_EQ(u64IsOne(1), 1);
+	EXPECT_EQ(u64IsOne(176453), 0);
+	EXPECT_EQ(u64IsOne(-1), 0);
+}
+
 TEST(testvli, TestNumBits)
 {
 	bignum<4>	p8(8);

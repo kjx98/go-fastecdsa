@@ -75,6 +75,18 @@ static forceinline int u64IsZero(u64 x) noexcept {
 	return x & 1;
 }
 
+// u64IsOne returns 1 if x is one and zero otherwise.
+static forceinline int u64IsOne(u64 x) noexcept {
+	x = ~(x ^ 1);
+	x &= x >> 32;
+	x &= x >> 16;
+	x &= x >> 8;
+	x &= x >> 4;
+	x &= x >> 2;
+	x &= x >> 1;
+	return x & 1;
+}
+
 template<const uint N>
 class bignum : public bn_words<N> {
 public:
@@ -130,36 +142,44 @@ public:
 	}
 	const u64* data() const noexcept { return this->d; }
 	//u64* raw_data() noexcept { return this->d; }
-	bool is_zero() const noexcept
+	int is_zero() const noexcept
 	{
 #if	__cplusplus > 201703L
 		if constexpr(N == 4) {
-			return u64IsZero(d[0]) | u64IsZero(d[1]) | u64IsZero(d[2]) |
-					u64IsZero(d[3]);
+			return u64IsZero(this->d[0]) & u64IsZero(this->d[1]) &
+					u64IsZero(this->d[2]) & u64IsZero(this->d[3]);
 		}
 #endif
+		int		ret=1;
 		for (uint i = 0; i < N; i++) {
-			if (this->d[i] != 0) return false;
+			ret &= u64IsZero(this->d[i]);
 		}
-		return true;
+		return ret;
 	}
 	inline constexpr explicit operator bool() const noexcept {
 		return !is_zero();
 	}
-	bool is_one() const noexcept
+	int is_one() const noexcept
 	{
-		if (this->d[0] != 1) return false;
-		for (uint i = 1; i < N; i++) {
-			if (this->d[i]) return false;
+#if	__cplusplus > 201703L
+		if constexpr(N == 4) {
+			return u64IsOne(this->d[0]) & u64IsZero(this->d[1]) &
+					u64IsZero(this->d[2]) & u64IsZero(this->d[3]);
 		}
-		return true;
+#endif
+		int	ret = u64IsOne(this->d[0]);
+		for (uint i = 1; i < N; i++) {
+			ret &= u64IsZero(this->d[i]);
+		}
+		return ret;
 	}
-	bool is_u64() const noexcept
+	int is_u64() const noexcept
 	{
+		int	ret = 0;
 		for (uint i = 1; i < N; i++) {
-			if (this->d[i] != 0) return false;
+			ret |= u64IsZero(this->d[i]);
 		}
-		return true;
+		return ret;
 	}
 	/* Sets dest = this, copyout */
 	void set(u64 *dest) const noexcept
@@ -175,8 +195,8 @@ public:
 	}
 	uint get_bit(const uint bit) const noexcept
 	{
+		if (bit >= N*64) return 0;
 		auto off = bit >> 6;
-		if ( off >= N ) return 0;	// out of bound
 		auto rem = bit & 0x3f;
 		return (this->d[off] >> rem) & 1;
 	}
