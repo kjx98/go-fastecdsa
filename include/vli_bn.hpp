@@ -63,6 +63,18 @@ protected:
 	u64		d[N];
 };
 
+// u64IsZero returns 1 if x is zero and zero otherwise.
+static forceinline int u64IsZero(u64 x) noexcept {
+	x = ~x;
+	x &= x >> 32;
+	x &= x >> 16;
+	x &= x >> 8;
+	x &= x >> 4;
+	x &= x >> 2;
+	x &= x >> 1;
+	return x & 1;
+}
+
 template<const uint N>
 class bignum : public bn_words<N> {
 public:
@@ -120,6 +132,12 @@ public:
 	//u64* raw_data() noexcept { return this->d; }
 	bool is_zero() const noexcept
 	{
+#if	__cplusplus > 201703L
+		if constexpr(N == 4) {
+			return u64IsZero(d[0]) | u64IsZero(d[1]) | u64IsZero(d[2]) |
+					u64IsZero(d[3]);
+		}
+#endif
 		for (uint i = 0; i < N; i++) {
 			if (this->d[i] != 0) return false;
 		}

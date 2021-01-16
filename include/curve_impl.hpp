@@ -146,6 +146,54 @@ pre_compute_base(const curveT& curve, point_t<N>  pre_comps[2][16]) noexcept
 	}
 }
 
+#ifdef	ommit
+template<const uint N, typename curveT> forceinline void
+initTable(const curveT& curve, bignum<N>  pre_comps[43][64]) noexcept
+{
+	p256Precomputed = new([43][32 * 8]uint64)
+
+	basePoint := []uint64{
+		0x61328990f418029e, 0x3e7981eddca6c050, 0xd6a1ed99ac24c3c3, 0x91167a5ee1c13b05,
+		0xc1354e593c2d0ddd, 0xc1f5e5788d3295fa, 0x8d4cfb066e2a48f8, 0x63cd65d481d735bd,
+		0x0000000000000001, 0xffffffff00000000, 0xffffffffffffffff, 0x00000000fffffffe,
+	}
+	t1 := make([]uint64, 12)
+	t2 := make([]uint64, 12)
+	copy(t2, basePoint)
+
+	zInv := make([]uint64, 4)
+	zInvSq := make([]uint64, 4)
+	for j := 0; j < 32; j++ {
+		copy(t1, t2)
+		for i := 0; i < 43; i++ {
+			// The window size is 6 so we need to double 6 times.
+			if i != 0 {
+				for k := 0; k < 6; k++ {
+					p256PointDoubleAsm(t1, t1)
+				}
+			}
+			// Convert the point to affine form. (Its values are
+			// still in Montgomery form however.)
+			p256Inverse(zInv, t1[8:12])
+			p256Sqr(zInvSq, zInv, 1)
+			p256Mul(zInv, zInv, zInvSq)
+
+			p256Mul(t1[:4], t1[:4], zInvSq)
+			p256Mul(t1[4:8], t1[4:8], zInv)
+
+			copy(t1[8:12], basePoint[8:12])
+			// Update the table entry
+			copy(p256Precomputed[i][j*8:], t1[:8])
+		}
+		if j == 0 {
+			p256PointDoubleAsm(t2, basePoint)
+		} else {
+			p256PointAddAsm(t2, t2, basePoint)
+		}
+	}
+}
+#endif
+
 /**
  * struct ecc_curve - definition of elliptic curve
  *
@@ -363,14 +411,19 @@ public:
 	void apply_z_mont(point_t<N>& p) const noexcept
 	{
 		if (p.z.is_zero() || p.z == mont_one()) return;
-		felem_t	t1, zp;
 		u64		z1[N];
+		felem_t	t1;
+		felem_t	*zp = reinterpret_cast<felem_t *>(z1);
+#ifndef	ommit
 		from_montgomery(z1, p.z);
 		vli_mod_inv<N>(z1, z1, this->p.data());
-		to_montgomery(zp, z1);		// z = p.z^-1
-		this->mont_msqr(t1, zp);	// t1 = z^2
+		to_montgomery(*zp, z1);		// z = p.z^-1
+#else
+		vli_mod_inv<N>(z1, p.z.data(), this->p.data());
+#endif
+		this->mont_msqr(t1, *zp);	// t1 = z^2
 		this->mont_mmult(p.x, p.x, t1);	// x1 * z^2
-		this->mont_mmult(t1, t1, zp);	// t1 = z^3
+		this->mont_mmult(t1, t1, *zp);	// t1 = z^3
 		this->mont_mmult(p.y, p.y, t1);	// y1 * z^3
 		p.z = this->mont_one();
 	}
