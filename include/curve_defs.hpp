@@ -25,7 +25,7 @@ static ecc::ecc_curve<3> nist_p192( "nist_192",
 #endif
 
 /* NIST P-256: a = p - 3 */
-static ecc::ecc_curve<4> nist_p256( //.name
+const auto nist_p256 = ecc::ecc_curve<4>::new_ecc_curve( //.name
 	"nist_256",
 	//.gx
 	nist_p256_gx,
@@ -44,7 +44,7 @@ static ecc::ecc_curve<4> nist_p256( //.name
 /* GM/T 0003.5-2012 SM2: a = p - 3 */
 /* prime following mu for Barrett's reduction */
 //			ecc::build_curve<4, 1, 0x327f9e8872350975>( //.name
-static ecc::ecc_curve<4> sm2_p256(//.name
+const auto sm2_p256p = ecc::ecc_curve<4>::new_ecc_curve(//.name
 	"sm2p256",
 	// .gx
 	sm2_gx,
@@ -57,13 +57,7 @@ static ecc::ecc_curve<4> sm2_p256(//.name
 	//.a
 	sm2_a,
 	//.b
-	sm2_b,
-	// rr_p, rr_n
-	sm2_p_rr,
-	sm2_n_rr,
-	// k0_p, k0_n
-	1, 0x327f9e8872350975 //
-	);
+	sm2_b);
 
 static ecc::curve256<1> sm2_k256(//.name
 	"sm2k256",
@@ -81,7 +75,7 @@ static ecc::curve256<1> sm2_k256(//.name
 	sm2_b
 	);
 
-static ecc::ecc_curve<4,false> secp256k1( //.name
+const auto secp256k1 = ecc::ecc_curve<4,false>::new_ecc_curve( //.name
 	"secp256k1",
 	//.gx
 	secp256k1_gx,

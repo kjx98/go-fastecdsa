@@ -11,6 +11,7 @@ using namespace vli;
 using namespace ecc;
 
 #include "testData.hpp"
+#define	sm2_p256	(*sm2_p256p)
 
 static void test_montMult(benchmark::State &state)
 {
@@ -178,8 +179,9 @@ BENCHMARK(test_ECScalarCMult);
 
 
 int main(int argc, char ** argv) {
-	sm2_p256.init();
-	sm2_k256.init();
+	//sm2_p256.init();
+	//sm2_k256.init();
+	sm2_k256.g_precompute();
 	benchmark::Initialize(&argc, argv);
 	benchmark::RunSpecifiedBenchmarks();
 }

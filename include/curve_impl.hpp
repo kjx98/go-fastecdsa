@@ -161,22 +161,32 @@ class ecc_curve {
 public:
 	using felem_t = bignum<N>;
 	ecc_curve(const char *_name, const u64 *_gx, const u64 *_gy, const u64 *_p,
-			const u64 *_n, const u64 *_a, const u64 *_b, const bool bBat=false)
-		: name(_name), gx(_gx), gy(_gy), p(_p), n(_n),
-		a(_a), b(_b), _a_is_neg3(A_is_n3), use_barrett(bBat)
-	{
-		static_assert(N > 3, "curve only support 256Bits or more");
-	}
-	ecc_curve(const char *_name, const u64 *_gx, const u64 *_gy, const u64 *_p,
 			const u64 *_n, const u64 *_a, const u64 *_b, const u64* rrP,
 			const u64* rrN, const u64 k0P, const u64 k0N):
 		name(_name), gx(_gx), gy(_gy),
 		p(_p), n(_n), a(_a), b(_b), rr_p(rrP), rr_n(rrN), k0_p(k0P), k0_n(k0N),
-		_a_is_neg3(A_is_n3), use_barrett(false)
+		_a_is_neg3(A_is_n3)
 	{
+		init();
 		static_assert(N > 3, "curve only support 256Bits or more");
 	}
 	ecc_curve(ecc_curve &&) = default;
+	static const ecc_curve* new_ecc_curve(const char *_name, const u64 *_gx,
+			const u64 *_gy, const u64 *_p, const u64 *_n, const u64 *_a,
+			const u64 *_b) noexcept
+	{
+		static_assert(N > 3, "curve only support 256Bits or more");
+		bignum<N>	prr, nrr;
+		u64		k0P, k0N;
+		bignum<N>	prime(_p);
+		bignum<N>	n_prime(_n);
+		k0P = calcK0<N>(prime);
+		calcRR<N>(prr, prime);
+		k0N = calcK0<N>(n_prime);
+		calcRR<N>(nrr, n_prime);
+		return new ecc_curve(_name, _gx, _gy, _p, _n, _a, _b, prr.data(),
+						nrr.data(), k0P, k0N);
+	}
 	const uint ndigits() const { return N; }
 	explicit operator bool() const noexcept
 	{
@@ -193,49 +203,8 @@ public:
 	const felem_t& getGy() const noexcept { return gy; }
 	const felem_t& montParamA() const noexcept { return _mont_a; }
 	const felem_t& paramP() const noexcept { return p; }
-	bool init(const u64 *muP=nullptr, const u64 *muN=nullptr) noexcept
-	{
-		if (_inited) return _inited;
-#ifdef	WITH_BARRETT
-		if (muP == nullptr || muN == nullptr) {
-			use_barrett = false;
-			return false;
-		}
-		mu_p = bignum<N+1>(muP);
-		mu_n = bignum<N+1>(muN);
-		use_barrett = true;
-		_inited = true;
-		return _inited;
-#else
-		if (unlikely(k0_p == 0))
-		{
-			// no calc k0 and rr after instantiation
-			return false;
-		}
-		felem_t	t1;
-		t1.clear();
-		_mont_one.sub(t1, p);
-		if (unlikely( !_a_is_neg3 )) {
-			if (likely(a.is_zero())) _a_is_zero = true;
-		}
-		// should verify calc K0 and RR
-		pre_compute_base<N>(*this, g_pre_comp);	// precompute g_pre_comp
-		_inited = true;
-		return true;
-#endif
-	}
 	const bool a_is_pminus3() const noexcept { return _a_is_neg3; }
 	const bool a_is_zero() const noexcept { return _a_is_zero; }
-#ifdef	WITH_BARRETT
-	void mmod_barrett(felem_t& res, const bn_prod<N>& prod) const noexcept
-	{
-		if (use_barrett) {
-			// res = barrettmod
-			prod.mmod_barrett(res, p, mu_p);
-		}
-		return;
-	}
-#endif
 	const felem_t& mont_one() const noexcept { return _mont_one; }
 	void to_montgomery(felem_t& res, const u64 *x) const noexcept
 	{
@@ -490,14 +459,6 @@ public:
 			if (!skip) point_double(q, q);
 			if (i % W != 0) continue;
 			uint	bits;
-#ifdef	ommit
-			bits = vli_get_bits<N, W>(scalar.data(), i);
-			bool	sign = (bits & (1<<(W-1)));
-			int digit = (sign)?(bits - wNAFsize):bits;
-			if (i > 0 && scalar.get_bit(i-1)) ++digit;
-			if (digit == 0) continue;
-			if ( sign ) point_neg(tmp, pres[-digit]); else tmp = pres[digit];
-#else
 			uint	digit;
 			bits = vli_get_bits<N, W+1>(scalar.data(), i-1);
 			auto sign = recode_scalar_bits<W>(digit, bits);
@@ -510,7 +471,6 @@ public:
 			tmp.y = ny;
 #else
 			if ( sign ) point_neg(tmp, pres[digit]); else tmp = pres[digit];
-#endif
 #endif
 			if (!skip) point_add(q, q, tmp); else {
 				q = tmp;
@@ -565,11 +525,6 @@ public:
 		this->from_montgomery(q.y, q.y);
 		q.z = felem_t(1);
 	}
-	bool select_base_point(point_t<N>& pt, const uint idx) const noexcept {
-		if (idx >= 2 * 16) return false;
-		pt = g_pre_comp[idx>>4][idx&0xf];
-		return true;
-	}
 	void point_double(point_t<N>& q, const point_t<N>& p) const noexcept {
 		point_double_jacob<A_is_n3>(*this, q.x, q.y, q.z, p.x, p.y, p.z);
 	}
@@ -585,6 +540,24 @@ public:
 						x2, y2);
 	}
 protected:
+	bool init() noexcept
+	{
+		if (_inited) return _inited;
+		if (unlikely(k0_p == 0))
+		{
+			// no calc k0 and rr after instantiation
+			return false;
+		}
+		felem_t	t1;
+		t1.clear();
+		_mont_one.sub(t1, p);
+		if (unlikely( !_a_is_neg3 )) {
+			if (likely(a.is_zero())) _a_is_zero = true;
+		}
+		// should verify calc K0 and RR
+		_inited = true;
+		return true;
+	}
 	const std::string name;
 	const felem_t gx;
 	const felem_t gy;
@@ -594,16 +567,11 @@ protected:
 	const felem_t b;
 	const felem_t rr_p = {};
 	const felem_t rr_n = {};
-#ifdef	WITH_BARRETT
-	bignum<N+1> mu_p;
-	bignum<N+1> mu_n;
-#endif
 	felem_t _mont_one;
 	felem_t _mont_a;
 	const u64	k0_p = 0;
 	const u64	k0_n = 0;
 	const uint _ndigits = N;
-	point_t<N>	g_pre_comp[2][16];
 	const bool _a_is_neg3 = false;
 	bool _a_is_zero = false;
 	const bool use_barrett = false;
@@ -676,6 +644,17 @@ public:
 		if ((carry=res.lshift(3)) != 0) {
 			this->carry_reduce(res, carry);
 		}
+	}
+	void g_precompute() noexcept
+	{
+		if (! this->init() ) return;
+		pre_compute_base<4>(*this, g_pre_comp);	// precompute g_pre_comp
+
+	}
+	bool select_base_point(point_t<4>& pt, const uint idx) const noexcept {
+		if (idx >= 2 * 16) return false;
+		pt = g_pre_comp[idx>>4][idx&0xf];
+		return true;
 	}
 	// G multiples with 0..31 32 bits, process one bit
 	bool base_mult_bit(point_t<4>& q, const felem_t& scalar, const uint bit,
@@ -888,6 +867,7 @@ private:
 		cc[3] = u << 32;
 		if (res.add_to(cc)) res.sub_from(this->p);
 	}
+	point_t<4>	g_pre_comp[2][16];
 };
 
 

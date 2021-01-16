@@ -13,6 +13,7 @@ using namespace ecc;
 using namespace std::chrono;
 
 #include "testData.hpp"
+#define	sm2_p256	(*sm2_p256p)
 
 TEST(testEcc, TestCalcK0RR)
 {
@@ -207,6 +208,13 @@ static bool select_gmul(point_t<4>& pt, const uint idx)
 
 TEST(testEcc, TestBasePreCompute)
 {
+	steady_clock::time_point t1 = steady_clock::now();
+	sm2_k256.g_precompute();
+	steady_clock::time_point t2 = steady_clock::now();
+	std::chrono::duration<double> time_span1;
+	time_span1 = (t2 - t1);
+	std::cerr << "pre_compute_base() cost " << time_span1.count() * 1000000
+			<< " us" << std::endl;
 	point_t<4>	gp, gm;
 	for(int i=0;i<32;i++) {
 		EXPECT_TRUE(sm2_k256.select_base_point(gp, i));
@@ -476,14 +484,7 @@ TEST(testEcc, TestScalarCombinedMult)
 
 int main(int argc, char *argv[])
 {
-	sm2_p256.init();
-	steady_clock::time_point t1 = steady_clock::now();
-	sm2_k256.init();
-	steady_clock::time_point t2 = steady_clock::now();
-	std::chrono::duration<double> time_span1;
-	time_span1 = (t2 - t1);
-	std::cerr << "pre_compute_base() cost " << time_span1.count() * 1000000
-			<< " us" << std::endl;
+	//sm2_p256.init();
     testing::InitGoogleTest(&argc, argv);//将命令行参数传递给gtest
     return RUN_ALL_TESTS();   //RUN_ALL_TESTS()运行所有测试案例
 }
