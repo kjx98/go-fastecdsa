@@ -38,6 +38,21 @@
 namespace ecc {
 
 using namespace vli;
+
+template<const uint N>
+struct spoint_t {
+	bignum<N>	x;
+	bignum<N>	y;
+	spoint_t() = default;
+	spoint_t(const spoint_t &) = default;
+	explicit spoint_t(const u64 *xx, const u64 *yy) : x(xx), y(yy) { }
+	void clear() {
+		x.clear();
+		y.clear();
+	}
+};
+
+
 template<const uint N>
 struct point_t {
 	bignum<N>	x;
@@ -48,16 +63,14 @@ struct point_t {
 	u64 *zd() { return const_cast<u64 *>(z.data()); }
 	point_t() = default;
 	point_t(const point_t &) = default;
+	explicit point_t(const spoint_t<N>& pt) : x(pt.x), y(pt.y), z(1) {}
 	explicit point_t(const bignum<N>& xx, const bignum<N>& yy,
 		const bignum<N>& zz=bignum<N>(1)) : x(xx), y(yy), z(zz) {}
 	explicit point_t(const u64 *xx, const u64 *yy, const u64 *zz) :
 		x(xx), y(yy), z(zz)
 	{
 	}
-	explicit point_t(const u64 *xx, const u64 *yy) :
-		x(xx), y(yy), z(1)
-	{
-	}
+	explicit point_t(const u64 *xx, const u64 *yy) : x(xx), y(yy), z(1) { }
 	void clear() {
 		x.clear();
 		y.clear();
@@ -67,8 +80,8 @@ struct point_t {
 		if (x ==  q.x && y == q.y && z ==  q.z) return true;
 		return false;
 	}
-	bool is_zero() const noexcept {
-		return z.is_zero(); // || y.is_zero();
+	int is_zero() const noexcept {
+		return z.is_zero(); // | y.is_zero();
 	}
 };
 
@@ -79,14 +92,14 @@ struct point_t {
  * S ... l2
  * T ... x3
  */
-// x,y,z in montgomery field
+// x,y,z in montgomery form
 template<const bool A_is_n3=true, typename bnT, typename curveT>
 forceinline static
 void point_double_jacob(const curveT& curve, bnT& x3, bnT& y3, bnT& z3,
 		const bnT &x1, const bnT &y1, const bnT &z1) noexcept
 {
 #ifdef	ommit
-	if (z1.is_zero() || y1.is_zero()) {
+	if (z1.is_zero() | y1.is_zero()) {
 		/* P_y == 0 || P_z == 0 => [1:1:0] */
 		x3 = bnT(1);
 		y3 = bnT(1);
@@ -197,7 +210,7 @@ void point_double_jacob(const curveT& curve, bnT& x3, bnT& y3, bnT& z3,
 	curve.mod_sub_from(y3, t2);
 }
 
-// x,y in montgomery field
+// x,y in montgomery form
 template<const bool A_is_n3=true, typename bnT, typename curveT>
 forceinline static
 void point_doublez_jacob(const curveT& curve, bnT& x3, bnT& y3, bnT& z3,
@@ -288,13 +301,14 @@ void point_add_jacob(const curveT& curve, bnT& x3, bnT& y3, bnT& z3,
 			const bnT& x1, const bnT& y1, const bnT& z1, const bnT& x2,
 			const bnT& y2, const bnT& z2) noexcept
 {
-#ifdef	ommit
-	if (z1.is_zero()) {
+	if ( unlikely(z1.is_zero()) ) {
 		x3 = x2;
 		y3 = y2;
 		z3 = z2;
 		return;
-	} else if (z2.is_zero()) {
+	}
+#ifdef	ommit
+	else if (z2.is_zero()) {
 		x3 = x1;
 		y3 = y1;
 		z3 = z1;
@@ -819,8 +833,9 @@ static void
 vli_mod_inv_new(u64 *result, const u64 *y, const u64 *x) noexcept
 {
 	// mod should be prime, >3 MUST BE odd
+	bignum<N>	*res = reinterpret_cast<bignum<N> *>(result);
 	if ( vli_is_even(x) ) {
-		vli_clear<N>(result);
+		res->clear();
 		return;
 	}
 	bignumz<N>	b(0l), d(1);
@@ -853,14 +868,13 @@ vli_mod_inv_new(u64 *result, const u64 *y, const u64 *x) noexcept
 		} else {
 			v.sub_from(u);
 			d.sub(d, b);
-		
+		}
 	}
 	if (!v.is_one()) {
-		vli_clear<N>(result);
-	} else if (d.is_negative()) {
-		vli_add<N>(result, x, d.data());
+		res->clear();
 	} else {
-		vli_set<N>(result, d.data());
+		if (d.is_negative()) d.add(d, x);
+		*res = d.abs();
 	}
 }
 #else

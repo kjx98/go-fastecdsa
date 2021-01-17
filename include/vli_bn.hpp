@@ -638,6 +638,11 @@ public:
 	}
 	explicit bignumz(const u64 *src) noexcept : bignum<N>(src), carry(0) {}
 	int is_negative() const noexcept { return carry < 0; }
+	bignum<N>& abs() const noexcept {
+		u64	*pp = const_cast<u64 *>(this->d);
+		bignum<N> *res = reinterpret_cast<bignum<N> *>(pp);
+		return *res;
+	}
 	bool operator==(const bignumz& bn) {
 		return this->carry == bn.carry && vli_cmp<N>(this->d, bn.d) == 0;
 	}

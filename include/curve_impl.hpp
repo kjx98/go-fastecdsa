@@ -41,15 +41,15 @@ constexpr int wSize = 1<<(W-1);
 constexpr int wNAFsize = 1<<W;
 
 template<const uint N, typename curveT> forceinline
-void pre_compute(const curveT& curve, point_t<N> pre_comp[wSize + 1],
+void pre_compute(const curveT& curve, point_t<N> pre_comp[wSize],
 		const point_t<N>& p) noexcept
 {
-	pre_comp[0].clear();
-	//memset(&pre_comp[0], 0, sizeof(pre_comp[0]));
-	pre_comp[1] = p;
-	for (int i = 2; i <= wSize; ++i) {
-		if (i & 1) {
+	pre_comp[0] = p;
+	curve.point_double(pre_comp[1], p.x, p.y);
+	for (int i = 2; i < wSize; ++i) {
+		if ((i & 1) == 0) {
 			curve.point_add(pre_comp[i], pre_comp[i-1], p.x, p.y);
+			//curve.point_add(pre_comp[i], pre_comp[i-1], p);
 		} else {
 			curve.point_double(pre_comp[i], pre_comp[i >> 1]);
 		}
@@ -150,6 +150,12 @@ pre_compute_base(const curveT& curve, point_t<N>  pre_comps[2][16]) noexcept
 template<const uint N, typename curveT> forceinline void
 initTable(const curveT& curve, bignum<N>  pre_comps[43][64]) noexcept
 {
+	int i, j;
+	point_t<N>	G;
+	static_assert(N == 4, "only 256 bits curve supported");
+	curve.to_montgomery(G.x, curve.getGx());
+	curve.to_montgomery(G.y, curve.getGy());
+	G.z = curve.mont_one();
 	p256Precomputed = new([43][32 * 8]uint64)
 
 	basePoint := []uint64{
@@ -497,9 +503,9 @@ public:
 		q.clear();
 		if ( unlikely(nbits == 0) ) return;
 #ifdef	PRECOMPUTE_INSTACK
-		point_t<N>	pres[wSize+1];
+		point_t<N>	pres[wSize];
 #else
-		auto pres = new(point_t<N>[wSize+1]);
+		auto pres = new(point_t<N>[wSize]);
 #endif
 		to_montgomery(tmp.x, p.x);
 		to_montgomery(tmp.y, p.y);
@@ -516,6 +522,7 @@ public:
 			bits = vli_get_bits<N, W+1>(scalar.data(), i-1);
 			auto sign = recode_scalar_bits<W>(digit, bits);
 			if (digit == 0) continue;
+			--digit;
 #ifndef	NO_CONDITIONAL_COPY
 			tmp = pres[digit];
 			felem_t	ny;
@@ -580,6 +587,10 @@ public:
 	}
 	void point_double(point_t<N>& q, const point_t<N>& p) const noexcept {
 		point_double_jacob<A_is_n3>(*this, q.x, q.y, q.z, p.x, p.y, p.z);
+	}
+	void point_double(point_t<N>& q, const felem_t& x1, const felem_t& y1)
+	const noexcept {
+		point_doublez_jacob<A_is_n3>(*this, q.x, q.y, q.z, x1, y1);
 	}
 	void point_add(point_t<N>& q, const point_t<N>& p1, const point_t<N>& p2)
 	const noexcept {
@@ -846,7 +857,7 @@ public:
 		bool	b_gscalar = !(g_scalar.is_zero());
 		q.clear();
 		if ( unlikely(nbits == 0) && !b_gscalar) return;
-		point_t<4>	pres[wSize+1];
+		point_t<4>	pres[wSize];
 		if (nbits > 0) {
 			to_montgomery(tmp.x, p.x);
 			to_montgomery(tmp.y, p.y);
@@ -870,6 +881,7 @@ public:
 				bits = vli_get_bits<4, W+1>(scalar.data(), i-1);
 				auto sign = recode_scalar_bits<W>(digit, bits);
 				if (digit == 0) continue;
+				--digit;
 #ifndef	NO_CONDITIONAL_COPY
 				tmp = pres[digit];
 				felem_t	ny;
@@ -897,6 +909,10 @@ public:
 			point_doublez_jacob<A_is_n3>(*this, q.x, q.y, q.z, p.x, p.y);
 		else
 			point_double_jacob<A_is_n3>(*this, q.x, q.y, q.z, p.x, p.y, p.z);
+	}
+	void point_double(point_t<4>& q, const felem_t& x1, const felem_t& y1)
+	const noexcept {
+		point_doublez_jacob<A_is_n3>(*this, q.x, q.y, q.z, x1, y1);
 	}
 	void point_add(point_t<4>& q, const point_t<4>& p1, const point_t<4>& p2)
 	const noexcept {
