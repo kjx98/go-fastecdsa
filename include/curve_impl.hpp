@@ -38,7 +38,7 @@ namespace ecc {
 using namespace vli;
 constexpr int W = 5;
 constexpr int wSize = 1<<(W-1);
-constexpr int wNAFsize = 1<<W;
+//constexpr int wNAFsize = 1<<W;
 
 template<const uint N, typename curveT> forceinline
 void pre_compute(const curveT& curve, point_t<N> pre_comp[wSize],
@@ -525,9 +525,9 @@ public:
 			const noexcept
 	{
 		point_t<N>	tmp;
-		uint	nbits = scalar.num_bits();
-		q.clear();
-		if ( unlikely(nbits == 0) ) return;
+		uint	nbits = N*64; //scalar.num_bits();
+		//q.clear();
+		//if ( unlikely(nbits == 0) ) return;
 #ifdef	PRECOMPUTE_INSTACK
 		point_t<N>	pres[wSize];
 #else
@@ -537,14 +537,31 @@ public:
 		to_montgomery(tmp.y, p.y);
 		tmp.z = this->mont_one();
 		pre_compute<N>(*this, pres, tmp);
-		bool	skip = true;
-		if (nbits % W != 0) --nbits;
-		for (int i = nbits; i >= 0; --i) {
-			if (!skip) point_double(q, q);
-			if (i % W != 0) continue;
+		int	off = nbits % W;
+		if (off == 0) off = W;
+		--nbits;
+		int	idx = nbits - off;
+		bool skip = true;
+		{
 			uint	bits;
 			uint	digit;
-			bits = vli_get_bits<N, W+1>(scalar.data(), i-1);
+			bits = vli_get_bits<N, W+1>(scalar.data(), idx);
+			recode_scalar_bits<W>(digit, bits);
+			if (digit != 0) {
+				--digit;
+				// sign MUST BE zero
+				q = pres[digit];
+				skip = false;
+			}
+		}
+		for (; idx >= 0; ) {
+			idx -= W;
+			if (!skip) {
+				for (int j=0; j<W ; ++j) point_double(q, q);
+			}
+			uint	bits;
+			uint	digit;
+			bits = vli_get_bits<N, W+1>(scalar.data(), idx);
 			auto sign = recode_scalar_bits<W>(digit, bits);
 			if (digit == 0) continue;
 			--digit;
@@ -559,7 +576,7 @@ public:
 #endif
 			if (!skip) point_add(q, q, tmp); else {
 				q = tmp;
-				skip =false;
+				skip = false;
 			}
 		}
 #ifndef	PRECOMPUTE_INSTACK
