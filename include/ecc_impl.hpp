@@ -45,6 +45,7 @@ struct spoint_t {
 	bignum<N>	y;
 	spoint_t() = default;
 	spoint_t(const spoint_t &) = default;
+	spoint_t(const bignum<N>& xx, const bignum<N>& yy) : x(xx), y(yy) {}
 	explicit spoint_t(const u64 *xx, const u64 *yy) : x(xx), y(yy) { }
 	void clear() {
 		x.clear();
@@ -58,9 +59,11 @@ struct point_t {
 	bignum<N>	x;
 	bignum<N>	y;
 	bignum<N>	z;
+#ifdef	ommit
 	u64 *xd() { return const_cast<u64 *>(x.data()); }
 	u64 *yd() { return const_cast<u64 *>(y.data()); }
 	u64 *zd() { return const_cast<u64 *>(z.data()); }
+#endif
 	point_t() = default;
 	point_t(const point_t &) = default;
 	explicit point_t(const spoint_t<N>& pt) : x(pt.x), y(pt.y), z(1) {}
@@ -944,6 +947,14 @@ vli_mod_inv_new(u64 *result, const u64 *y, const u64 *x) noexcept
 }
 #endif
 
+using namespace vli;
+template<const uint N> forceinline
+static void
+mod_inv(bignum<N>& res, const bignum<N>& x, const bignum<N>& mod) noexcept
+{
+	u64	*rp = const_cast<u64 *>(res.data());
+	vli_mod_inv<N>(rp, x.data(), mod.data());
+}
 
 /*-
  * This function looks at w+1 scalar bits (5 current, 1 adjacent less

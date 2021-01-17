@@ -125,7 +125,10 @@ void    point_double(Point *pt, const Point *p, CURVE_HND curveH)
 	auto	*curve=(curve_t *)curveH;
 	if (!(*curve) || curve->ndigits() != 4) return;
 	curve->point_double_jacobian(pt->x, pt->y, pt->z, p->x, p->y, p->z);
-	curve->apply_z(pt->x, pt->y, pt->z);
+	bignum<4>	*xx = reinterpret_cast<bignum<4> *>(pt->x);
+	bignum<4>	*yy = reinterpret_cast<bignum<4> *>(pt->y);
+	bignum<4>	*zz = reinterpret_cast<bignum<4> *>(pt->z);
+	curve->apply_z(*xx, *yy, *zz);
 }
 
 void    point_add_jacobian(Point *pt, const Point *p, const Point *q,
@@ -147,7 +150,10 @@ void    point_add(Point *pt, const Point *p, const Point *q,
 	if (!(*curve) || curve->ndigits() != 4) return;
 	curve->point_add_jacobian(pt->x, pt->y, pt->z, p->x, p->y, p->z,
 				q->x, q->y, q->z);
-	curve->apply_z(pt->x, pt->y, pt->z);
+	bignum<4>	*xx = reinterpret_cast<bignum<4> *>(pt->x);
+	bignum<4>	*yy = reinterpret_cast<bignum<4> *>(pt->y);
+	bignum<4>	*zz = reinterpret_cast<bignum<4> *>(pt->z);
+	curve->apply_z(*xx, *yy, *zz);
 }
 
 void    affine_from_jacobian(u64 *x, u64 *y, const Point *pt, CURVE_HND curveH)
@@ -156,10 +162,13 @@ void    affine_from_jacobian(u64 *x, u64 *y, const Point *pt, CURVE_HND curveH)
 	if (curveH == nullptr) return;
 	auto	*curve=(curve_t *)curveH;
 	if (!(*curve) || curve->ndigits() != 4) return;
+	bignum<4>	*xx = reinterpret_cast<bignum<4> *>(const_cast<u64 *>(pt->x));
+	bignum<4>	*yy = reinterpret_cast<bignum<4> *>(const_cast<u64 *>(pt->y));
+	bignum<4>	*zz = reinterpret_cast<bignum<4> *>(const_cast<u64 *>(pt->z));
+	curve->apply_z(*xx, *yy, *zz);
 	vli_set<4>(x, pt->x);
 	vli_set<4>(y, pt->y);
 	vli_set<4>(z, pt->z);
-	curve->apply_z(x, y, z);
 }
 
 void	point_mult(Point *pt, const Point *p, const u64 *scalar,

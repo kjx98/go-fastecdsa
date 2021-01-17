@@ -132,10 +132,23 @@ public:
 		return !(*this < bn);
 	}
 	bool operator==(const bignum& bn) const noexcept {
+#ifdef	ommit
 		for (int i = N - 1; i >= 0; i--) {
 			if (this->d[i] != bn.d[i]) return false;
 		}
 		return true;
+#endif
+#if	__cplusplus > 201703L
+		if constexpr(N == 4) {
+			return u64IsZero(this->d[0] ^ bn.d[0]) &
+					u64IsZero(this->d[1] ^ bn.d[1]) &
+					u64IsZero(this->d[2] ^ bn.d[2]) &
+					u64IsZero(this->d[3] ^ bn.d[3]);
+		}
+#endif
+		int	ret = u64IsZero(this->d[0] ^ bn.d[0]);
+		for (uint i=1; i < N; ++i) ret &= u64IsZero(this->d[i] ^ bn.d[i]);
+		return ret;
 	}
 	bool operator!=(const bignum& bn) const noexcept {
 		return ! (*this == bn);
@@ -150,8 +163,8 @@ public:
 					u64IsZero(this->d[2]) & u64IsZero(this->d[3]);
 		}
 #endif
-		int		ret=1;
-		for (uint i = 0; i < N; i++) {
+		int		ret=u64IsZero(this->d[0]);
+		for (uint i = 1; i < N; i++) {
 			ret &= u64IsZero(this->d[i]);
 		}
 		return ret;
@@ -175,9 +188,9 @@ public:
 	}
 	int is_u64() const noexcept
 	{
-		int	ret = 0;
-		for (uint i = 1; i < N; i++) {
-			ret |= u64IsZero(this->d[i]);
+		int	ret = u64IsZero(this->d[1]);
+		for (uint i = 2; i < N; i++) {
+			ret &= u64IsZero(this->d[i]);
 		}
 		return ret;
 	}

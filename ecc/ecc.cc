@@ -247,69 +247,11 @@ void vli_from_be64(u64 *dest, const void *src, uint ndigits)
 
 /* ------ Point operations ------ */
 
-#ifdef	WITH_SHAMIR
-/* Computes R = u1P + u2Q mod p using Shamir's trick.
- * Based on: Kenneth MacKay's micro-ecc (2014).
- */
-void ecc_point_mult_shamir(const u64 *result_x, const u64 *result_y,
-			   const u64 *u1, const u64 *p_x, const u64 *p_y,
-			   const u64 *u2, const u64 *q_x, const u64 *q_y,
-			   const struct ecc_curve *curve)
-{
-	u64 z[ndigits];
-	u64 *rx = (u64 *)result_x;
-	u64 *ry = (u64 *)result_y;
-	unsigned int ndigits = curve->ndigits; //curve->g.ndigits;
-	unsigned int num_bits;
-	struct ecc_point sum;//  = ECC_POINT_INIT({}, {}, ndigits);
-	const struct ecc_point *points[4];
-	const struct ecc_point *point;
-	unsigned int idx;
-	int i;
-
-	ecc_point_add(&sum, p, q, curve);
-	points[0] = nullptr;
-	points[1] = p;
-	points[2] = q;
-	points[3] = &sum;
-
-	num_bits = max<uint>(vli_num_bits(u1, ndigits), vli_num_bits(u2, ndigits));
-	i = num_bits - 1;
-	idx = (!!vli_test_bit(u1, i)) | ((!!vli_test_bit(u2, i)) << 1);
-	point = points[idx];
-
-	vli_set(rx, point->x, ndigits);
-	vli_set(ry, point->y, ndigits);
-	vli_clear(z + 1, ndigits - 1);
-	z[0] = 1;
-
-	for (--i; i >= 0; i--) {
-		ecc_point_double_jacobian(rx, ry, z, curve->p, ndigits);
-		idx = (!!vli_test_bit(u1, i)) | ((!!vli_test_bit(u2, i)) << 1);
-		point = points[idx];
-		if (point) {
-			u64 tx[ndigits];
-			u64 ty[ndigits];
-			u64 tz[ndigits];
-
-			vli_set(tx, point->x, ndigits);
-			vli_set(ty, point->y, ndigits);
-			apply_z(tx, ty, z, curve->p, ndigits);
-			vli_mod_sub(tz, rx, tx, curve->p, ndigits);
-			xycz_add(tx, ty, rx, ry, curve->p, ndigits);
-			vli_mod_mult_fast(z, z, tz, curve->p, ndigits);
-		}
-	}
-	apply_z(rx, ry, z, curve->p, ndigits);
-}
-#endif
-
 forceinline static
 void ecc_swap_digits(const u64 *in, u64 *out, uint ndigits)
 {
 	const be64 *src = (be64 *)in;
 	uint i;
-//#pragma GCC unroll 4
 	for (i = 0; i < ndigits; i++)
 		out[i] = be64toh(src[ndigits - 1 - i]);
 }

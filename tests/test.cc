@@ -486,10 +486,9 @@ TEST(testEcc, TestScalarCombinedMult)
 	ASSERT_TRUE(res2.z.is_one());
 	sm2_p256.point_add_jacobian(x3, y3, z3, res1.x.data(), res1.y.data(),
 						bigOne.data(), res2.x.data(), res2.y.data());
-	sm2_p256.apply_z(x3, y3, z3);
-	EXPECT_EQ(res.x.cmp(x3), 0);
-	EXPECT_EQ(res.y.cmp(y3), 0);
-	EXPECT_EQ(res.z.cmp(z3), 0);
+	point_t<4>	pt3(x3, y3, z3);
+	sm2_p256.apply_z(pt3);
+	EXPECT_EQ(res, pt3);
 	std::cout << "res x3: " << res.x << std::endl;
 	std::cout << "res y3: " << res.y << std::endl;
 	bignum<4>	xx3(x3);

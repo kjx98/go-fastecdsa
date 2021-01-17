@@ -373,6 +373,7 @@ public:
 		from_montgomery(y3, *y3p);
 		from_montgomery(z3, *z3p);
 	}
+#ifdef	ommit
 	void apply_z(u64 *x1, u64 *y1, u64 *z) const noexcept
 	{
 		felem_t	t1;
@@ -402,44 +403,69 @@ public:
 		vli_clear<N>(z);
 		z[0] = 1;
 	}
-	void apply_z(u64* x, u64 *y, const point_t<N>& p) const noexcept
+#endif
+	void apply_z(bignum<N>& x1, bignum<N>& y1, bignum<N>& z) const noexcept
 	{
-		p.x.set(x);
-		p.y.set(y);
-		u64	z[N];
-		p.z.set(z);
+		felem_t	t1;
+
+		if (z.is_one()) return;
+		if (z.is_zero()) {
+			x1.clear();
+			y1.clear();
+			return;
+		}
+		mod_inv<N>(z, z, this->p);
+		to_montgomery(z, z);
+		this->mont_msqr(t1, z);	// t1 = z^2
+		to_montgomery(x1, x1);
+		to_montgomery(y1, y1);
+		this->mont_mmult(x1, x1, t1);	// x1 * z^2
+		this->mont_mmult(t1, t1, z);	// t1 = z^3
+		this->mont_mmult(y1, y1, t1);	// y1 * z^3
+
+		// montgomery reduction
+		from_montgomery(x1, x1);
+		from_montgomery(y1, y1);
+		// set z to 1
+		z = felem_t(1);
+	}
+	void apply_z(felem_t& x, felem_t& y, const point_t<N>& pt) const noexcept
+	{
+		felem_t	z(pt.z);
+		x = pt.x;
+		y = pt.y;
 		apply_z(x, y, z);
 	}
 	void apply_z(point_t<N>& p) const noexcept
 	{
-		apply_z(p.xd(), p.yd(), p.zd());
+		apply_z(p.x, p.y, p.z);
 	}
-	void apply_z_mont(point_t<N>& p) const noexcept
+	void apply_z_mont(point_t<N>& pt) const noexcept
 	{
-		if (p.z.is_zero() || p.z == mont_one()) return;
-		u64		z1[N];
+		if (pt.z.is_zero() || pt.z == mont_one()) return;
 		felem_t	t1;
-		felem_t	*zp = reinterpret_cast<felem_t *>(z1);
-#ifndef	ommit
-		from_montgomery(z1, p.z);
-		vli_mod_inv<N>(z1, z1, this->p.data());
-		to_montgomery(*zp, z1);		// z = p.z^-1
-#else
-		vli_mod_inv<N>(z1, p.z.data(), this->p.data());
-#endif
-		this->mont_msqr(t1, *zp);	// t1 = z^2
-		this->mont_mmult(p.x, p.x, t1);	// x1 * z^2
-		this->mont_mmult(t1, t1, *zp);	// t1 = z^3
-		this->mont_mmult(p.y, p.y, t1);	// y1 * z^3
-		p.z = this->mont_one();
+		from_montgomery(pt.z, pt.z);
+		mod_inv<N>(pt.z, pt.z, this->p);
+		to_montgomery(pt.z, pt.z);		// z = p.z^-1
+		this->mont_msqr(t1, pt.z);	// t1 = z^2
+		this->mont_mmult(pt.x, pt.x, t1);	// x1 * z^2
+		this->mont_mmult(t1, t1, pt.z);	// t1 = z^3
+		this->mont_mmult(pt.y, pt.y, t1);	// y1 * z^3
+		pt.z = this->mont_one();
 	}
 	bool point_eq(const point_t<N>& p, const point_t<N>& q) const noexcept
 	{
 		if (p == q) return true;
-		u64		x1[N], x2[N], y1[N], y2[N];
-		this->apply_z(x1, y1, p);
-		this->apply_z(x2, y2, q);
-		return vli_cmp<N>(x1, x2) == 0 && vli_cmp<N>(y1, y2) == 0;
+		if ( likely(p.z.is_one()) ) {
+			felem_t	x2, y2;
+			this->apply_z(x2, y2, q);
+			return p.x == x2 && p.y == y2;
+		} else {
+			felem_t	x1, x2, y1, y2;
+			this->apply_z(x1, y1, p);
+			this->apply_z(x2, y2, q);
+			return x1 == x2 && y1 == y2;
+		}
 	}
 	void point_neg(point_t<N>& q, const point_t<N>& p) const noexcept
 	{
@@ -495,7 +521,7 @@ public:
 		from_montgomery(y3, *y3p);
 		from_montgomery(z3, *z3p);
 	}
-	void scalar_mult(point_t<N>& q, const point_t<N>& p, const felem_t& scalar)
+	void scalar_mult(point_t<N>& q, const spoint_t<N>& p, const felem_t& scalar)
 			const noexcept
 	{
 		point_t<N>	tmp;
@@ -509,8 +535,7 @@ public:
 #endif
 		to_montgomery(tmp.x, p.x);
 		to_montgomery(tmp.y, p.y);
-		if ( likely(p.z.is_one()) ) tmp.z = this->mont_one(); else
-			to_montgomery(tmp.z, p.z);
+		tmp.z = this->mont_one();
 		pre_compute<N>(*this, pres, tmp);
 		bool	skip = true;
 		if (nbits % W != 0) --nbits;
@@ -540,6 +565,12 @@ public:
 #ifndef	PRECOMPUTE_INSTACK
 		delete []pres;
 #endif
+	}
+	void scalar_mult(point_t<N>& q, const point_t<N>& p, const felem_t& scalar)
+			const noexcept
+	{
+		spoint_t<N>	pp(p.x, p.y);
+		scalar_mult(q, pp, scalar);
 		// montgomery reduction
 		if ( unlikely(q.z.is_zero()) ) return;
 		this->apply_z_mont(q);
@@ -670,19 +701,18 @@ public:
 		felem_t   *res = reinterpret_cast<felem_t *>(result);
 		mont_reduction<Pk0>(*res, y, this->p);
 	}
-	void apply_z_mont(point_t<4>& p) const noexcept
+	void apply_z_mont(point_t<4>& pt) const noexcept
 	{
-		if (p.z.is_zero() || p.z == mont_one()) return;
-		felem_t	t1, zp;
-		u64		z1[4];
-		from_montgomery(z1, p.z);
-		vli_mod_inv<4>(z1, z1, this->p.data());
-		to_montgomery(zp, z1);		// z = p.z^-1
-		this->mont_msqr(t1, zp);	// t1 = z^2
-		this->mont_mmult(p.x, p.x, t1);	// x1 * z^2
-		this->mont_mmult(t1, t1, zp);	// t1 = z^3
-		this->mont_mmult(p.y, p.y, t1);	// y1 * z^3
-		p.z = this->mont_one();
+		if (pt.z.is_zero() || pt.z == mont_one()) return;
+		felem_t	t1, z;
+		from_montgomery(z, pt.z);
+		mod_inv<4>(z, z, this->p);
+		to_montgomery(z, z);		// z = p.z^-1
+		this->mont_msqr(t1, z);	// t1 = z^2
+		this->mont_mmult(pt.x, pt.x, t1);	// x1 * z^2
+		this->mont_mmult(t1, t1, z);	// t1 = z^3
+		this->mont_mmult(pt.y, pt.y, t1);	// y1 * z^3
+		pt.z = this->mont_one();
 	}
 	void mont_mmult(felem_t& res, const felem_t& left, const felem_t& right)
 	const noexcept {
