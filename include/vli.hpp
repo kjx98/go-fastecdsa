@@ -57,6 +57,30 @@ static void vli_clear(u64 *vli) noexcept
 		vli[i] = 0;
 }
 
+// u64IsZero returns 1 if x is zero and zero otherwise.
+static forceinline int u64IsZero(u64 x) noexcept {
+	x = ~x;
+	x &= x >> 32;
+	x &= x >> 16;
+	x &= x >> 8;
+	x &= x >> 4;
+	x &= x >> 2;
+	x &= x >> 1;
+	return x & 1;
+}
+
+// u64IsOne returns 1 if x is one and zero otherwise.
+static forceinline int u64IsOne(u64 x) noexcept {
+	x = ~(x ^ 1);
+	x &= x >> 32;
+	x &= x >> 16;
+	x &= x >> 8;
+	x &= x >> 4;
+	x &= x >> 2;
+	x &= x >> 1;
+	return x & 1;
+}
+
 /**
  * vli_is_zero() - Determine is vli is zero
  *
@@ -65,22 +89,38 @@ static void vli_clear(u64 *vli) noexcept
  */
 /* Returns true if vli == 0, false otherwise. */
 template<const uint N> forceinline
-static bool vli_is_zero(const u64 *vli) noexcept
+static int vli_is_zero(const u64 *vli) noexcept
 {
+#ifdef	NO_U64ZERO
 	for (uint i = 0; i < N; i++) {
-		if (vli[i]) return false;
+		if (vli[i]) return 0;
 	}
 	return true;
+#else
+	int	ret = u64IsZero(vli[0]);
+	for (uint i = 1; i < N; i++) {
+		ret &= u64IsZero(vli[i]);
+	}
+	return ret;
+#endif
 }
 
 template<const uint N> forceinline
-static bool vli_is_one(const u64 *vli) noexcept
+static int vli_is_one(const u64 *vli) noexcept
 {
-	if (vli[0] != 1) return false;
+#ifdef	NO_U64ZERO
+	if (vli[0] != 1) return 0;
 	for (uint i = 1; i < N; i++) {
-		if (vli[i]) return false;
+		if (vli[i]) return 0;
 	}
 	return true;
+#else
+	int	ret = u64IsOne(vli[0]);
+	for (uint i = 1; i < N; i++) {
+		ret &= u64IsZero(vli[i]);
+	}
+	return ret;
+#endif
 }
 
 /* Sets dest = src. */

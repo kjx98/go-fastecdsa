@@ -66,29 +66,6 @@ protected:
 	u64		d[N];
 };
 
-// u64IsZero returns 1 if x is zero and zero otherwise.
-static forceinline int u64IsZero(u64 x) noexcept {
-	x = ~x;
-	x &= x >> 32;
-	x &= x >> 16;
-	x &= x >> 8;
-	x &= x >> 4;
-	x &= x >> 2;
-	x &= x >> 1;
-	return x & 1;
-}
-
-// u64IsOne returns 1 if x is one and zero otherwise.
-static forceinline int u64IsOne(u64 x) noexcept {
-	x = ~(x ^ 1);
-	x &= x >> 32;
-	x &= x >> 16;
-	x &= x >> 8;
-	x &= x >> 4;
-	x &= x >> 2;
-	x &= x >> 1;
-	return x & 1;
-}
 
 template<const uint N>
 class bignum : public bn_words<N> {
@@ -135,12 +112,12 @@ public:
 		return !(*this < bn);
 	}
 	bool operator==(const bignum& bn) const noexcept {
-#ifdef	ommit
+#ifdef	NO_U64ZERO
 		for (int i = N - 1; i >= 0; i--) {
 			if (this->d[i] != bn.d[i]) return false;
 		}
 		return true;
-#endif
+#else
 #if	__cplusplus > 201703L
 		if constexpr(N == 4) {
 			return u64IsZero(this->d[0] ^ bn.d[0]) &
@@ -152,6 +129,7 @@ public:
 		int	ret = u64IsZero(this->d[0] ^ bn.d[0]);
 		for (uint i=1; i < N; ++i) ret &= u64IsZero(this->d[i] ^ bn.d[i]);
 		return ret;
+#endif
 	}
 	bool operator!=(const bignum& bn) const noexcept {
 		return ! (*this == bn);
@@ -160,6 +138,7 @@ public:
 	//u64* raw_data() noexcept { return this->d; }
 	int is_zero() const noexcept
 	{
+#ifndef	NO_U64ZERO
 #if	__cplusplus > 201703L
 		if constexpr(N == 4) {
 			return u64IsZero(this->d[0]) & u64IsZero(this->d[1]) &
@@ -171,12 +150,19 @@ public:
 			ret &= u64IsZero(this->d[i]);
 		}
 		return ret;
+#else
+		for (uint i = 0; i < N; i++) {
+			if (this->d[i]) return 0;
+		}
+		return true;
+#endif
 	}
 	inline constexpr explicit operator bool() const noexcept {
 		return !is_zero();
 	}
 	int is_one() const noexcept
 	{
+#ifndef	NO_U64ZERO
 #if	__cplusplus > 201703L
 		if constexpr(N == 4) {
 			return u64IsOne(this->d[0]) & u64IsZero(this->d[1]) &
@@ -188,6 +174,13 @@ public:
 			ret &= u64IsZero(this->d[i]);
 		}
 		return ret;
+#else
+		if (this->d[0] != 1) return 0;
+		for (uint i = 1; i < N; i++) {
+			if (this->d[i]) return 0;
+		}
+		return true;
+#endif
 	}
 	int is_u64() const noexcept
 	{
