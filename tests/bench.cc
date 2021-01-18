@@ -11,7 +11,7 @@ using namespace vli;
 using namespace ecc;
 
 #include "testData.hpp"
-#define	sm2_p256	(*sm2_p256p)
+//#define	sm2_p256	(*sm2_p256p)
 
 static void test_montMult(benchmark::State &state)
 {

@@ -304,13 +304,13 @@ void point_add_jacob(const curveT& curve, bnT& x3, bnT& y3, bnT& z3,
 			const bnT& x1, const bnT& y1, const bnT& z1, const bnT& x2,
 			const bnT& y2, const bnT& z2) noexcept
 {
+#ifdef	ommit
 	if ( unlikely(z1.is_zero()) ) {
 		x3 = x2;
 		y3 = y2;
 		z3 = z2;
 		return;
 	}
-#ifdef	ommit
 	else if (z2.is_zero()) {
 		x3 = x1;
 		y3 = y1;

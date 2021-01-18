@@ -13,7 +13,7 @@ using namespace ecc;
 using namespace std::chrono;
 
 #include "testData.hpp"
-#define	sm2_p256	(*sm2_p256p)
+//#define	sm2_p256	(*sm2_p256p)
 
 TEST(testEcc, TestCalcK0RR)
 {
