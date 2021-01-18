@@ -176,6 +176,14 @@ TEST(testVli, TestInverseNew)
 	EXPECT_EQ(vli_cmp<4>(res, x2_inv), 0);
 }
 
+#ifdef	WITH_BASENAF
+TEST(testEcc, TestBaseNAF)
+{
+	ASSERT_EQ(BaseW, 6);
+	EXPECT_EQ(nwBaseNAF<4>(), 43);
+}
+#endif
+
 TEST(testEcc, TestMult248)
 {
 	bignum<4>	x3(dx3), y3(dy3), res1, res2;

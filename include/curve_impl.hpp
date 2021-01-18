@@ -39,6 +39,8 @@ using namespace vli;
 constexpr int W = 5;
 constexpr int wSize = 1<<(W-1);
 //constexpr int wNAFsize = 1<<W;
+constexpr int BaseW = 6;
+constexpr int wBaseSize = 1<<(BaseW-1);
 
 template<const uint N, typename curveT> forceinline
 void pre_compute(const curveT& curve, point_t<N> pre_comp[wSize],
@@ -55,6 +57,61 @@ void pre_compute(const curveT& curve, point_t<N> pre_comp[wSize],
 		}
 	}
 }
+
+#ifdef	WITH_BASENAF
+template<const uint N> forceinline
+int nwBaseNAF() noexcept {
+	return (64*N -1 + BaseW) / BaseW;
+}
+
+template<const uint N, typename curveT> forceinline
+void initBaseTable(const curveT& curve, const int nBaseNAF,
+		spoint_t<N>  pre_comps[][wBaseSize]) noexcept
+{
+	int i, j;
+	point_t<N>	G;
+	static_assert(N == 4, "only 256 bits curve supported");
+	curve.to_montgomery(G.x, curve.getGx());
+	curve.to_montgomery(G.y, curve.getGy());
+	G.z = curve.mont_one();
+
+	point_t<N>	t1, t2;
+	t2 = G;
+
+	bignum<N> zInv, zInvSq;
+	for (int j = 0; j < wBaseSize; ++j) {
+		t1 = t2;
+		for (int i = 0; i < nBaseNAF; ++i) {
+			// The window size is 6 so we need to double 6 times.
+			if (i != 0) {
+				for (int k = 0; k < 6; ++k) {
+					curve.point_double(t1, t1);
+				}
+			}
+			// Convert the point to affine form. (Its values are
+			// still in Montgomery form however.)
+			curve.from_montgomery(zInv, t1);
+			mod_inv<N>(zInv, zInv, curve.p);
+			curve.to_montgomery(zInv, zInv);
+			curve.mont_sqr(zInvSq, zInv);
+			curve.mont_mult(zInv, zInv, zInvSq);
+
+			curve.mont_mult(t1.x, t1.x, zInvSq);
+			curve.mont_mult(t1.y, t1.y, zInvSq);
+			t1.z = G.z;
+
+			// Update the table entry
+			pre_comps[i][j].x = t1.x;
+			pre_comps[i][j].y = t1.y;
+		}
+		if (j == 0) {
+			curve.point_double(t2, G.x, G.y);
+		} else {
+			curve.point_add(t2, t2, G.x, G.y);
+		}
+	}
+}
+#endif
 
 // fast scalar Base mult for 256 Bits ECC Curve
 /*-
@@ -146,59 +203,6 @@ pre_compute_base(const curveT& curve, point_t<N>  pre_comps[2][16]) noexcept
 	}
 }
 
-#ifdef	ommit
-template<const uint N, typename curveT> forceinline void
-initTable(const curveT& curve, bignum<N>  pre_comps[43][64]) noexcept
-{
-	int i, j;
-	point_t<N>	G;
-	static_assert(N == 4, "only 256 bits curve supported");
-	curve.to_montgomery(G.x, curve.getGx());
-	curve.to_montgomery(G.y, curve.getGy());
-	G.z = curve.mont_one();
-	p256Precomputed = new([43][32 * 8]uint64)
-
-	basePoint := []uint64{
-		0x61328990f418029e, 0x3e7981eddca6c050, 0xd6a1ed99ac24c3c3, 0x91167a5ee1c13b05,
-		0xc1354e593c2d0ddd, 0xc1f5e5788d3295fa, 0x8d4cfb066e2a48f8, 0x63cd65d481d735bd,
-		0x0000000000000001, 0xffffffff00000000, 0xffffffffffffffff, 0x00000000fffffffe,
-	}
-	t1 := make([]uint64, 12)
-	t2 := make([]uint64, 12)
-	copy(t2, basePoint)
-
-	zInv := make([]uint64, 4)
-	zInvSq := make([]uint64, 4)
-	for j := 0; j < 32; j++ {
-		copy(t1, t2)
-		for i := 0; i < 43; i++ {
-			// The window size is 6 so we need to double 6 times.
-			if i != 0 {
-				for k := 0; k < 6; k++ {
-					p256PointDoubleAsm(t1, t1)
-				}
-			}
-			// Convert the point to affine form. (Its values are
-			// still in Montgomery form however.)
-			p256Inverse(zInv, t1[8:12])
-			p256Sqr(zInvSq, zInv, 1)
-			p256Mul(zInv, zInv, zInvSq)
-
-			p256Mul(t1[:4], t1[:4], zInvSq)
-			p256Mul(t1[4:8], t1[4:8], zInv)
-
-			copy(t1[8:12], basePoint[8:12])
-			// Update the table entry
-			copy(p256Precomputed[i][j*8:], t1[:8])
-		}
-		if j == 0 {
-			p256PointDoubleAsm(t2, basePoint)
-		} else {
-			p256PointAddAsm(t2, t2, basePoint)
-		}
-	}
-}
-#endif
 
 /**
  * struct ecc_curve - definition of elliptic curve

@@ -70,15 +70,9 @@ struct point_t {
 	explicit point_t(const bignum<N>& xx, const bignum<N>& yy,
 		const bignum<N>& zz=bignum<N>(1)) : x(xx), y(yy), z(zz) {}
 	explicit point_t(const u64 *xx, const u64 *yy, const u64 *zz) :
-		x(xx), y(yy), z(zz)
-	{
-	}
+		x(xx), y(yy), z(zz) { }
 	explicit point_t(const u64 *xx, const u64 *yy) : x(xx), y(yy), z(1) { }
-	void clear() {
-		x.clear();
-		y.clear();
-		z.clear();
-	}
+	void clear() { x.clear(); y.clear(); z.clear(); }
 	bool operator==(const point_t& q) const noexcept {
 		if (x ==  q.x && y == q.y && z ==  q.z) return true;
 		return false;
@@ -102,7 +96,8 @@ void point_double_jacob(const curveT& curve, bnT& x3, bnT& y3, bnT& z3,
 		const bnT &x1, const bnT &y1, const bnT &z1) noexcept
 {
 #ifdef	ommit
-	if (z1.is_zero() | y1.is_zero()) {
+	if ( unlikely(z1.is_zero()) ) // | y1.is_zero())
+	{
 		/* P_y == 0 || P_z == 0 => [1:1:0] */
 		x3 = bnT(1);
 		y3 = bnT(1);
@@ -305,7 +300,8 @@ void point_add_jacob(const curveT& curve, bnT& x3, bnT& y3, bnT& z3,
 			const bnT& y2, const bnT& z2) noexcept
 {
 #ifdef	ommit
-	if ( unlikely(z1.is_zero()) ) {
+	if ( unlikely(z1.is_zero()) )
+	{
 		x3 = x2;
 		y3 = y2;
 		z3 = z2;

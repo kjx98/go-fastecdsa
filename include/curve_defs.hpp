@@ -5,24 +5,6 @@
 #include "curve_const.hpp"
 #include "curve_impl.hpp"
 
-#ifdef	ommit
-/* NIST P-192: a = p - 3 */
-static ecc::ecc_curve<3> nist_p192( "nist_192",
-	// .gx
-	{ 0xF4FF0AFD82FF1012ull, 0x7CBF20EB43A18800ull,
-			0x188DA80EB03090F6ull },
-	//.gy
-	{ 0x73F977A11E794811ull, 0x631011ED6B24CDD5ull,
-			0x07192B95FFC8DA78ull },
-	//.p
-	nist_p192_p,
-	//.n
-	nist_p192_n,
-	//.a
-	nist_p192_a,
-	//.b
-	nist_p192_b);
-#endif
 
 /* NIST P-256: a = p - 3 */
 const auto nist_p256 = ecc::ecc_curve<4>::new_ecc_curve( //.name
