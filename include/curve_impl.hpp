@@ -58,60 +58,6 @@ void pre_compute(const curveT& curve, point_t<N> pre_comp[wSize],
 	}
 }
 
-#ifdef	WITH_BASENAF
-template<const uint N> forceinline
-int nwBaseNAF() noexcept {
-	return (64*N -1 + BaseW) / BaseW;
-}
-
-template<const uint N, typename curveT> forceinline
-void initBaseTable(const curveT& curve, const int nBaseNAF,
-		spoint_t<N>  pre_comps[][wBaseSize]) noexcept
-{
-	int i, j;
-	point_t<N>	G;
-	static_assert(N == 4, "only 256 bits curve supported");
-	curve.to_montgomery(G.x, curve.getGx());
-	curve.to_montgomery(G.y, curve.getGy());
-	G.z = curve.mont_one();
-
-	point_t<N>	t1, t2;
-	t2 = G;
-
-	bignum<N> zInv, zInvSq;
-	for (int j = 0; j < wBaseSize; ++j) {
-		t1 = t2;
-		for (int i = 0; i < nBaseNAF; ++i) {
-			// The window size is 6 so we need to double 6 times.
-			if (i != 0) {
-				for (int k = 0; k < 6; ++k) {
-					curve.point_double(t1, t1);
-				}
-			}
-			// Convert the point to affine form. (Its values are
-			// still in Montgomery form however.)
-			curve.from_montgomery(zInv, t1);
-			mod_inv<N>(zInv, zInv, curve.p);
-			curve.to_montgomery(zInv, zInv);
-			curve.mont_sqr(zInvSq, zInv);
-			curve.mont_mult(zInv, zInv, zInvSq);
-
-			curve.mont_mult(t1.x, t1.x, zInvSq);
-			curve.mont_mult(t1.y, t1.y, zInvSq);
-			t1.z = G.z;
-
-			// Update the table entry
-			pre_comps[i][j].x = t1.x;
-			pre_comps[i][j].y = t1.y;
-		}
-		if (j == 0) {
-			curve.point_double(t2, G.x, G.y);
-		} else {
-			curve.point_add(t2, t2, G.x, G.y);
-		}
-	}
-}
-#endif
 
 // fast scalar Base mult for 256 Bits ECC Curve
 /*-
@@ -203,6 +149,8 @@ pre_compute_base(const curveT& curve, point_t<N>  pre_comps[2][16]) noexcept
 	}
 }
 
+template<const uint N=4> forceinline
+static constexpr int nwBaseNAF() { return (64*N -1 + BaseW) / BaseW; }
 
 /**
  * struct ecc_curve - definition of elliptic curve
@@ -218,6 +166,7 @@ template<const uint N=4, const bool A_is_n3=true>
 class ecc_curve {
 public:
 	using felem_t = bignum<N>;
+	typedef spoint_t<N>	gwNAF_t[wBaseSize];
 	ecc_curve(const char *_name, const u64 *_gx, const u64 *_gy, const u64 *_p,
 			const u64 *_n, const u64 *_a, const u64 *_b, const u64* rrP,
 			const u64* rrN, const u64 k0P, const u64 k0N):
@@ -655,6 +604,48 @@ public:
 		point_addz_jacob<A_is_n3>(*this, q.x, q.y, q.z, p1.x, p1.y, p1.z,
 						x2, y2);
 	}
+#ifdef	WITH_BASENAF
+	bool initTable() noexcept
+	{
+		int i, j;
+		point_t<N>	G;
+		static_assert(N == 4, "only 256 bits curve supported");
+		if (g_precomps != nullptr) return true;
+		g_precomps = new(std::nothrow) gwNAF_t[nwBaseNAF];
+		if (g_precomps == nullptr) return false;
+		to_montgomery(G.x, this->getGx());
+		to_montgomery(G.y, this->getGy());
+		G.z = this->mont_one();
+
+		point_t<N>	t1, t2;
+		t2 = G;
+
+		for (int j = 0; j < wBaseSize; ++j) {
+			t1 = t2;
+			for (int i = 0; i < nwBaseNAF<4>(); ++i) {
+				// The window size is 6 so we need to double 6 times.
+				// baseW is the window size
+				if (i != 0) {
+					for (int k = 0; k < BaseW; ++k) {
+						this->point_double(t1, t1);
+					}
+				}
+				// Convert the point to affine form. (Its values are
+				// still in Montgomery form however.)
+				apply_z_mont(t1);
+
+				// Update the table entry
+				g_precomps[i][j].x = t1.x;
+				g_precomps[i][j].y = t1.y;
+			}
+			if (j == 0) {
+				this->point_double(t2, G.x, G.y);
+			} else {
+				this->point_add(t2, t2, G.x, G.y);
+			}
+		}
+	}
+#endif
 protected:
 	bool init() noexcept
 	{
@@ -683,6 +674,7 @@ protected:
 	const felem_t b;
 	const felem_t rr_p = {};
 	const felem_t rr_n = {};
+	gwNAF_t	*g_precomps = nullptr;
 	felem_t _mont_one;
 	felem_t _mont_a;
 	const u64	k0_p = 0;
