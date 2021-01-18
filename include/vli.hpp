@@ -122,7 +122,7 @@ static uint vli_get_bits(const u64 *vli, const int bit) noexcept
 	auto rem = (uint)bit & 0x3f;
 	rr = (vli[off] >> rem); // & 0xff;
 	if ((uint)bit < (N-1)*64 && rem > (64 - cnt)) {
-		off++;
+		++off;
 		//rr &= (1 << (64-rem)) - 1;
 		rr |= (vli[off] << (64 - rem));
 	}

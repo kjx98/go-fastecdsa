@@ -53,11 +53,14 @@ public:
 	explicit bn_words(const u64 v) : d{v, 0, 0, 0}
 	{
 #if	__cplusplus >= 201703L
-		if constexpr(N > 4) {
+		if constexpr(N > 4)
+#else
+		if ( unlikely(N > 4) )
+#endif
+		{
 			for (uint i = 4; i < N; i++)
 				this->d[i] = 0;
 		}
-#endif
 	}
 protected:
 	u64		d[N];
@@ -272,9 +275,8 @@ public:
 		return carry;
 	}
 /* Computes vli = vli >> 1. */
-	void rshift1() noexcept
+	void rshift1(u64 carry=0) noexcept
 	{
-		u64 carry = 0;
 		for (int i=N - 1; i >= 0; i--) { 
 			u64 temp = this->d[i];
 			this->d[i] = (temp >> 1) | carry;
@@ -421,6 +423,11 @@ public:
 		return borrow;
 #endif
 	}
+	bool sub_from(const u64* right) noexcept
+	{
+		auto	*rt=reinterpret_cast<const bignum<N> *>(right);
+		return sub_from(*rt);
+	}
 /* Computes this = this` - right, returning borrow. Can modify in place. */
 	bool usub_from(const u64 right) noexcept
 	{
@@ -442,11 +449,12 @@ public:
 		return (this->d[N-1] & ((u64)1 << 63)) != 0;
 	}
 #endif
-	bool is_even() const noexcept {
-		return (this->d[0] & 1) == 0;
+	int is_even() const noexcept {
+		return (this->d[0] & 1) ^ 1;
 	}
-	bool is_odd() const noexcept {
-		return (this->d[0] & 1) != 0;
+	int is_odd() const noexcept {
+		//return (this->d[0] & 1) != 0;
+		return this->d[0] & 1;
 	}
 /* Counts the number of 64-bit "digits" in vli. */
 	uint num_digits() const noexcept
