@@ -354,7 +354,7 @@ TEST(testEcc, TestScalarMult)
 #endif
 }
 
-#ifdef	WITH_BASENAF
+#ifndef	NO_BASENAF
 TEST(testEcc, TestBaseNAF)
 {
 	ASSERT_EQ(BaseW, 6);
@@ -591,7 +591,7 @@ TEST(testEcc, TestScalarCombinedMult)
 	std::cout << "res yy3: " << yy3 << std::endl;
 }
 
-#ifdef	WITH_BASENAF
+#ifndef	NO_BASENAF
 TEST(testEcc, TestScalarCombinedMultN)
 {
 	point_t<4>	pt1(dx1, dy1);

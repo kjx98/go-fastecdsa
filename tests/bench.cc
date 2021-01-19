@@ -132,7 +132,7 @@ static void test_ECScalarMultBase(benchmark::State &state)
 }
 BENCHMARK(test_ECScalarMultBase);
 
-#ifdef	WITH_BASENAF
+#ifndef	NO_BASENAF
 static void test_ECScalarMultBaseN(benchmark::State &state)
 {
 	bignum<4>	d1(d1d);
@@ -189,7 +189,7 @@ static void test_ECScalarCMult(benchmark::State &state)
 }
 BENCHMARK(test_ECScalarCMult);
 
-#ifdef	WITH_BASENAF
+#ifndef	NO_BASENAF
 static void test_ECScalarCMultNAF(benchmark::State &state)
 {
 	point_t<4>	pt1(dx1, dy1);
@@ -205,7 +205,7 @@ BENCHMARK(test_ECScalarCMultNAF);
 int main(int argc, char ** argv) {
 	//sm2_p256.init();
 	//sm2_k256.init();
-#ifdef	WITH_BASENAF
+#ifndef	NO_BASENAF
 	sm2_p256.initTable();
 #endif
 	sm2_k256.g_precompute();

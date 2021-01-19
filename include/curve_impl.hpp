@@ -619,7 +619,7 @@ public:
 		point_addz_jacob<A_is_n3>(*this, q.x, q.y, q.z, p1.x, p1.y, p1.z,
 						x2, y2);
 	}
-#ifdef	WITH_BASENAF
+#ifndef	NO_BASENAF
 	const gwNAF_t&	select_base_NAF(const uint iLvl = 0) const noexcept {
 		if ( unlikely(iLvl >= nBaseNAF) ) {
 			static gwNAF_t	dummy;
@@ -712,7 +712,7 @@ public:
 	}
 #endif
 protected:
-#ifdef	WITH_BASENAF
+#ifndef	NO_BASENAF
 	void scalar_mult_base_internal(point_t<N>& q, const felem_t& scalar)
 		const noexcept
 	{
@@ -721,14 +721,14 @@ protected:
 		if ( unlikely(scalar.is_zero()) ) return;
 		bool skip = true;
 		int	idx = -1;
-		//for (int iLvl = 1; iLvl < maxBaseNAF ; ++iLvl, idx += BaseW)
-		for (int iLvl = 0; iLvl < 43 ; ++iLvl)
+		for (int iLvl = 0; iLvl < maxBaseNAF ; ++iLvl)
+		//for (int iLvl = 0; iLvl < 43 ; ++iLvl)
 		{
 			spoint_t<N>	tmp;
 			uint	digit;
 			uint	bits = vli_get_bits<N, BaseW+1>(scalar.data(), idx);
 			auto sign = recode_scalar_bits<BaseW>(digit, bits);
-			idx += 6;
+			idx += BaseW;
 			if (digit == 0) continue;
 			--digit;
 #ifndef	NO_CONDITIONAL_COPY
@@ -782,7 +782,7 @@ protected:
 	const felem_t b;
 	const felem_t rr_p = {};
 	const felem_t rr_n = {};
-#ifdef	WITH_BASENAF
+#ifndef	WITH_BASENAF
 	gwNAF_t	g_precomps[maxBaseNAF];
 #endif
 	felem_t _mont_one;

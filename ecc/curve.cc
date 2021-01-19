@@ -64,6 +64,7 @@ static forceinline const curve_t *ecc_get_curve(uint curve_id) noexcept
 		ret =  nist_p256;
 		break;
 	case ECC_CURVE_SM2:
+		sm2_p256.initTable();
 		ret =  sm2_p256p;
 		break;
 #else
@@ -190,7 +191,6 @@ void	point_cmult(Point *pt, const Point *p, const u64 *scalar,
 	auto	*curve=(curve_t *)curveH;
 	if (!(*curve) || curve->ndigits() != 4) return;
 	if (gscalar == nullptr && scalar == nullptr) return;
-#ifdef	WITH_SM2K256
 	if (scalar == nullptr) {
 		point_t<4> *q=reinterpret_cast<point_t<4> *>(pt);
 		const bignum<4>	*sp = reinterpret_cast<const bignum<4> *>(gscalar);
@@ -202,13 +202,4 @@ void	point_cmult(Point *pt, const Point *p, const u64 *scalar,
 		const bignum<4>	*gsp = reinterpret_cast<const bignum<4> *>(gscalar);
 		curve->combined_mult(*q, *pp, *sp, *gsp);
 	}
-#else
-	if (scalar == nullptr) {
-		point_t<4> *q=reinterpret_cast<point_t<4> *>(pt);
-		point_t<4>	gg(curve->getGx(), curve->getGy());
-		const bignum<4>	*sp = reinterpret_cast<const bignum<4> *>(gscalar);
-		curve->scalar_mult(*q, gg, *sp);
-		//curve->scalar_mult_base(*q, *sp);
-	}
-#endif
 }
