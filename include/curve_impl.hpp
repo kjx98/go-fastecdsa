@@ -612,13 +612,58 @@ public:
 						x2, y2);
 	}
 #ifdef	WITH_BASENAF
+	void scalar_mult_base_internal(point_t<N>& q, const felem_t& scalar)
+		const noexcept
+	{
+		if ( unlikely(g_precomps == nullptr) ) return;
+		spoint_t<N>	tmp;
+		q.clear();
+		if ( unlikely(scalar.is_zero()) ) return;
+		bool skip = true;
+		int	idx = 0;
+		for (int iLvl = 0; iLvl < nwBaseNAF<N>() ; ++iLvl, idx += BaseW) {
+			uint	bits;
+			uint	digit;
+			bits = vli_get_bits<N, BaseW+1>(scalar.data(), idx-1);
+			auto sign = recode_scalar_bits<BaseW>(digit, bits);
+			if (digit == 0) continue;
+			--digit;
+#ifndef	NO_CONDITIONAL_COPY
+			tmp = g_precomps[iLvl][digit];
+			felem_t	ny;
+			ny.sub(this->p, tmp.y);
+			ny.copy_conditional(tmp.y, sign-1);
+			tmp.y = ny;
+#else
+			if ( sign )
+				point_neg(tmp, g_precomps[iLvl][digit]);
+			else
+				tmp = g_precomps[iLvl][digit];
+#endif
+			if (!skip) point_add(q, q, tmp.x, tmp.y); else {
+				q.x = tmp.x;
+				q.y = tmp.y;
+				q.z = this->mont_one();
+				skip = false;
+			}
+		}
+	}
+	void scalar_mult_base(point_t<N>& q, const felem_t& scalar) const noexcept
+	{
+		if ( unlikely(g_precomps == nullptr) ) return;
+		if ( unlikely(scalar.is_zero()) ) return;
+		scalar_mult_base_internal(q, scalar);
+		// montgomery reduction
+		this->from_montgomery(q.x, q.x);
+		this->from_montgomery(q.y, q.y);
+		q.z = felem_t(1);
+	}
 	bool initTable() noexcept
 	{
-		int i, j;
 		point_t<N>	G;
 		static_assert(N == 4, "only 256 bits curve supported");
 		if (g_precomps != nullptr) return true;
-		g_precomps = new(std::nothrow) gwNAF_t[nwBaseNAF];
+		g_precomps = new(std::nothrow) gwNAF_t[nwBaseNAF<N>()];
 		if (g_precomps == nullptr) return false;
 		to_montgomery(G.x, this->getGx());
 		to_montgomery(G.y, this->getGy());
@@ -651,6 +696,7 @@ public:
 				this->point_add(t2, t2, G.x, G.y);
 			}
 		}
+		return true;
 	}
 #endif
 protected:

@@ -176,14 +176,6 @@ TEST(testVli, TestInverseNew)
 	EXPECT_EQ(vli_cmp<4>(res, x2_inv), 0);
 }
 
-#ifdef	WITH_BASENAF
-TEST(testEcc, TestBaseNAF)
-{
-	ASSERT_EQ(BaseW, 6);
-	EXPECT_EQ(nwBaseNAF<4>(), 43);
-}
-#endif
-
 TEST(testEcc, TestMult248)
 {
 	bignum<4>	x3(dx3), y3(dy3), res1, res2;
@@ -361,6 +353,44 @@ TEST(testEcc, TestScalarMult)
 	std::cout << "res y2: " << res.y << std::endl;
 #endif
 }
+
+#ifdef	WITH_BASENAF
+TEST(testEcc, TestBaseNAF)
+{
+	ASSERT_EQ(BaseW, 6);
+	EXPECT_EQ(nwBaseNAF<4>(), 43);
+}
+
+TEST(testEcc, TestScalarMultBaseNAF)
+{
+	bignum<4>	d1(d1d), d2(d2d);
+	point_t<4>	res;
+	steady_clock::time_point t1 = steady_clock::now();
+	bool iniRes = sm2_p256.initTable();
+	steady_clock::time_point t2 = steady_clock::now();
+	std::chrono::duration<double> time_span1;
+	time_span1 = (t2 - t1);
+	std::cerr << "initTable() cost " << time_span1.count() * 1e6
+			<< " us" << std::endl;
+	ASSERT_TRUE(iniRes);
+	sm2_p256.scalar_mult_base(res, d1);
+	ASSERT_TRUE(res.z.is_one());
+	EXPECT_EQ(res.x.cmp(d1Gx), 0);
+	EXPECT_EQ(res.y.cmp(d1Gy), 0);
+#ifndef	ommit
+	std::cout << "res x1: " << res.x << std::endl;
+	std::cout << "res y1: " << res.y << std::endl;
+#endif
+	sm2_p256.scalar_mult_base(res, d2);
+	ASSERT_TRUE(res.z.is_one());
+	EXPECT_EQ(res.x.cmp(d2Gx), 0);
+	EXPECT_EQ(res.y.cmp(d2Gy), 0);
+#ifndef	ommit
+	std::cout << "res x2: " << res.x << std::endl;
+	std::cout << "res y2: " << res.y << std::endl;
+#endif
+}
+#endif
 
 TEST(testEcc, TestScalar256Mult)
 {

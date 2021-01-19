@@ -132,6 +132,16 @@ static void test_ECScalarMultBase(benchmark::State &state)
 }
 BENCHMARK(test_ECScalarMultBase);
 
+static void test_ECScalarMultBaseN(benchmark::State &state)
+{
+	bignum<4>	d1(d1d);
+	point_t<4>	res;
+	for (auto _ : state) {
+		sm2_p256.scalar_mult_base(res, d1);
+	}
+}
+BENCHMARK(test_ECScalarMultBaseN);
+
 static void test_ECScalarMult(benchmark::State &state)
 {
 	bignum<4>	d1(d1d);
@@ -181,6 +191,7 @@ BENCHMARK(test_ECScalarCMult);
 int main(int argc, char ** argv) {
 	//sm2_p256.init();
 	//sm2_k256.init();
+	sm2_p256.initTable();
 	sm2_k256.g_precompute();
 	benchmark::Initialize(&argc, argv);
 	benchmark::RunSpecifiedBenchmarks();
