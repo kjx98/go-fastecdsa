@@ -775,18 +775,14 @@ vli_mod_inv(u64 *result, const u64 *input, const u64 *mod) noexcept
 			if (!vli_is_even(u))
 				carry = vli_add_to<N>(u, mod);
 
-			vli_rshift1<N>(u);
-			if (carry)
-				u[N - 1] |= 0x8000000000000000ull;
+			vli_rshift1<N>(u, carry);
 		} else if (vli_is_even(b)) {
 			vli_rshift1<N>(b);
 
 			if (!vli_is_even(v))
 				carry = vli_add_to<N>(v, mod);
 
-			vli_rshift1<N>(v);
-			if (carry)
-				v[N - 1] |= 0x8000000000000000ull;
+			vli_rshift1<N>(v, carry);
 		} else if (cmp_result > 0) {
 			vli_sub_from<N>(a, b);
 			vli_rshift1<N>(a);
@@ -798,9 +794,7 @@ vli_mod_inv(u64 *result, const u64 *input, const u64 *mod) noexcept
 			if (!vli_is_even(u))
 				carry = vli_add_to<N>(u, mod);
 
-			vli_rshift1<N>(u);
-			if (carry)
-				u[N - 1] |= 0x8000000000000000ull;
+			vli_rshift1<N>(u, carry);
 		} else {
 			vli_sub_from<N>(b, a);
 			vli_rshift1<N>(b);
@@ -812,9 +806,7 @@ vli_mod_inv(u64 *result, const u64 *input, const u64 *mod) noexcept
 			if (!vli_is_even(v))
 				carry = vli_add_to<N>(v, mod);
 
-			vli_rshift1<N>(v);
-			if (carry)
-				v[N - 1] |= 0x8000000000000000ull;
+			vli_rshift1<N>(v, carry);
 		}
 	}
 

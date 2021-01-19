@@ -38,7 +38,6 @@ namespace ecc {
 using namespace vli;
 constexpr int W = 5;
 constexpr int wSize = 1<<(W-1);
-//constexpr int wNAFsize = 1<<W;
 constexpr int BaseW = 6;
 constexpr int wBaseSize = 1<<(BaseW-1);
 
@@ -479,7 +478,8 @@ public:
 	{
 		point_t<N>	tmp;
 		uint	nbits = N*64; //scalar.num_bits();
-		//q.clear();
+		q.clear();
+		if ( unlikely(scalar.is_zero()) ) return;
 		//if ( unlikely(nbits == 0) ) return;
 #ifdef	PRECOMPUTE_INSTACK
 		point_t<N>	pres[wSize];
@@ -499,6 +499,7 @@ public:
 			uint	bits;
 			uint	digit;
 			bits = vli_get_bits<N, W+1>(scalar.data(), idx);
+			//bits = bn_get_bits<W+1>(scalar, idx);
 			recode_scalar_bits<W>(digit, bits);
 			if (digit != 0) {
 				--digit;
@@ -515,6 +516,7 @@ public:
 			uint	bits;
 			uint	digit;
 			bits = vli_get_bits<N, W+1>(scalar.data(), idx);
+			//bits = bignum<N>::bn_get_bits<W+1>(scalar, idx);
 			auto sign = recode_scalar_bits<W>(digit, bits);
 			if (digit == 0) continue;
 			--digit;
@@ -539,6 +541,10 @@ public:
 	void scalar_mult(point_t<N>& q, const point_t<N>& p, const felem_t& scalar)
 			const noexcept
 	{
+		if ( unlikely(p.is_zero()) ) {
+			q = p;
+			return;
+		}
 		spoint_t<N>	pp(p.x, p.y);
 		scalar_mult(q, pp, scalar);
 		// montgomery reduction
@@ -569,6 +575,7 @@ public:
 			if (i & 1) continue;
 			uint	bits;
 			bits = vli_get_bits<N, 2>(scalar.data(), i);
+			//bits = bn_get_bits<2>(scalar, idx);
 			bool	sign = (bits & 2);
 			int digit = (sign)?(bits - 4):bits;
 			if (i > 0 && scalar.get_bit(i-1)) ++digit;
@@ -922,6 +929,7 @@ public:
 				uint	bits;
 				uint	digit;
 				bits = vli_get_bits<4, W+1>(scalar.data(), i-1);
+				//bits = bn_get_bits<W+1>(scalar, i - 1);
 				auto sign = recode_scalar_bits<W>(digit, bits);
 				if (digit == 0) continue;
 				--digit;

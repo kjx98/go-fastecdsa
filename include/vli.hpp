@@ -140,12 +140,14 @@ static bool vli_test_bit(const u64 *vli, uint bit) noexcept
 	return (vli[bit / 64] & ((u64)1 << (bit % 64)));
 }
 
+#ifdef	ommit
 template<const uint N> forceinline
 static u8 vli_get_bit(const u64 *vli, const uint bit) noexcept
 {
 	if ( bit >= N*64 ) return 0;	// out of bound
 	return (vli[bit >> 6] >> (bit & 0x3f)) & 1;
 }
+#endif
 
 // -1 <= bit < 64*N, cnt <= 8
 template<const uint N, const uint cnt=5> forceinline
@@ -220,9 +222,9 @@ u64 vli_lshift1(u64 *result, const u64 *in) noexcept
 
 /* Computes vli = vli >> 1. */
 template<const uint N> forceinline
-static void vli_rshift1(u64 *vli) noexcept
+static void vli_rshift1(u64 *vli, u64 carry=0) noexcept
 {
-	u64 carry = 0;
+	if (carry) carry = 1L << 63;
 	for (int i=N - 1; i >= 0; i--) { 
 		u64 temp = vli[i];
 		vli[i] = (temp >> 1) | carry;

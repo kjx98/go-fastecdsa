@@ -209,6 +209,29 @@ public:
 		auto rem = bit & 0x3f;
 		return (this->d[off] >> rem) & 1;
 	}
+#ifdef	ommit
+	// -1 <= bit < 64*N, cnt <= 8
+	template<const uint cnt=5> forceinline friend
+	uint bn_get_bits(const bignum& bn, const int bit) noexcept
+	{
+		static_assert(cnt <= 8, "w of wNAF MUST no larger than 8");
+		uint	rr;
+		if (unlikely(bit < 0)) {
+			rr = bn.d[0] << 1;
+			return rr & ((1<<cnt) - 1);
+		}
+		auto off = (uint)bit >> 6;
+		if (off >= N) return 0;
+		auto rem = (uint)bit & 0x3f;
+		rr = (bn.d[off] >> rem); // & 0xff;
+		if ((uint)bit < (N-1)*64 && rem > (64 - cnt)) {
+			++off;
+			//rr &= (1 << (64-rem)) - 1;
+			rr |= (bn.d[off] << (64 - rem));
+		}
+		return rr & ((1<<cnt) - 1);
+	}
+#endif
 	/* copy_conditional copies in to out if mask is all ones. */
 	void copy_conditional(const bignum& in, u64 mask)
 	{
@@ -270,6 +293,7 @@ public:
 /* Computes vli = vli >> 1. */
 	void rshift1(u64 carry=0) noexcept
 	{
+		if (carry) carry = 1L << 63;
 		for (int i=N - 1; i >= 0; i--) { 
 			u64 temp = this->d[i];
 			this->d[i] = (temp >> 1) | carry;
@@ -507,7 +531,6 @@ public:
 		if (borrow)
 			this->add_to(mod);
 	}
-
 	template<const u64 k0> forceinline
 	friend void mont_reduction(bignum& res,  const bignum& y,
 					const bignum& prime) noexcept
@@ -599,9 +622,8 @@ public:
 			vli_sub<N>(this->d, r, prime.d);
 		} else vli_set<N>(this->d, r);
 	}
-	template<const u64 k0> forceinline
-	friend void mont_sqr(bignum& res, const bignum& x, const bignum& prime)
-	noexcept
+	template<const u64 k0> forceinline friend
+	void mont_sqr(bignum& res, const bignum& x, const bignum& prime) noexcept
 	{
 		u64	s[N*2];
 		u64	r[N+2];
