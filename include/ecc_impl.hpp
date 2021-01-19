@@ -66,7 +66,7 @@ struct point_t {
 #endif
 	point_t() = default;
 	point_t(const point_t &) = default;
-	explicit point_t(const spoint_t<N>& pt) : x(pt.x), y(pt.y), z(1) {}
+	//explicit point_t(const spoint_t<N>& pt) : x(pt.x), y(pt.y), z(1) {}
 	explicit point_t(const bignum<N>& xx, const bignum<N>& yy,
 		const bignum<N>& zz=bignum<N>(1)) : x(xx), y(yy), z(zz) {}
 	explicit point_t(const u64 *xx, const u64 *yy, const u64 *zz) :
@@ -81,6 +81,12 @@ struct point_t {
 		return z.is_zero(); // | y.is_zero();
 	}
 };
+
+template<const uint N=4> forceinline static
+bool operator==(const spoint_t<N>& p, const point_t<N>& q) noexcept {
+	if (p.x ==  q.x && p.y == q.y) return true;
+	return false;
+}
 
 // point add & double template
 /* dbl-1998-cmo-2 algorithm

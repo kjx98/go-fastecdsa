@@ -361,6 +361,62 @@ TEST(testEcc, TestBaseNAF)
 	EXPECT_EQ(nwBaseNAF<4>(), 43);
 }
 
+TEST(testEcc, TestPreComputeBaseN)
+{
+	point_t<4>	res, res1;
+	point_t<4>	gg;
+	sm2_p256.to_montgomery(gg.x, sm2_gx);
+	sm2_p256.to_montgomery(gg.y, sm2_gy);
+	gg.z = sm2_p256.mont_one();
+	steady_clock::time_point t1 = steady_clock::now();
+	bool iniRes = sm2_p256.initTable();
+	steady_clock::time_point t2 = steady_clock::now();
+	std::chrono::duration<double> time_span1;
+	time_span1 = (t2 - t1);
+	std::cerr << "initTable() cost " << time_span1.count() * 1e6
+			<< " us" << std::endl;
+	ASSERT_TRUE(iniRes);
+	auto& pre_comps = sm2_p256.select_base_NAF();
+	res = gg;
+	EXPECT_TRUE(pre_comps[0] == res);
+	sm2_p256.point_double(res, res);
+	sm2_p256.apply_z_mont(res);
+	EXPECT_TRUE(pre_comps[1] == res);
+	sm2_p256.point_add(res1, res, gg.x, gg.y);
+	sm2_p256.apply_z_mont(res1);
+	EXPECT_TRUE(pre_comps[2] == res1);
+	sm2_p256.point_double(res, res);
+	sm2_p256.apply_z_mont(res);
+	EXPECT_TRUE(pre_comps[3] == res);
+	sm2_p256.point_double(res, res);
+	sm2_p256.apply_z_mont(res);
+	EXPECT_TRUE(pre_comps[7] == res);
+	sm2_p256.point_add(res1, res, gg.x, gg.y);
+	sm2_p256.apply_z_mont(res1);
+	EXPECT_TRUE(pre_comps[8] == res1);
+	sm2_p256.point_double(res, res);
+	sm2_p256.apply_z_mont(res);
+	EXPECT_TRUE(pre_comps[15] == res);
+	sm2_p256.point_add(res1, res, res1);
+	sm2_p256.apply_z_mont(res1);
+	EXPECT_TRUE(sm2_p256.point_eq(pre_comps[24],res1));
+	auto& pre_comps1 = sm2_p256.select_base_NAF(1);
+	point_t<4>	resN, resN1;
+	sm2_p256.point_double(resN, res.x, res.y);
+	sm2_p256.point_double(resN1, res1.x, res1.y);
+	for (int i=1; i < 6; ++i) {
+		sm2_p256.point_double(resN, resN);
+		sm2_p256.point_double(resN1, resN1);
+	}
+	sm2_p256.apply_z_mont(resN);
+	EXPECT_TRUE(pre_comps1[15] == resN);
+	sm2_p256.apply_z_mont(resN1);
+	EXPECT_TRUE(sm2_p256.point_eq(pre_comps1[24],resN1));
+	spoint_t<4>	rr;
+	ASSERT_TRUE(sm2_p256.select_base_point(rr, 24, 1));
+	EXPECT_TRUE(rr == resN1);
+}
+
 TEST(testEcc, TestScalarMultBaseNAF)
 {
 	bignum<4>	d1(d1d), d2(d2d);
@@ -377,7 +433,7 @@ TEST(testEcc, TestScalarMultBaseNAF)
 	ASSERT_TRUE(res.z.is_one());
 	EXPECT_EQ(res.x.cmp(d1Gx), 0);
 	EXPECT_EQ(res.y.cmp(d1Gy), 0);
-#ifndef	ommit
+#ifdef	ommit
 	std::cout << "res x1: " << res.x << std::endl;
 	std::cout << "res y1: " << res.y << std::endl;
 #endif
@@ -385,7 +441,7 @@ TEST(testEcc, TestScalarMultBaseNAF)
 	ASSERT_TRUE(res.z.is_one());
 	EXPECT_EQ(res.x.cmp(d2Gx), 0);
 	EXPECT_EQ(res.y.cmp(d2Gy), 0);
-#ifndef	ommit
+#ifdef	ommit
 	std::cout << "res x2: " << res.x << std::endl;
 	std::cout << "res y2: " << res.y << std::endl;
 #endif

@@ -166,6 +166,7 @@ class ecc_curve {
 public:
 	using felem_t = bignum<N>;
 	typedef spoint_t<N>	gwNAF_t[wBaseSize];
+	static constexpr int maxBaseNAF = nwBaseNAF<N>();
 	ecc_curve(const char *_name, const u64 *_gx, const u64 *_gy, const u64 *_p,
 			const u64 *_n, const u64 *_a, const u64 *_b, const u64* rrP,
 			const u64* rrN, const u64 k0P, const u64 k0N):
@@ -419,11 +420,18 @@ public:
 			return x1 == x2 && y1 == y2;
 		}
 	}
+	bool point_eq(const spoint_t<N>& p, const point_t<N>& q) const noexcept
+	{
+		if (q.z != this->mont_one()) return false;
+		return p.x == q.x && p.y == q.y;
+	}
 	void point_neg(point_t<N>& q, const point_t<N>& p) const noexcept
 	{
-		q.x = p.x;
+		if ( unlikely(&q != &p) ) {
+			q.x = p.x;
+			q.z = p.z;
+		}
 		q.y.sub(this->p, p.y);
-		q.z = p.z;
 	}
 	void point_add_jacobian(u64 *x3, u64 *y3, u64 *z3, const u64 *x1,
 			const u64 *y1, const u64 *z1, const u64 *x2,
@@ -612,41 +620,20 @@ public:
 						x2, y2);
 	}
 #ifdef	WITH_BASENAF
-	void scalar_mult_base_internal(point_t<N>& q, const felem_t& scalar)
+	const gwNAF_t&	select_base_NAF(const uint iLvl = 0) const noexcept {
+		if ( unlikely(iLvl >= nBaseNAF) ) {
+			static gwNAF_t	dummy;
+			return dummy;
+		}
+		return g_precomps[iLvl];
+	}
+	bool select_base_point(spoint_t<N>& pt, const uint idx, const uint iLvl = 0)
 		const noexcept
 	{
-		if ( unlikely(g_precomps == nullptr) ) return;
-		spoint_t<N>	tmp;
-		q.clear();
-		if ( unlikely(scalar.is_zero()) ) return;
-		bool skip = true;
-		int	idx = 0;
-		for (int iLvl = 0; iLvl < nwBaseNAF<N>() ; ++iLvl, idx += BaseW) {
-			uint	bits;
-			uint	digit;
-			bits = vli_get_bits<N, BaseW+1>(scalar.data(), idx-1);
-			auto sign = recode_scalar_bits<BaseW>(digit, bits);
-			if (digit == 0) continue;
-			--digit;
-#ifndef	NO_CONDITIONAL_COPY
-			tmp = g_precomps[iLvl][digit];
-			felem_t	ny;
-			ny.sub(this->p, tmp.y);
-			ny.copy_conditional(tmp.y, sign-1);
-			tmp.y = ny;
-#else
-			if ( sign )
-				point_neg(tmp, g_precomps[iLvl][digit]);
-			else
-				tmp = g_precomps[iLvl][digit];
-#endif
-			if (!skip) point_add(q, q, tmp.x, tmp.y); else {
-				q.x = tmp.x;
-				q.y = tmp.y;
-				q.z = this->mont_one();
-				skip = false;
-			}
-		}
+		if ( unlikely(idx >= wBaseSize) ) return false;
+		if ( unlikely(iLvl >= nBaseNAF) ) return false;
+		pt = g_precomps[iLvl][idx];
+		return true;
 	}
 	void scalar_mult_base(point_t<N>& q, const felem_t& scalar) const noexcept
 	{
@@ -654,6 +641,8 @@ public:
 		if ( unlikely(scalar.is_zero()) ) return;
 		scalar_mult_base_internal(q, scalar);
 		// montgomery reduction
+		if ( unlikely(q.z.is_zero()) ) return;
+		this->apply_z_mont(q);
 		this->from_montgomery(q.x, q.x);
 		this->from_montgomery(q.y, q.y);
 		q.z = felem_t(1);
@@ -662,9 +651,11 @@ public:
 	{
 		point_t<N>	G;
 		static_assert(N == 4, "only 256 bits curve supported");
-		if (g_precomps != nullptr) return true;
-		g_precomps = new(std::nothrow) gwNAF_t[nwBaseNAF<N>()];
-		if (g_precomps == nullptr) return false;
+		static_assert(nwBaseNAF<N>() == 43, "only 256 bits curve supported");
+		static_assert(maxBaseNAF == 43, "only 256 bits curve supported");
+		static_assert((N * 64 % BaseW) != 0, "curve Bits MUUST not multiples of BaseW");
+		if (nBaseNAF != 0) return true;
+		nBaseNAF = maxBaseNAF;
 		to_montgomery(G.x, this->getGx());
 		to_montgomery(G.y, this->getGy());
 		G.z = this->mont_one();
@@ -674,11 +665,12 @@ public:
 
 		for (int j = 0; j < wBaseSize; ++j) {
 			t1 = t2;
-			for (int i = 0; i < nwBaseNAF<4>(); ++i) {
+			for (int i = 0; i < maxBaseNAF; ++i) {
 				// The window size is 6 so we need to double 6 times.
 				// baseW is the window size
 				if (i != 0) {
-					for (int k = 0; k < BaseW; ++k) {
+					this->point_double(t1, t1.x, t1.y);
+					for (int k = 1; k < BaseW; ++k) {
 						this->point_double(t1, t1);
 					}
 				}
@@ -700,6 +692,49 @@ public:
 	}
 #endif
 protected:
+#ifdef	WITH_BASENAF
+	void scalar_mult_base_internal(point_t<N>& q, const felem_t& scalar)
+		const noexcept
+	{
+		if ( unlikely(nBaseNAF == 0) ) return;
+		q.clear();
+		if ( unlikely(scalar.is_zero()) ) return;
+		bool skip = true;
+		int	idx = -1;
+		//for (int iLvl = 1; iLvl < maxBaseNAF ; ++iLvl, idx += BaseW)
+		for (int iLvl = 0; iLvl < 43 ; ++iLvl)
+		{
+			spoint_t<N>	tmp;
+			uint	digit;
+			uint	bits = vli_get_bits<N, BaseW+1>(scalar.data(), idx);
+			auto sign = recode_scalar_bits<BaseW>(digit, bits);
+			idx += 6;
+			if (digit == 0) continue;
+			--digit;
+#ifndef	NO_CONDITIONAL_COPY
+			if ( unlikely(select_base_point(tmp, digit, iLvl)) ) {
+				// assert, should panic
+			}
+			//tmp = g_precomps[iLvl][digit];
+			felem_t	ny;
+			ny.sub(this->p, tmp.y);
+			ny.copy_conditional(tmp.y, sign-1);
+			tmp.y = ny;
+#else
+			if ( sign )
+				point_neg(tmp, g_precomps[iLvl][digit]);
+			else
+				tmp = g_precomps[iLvl][digit];
+#endif
+			if (!skip) point_add(q, q, tmp.x, tmp.y); else {
+				q.x = tmp.x;
+				q.y = tmp.y;
+				q.z = this->mont_one();
+				skip = false;
+			}
+		}
+	}
+#endif
 	bool init() noexcept
 	{
 		if (_inited) return _inited;
@@ -727,13 +762,16 @@ protected:
 	const felem_t b;
 	const felem_t rr_p = {};
 	const felem_t rr_n = {};
-	gwNAF_t	*g_precomps = nullptr;
+#ifdef	WITH_BASENAF
+	gwNAF_t	g_precomps[maxBaseNAF];
+#endif
 	felem_t _mont_one;
 	felem_t _mont_a;
 	const u64	k0_p = 0;
 	const u64	k0_n = 0;
 	const uint _ndigits = N;
 	const bool _a_is_neg3 = false;
+	uint	nBaseNAF=0;
 	bool _a_is_zero = false;
 	const bool use_barrett = false;
 	bool _inited = false;

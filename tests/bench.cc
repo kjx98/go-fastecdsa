@@ -132,6 +132,7 @@ static void test_ECScalarMultBase(benchmark::State &state)
 }
 BENCHMARK(test_ECScalarMultBase);
 
+#ifdef	WITH_BASENAF
 static void test_ECScalarMultBaseN(benchmark::State &state)
 {
 	bignum<4>	d1(d1d);
@@ -141,6 +142,7 @@ static void test_ECScalarMultBaseN(benchmark::State &state)
 	}
 }
 BENCHMARK(test_ECScalarMultBaseN);
+#endif
 
 static void test_ECScalarMult(benchmark::State &state)
 {
@@ -191,7 +193,9 @@ BENCHMARK(test_ECScalarCMult);
 int main(int argc, char ** argv) {
 	//sm2_p256.init();
 	//sm2_k256.init();
+#ifdef	WITH_BASENAF
 	sm2_p256.initTable();
+#endif
 	sm2_k256.g_precompute();
 	benchmark::Initialize(&argc, argv);
 	benchmark::RunSpecifiedBenchmarks();
