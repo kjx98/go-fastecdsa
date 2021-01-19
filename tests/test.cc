@@ -591,6 +591,34 @@ TEST(testEcc, TestScalarCombinedMult)
 	std::cout << "res yy3: " << yy3 << std::endl;
 }
 
+#ifdef	WITH_BASENAF
+TEST(testEcc, TestScalarCombinedMultN)
+{
+	point_t<4>	pt1(dx1, dy1);
+	bignum<4>	d1(d1d), d2(d2d);
+	u64		x3[4], y3[4], z3[4];
+	point_t<4>	res, res1, res2;
+	sm2_p256.combined_mult(res, pt1, d1, d2);
+	ASSERT_TRUE(res.z.is_one());
+
+	sm2_p256.scalar_mult(res1, pt1, d1);
+	ASSERT_TRUE(res1.z.is_one());
+	sm2_p256.scalar_mult_base(res2, d2);
+	ASSERT_TRUE(res2.z.is_one());
+	sm2_p256.point_add_jacobian(x3, y3, z3, res1.x.data(), res1.y.data(),
+						res1.z.data(), res2.x.data(), res2.y.data());
+	point_t<4>	pt3(x3, y3, z3);
+	sm2_p256.apply_z(pt3);
+	EXPECT_EQ(res, pt3);
+	std::cout << "res x3: " << res.x << std::endl;
+	std::cout << "res y3: " << res.y << std::endl;
+	bignum<4>	xx3(x3);
+	bignum<4>	yy3(y3);
+	std::cout << "res xx3: " << xx3 << std::endl;
+	std::cout << "res yy3: " << yy3 << std::endl;
+}
+#endif
+
 int main(int argc, char *argv[])
 {
 	//sm2_p256.init();

@@ -637,7 +637,7 @@ public:
 	}
 	void scalar_mult_base(point_t<N>& q, const felem_t& scalar) const noexcept
 	{
-		if ( unlikely(g_precomps == nullptr) ) return;
+		if ( unlikely(nBaseNAF == 0) ) return;
 		if ( unlikely(scalar.is_zero()) ) return;
 		scalar_mult_base_internal(q, scalar);
 		// montgomery reduction
@@ -689,6 +689,26 @@ public:
 			}
 		}
 		return true;
+	}
+	// scalar may be zero, g_scalar may be zero
+	void combined_mult(point_t<N>& q, const point_t<N>& p,
+				const felem_t& scalar, const felem_t& g_scalar) const noexcept
+	{
+		if ( unlikely(nBaseNAF == 0) ) return;
+		if ( unlikely(g_scalar.is_zero()) ) return;
+		scalar_mult_base_internal(q, g_scalar);
+		if ( likely(!scalar.is_zero()) ) {
+			point_t<N>	tmp;
+			spoint_t<N> pp(p.x, p.y);
+			scalar_mult(tmp, pp, scalar);
+			point_add(q, q, tmp);
+		}
+		// montgomery reduction
+		if ( unlikely(q.z.is_zero()) ) return;
+		this->apply_z_mont(q);
+		this->from_montgomery(q.x, q.x);
+		this->from_montgomery(q.y, q.y);
+		q.z = felem_t(1);
 	}
 #endif
 protected:
