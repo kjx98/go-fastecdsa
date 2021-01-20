@@ -166,6 +166,7 @@ static void test_ECScalarMultNAF2(benchmark::State &state)
 }
 BENCHMARK(test_ECScalarMultNAF2);
 
+#ifdef	NO_BASENAF
 static void test_ECScalarMult256(benchmark::State &state)
 {
 	bignum<4>	d1(d1d);
@@ -177,6 +178,7 @@ static void test_ECScalarMult256(benchmark::State &state)
 	}
 }
 BENCHMARK(test_ECScalarMult256);
+#endif
 
 static void test_ECScalarCMult(benchmark::State &state)
 {
@@ -205,10 +207,12 @@ BENCHMARK(test_ECScalarCMultNAF);
 int main(int argc, char ** argv) {
 	//sm2_p256.init();
 	//sm2_k256.init();
-#ifndef	NO_BASENAF
-	sm2_p256.initTable();
-#endif
+#ifdef	NO_BASENAF
 	sm2_k256.g_precompute();
+#else
+	sm2_p256.initTable();
+	sm2_k256.initTable();
+#endif
 	benchmark::Initialize(&argc, argv);
 	benchmark::RunSpecifiedBenchmarks();
 }

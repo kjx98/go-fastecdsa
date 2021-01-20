@@ -212,6 +212,7 @@ TEST(testEcc, TestPointNeg)
 	EXPECT_TRUE(res.is_zero());
 }
 
+#ifdef	NO_BASENAF
 static bool select_gmul(point_t<4>& pt, const uint idx)
 {
 	if (idx >= 2 * 16) return false;
@@ -248,6 +249,7 @@ TEST(testEcc, TestBasePreCompute)
 		EXPECT_TRUE(gp.z == gm.z);
 	}
 }
+#endif
 
 TEST(testEcc, TestPreCompute)
 {
@@ -454,8 +456,9 @@ TEST(testEcc, TestScalar256Mult)
 	point_t<4>	res;
 	bignum<4>	bn_zero(0ul);
 	point_t<4>	gg(sm2_gx, sm2_gy);
+#ifdef	NO_BASENAF
 	sm2_k256.combined_mult(res, gg, d1, bn_zero);
-	ASSERT_TRUE(res.z.is_one());
+	EXPECT_TRUE(res.z.is_one());
 	EXPECT_EQ(res.x.cmp(d1Gx), 0);
 	EXPECT_EQ(res.y.cmp(d1Gy), 0);
 #ifdef	ommit
@@ -463,7 +466,7 @@ TEST(testEcc, TestScalar256Mult)
 	std::cout << "res y1: " << res.y << std::endl;
 #endif
 	sm2_k256.combined_mult(res, gg, d2, bn_zero);
-	ASSERT_TRUE(res.z.is_one());
+	EXPECT_TRUE(res.z.is_one());
 	EXPECT_EQ(res.x.cmp(d2Gx), 0);
 	EXPECT_EQ(res.y.cmp(d2Gy), 0);
 #ifdef	ommit
@@ -477,6 +480,7 @@ TEST(testEcc, TestScalar256Mult)
 #ifdef	ommit
 	std::cout << "res x1: " << res.x << std::endl;
 	std::cout << "res y1: " << res.y << std::endl;
+#endif
 #endif
 	sm2_k256.combined_mult(res, gg, bn_zero, d2);
 	ASSERT_TRUE(res.z.is_one());
@@ -622,6 +626,7 @@ TEST(testEcc, TestScalarCombinedMultN)
 int main(int argc, char *argv[])
 {
 	//sm2_p256.init();
+	sm2_k256.initTable();
     testing::InitGoogleTest(&argc, argv);//将命令行参数传递给gtest
     return RUN_ALL_TESTS();   //RUN_ALL_TESTS()运行所有测试案例
 }

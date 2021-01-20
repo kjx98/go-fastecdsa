@@ -124,7 +124,6 @@ static int vli_is_one(const u64 *vli) noexcept
 }
 
 /* Sets dest = src. */
-/* Sets dest = src. */
 template<const uint N> forceinline
 static void vli_set(u64 *dest, const u64 *src) noexcept
 {
@@ -140,14 +139,6 @@ static bool vli_test_bit(const u64 *vli, uint bit) noexcept
 	return (vli[bit / 64] & ((u64)1 << (bit % 64)));
 }
 
-#ifdef	ommit
-template<const uint N> forceinline
-static u8 vli_get_bit(const u64 *vli, const uint bit) noexcept
-{
-	if ( bit >= N*64 ) return 0;	// out of bound
-	return (vli[bit >> 6] >> (bit & 0x3f)) & 1;
-}
-#endif
 
 // -1 <= bit < 64*N, cnt <= 8
 template<const uint N, const uint cnt=5> forceinline
@@ -165,7 +156,6 @@ static uint vli_get_bits(const u64 *vli, const int bit) noexcept
 	rr = (vli[off] >> rem); // & 0xff;
 	if ((uint)bit < (N-1)*64 && rem > (64 - cnt)) {
 		++off;
-		//rr &= (1 << (64-rem)) - 1;
 		rr |= (vli[off] << (64 - rem));
 	}
 	return rr & ((1<<cnt) - 1);
@@ -176,7 +166,7 @@ static uint vli_get_bits(const u64 *vli, const int bit) noexcept
  *
  * @left:		vli
  * @right:		vli
- * @ndigits:		length of both vlis
+ * @ndigits:	N, length of both vlis
  *
  * Returns sign of @left - @right, i.e. -1 if @left < @right,
  * 0 if @left == @right, 1 if @left > @right.
@@ -315,7 +305,7 @@ bool vli_add_to(u64 *result, const u64 *right) noexcept
 }
 
 /* Computes result = left + right, returning carry. Can modify in place. */
-template<uint N> forceinline
+template<const uint N> forceinline
 static bool vli_uadd_to(u64 *result, u64 right) noexcept
 {
 #ifdef	NO_BUILTIN_OVERFLOW
@@ -348,17 +338,17 @@ static bool vli_uadd_to(u64 *result, u64 right) noexcept
  * @result:		where to write result
  * @left:		vli
  * @right		vli
- * @ndigits:		length of all vlis
+ * @ndigits:	N, length of all vlis
  *
  * Note: can modify in-place.
  *
  * Return: carry bit.
  */
-template<uint ndigits> forceinline static
+template<const uint N> forceinline static
 bool vli_sub(u64 *result, const u64 *left, const u64 *right) noexcept
 {
 	bool borrow = false;
-	for (uint i = 0; i < ndigits; i++) {
+	for (uint i = 0; i < N; i++) {
 		u64 diff;
 #ifdef	NO_BUILTIN_OVERFLOW
 		diff = left[i] - right[i] - borrow;
@@ -375,7 +365,7 @@ bool vli_sub(u64 *result, const u64 *left, const u64 *right) noexcept
 }
 
 /* Computes result = left - right, returning borrow. Can modify in place. */
-template<uint N> forceinline
+template<const uint N> forceinline
 static bool vli_usub(u64 *result, const u64 *left, u64 right) noexcept
 {
 #ifdef	NO_BUILTIN_OVERFLOW
@@ -400,7 +390,7 @@ static bool vli_usub(u64 *result, const u64 *left, u64 right) noexcept
 #endif
 }
 
-template<uint N> forceinline static
+template<const uint N> forceinline static
 bool vli_sub_from(u64 *result, const u64 *right) noexcept
 {
 	bool borrow = false;
@@ -421,7 +411,7 @@ bool vli_sub_from(u64 *result, const u64 *right) noexcept
 }
 
 /* Computes result = left - right, returning borrow. Can modify in place. */
-template<uint N> forceinline
+template<const uint N> forceinline
 static bool vli_usub_from(u64 *result, const u64 *left, u64 right) noexcept
 {
 #ifdef	NO_BUILTIN_OVERFLOW
@@ -446,7 +436,7 @@ static bool vli_usub_from(u64 *result, const u64 *left, u64 right) noexcept
 #endif
 }
 
-template<uint N> forceinline
+template<const uint N> forceinline
 static bool vli_is_negative(const u64 *vli)  noexcept
 {
 	return vli_test_bit<N>(vli, N * 64 - 1);
@@ -457,7 +447,7 @@ forceinline static bool vli_is_even(const u64 *vli) noexcept {
 }
 
 /* Counts the number of 64-bit "digits" in vli. */
-template<uint N> forceinline
+template<const uint N> forceinline
 static uint vli_num_digits(const u64 *vli) noexcept
 {
 	/* Search from the end until we find a non-zero digit.
@@ -470,7 +460,7 @@ static uint vli_num_digits(const u64 *vli) noexcept
 }
 
 /* Counts the number of bits required for vli. */
-template<uint N> forceinline
+template<const uint N> forceinline
 static uint vli_num_bits(const u64 *vli) noexcept
 {
 	auto num_digits = vli_num_digits<N>(vli);
@@ -479,13 +469,6 @@ static uint vli_num_bits(const u64 *vli) noexcept
 	return ((num_digits - 1) * 64 + i);
 }
 
-#ifdef	ommit
-#define ECC_DIGITS_TO_BYTES_SHIFT 3
-forceinline static uint vli_bytes(uint ndigits) {
-	return ndigits << ECC_DIGITS_TO_BYTES_SHIFT;
-}
-#endif
-
 /**
  * vli_from_be64() - Load vli from big-endian u64 array
  *
@@ -493,7 +476,7 @@ forceinline static uint vli_bytes(uint ndigits) {
  * @src:		source array of u64 BE values
  * @ndigits:		length of both vli and array
  */
-template<uint N> forceinline
+template<const uint N> forceinline
 static void vli_from_be64(u64 *dest, const void *src) noexcept
 {
 	const u64 *from = (const u64 *)src;
@@ -509,18 +492,18 @@ static void vli_from_be64(u64 *dest, const void *src) noexcept
  * @src:		source array of u64 LE values
  * @ndigits:		length of both vli and array
  */
-template<uint ndigits> forceinline
+template<uint N> forceinline
 __attribute__((optimize("unroll-loops")))
 static void vli_from_le64(u64 *dest, const void *src) noexcept
 {
 	const u64 *from = (const u64 *)src;
-	for (uint i = 0; i < ndigits; i++)
-		dest[i] = le64toh(from[ndigits - 1 - i]);
+	for (uint i = 0; i < N; i++)
+		dest[i] = le64toh(from[N - 1 - i]);
 }
 #endif
 
 
-template<uint N> forceinline static
+template<const uint N> forceinline static
 void vli_mult(u64 *result, const u64 *left, const u64 *right) noexcept
 {
 	uint128_t r01( 0, 0 );
