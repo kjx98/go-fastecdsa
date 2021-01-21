@@ -64,7 +64,6 @@ static forceinline const curve_t *ecc_get_curve(uint curve_id) noexcept
 		ret =  nist_p256;
 		break;
 	case ECC_CURVE_SM2:
-		sm2_p256.initTable();
 		ret =  sm2_p256p;
 		break;
 #else

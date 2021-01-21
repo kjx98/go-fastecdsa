@@ -212,45 +212,6 @@ TEST(testEcc, TestPointNeg)
 	EXPECT_TRUE(res.is_zero());
 }
 
-#ifdef	NO_BASENAF
-static bool select_gmul(point_t<4>& pt, const uint idx)
-{
-	if (idx >= 2 * 16) return false;
-	pt.x = bignum<4>(gmul[idx>>4][idx&0xf][0]);
-	pt.y = bignum<4>(gmul[idx>>4][idx&0xf][1]);
-	pt.z = bignum<4>(gmul[idx>>4][idx&0xf][2]);
-	return true;
-}
-
-TEST(testEcc, TestBasePreCompute)
-{
-	steady_clock::time_point t1 = steady_clock::now();
-	sm2_k256.g_precompute();
-	steady_clock::time_point t2 = steady_clock::now();
-	std::chrono::duration<double> time_span1;
-	time_span1 = (t2 - t1);
-	std::cerr << "pre_compute_base() cost " << time_span1.count() * 1000000
-			<< " us" << std::endl;
-	point_t<4>	gp, gm;
-	for(int i=0;i<32;i++) {
-		EXPECT_TRUE(sm2_k256.select_base_point(gp, i));
-		EXPECT_TRUE(select_gmul(gm, i));
-		if ( !gp.z.is_zero() ) {
-			if ( gp.z != sm2_k256.mont_one()) {
-				std::cerr << "base_pre_compute diff idx: " << i << std::endl;
-			}
-			sm2_k256.from_montgomery(gp.x, gp.x);
-			sm2_k256.from_montgomery(gp.y, gp.y);
-			EXPECT_TRUE(gp.z == sm2_k256.mont_one());
-			gp.z = bignum<4>(1);
-		}
-		EXPECT_TRUE(gp.x == gm.x);
-		EXPECT_TRUE(gp.y == gm.y);
-		EXPECT_TRUE(gp.z == gm.z);
-	}
-}
-#endif
-
 TEST(testEcc, TestPreCompute)
 {
 	point_t<4>	res, res1;
@@ -356,7 +317,6 @@ TEST(testEcc, TestScalarMult)
 #endif
 }
 
-#ifndef	NO_BASENAF
 TEST(testEcc, TestBaseNAF)
 {
 	ASSERT_EQ(BaseW, 6);
@@ -370,14 +330,6 @@ TEST(testEcc, TestPreComputeBaseN)
 	sm2_p256.to_montgomery(gg.x, sm2_gx);
 	sm2_p256.to_montgomery(gg.y, sm2_gy);
 	gg.z = sm2_p256.mont_one();
-	steady_clock::time_point t1 = steady_clock::now();
-	bool iniRes = sm2_p256.initTable();
-	steady_clock::time_point t2 = steady_clock::now();
-	std::chrono::duration<double> time_span1;
-	time_span1 = (t2 - t1);
-	std::cerr << "initTable() cost " << time_span1.count() * 1e6
-			<< " us" << std::endl;
-	ASSERT_TRUE(iniRes);
 	auto& pre_comps = sm2_p256.select_base_NAF();
 	res = gg;
 	EXPECT_TRUE(pre_comps[0] == res);
@@ -423,6 +375,8 @@ TEST(testEcc, TestScalarMultBaseNAF)
 {
 	bignum<4>	d1(d1d), d2(d2d);
 	point_t<4>	res;
+	// initTable moved int protected
+#ifdef	ommit
 	steady_clock::time_point t1 = steady_clock::now();
 	bool iniRes = sm2_p256.initTable();
 	steady_clock::time_point t2 = steady_clock::now();
@@ -431,6 +385,7 @@ TEST(testEcc, TestScalarMultBaseNAF)
 	std::cerr << "initTable() cost " << time_span1.count() * 1e6
 			<< " us" << std::endl;
 	ASSERT_TRUE(iniRes);
+#endif
 	sm2_p256.scalar_mult_base(res, d1);
 	ASSERT_TRUE(res.z.is_one());
 	EXPECT_EQ(res.x.cmp(d1Gx), 0);
@@ -448,7 +403,6 @@ TEST(testEcc, TestScalarMultBaseNAF)
 	std::cout << "res y2: " << res.y << std::endl;
 #endif
 }
-#endif
 
 TEST(testEcc, TestScalar256Mult)
 {
@@ -456,7 +410,6 @@ TEST(testEcc, TestScalar256Mult)
 	point_t<4>	res;
 	bignum<4>	bn_zero(0ul);
 	point_t<4>	gg(sm2_gx, sm2_gy);
-#ifdef	NO_BASENAF
 	sm2_k256.combined_mult(res, gg, d1, bn_zero);
 	EXPECT_TRUE(res.z.is_one());
 	EXPECT_EQ(res.x.cmp(d1Gx), 0);
@@ -480,7 +433,6 @@ TEST(testEcc, TestScalar256Mult)
 #ifdef	ommit
 	std::cout << "res x1: " << res.x << std::endl;
 	std::cout << "res y1: " << res.y << std::endl;
-#endif
 #endif
 	sm2_k256.combined_mult(res, gg, bn_zero, d2);
 	ASSERT_TRUE(res.z.is_one());
@@ -595,7 +547,6 @@ TEST(testEcc, TestScalarCombinedMult)
 	std::cout << "res yy3: " << yy3 << std::endl;
 }
 
-#ifndef	NO_BASENAF
 TEST(testEcc, TestScalarCombinedMultN)
 {
 	point_t<4>	pt1(dx1, dy1);
@@ -621,12 +572,10 @@ TEST(testEcc, TestScalarCombinedMultN)
 	std::cout << "res xx3: " << xx3 << std::endl;
 	std::cout << "res yy3: " << yy3 << std::endl;
 }
-#endif
 
 int main(int argc, char *argv[])
 {
 	//sm2_p256.init();
-	sm2_k256.initTable();
     testing::InitGoogleTest(&argc, argv);//将命令行参数传递给gtest
     return RUN_ALL_TESTS();   //RUN_ALL_TESTS()运行所有测试案例
 }
