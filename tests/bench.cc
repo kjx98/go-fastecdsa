@@ -80,6 +80,35 @@ static void test_mult8(benchmark::State &state)
 }
 BENCHMARK(test_mult8);
 
+static void test_mult2k(benchmark::State &state)
+{
+	bignum<4>	x3(dx3), res;
+	for (auto _ : state) {
+		sm2_k256.mont_mult2(res, x3);
+	}
+}
+BENCHMARK(test_mult2k);
+
+static void test_mult8k(benchmark::State &state)
+{
+	bignum<4>	x3(dx3), res;
+	for (auto _ : state) {
+		res = x3;
+		sm2_k256.mont_mult8(res);
+	}
+}
+BENCHMARK(test_mult8k);
+
+static void test_div2(benchmark::State &state)
+{
+	bignum<4>	x3(dx3), res;
+	for (auto _ : state) {
+		res = x3;
+		sm2_p256.mont_div2(res);
+	}
+}
+BENCHMARK(test_div2);
+
 static void test_ECADDJac(benchmark::State &state)
 {
 	u64		xx3[4], yy3[4], zz3[4];

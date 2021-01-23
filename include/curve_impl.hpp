@@ -38,7 +38,7 @@ namespace ecc {
 using namespace vli;
 constexpr int W = 5;
 constexpr int wSize = 1<<(W-1);
-constexpr int BaseW = 6;
+constexpr int BaseW = 6;	// 7 for 37 *64 pre computed Points, 6 for 43*32
 constexpr int wBaseSize = 1<<(BaseW-1);
 
 
@@ -202,6 +202,15 @@ public:
 		this->mont_mult2(res, res);
 		this->mont_mult2(res, res);
 		this->mont_mult2(res, res);
+	}
+	void mont_div2(felem_t& res) const noexcept
+	{
+		if ( likely(res.is_even()) ) {
+			res.rshift1();
+		} else {
+			bool carry = res.add_to(this->p);
+			res.rshift1(carry);
+		}
 	}
 	void point_double_jacobian(u64 *x3, u64 *y3, u64 *z3, const u64 *x1,
 					const u64 *y1, const u64 *z1 = nullptr) const noexcept
@@ -584,8 +593,10 @@ protected:
 	{
 		point_t<N>	G;
 		static_assert(N == 4, "only 256 bits curve supported");
+#ifdef	ommit
 		static_assert(nwBaseNAF<N>() == 43, "only 256 bits curve supported");
 		static_assert(maxBaseNAF == 43, "only 256 bits curve supported");
+#endif
 		static_assert((N * 64 % BaseW) != 0, "curve Bits MUUST not multiples of BaseW");
 		if (nBaseNAF != 0) return true;
 		nBaseNAF = maxBaseNAF;
@@ -632,7 +643,6 @@ protected:
 		bool skip = true;
 		int	idx = -1;
 		for (int iLvl = 0; iLvl < maxBaseNAF ; ++iLvl)
-		//for (int iLvl = 0; iLvl < 43 ; ++iLvl)
 		{
 			spoint_t<N>	tmp;
 			uint	digit;
@@ -754,6 +764,17 @@ public:
 	const noexcept {
 		mont_sqr<Pk0>(res, left, this->p);
 		for (uint i=1; i < nTimes; i++) mont_sqr<Pk0>(res, res, this->p);
+	}
+	void mont_mult2(felem_t& res, const felem_t& left) const noexcept
+	{
+#ifdef	ommit
+		this->mod_add(res, left, left);
+#else
+		if (res.lshift1(left) != 0) {
+			this->carry_reduce(res, 1);
+			//res.sub_from(this->p);
+		}
+#endif
 	}
 	void mont_mult4(felem_t& res) const noexcept
 	{
@@ -1005,7 +1026,6 @@ private:
 		bool skip = true;
 		int	idx = -1;
 		for (int iLvl = 0; iLvl < nwBaseNAF<4>() ; ++iLvl)
-		//for (int iLvl = 0; iLvl < 43 ; ++iLvl)
 		{
 			spoint_t<4>	tmp;
 			uint	digit;

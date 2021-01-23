@@ -87,14 +87,37 @@ static forceinline int u64IsOne(u64 x) noexcept {
 
 static forceinline bool vli4_add_to(u64 *left, const u64 *right) noexcept {
 	bool	carry=false;
+#ifdef	__x86_64__1
+	asm volatile("movq (%%rsi), %%rdx;\n"	// mov rdx, left[0]
+				"addq (%%rdi), %%rdx;\n"		// add
+				"movq %%rdx, (%%rdi);\n"		// left[0] += right[0]
+				"movq 8(%%rsi), %%rdx;\n"
+				"adcq 8(%%rdi), %%rdx;\n"
+				"movq %%rdx, 8(%%rdi);\n"
+				"movq 16(%%rsi), %%rdx;\n"
+				"adcq 16(%%rdi), %%rdx;\n"
+				"movq %%rdx, 16(%%rdi);\n"
+				"movq 24(%%rsi), %%rdx;\n"
+				"adcq 24(%%rdi), %%rdx;\n"
+				"movq %%rdx, 24(%%rdi);\n"
+				"adcq %%rax, %%rax\n"				// set carry
+				: "=a"(carry)
+				: "a"(carry), "rsi"(right), "rdi"(left)
+				: "%rdx", "cc", "memory");
+#else
 	left[0] += right[0] + carry;
-	carry = (left[0] < right[0]);
+	if (left[0] != right[0])
+		carry = (left[0] < right[0]);
 	left[1] += right[1] + carry;
-	carry = (left[1] < right[1]);
+	if (left[1] != right[1])
+		carry = (left[1] < right[1]);
 	left[2] += right[2] + carry;
-	carry = (left[2] < right[2]);
+	if (left[2] != right[2])
+		carry = (left[2] < right[2]);
 	left[3] += right[3] + carry;
-	carry = (left[3] < right[3]);
+	if (left[2] != right[2])
+		carry = (left[3] < right[3]);
+#endif
 	return carry;
 }
 
@@ -270,8 +293,7 @@ template<const uint N> forceinline
 static bool vli_uadd(u64 *result, const u64 *left, u64 right) noexcept
 {
 	u64 carry = right;
-	uint i;
-	for (i = 0; i < N; i++) {
+	for (uint i = 0; i < N; i++) {
 		u64 sum;
 		sum = left[i] + carry;
 		if (sum != left[i])
@@ -304,8 +326,7 @@ template<const uint N> forceinline
 static bool vli_uadd_to(u64 *result, u64 right) noexcept
 {
 	u64 carry = right;
-	uint i;
-	for (i = 0; i < N; i++) {
+	for (uint i = 0; i < N; i++) {
 		u64 sum;
 		sum = result[i] + carry;
 		if (sum != result[i])
@@ -348,8 +369,7 @@ template<const uint N> forceinline
 static bool vli_usub(u64 *result, const u64 *left, u64 right) noexcept
 {
 	u64 borrow = right;
-	uint i;
-	for (i = 0; i < N; i++) {
+	for (uint i = 0; i < N; i++) {
 		u64 diff;
 		diff = left[i] - borrow;
 		if (diff != left[i])
