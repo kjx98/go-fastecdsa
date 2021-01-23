@@ -180,6 +180,31 @@ func TestMontExpMod(t *testing.T) {
 	}
 }
 
+func TestSqrtMod(t *testing.T) {
+	p := sm2.P256().Params().P
+	yy := new(big.Int).Mul(y1, y1)
+	yy.Mod(yy, p)
+	ySqrt := new(big.Int).ModSqrt(yy, p)
+	if ySqrt == nil {
+		t.Log("can't find sqrt of yy")
+		t.Fail()
+	}
+	t0 := new(big.Int).Rsh(p, 2)
+	a1 := new(big.Int).Exp(yy, t0, p)
+	a0 := new(big.Int).Mul(a1, yy)
+	a0.Mod(a0, p)
+	tt := new(big.Int).Mul(a0, a1)
+	tt.Mod(tt, p)
+	bOne := big.NewInt(1)
+	if tt.Cmp(bOne) != 0 {
+		t.Log("no sqrt for yy via yy^(p/4)")
+		t.Fail()
+	}
+	if a0.Cmp(y1) == 0 {
+		t.Log("sqrt = a * a ^ (p/4) ")
+	}
+}
+
 func TestSM2MontMultMod(t *testing.T) {
 	p := sm2.P256().Params().P
 	xy := new(big.Int).Mul(x1, y1)
@@ -376,6 +401,17 @@ func BenchmarkMontExpMod(b *testing.B) {
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
 		_ = vliExpModMont(x1.Bits(), y1.Bits(), p.Bits(), rr, 1)
+	}
+}
+
+func BenchmarkExpMod(b *testing.B) {
+	b.ResetTimer()
+	p := sm2.P256().Params().P
+	xymod := new(big.Int)
+
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		xymod.Exp(x1, y1, p)
 	}
 }
 

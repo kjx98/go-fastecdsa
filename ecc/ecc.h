@@ -213,6 +213,7 @@ void vli_sm2_mult_p(u64 *result, const u64 rLen, const u64 u);
 void mont_sm2_mod_mult_p(u64 *result, const u64 *x, const u64 *y);
 void mont_sm2_mod_mult_n(u64 *result, const u64 *x, const u64 *y);
 u64 vli_asm_acc();
+bool bn256_add_to(u64 *left, const u64 *right);
 
 /* Computes result = (left * right) % curve_prime. */
 // SM2 use barret reduction
@@ -241,21 +242,6 @@ void	point_cmult(Point *pt, const Point *p, const u64 *scalar,
 				const u64 *gscalar, CURVE_HND curveH);
 void	affine_from_jacobian(u64 *x, u64 *y, const Point *pt, CURVE_HND curveH);
 
-/**
- * ecc_point_mult_shamir() - Add two points multiplied by scalars
- *
- * @result:		resulting point
- * @x:			scalar to multiply with @p
- * @p:			point to multiply with @x
- * @y:			scalar to multiply with @q
- * @q:			point to multiply with @y
- * @curve:		curve
- *
- * Returns result = x * p + y * q over the curve.
- * This works faster than two multiplications and addition.
- */
-void ecc_point_mult_shamir(const Point *result, const u64 *x, const Point *p,
-			   const u64 *y, const Point *q, const CURVE_HND curveH);
 #ifdef	__cplusplus
 }
 #endif

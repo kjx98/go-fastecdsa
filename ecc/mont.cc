@@ -50,6 +50,11 @@ u64 vli_asm_acc()
 #endif
 }
 
+bool bn256_add_to(u64 *left, const u64 *right)
+{
+	return vli4_add_to(left, right);
+}
+
 /* Computes result = product % mod using Barrett's reduction with precomputed
  * value mu appended to the mod after ndigits, mu = (2^{2w} / mod) and have
  * length ndigits + 1, where mu * (2^w - 1) should not overflow ndigits
@@ -133,13 +138,28 @@ void mont_mod_exp(u64 *result, const u64 *x, const u64 *y, const montParams *pa)
 	u64	t[4];
 	int	num_bits = vli_num_bits<4>(y);
 	mont_mult<4>(xp, x, rr, prime, k0);
+#ifdef	ommit
 	mont_reduction<4>(t, rr, prime, k0);
+#else
+	vli_clear<4>(t);
+	vli_sub_from<4>(t, prime);
+#endif
 	for (int i = num_bits - 1;i >= 0; i--) {
 		mont_sqr<4>(t, t, prime, k0);
 		if (vli_test_bit<4>(y, i)) mont_mult<4>(t, t, xp, prime, k0);
 	}
 	//mont_mult<4>(result, montOne, t, prime, k0);
 	mont_reduction<4>(result, t, prime, k0);
+}
+
+// sqrt of x mod P, P = 4k + 3
+bool mont_mod_sqrt(u64 *result, const u64 *x, const u64 *p) {
+	if ((p[0] & 3) !=3) return false;
+	u64	mod[4];
+	vli_set<4>(mod, p);
+	vli_rshift1<4>(mod);
+	vli_rshift1<4>(mod);
+	return true;
 }
 
 void mont_sm2_mod_mult_p(u64 *result, const u64 *x, const u64 *y)

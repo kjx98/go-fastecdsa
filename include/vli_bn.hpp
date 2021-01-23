@@ -326,6 +326,7 @@ public:
 		return carry;
 #endif
 	}
+#ifdef	ommit
 /* Computes this = left + right, returning carry. Can modify in place. */
 	bool uadd(const bignum& left, const u64 right) noexcept
 	{
@@ -341,6 +342,7 @@ public:
 		return carry;
 #endif
 	}
+#endif
 /* Computes this = this + right, returning carry. Can modify in place. */
 	bool add_to(const bignum& right) noexcept
 	{
@@ -407,6 +409,7 @@ public:
 		return borrow;
 #endif
 	}
+#ifdef	ommit
 /* Computes this = left - right, returning borrow. Can modify in place. */
 	bool usub(const bignum& left, const u64 right) noexcept
 	{
@@ -422,6 +425,7 @@ public:
 		return borrow;
 #endif
 	}
+#endif
 	bool sub_from(const bignum& right) noexcept
 	{
 #ifdef	NO_BUILTIN_OVERFLOW

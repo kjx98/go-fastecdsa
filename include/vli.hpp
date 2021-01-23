@@ -71,6 +71,9 @@ static forceinline int u64IsZero(u64 x) noexcept {
 
 // u64IsOne returns 1 if x is one and zero otherwise.
 static forceinline int u64IsOne(u64 x) noexcept {
+#ifndef	ommit
+	return u64IsZero(x ^ 1);
+#else
 	x = ~(x ^ 1);
 	x &= x >> 32;
 	x &= x >> 16;
@@ -79,6 +82,20 @@ static forceinline int u64IsOne(u64 x) noexcept {
 	x &= x >> 2;
 	x &= x >> 1;
 	return x & 1;
+#endif
+}
+
+static forceinline bool vli4_add_to(u64 *left, const u64 *right) noexcept {
+	bool	carry=false;
+	left[0] += right[0] + carry;
+	carry = (left[0] < right[0]);
+	left[1] += right[1] + carry;
+	carry = (left[1] < right[1]);
+	left[2] += right[2] + carry;
+	carry = (left[2] < right[2]);
+	left[3] += right[3] + carry;
+	carry = (left[3] < right[3]);
+	return carry;
 }
 
 /**
@@ -254,6 +271,7 @@ bool vli_add(u64 *result, const u64 *left, const u64 *right) noexcept
 	return carry;
 }
 
+#ifdef	ommit
 /* Computes result = left + right, returning carry. Can modify in place. */
 template<const uint N> forceinline
 static bool vli_uadd(u64 *result, const u64 *left, u64 right) noexcept
@@ -281,6 +299,7 @@ static bool vli_uadd(u64 *result, const u64 *left, u64 right) noexcept
 	return carry;
 #endif
 }
+#endif
 
 /* Computes result = left + right, returning carry. Can modify in place. */
 template<const uint N> forceinline static
@@ -364,6 +383,7 @@ bool vli_sub(u64 *result, const u64 *left, const u64 *right) noexcept
 	return borrow;
 }
 
+#ifdef	ommit
 /* Computes result = left - right, returning borrow. Can modify in place. */
 template<const uint N> forceinline
 static bool vli_usub(u64 *result, const u64 *left, u64 right) noexcept
@@ -389,6 +409,7 @@ static bool vli_usub(u64 *result, const u64 *left, u64 right) noexcept
 	return borrow;
 #endif
 }
+#endif
 
 template<const uint N> forceinline static
 bool vli_sub_from(u64 *result, const u64 *right) noexcept
