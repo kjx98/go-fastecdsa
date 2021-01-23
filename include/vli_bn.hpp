@@ -124,11 +124,13 @@ public:
 					u64IsZero(this->d[1] ^ bn.d[1]) &
 					u64IsZero(this->d[2] ^ bn.d[2]) &
 					u64IsZero(this->d[3] ^ bn.d[3]);
-		}
+		} else
 #endif
-		int	ret = u64IsZero(this->d[0] ^ bn.d[0]);
-		for (uint i=1; i < N; ++i) ret &= u64IsZero(this->d[i] ^ bn.d[i]);
-		return ret;
+		{
+			int	ret = u64IsZero(this->d[0] ^ bn.d[0]);
+			for (uint i=1; i < N; ++i) ret &= u64IsZero(this->d[i] ^ bn.d[i]);
+			return ret;
+		}
 #endif
 	}
 	bool operator!=(const bignum& bn) const noexcept {
@@ -143,13 +145,13 @@ public:
 		if constexpr(N == 4) {
 			return u64IsZero(this->d[0]) & u64IsZero(this->d[1]) &
 					u64IsZero(this->d[2]) & u64IsZero(this->d[3]);
-		}
+		} else
 #endif
-		int		ret=u64IsZero(this->d[0]);
-		for (uint i = 1; i < N; i++) {
-			ret &= u64IsZero(this->d[i]);
+		{
+			int		ret=u64IsZero(this->d[0]);
+			for (uint i = 1; i < N; i++) ret &= u64IsZero(this->d[i]);
+			return ret;
 		}
-		return ret;
 #else
 		for (uint i = 0; i < N; i++) {
 			if (this->d[i]) return 0;
@@ -167,13 +169,13 @@ public:
 		if constexpr(N == 4) {
 			return u64IsOne(this->d[0]) & u64IsZero(this->d[1]) &
 					u64IsZero(this->d[2]) & u64IsZero(this->d[3]);
-		}
+		} else
 #endif
-		int	ret = u64IsOne(this->d[0]);
-		for (uint i = 1; i < N; i++) {
-			ret &= u64IsZero(this->d[i]);
+		{
+			int	ret = u64IsOne(this->d[0]);
+			for (uint i = 1; i < N; i++) ret &= u64IsZero(this->d[i]);
+			return ret;
 		}
-		return ret;
 #else
 		if (this->d[0] != 1) return 0;
 		for (uint i = 1; i < N; i++) {
@@ -209,29 +211,6 @@ public:
 		auto rem = bit & 0x3f;
 		return (this->d[off] >> rem) & 1;
 	}
-#ifdef	ommit
-	// -1 <= bit < 64*N, cnt <= 8
-	template<const uint cnt=5> forceinline friend
-	uint bn_get_bits(const bignum& bn, const int bit) noexcept
-	{
-		static_assert(cnt <= 8, "w of wNAF MUST no larger than 8");
-		uint	rr;
-		if (unlikely(bit < 0)) {
-			rr = bn.d[0] << 1;
-			return rr & ((1<<cnt) - 1);
-		}
-		auto off = (uint)bit >> 6;
-		if (off >= N) return 0;
-		auto rem = (uint)bit & 0x3f;
-		rr = (bn.d[off] >> rem); // & 0xff;
-		if ((uint)bit < (N-1)*64 && rem > (64 - cnt)) {
-			++off;
-			//rr &= (1 << (64-rem)) - 1;
-			rr |= (bn.d[off] << (64 - rem));
-		}
-		return rr & ((1<<cnt) - 1);
-	}
-#endif
 	/* copy_conditional copies in to out if mask is all ones. */
 	void copy_conditional(const bignum& in, u64 mask)
 	{
@@ -311,55 +290,19 @@ public:
 /* Computes result = this + right, returning carry. Can modify in place. */
 	bool add(const bignum& left, const bignum &right) noexcept
 	{
-#ifdef	NO_BUILTIN_OVERFLOW
 		return vli_add<N>(this->d, left.d, right.d);
-#else
-		bool carry = false;
-		for (uint i = 0; i < N; i++) {
-			u64 sum;
-			auto c_carry = __builtin_uaddl_overflow(left.d[i],right.d[i],&sum);
-			if (unlikely(carry)) {
-				carry = c_carry | __builtin_uaddl_overflow(sum, 1, &sum);
-			} else carry = c_carry;
-			this->d[i] = sum;
-		}
-		return carry;
-#endif
 	}
 #ifdef	ommit
 /* Computes this = left + right, returning carry. Can modify in place. */
 	bool uadd(const bignum& left, const u64 right) noexcept
 	{
-#ifdef	NO_BUILTIN_OVERFLOW
 		return vli_uadd<N>(this->d, left.d, right);
-#else
-		auto carry = __builtin_uaddl_overflow(left.d[0], right, this->d);
-		for (uint i = 1; i < N; i++) {
-			if (unlikely(carry)) {
-				carry = __builtin_uaddl_overflow(left.d[i], 1, this->d+i);
-			} else this->d[i] = left.d[i];
-		}
-		return carry;
-#endif
 	}
 #endif
 /* Computes this = this + right, returning carry. Can modify in place. */
 	bool add_to(const bignum& right) noexcept
 	{
-#ifdef	NO_BUILTIN_OVERFLOW
 		return vli_add_to<N>(this->d, right.d);
-#else
-		bool carry = false;
-		for (uint i = 0; i < N; i++) {
-			u64 sum;
-			auto c_carry = __builtin_uaddl_overflow(this->d[i],right.d[i],&sum);
-			if (unlikely(carry)) {
-				carry = c_carry | __builtin_uaddl_overflow(sum, 1, &sum);
-			} else carry = c_carry;
-			this->d[i] = sum;
-		}
-		return carry;
-#endif
 	}
 	bool add_to(const u64* right) noexcept
 	{
@@ -369,17 +312,7 @@ public:
 /* Computes this = this + right, returning carry. Can modify in place. */
 	bool uadd_to(const u64 right) noexcept
 	{
-#ifdef	NO_BUILTIN_OVERFLOW
 		return vli_uadd_to<N>(this->d, right);
-#else
-		auto carry = __builtin_uaddl_overflow(this->d[0], right, this->d);
-		for (uint i = 1; i < N; i++) {
-			if (unlikely(carry)) {
-				carry = __builtin_uaddl_overflow(this->d[i], 1, this->d+i);
-			} else break;
-		}
-		return carry;
-#endif
 	}
 /**
  * sub() - Subtracts right from this
@@ -394,55 +327,18 @@ public:
  */
 	bool sub(const bignum& left, const bignum& right) noexcept
 	{
-#ifdef	NO_BUILTIN_OVERFLOW
 		return vli_sub<N>(this->d, left.d, right.d);
-#else
-		bool borrow = false;
-		for (uint i = 0; i < N; i++) {
-			u64 diff;
-			auto c_borrow=__builtin_usubl_overflow(left.d[i],right.d[i],&diff);
-			if (unlikely(borrow)) {
-				borrow = c_borrow | __builtin_usubl_overflow(diff, 1, &diff);
-			} else borrow = c_borrow;
-			this->d[i] = diff;
-		}
-		return borrow;
-#endif
 	}
 #ifdef	ommit
 /* Computes this = left - right, returning borrow. Can modify in place. */
 	bool usub(const bignum& left, const u64 right) noexcept
 	{
-#ifdef	NO_BUILTIN_OVERFLOW
 		return vli_usub<N>(this->d, left.d, right);
-#else
-		auto borrow = __builtin_usubl_overflow(left.d[0], right, this->d);
-		for (uint i = 1; i < N; i++) {
-			if (unlikely(borrow)) {
-				borrow = __builtin_usubl_overflow(left.d[i], 1, this->d+i);
-			} else this->d[i] = left.d[i];
-		}
-		return borrow;
-#endif
 	}
 #endif
 	bool sub_from(const bignum& right) noexcept
 	{
-#ifdef	NO_BUILTIN_OVERFLOW
 		return vli_sub_from<N>(this->d, right.d);
-#else
-		bool borrow = false;
-		for (uint i = 0; i < N; i++) {
-			u64 diff;
-			auto c_borrow = __builtin_usubl_overflow(this->d[i], right.d[i],
-									&diff);
-			if (unlikely(borrow)) {
-				borrow = c_borrow | __builtin_usubl_overflow(diff, 1, &diff);
-			} else borrow = c_borrow;
-			this->d[i] = diff;
-		}
-		return borrow;
-#endif
 	}
 	bool sub_from(const u64* right) noexcept
 	{
@@ -452,17 +348,7 @@ public:
 /* Computes this = this` - right, returning borrow. Can modify in place. */
 	bool usub_from(const u64 right) noexcept
 	{
-#ifdef	NO_BUILTIN_OVERFLOW
 		return vli_usub_from<N>(this->d, right);
-#else
-		auto borrow = __builtin_usubl_overflow(this->d[0], right, this->d);
-		for (uint i = 1; i < N; i++) {
-			if (unlikely(borrow)) {
-				borrow = __builtin_usubl_overflow(this->d[i], 1, this->d+i);
-			} else break;
-		}
-		return borrow;
-#endif
 	}
 #ifdef	ommit
 	bool is_negative() const noexcept
@@ -786,16 +672,12 @@ public:
 			if (k < N) min = 0; else min = (k + 1) - N;
 			for (uint i = min; i <= k && i < N; i++) {
 				uint128_t product;
-				//product = mul_64_64(left[i], right[k - i]);
 				product.mul_64_64(left.d[i], right.d[k - i]);
-				//r01 = add_128_128(r01, product);
 				r01 += product;
 				r2 += (r01.m_high() < product.m_high());
 			}
 			this->d[k] = r01.m_low();
 			r01 = uint128_t(r01.m_high(), r2);
-			//r01.m_low = r01.m_high;
-			//r01.m_high = r2;
 			r2 = 0;
 		}
 		this->d[N * 2 - 1] = r01.m_low();
@@ -810,16 +692,12 @@ public:
 			uint128_t product;
 			//if (likely(left[k] != 0))
 			{
-				//product = mul_64_64(left[k], right);
 				product.mul_64_64(left.data()[k], right);
-				//r01 = add_128_128(r01, product);
 				r01 += product;
 			}
 			/* no carry */
 			this->d[k] = r01.m_low();
 			r01 = uint128_t(r01.m_high(), 0);
-			//r01.m_low = r01.m_high;
-			//r01.m_high = 0;
 		}
 		this->d[N] = r01.m_low();
 		for (k = N+1; k < N * 2; k++) this->d[k] = 0;
@@ -834,7 +712,6 @@ public:
 			if (k < N) min = 0; else min = (k + 1) - N;
 			for (uint i = min; i <= k && i <= k - i; i++) {
 				uint128_t product;
-				//product = mul_64_64(left[i], left[k - i]);
 				product.mul_64_64(left.d[i], left.d[k - i]);
 				if (i < k - i) {
 					r2 += product.m_high() >> 63;
@@ -842,13 +719,10 @@ public:
 					u64 _low = product.m_low() << 1;
 					product = uint128_t(_low, _high);
 				}
-				//r01 = add_128_128(r01, product);
 				r01 += product;
 				r2 += (r01.m_high() < product.m_high());
 			}
 			this->d[k] = r01.m_low();
-			//r01.m_low = r01.m_high;
-			//r01.m_high = r2;
 			r01 = uint128_t(r01.m_high(), r2);
 		}
 		this->d[N * 2 - 1] = r01.m_low();

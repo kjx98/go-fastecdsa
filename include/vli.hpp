@@ -256,16 +256,9 @@ bool vli_add(u64 *result, const u64 *left, const u64 *right) noexcept
 	bool carry = false;
 	for (uint i = 0; i < N; i++) {
 		u64 sum;
-#ifdef	NO_BUILTIN_OVERFLOW
 		sum = left[i] + right[i] + carry;
 		if (sum != left[i])
 			carry = (sum < left[i]);
-#else
-		auto c_carry = __builtin_uaddl_overflow(left[i], right[i], &sum);
-		if (unlikely(carry)) {
-			carry = c_carry | __builtin_uaddl_overflow(sum, 1, &sum);
-		} else carry = c_carry;
-#endif
 		result[i] = sum;
 	}
 	return carry;
@@ -276,7 +269,6 @@ bool vli_add(u64 *result, const u64 *left, const u64 *right) noexcept
 template<const uint N> forceinline
 static bool vli_uadd(u64 *result, const u64 *left, u64 right) noexcept
 {
-#ifdef	NO_BUILTIN_OVERFLOW
 	u64 carry = right;
 	uint i;
 	for (i = 0; i < N; i++) {
@@ -289,15 +281,6 @@ static bool vli_uadd(u64 *result, const u64 *left, u64 right) noexcept
 		result[i] = sum;
 	}
 	return carry != 0;
-#else
-	auto carry = __builtin_uaddl_overflow(left[0], right, result);
-	for (uint i = 1; i < N; i++) {
-		if (unlikely(carry)) {
-			carry = __builtin_uaddl_overflow(result[i], 1, result+i);
-		} else break;
-	}
-	return carry;
-#endif
 }
 #endif
 
@@ -308,16 +291,9 @@ bool vli_add_to(u64 *result, const u64 *right) noexcept
 	bool carry = false;
 	for (uint i = 0; i < N; i++) {
 		u64 sum;
-#ifdef	NO_BUILTIN_OVERFLOW
 		sum = result[i] + right[i] + carry;
 		if (sum != result[i])
 			carry = (sum < result[i]);
-#else
-		auto c_carry = __builtin_uaddl_overflow(result[i], right[i], &sum);
-		if (unlikely(carry)) {
-			carry = c_carry | __builtin_uaddl_overflow(sum, 1, &sum);
-		} else carry = c_carry;
-#endif
 		result[i] = sum;
 	}
 	return carry;
@@ -327,7 +303,6 @@ bool vli_add_to(u64 *result, const u64 *right) noexcept
 template<const uint N> forceinline
 static bool vli_uadd_to(u64 *result, u64 right) noexcept
 {
-#ifdef	NO_BUILTIN_OVERFLOW
 	u64 carry = right;
 	uint i;
 	for (i = 0; i < N; i++) {
@@ -340,15 +315,6 @@ static bool vli_uadd_to(u64 *result, u64 right) noexcept
 		result[i] = sum;
 	}
 	return carry != 0;
-#else
-	auto carry = __builtin_uaddl_overflow(result[0], right, result);
-	for (uint i = 1; i < N; i++) {
-		if (unlikely(carry)) {
-			carry = __builtin_uaddl_overflow(result[i], 1, result+i);
-		} else break;
-	}
-	return carry;
-#endif
 }
 
 /**
@@ -369,15 +335,8 @@ bool vli_sub(u64 *result, const u64 *left, const u64 *right) noexcept
 	bool borrow = false;
 	for (uint i = 0; i < N; i++) {
 		u64 diff;
-#ifdef	NO_BUILTIN_OVERFLOW
 		diff = left[i] - right[i] - borrow;
 		if (diff != left[i]) borrow = (diff > left[i]);
-#else
-		auto c_borrow = __builtin_usubl_overflow(left[i], right[i], &diff);
-		if (unlikely(borrow)) {
-			borrow = c_borrow | __builtin_usubl_overflow(diff, 1, &diff);
-		} else borrow = c_borrow;
-#endif
 		result[i] = diff;
 	}
 	return borrow;
@@ -388,7 +347,6 @@ bool vli_sub(u64 *result, const u64 *left, const u64 *right) noexcept
 template<const uint N> forceinline
 static bool vli_usub(u64 *result, const u64 *left, u64 right) noexcept
 {
-#ifdef	NO_BUILTIN_OVERFLOW
 	u64 borrow = right;
 	uint i;
 	for (i = 0; i < N; i++) {
@@ -399,15 +357,6 @@ static bool vli_usub(u64 *result, const u64 *left, u64 right) noexcept
 		result[i] = diff;
 	}
 	return borrow != 0;
-#else
-	auto borrow = __builtin_usubl_overflow(left[0], right, result);
-	for (uint i = 1; i < N; i++) {
-		if (unlikely(borrow)) {
-			borrow = __builtin_usubl_overflow(result[i], 1, result+i);
-		} else break;
-	}
-	return borrow;
-#endif
 }
 #endif
 
@@ -417,15 +366,8 @@ bool vli_sub_from(u64 *result, const u64 *right) noexcept
 	bool borrow = false;
 	for (uint i = 0; i < N; i++) {
 		u64 diff;
-#ifdef	NO_BUILTIN_OVERFLOW
 		diff = result[i] - right[i] - borrow;
 		if (diff != result[i]) borrow = (diff > result[i]);
-#else
-		auto c_borrow = __builtin_usubl_overflow(result[i], right[i], &diff);
-		if (unlikely(borrow)) {
-			borrow = c_borrow | __builtin_usubl_overflow(diff, 1, &diff);
-		} else borrow = c_borrow;
-#endif
 		result[i] = diff;
 	}
 	return borrow;
@@ -435,7 +377,6 @@ bool vli_sub_from(u64 *result, const u64 *right) noexcept
 template<const uint N> forceinline
 static bool vli_usub_from(u64 *result, const u64 *left, u64 right) noexcept
 {
-#ifdef	NO_BUILTIN_OVERFLOW
 	u64 borrow = right;
 	uint i;
 	for (i = 0; i < N; i++) {
@@ -446,15 +387,6 @@ static bool vli_usub_from(u64 *result, const u64 *left, u64 right) noexcept
 		result[i] = diff;
 	}
 	return borrow != 0;
-#else
-	auto borrow = __builtin_usubl_overflow(result[0], right, result);
-	for (uint i = 1; i < N; i++) {
-		if (unlikely(borrow)) {
-			borrow = __builtin_usubl_overflow(result[i], 1, result+i);
-		} else break;
-	}
-	return borrow;
-#endif
 }
 
 template<const uint N> forceinline
@@ -543,18 +475,14 @@ void vli_mult(u64 *result, const u64 *left, const u64 *right) noexcept
 		for (i = min; i <= k && i < N; i++) {
 			uint128_t product;
 
-			//product = mul_64_64(left[i], right[k - i]);
 			product.mul_64_64(left[i], right[k - i]);
 
-			//r01 = add_128_128(r01, product);
 			r01 += product;
 			r2 += (r01.m_high() < product.m_high());
 		}
 
 		result[k] = r01.m_low();
 		r01 = uint128_t(r01.m_high(), r2);
-		//r01.m_low = r01.m_high;
-		//r01.m_high = r2;
 		r2 = 0;
 	}
 
@@ -573,16 +501,12 @@ static void vli_umult(u64 *result, const u64 *left, u64 right) noexcept
 
 		//if (likely(left[k] != 0))
 		{
-			//product = mul_64_64(left[k], right);
 			product.mul_64_64(left[k], right);
-			//r01 = add_128_128(r01, product);
 			r01 += product;
 		}
 		/* no carry */
 		result[k] = r01.m_low();
 		r01 = uint128_t(r01.m_high(), 0);
-		//r01.m_low = r01.m_high;
-		//r01.m_high = 0;
 	}
 	result[N] = r01.m_low();
 	for (k = N+1; k < N * 2; k++)
@@ -607,7 +531,6 @@ static void vli_square(u64 *result, const u64 *left) noexcept
 		for (i = min; i <= k && i <= k - i; i++) {
 			uint128_t product;
 
-			//product = mul_64_64(left[i], left[k - i]);
 			product.mul_64_64(left[i], left[k - i]);
 
 			if (i < k - i) {
@@ -617,14 +540,11 @@ static void vli_square(u64 *result, const u64 *left) noexcept
 				product = uint128_t(_low, _high);
 			}
 
-			//r01 = add_128_128(r01, product);
 			r01 += product;
 			r2 += (r01.m_high() < product.m_high());
 		}
 
 		result[k] = r01.m_low();
-		//r01.m_low = r01.m_high;
-		//r01.m_high = r2;
 		r01 = uint128_t(r01.m_high(), r2);
 		r2 = 0;
 	}
