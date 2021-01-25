@@ -11,6 +11,7 @@ set(CMAKE_BUILD_TYPE "Release")
 add_definitions( "-O3 -pthread -std=c++17 -funroll-loops" )
 add_definitions( "-Wpedantic -Wall -Wuninitialized" )
 #add_definitions( "-DWITH_ADD_2007bl" )
+#add_definitions( "-DWITH_DBL_2004hmv" )
 #add_definitions( "-DNO_U64ZERO" )
 
 include(FindPkgConfig)

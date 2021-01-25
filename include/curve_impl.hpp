@@ -522,8 +522,14 @@ public:
 	}
 	void point_double(point_t<N>& q, const point_t<N>& p) const noexcept
 	{
-		//point_double_jacob<A_is_n3>(*this, q.x, q.y, q.z, p.x, p.y, p.z);
-		point_double3n_jacob(*this, q.x, q.y, q.z, p.x, p.y, p.z);
+#if	defined(WITH_DBL_2004hmv) && __cplusplus >= 201703L
+		if constexpr(A_is_n3)
+		{
+			point_double3n_jacob(*this, q.x, q.y, q.z, p.x, p.y, p.z);
+			return;
+		} else
+#endif
+		point_double_jacob<A_is_n3>(*this, q.x, q.y, q.z, p.x, p.y, p.z);
 	}
 	void point_double(point_t<N>& q, const felem_t& x1, const felem_t& y1)
 	const noexcept
