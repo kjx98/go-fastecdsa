@@ -184,7 +184,7 @@ public:
 	}
 	void mont_mult2(felem_t& res, const felem_t& left) const noexcept
 	{
-#ifndef	ommit
+#ifdef	ommit
 		this->mod_add(res, left, left);
 #else
 		if (res.lshift1(left) != 0) {
@@ -216,11 +216,11 @@ public:
 					const u64 *y1, const u64 *z1 = nullptr) const noexcept
 	{
 		if ((z1 != nullptr && vli_is_zero<N>(z1)) || vli_is_zero<N>(y1)) {
-			/* P_y == 0 || P_z == 0 => [1:1:0] */
+			/* P_y == 0 || P_z == 0 => [0:1:0] */
 			vli_clear<N>(x3);
 			vli_clear<N>(y3);
 			vli_clear<N>(z3);
-			x3[0] = 1;
+			//x3[0] = 1;
 			y3[0] = 1;
 			return;
 		}
@@ -280,8 +280,8 @@ public:
 	{
 		felem_t	t1;
 
-		if (z.is_one()) return;
-		if (z.is_zero()) {
+		if ( unlikely(z.is_one()) ) return;
+		if ( unlikely(z.is_zero()) ) {
 			x1.clear();
 			y1.clear();
 			return;
@@ -314,7 +314,7 @@ public:
 	}
 	void apply_z_mont(point_t<N>& pt) const noexcept
 	{
-		if (pt.z.is_zero() || pt.z == mont_one()) return;
+		if ( unlikely(pt.z.is_zero() || pt.z == mont_one()) ) return;
 		felem_t	t1;
 		from_montgomery(pt.z, pt.z);
 		mod_inv<N>(pt.z, pt.z, this->p);
@@ -522,7 +522,8 @@ public:
 	}
 	void point_double(point_t<N>& q, const point_t<N>& p) const noexcept
 	{
-		point_double_jacob<A_is_n3>(*this, q.x, q.y, q.z, p.x, p.y, p.z);
+		//point_double_jacob<A_is_n3>(*this, q.x, q.y, q.z, p.x, p.y, p.z);
+		point_double3n_jacob(*this, q.x, q.y, q.z, p.x, p.y, p.z);
 	}
 	void point_double(point_t<N>& q, const felem_t& x1, const felem_t& y1)
 	const noexcept
@@ -593,9 +594,11 @@ protected:
 	{
 		point_t<N>	G;
 		static_assert(N == 4, "only 256 bits curve supported");
-#ifdef	ommit
-		static_assert(nwBaseNAF<N>() == 43, "only 256 bits curve supported");
-		static_assert(maxBaseNAF == 43, "only 256 bits curve supported");
+#if	__cplusplus >= 201703L
+		if constexpr(BaseW == 6) {
+			static_assert(nwBaseNAF<N>() == 43, "only 256 bits curve supported");
+			static_assert(maxBaseNAF == 43, "only 256 bits curve supported");
+		}
 #endif
 		static_assert((N * 64 % BaseW) != 0, "curve Bits MUUST not multiples of BaseW");
 		if (nBaseNAF != 0) return true;
@@ -771,8 +774,8 @@ public:
 		this->mod_add(res, left, left);
 #else
 		if (res.lshift1(left) != 0) {
-			this->carry_reduce(res, 1);
-			//res.sub_from(this->p);
+			//this->carry_reduce(res, 1);
+			res.sub_from(this->p);
 		}
 #endif
 	}

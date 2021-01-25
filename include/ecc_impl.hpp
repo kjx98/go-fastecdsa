@@ -294,6 +294,83 @@ void point_doublez_jacob(const curveT& curve, bnT& x3, bnT& y3, bnT& z3,
 }
 
 
+// point add & double template
+/* dbl-2004-hmv algorithm
+ * http://hyperelliptic.org/EFD/g1p/auto-shortw-jacobian.html
+ */
+// x,y,z in montgomery form
+template<typename bnT, typename curveT>
+forceinline static
+void point_double3n_jacob(const curveT& curve, bnT& x3, bnT& y3, bnT& z3,
+		const bnT &x1, const bnT &y1, const bnT &z1) noexcept
+{
+#ifdef	ommit
+	if ( unlikely(z1.is_zero()) ) // | y1.is_zero())
+	{
+		/* P_y == 0 || P_z == 0 => [1:1:0] */
+		//x3 = bnT(1);
+		x3.clear();
+		y3 = bnT(1);
+		z3.clear();
+		return;
+	}
+#endif
+	bool	z_is_one = (curve.mont_one() == z1);
+	bnT	t1, t2, t3;
+	// t2 = 3(x1 + z1^2)(x1 - z1^2)
+	if ( unlikely(z_is_one) ) {
+		// t2 = X - Z^2
+		curve.mod_sub(t2, x1, curve.mont_one());
+		curve.mod_add(t1, x1, curve.mont_one());
+		curve.mont_mmult(t2, t2, t1);
+		curve.mont_mult2(t1, t2);
+		curve.mod_add_to(t2, t1);
+	} else {
+		// t1 = Z^2
+		curve.mont_msqr(t1, z1);
+		// t2 = X - Z^2
+		curve.mod_sub(t2, x1, t1);
+		// t1 = X + Z^2
+		curve.mod_add_to(t1, x1);
+		curve.mont_mmult(t2, t2, t1);
+		// t2 = (x1 + z1^2) ( x1 - z1^2)
+		// t1 = 2 * t2
+		curve.mont_mult2(t1, t2);
+		// t2 = t2 + 2 * t2 = 3(X - Z^2)
+		curve.mod_add_to(t2, t1);
+	}
+
+	// y3 = 2 y1
+	curve.mont_mult2(y3, y1);
+	/* Z3 = 2YZ */
+	if ( unlikely(z_is_one) ) {
+		z3 = y3;
+	} else {
+		// Z3 = YZ
+		curve.mont_mmult(z3, y3, z1);
+	}
+
+	// y3 = y3^2 = 4 y1^2
+	curve.mont_msqr(y3, y3);
+	/* t3 = 4XY^2 */
+	curve.mont_mmult(t3, y3, x1);
+	curve.mont_msqr(y3, y3);
+	// y3 = y3^2 / 2 = 8 y1^4
+	curve.mont_div2(y3);
+	/* x3 = t2^2 */
+	curve.mont_msqr(x3, t2);
+	// t1 = 2 t3 = 8 x y^2
+	curve.mont_mult2(t1, t3);
+	// x3 = x3 - t1
+	curve.mod_sub_from(x3, t1);
+	// t1 = t3 - x3
+	curve.mod_sub(t1, t3, x3);
+	// t1 = t1 * t2
+	curve.mont_mmult(t1, t1, t2);
+	// y3 = t1 - y3
+	curve.mod_sub(y3, t1, y3);
+}
+
 /* add-1998-cmo-2 algorithm
  * http://hyperelliptic.org/EFD/g1p/auto-shortw-jacobian-3.html
  */
