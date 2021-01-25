@@ -659,7 +659,22 @@ void point_addz_jacob(const curveT& curve, bnT& x3, bnT& y3, bnT& z3,
 #undef	t1
 }
 
+
+template<typename bnT, typename curveT>
+forceinline static
+bool point_recovery (const curveT& curve, const bnT& x1, bnT& y1) noexcept
+{
+	bnT		t1, t2;
+	curve.to_montgomery(t1, x1);
+	curve.mont_msqr(t2, x1);
+	curve.mod_add_to(t2, curve.montParamA());
+	curve.mont_mmult(t2, t2, t1);
+	curve.from_montgomery(t1, t2);
+	curve.mod_add_to(t1, curve.getB());
+	// need mod_sqrt
 }
+
+}	// namespace ecc
 
 
 /*

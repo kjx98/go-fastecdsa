@@ -119,11 +119,13 @@ public:
 	void getGy(u64 *v) const noexcept { gy.set(v); }
 	const felem_t& getGx() const noexcept { return gx; }
 	const felem_t& getGy() const noexcept { return gy; }
+	const felem_t& getB() const noexcept { return b; }
 	const felem_t& montParamA() const noexcept { return _mont_a; }
 	const felem_t& paramP() const noexcept { return p; }
 	const bool a_is_pminus3() const noexcept { return _a_is_neg3; }
 	const bool a_is_zero() const noexcept { return _a_is_zero; }
 	const felem_t& mont_one() const noexcept { return _mont_one; }
+	const felem_t& quadP() const noexcept { return _quadP; }
 	void to_montgomery(felem_t& res, const u64 *x) const noexcept
 	{
 		felem_t   *xx = reinterpret_cast<felem_t *>(const_cast<u64 *>(x));
@@ -211,6 +213,29 @@ public:
 			bool carry = res.add_to(this->p);
 			res.rshift1(carry);
 		}
+	}
+	// x^y modulo prime, xp is x in motgomery form
+	void mont_mod_exp(felem_t& res, const felem_t& xp, const felem_t& y)
+	const noexcept
+	{
+		felem_t	t1(0l);
+		t1.sub_from(this->p);
+		for (int i = y.num_bits()-1; i >= 0; --i) {
+			mont_msqr(t1, t1);
+			if (y.test_bit(i)) mont_mmult(t1, t1, xp);
+		}
+	}
+	bool mont_mod_sqrt(felem_t& res, const felem_t& x) const noexcept
+	{
+		felem_t	xp;
+		to_montgomery(xp, x);
+		felem_t	a1;
+		this->mont_mod_exp(a1, xp, this->quadP());
+		felem_t	a0;
+		mont_mmult(res, a1, xp);
+		mont_mmult(a0, res, a1);
+		from_montgomery(res, res);
+		return (a0 == this->mont_one());
 	}
 	void point_double_jacobian(u64 *x3, u64 *y3, u64 *z3, const u64 *x1,
 					const u64 *y1, const u64 *z1 = nullptr) const noexcept
@@ -694,6 +719,9 @@ protected:
 		felem_t	t1;
 		t1.clear();
 		_mont_one.sub(t1, p);
+		_quadP = p;
+		_quadP.rshift1();
+		_quadP.rshift1();
 		if (unlikely( !_a_is_neg3 )) {
 			if (likely(a.is_zero())) _a_is_zero = true;
 		}
@@ -714,6 +742,7 @@ protected:
 	gwNAF_t	g_precomps[maxBaseNAF];
 	felem_t _mont_one;
 	felem_t _mont_a;
+	felem_t	_quadP;
 	const u64	k0_p = 0;
 	const u64	k0_n = 0;
 	const uint _ndigits = N;
@@ -723,6 +752,7 @@ protected:
 	const bool use_barrett = false;
 	bool _inited = false;
 };
+
 
 template <const u64 Pk0=1, const bool A_is_n3=true>
 class curve256 : public ecc_curve<4,A_is_n3> {
