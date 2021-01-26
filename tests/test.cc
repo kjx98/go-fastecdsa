@@ -207,6 +207,20 @@ TEST(testEcc, TestModSqrt)
 	EXPECT_TRUE(sm2_p256.mod_sqrt(sqrT, res));
 	if (by2.is_even()) sqrT.sub(prime, sqrT);
 	EXPECT_TRUE(sqrT.cmp(by2) == 0);
+	ASSERT_EQ(sm2_p256.quadP(), quadPrime);
+	mont_sqr(sm2_p256, res, by1);
+	ASSERT_EQ(res.cmp(dy1y1), 0);
+	sm2_k256.mod_exp(tt, res, quadPrime);
+	ASSERT_EQ(tt.cmp(dy1Quad), 0);
+	EXPECT_TRUE(sm2_k256.mod_sqrt(sqrT, res));
+	EXPECT_TRUE(sqrT.cmp(by1) == 0);
+	mont_sqr(sm2_p256, res, by2);
+	sm2_k256.mod_exp(tt, res, quadPrime);
+	ASSERT_EQ(tt.cmp(dy2Quad), 0);
+	ASSERT_EQ(res.cmp(dy2y2), 0);
+	EXPECT_TRUE(sm2_k256.mod_sqrt(sqrT, res));
+	if (by2.is_even()) sqrT.sub(prime, sqrT);
+	EXPECT_TRUE(sqrT.cmp(by2) == 0);
 }
 
 TEST(testEcc, TestMult248)
@@ -256,8 +270,8 @@ TEST(testEcc, TestOnCurve)
 	if (res.cmp(sm2_p256.paramP()) >= 0) res.sub_from(sm2_p256.paramP());
 	EXPECT_TRUE(res.is_zero());
 	std::cerr << "mont_A mont(-3): " << sm2_p256.montParamA() << std::endl;
-	ASSERT_TRUE(sm2_p256.point_on_curve(x1, y1));
-	ASSERT_TRUE(sm2_p256.point_on_curve(x2, y2));
+	ASSERT_TRUE(sm2_p256.is_on_curve(x1, y1));
+	ASSERT_TRUE(sm2_p256.is_on_curve(x2, y2));
 }
 
 TEST(testEcc, TestPointRecovery)

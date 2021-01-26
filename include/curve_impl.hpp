@@ -186,14 +186,6 @@ public:
 			res.add_to(p);
 		}
 	}
-	void
-	mod_exp(felem_t& res, const felem_t &x1, const felem_t& y1) const noexcept
-	{
-		felem_t		tmp;
-		to_montgomery(tmp, x1);
-		mont_mod_exp(res, tmp, y1);
-		from_montgomery(res, res);
-	}
 	void mont_mult2(felem_t& res, const felem_t& left) const noexcept
 	{
 #ifdef	ommit
@@ -224,6 +216,14 @@ public:
 			res.rshift1(carry);
 		}
 	}
+	void
+	mod_exp(felem_t& res, const felem_t &x1, const felem_t& y1) const noexcept
+	{
+		felem_t		tmp;
+		to_montgomery(tmp, x1);
+		mont_mod_exp(res, tmp, y1);
+		from_montgomery(res, res);
+	}
 	bool mod_sqrt(felem_t& res, const felem_t& x) const noexcept
 	{
 		felem_t	xp;
@@ -236,7 +236,7 @@ public:
 		from_montgomery(res, res);
 		return (a0 == this->mont_one());
 	}
-	bool point_on_curve(const felem_t& x1, const felem_t& y1) const noexcept
+	bool is_on_curve(const felem_t& x1, const felem_t& y1) const noexcept
 	{
 		felem_t	xp, yp, tt, yy;
 		to_montgomery(xp, x1);
@@ -249,8 +249,8 @@ public:
 		if (this->_a_is_neg3)
 #endif
 		{
-			tt.sub_from(this->_mont_three);
-			//if (tt.add_to(this->_mont_a)) tt.sub_from(this->p);
+			if ( tt.sub_from(this->_mont_three) ) tt.add_to(this->p);
+			//if ( tt.add_to(this->_mont_a) ) tt.sub_from(this->p);
 		} else {
 			if (! this->_a_is_zero) return false;
 		}
@@ -874,6 +874,35 @@ public:
 			this->carry_reduce(res, carry);
 		}
 	}
+	void mont_div2(felem_t& res) const noexcept
+	{
+		if ( likely(res.is_even()) ) {
+			res.rshift1();
+		} else {
+			bool carry = res.add_to(this->p);
+			res.rshift1(carry);
+		}
+	}
+	void
+	mod_exp(felem_t& res, const felem_t &x1, const felem_t& y1) const noexcept
+	{
+		felem_t		tmp;
+		to_montgomery(tmp, x1);
+		mont_mod_exp(res, tmp, y1);
+		from_montgomery(res, res);
+	}
+	bool mod_sqrt(felem_t& res, const felem_t& x) const noexcept
+	{
+		felem_t	xp;
+		to_montgomery(xp, x);
+		felem_t	a1;
+		this->mont_mod_exp(a1, xp, this->quadP());
+		felem_t	a0;
+		mont_mmult(res, a1, xp);
+		mont_mmult(a0, res, a1);
+		from_montgomery(res, res);
+		return (a0 == this->mont_one());
+	}
 	void point_double_jacobian(u64 *x3, u64 *y3, u64 *z3, const u64 *x1,
 					const u64 *y1, const u64 *z1 = nullptr) const noexcept
 	{
@@ -1098,6 +1127,16 @@ private:
 		cc[2] = 0;
 		cc[3] = u << 32;
 		if (res.add_to(cc)) res.sub_from(this->p);
+	}
+	// x^y modulo prime, xp is x in motgomery form
+	void mont_mod_exp(felem_t& res, const felem_t& xp, const felem_t& y)
+	const noexcept
+	{
+		res = xp;
+		for (int i = y.num_bits()-2; i >= 0; --i) {
+			mont_msqr(res, res);
+			if (y.test_bit(i)) mont_mmult(res, res, xp);
+		}
 	}
 	void scalar_mult_base_internal(point_t<4>& q, const felem_t& scalar)
 		const noexcept
