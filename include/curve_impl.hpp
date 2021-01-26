@@ -299,37 +299,6 @@ public:
 		from_montgomery(y3, *y3p);
 		from_montgomery(z3, *z3p);
 	}
-#ifdef	ommit
-	void apply_z(u64 *x1, u64 *y1, u64 *z) const noexcept
-	{
-		felem_t	t1;
-
-		if (vli_is_one<N>(z)) return;
-		if (vli_is_zero<N>(z)) {
-			vli_clear<N>(x1);
-			vli_clear<N>(y1);
-			return;
-		}
-		vli_mod_inv<N>(z, z, this->p.data());
-		felem_t	*xp = reinterpret_cast<felem_t *>(x1);
-		felem_t	*yp = reinterpret_cast<felem_t *>(y1);
-		felem_t	*zp = reinterpret_cast<felem_t *>(z);
-		to_montgomery(*zp, z);
-		this->mont_msqr(t1, *zp);	// t1 = z^2
-		to_montgomery(*xp, x1);
-		to_montgomery(*yp, y1);
-		this->mont_mmult(*xp, *xp, t1);	// x1 * z^2
-		this->mont_mmult(t1, t1, *zp);	// t1 = z^3
-		this->mont_mmult(*yp, *yp, t1);	// y1 * z^3
-
-		// montgomery reduction
-		from_montgomery(x1, *xp);
-		from_montgomery(y1, *yp);
-		// set z to 1
-		vli_clear<N>(z);
-		z[0] = 1;
-	}
-#endif
 	void apply_z(bignum<N>& x1, bignum<N>& y1, bignum<N>& z) const noexcept
 	{
 		felem_t	t1;
@@ -1119,6 +1088,7 @@ public:
 private:
 	void carry_reduce(felem_t& res, const u64 carry) const noexcept
 	{
+		static_assert(Pk0 == 1, "MUST be sm2");
 		// carry < 2^32
 		u64		u = carry & ((1L<<32) -1);
 		u64		cc[4];
