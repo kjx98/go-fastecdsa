@@ -661,22 +661,30 @@ void point_addz_jacob(const curveT& curve, bnT& x3, bnT& y3, bnT& z3,
 
 
 template<typename bnT, typename curveT>
-forceinline static
-bool point_recovery (const curveT& curve, const bnT& x1, bnT& y1) noexcept
+forceinline static bool
+point_recovery (const curveT& curve, bnT& y1, const bnT& x1, const bool bEven)
+	noexcept
 {
 	bnT		t1, t2;
 	curve.to_montgomery(t1, x1);
 	// t2 = x^2 + a
-	curve.mont_msqr(t2, x1);
+	curve.mont_msqr(t2, t1);
 	curve.mod_add_to(t2, curve.montParamA());
 	// t2 = x^3 + ax
 	curve.mont_mmult(t2, t2, t1);
+	// t1 = t2 reduction
 	curve.from_montgomery(t1, t2);
-	// t1 = t2 + b = x^3 + ax +b
-	curve.mod_add_to(t1, curve.getB());
+	// t1 = t1 + b = x^3 + ax +b
+	if (t1.add_to(curve.paramB()) || t1.cmp(curve.paramP()) >= 0) {
+		t1.sub_from(curve.paramP());
+	}
 	// need mod_sqrt
 	// y^2 = x^3 + ax + b
-	return curve.mod_sqrt(y1, t1);
+	auto ret = curve.mod_sqrt(y1, t1);
+	if ( likely(ret) ) {
+		if (!bEven) y1.sub(curve.paramP(), y1);
+	}
+	return ret;
 }
 
 }	// namespace ecc

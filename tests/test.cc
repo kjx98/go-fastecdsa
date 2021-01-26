@@ -187,17 +187,6 @@ void mont_sqr(const curveT& curve, bnT& res, const bnT &x1) noexcept
 	curve.from_montgomery(res, res);
 }
 
-template<typename bnT, typename curveT>
-forceinline static
-void mont_exp(const curveT& curve, bnT& res, const bnT &x1, const bnT& y1)
-	noexcept
-{
-	bnT		tmp;
-	curve.to_montgomery(tmp, x1);
-	curve.mont_mod_exp(res, tmp, y1);
-	curve.from_montgomery(res, res);
-}
-
 
 TEST(testEcc, TestModSqrt)
 {
@@ -207,12 +196,12 @@ TEST(testEcc, TestModSqrt)
 	ASSERT_EQ(sm2_p256.quadP(), quadPrime);
 	mont_sqr(sm2_p256, res, by1);
 	ASSERT_EQ(res.cmp(dy1y1), 0);
-	mont_exp(sm2_p256, tt, res, quadPrime);
+	sm2_p256.mod_exp(tt, res, quadPrime);
 	ASSERT_EQ(tt.cmp(dy1Quad), 0);
 	EXPECT_TRUE(sm2_p256.mod_sqrt(sqrT, res));
 	EXPECT_TRUE(sqrT.cmp(by1) == 0);
 	mont_sqr(sm2_p256, res, by2);
-	mont_exp(sm2_p256, tt, res, quadPrime);
+	sm2_p256.mod_exp(tt, res, quadPrime);
 	ASSERT_EQ(tt.cmp(dy2Quad), 0);
 	ASSERT_EQ(res.cmp(dy2y2), 0);
 	EXPECT_TRUE(sm2_p256.mod_sqrt(sqrT, res));
@@ -247,6 +236,20 @@ TEST(testEcc, TestMult248)
 	res2 = y3;
 	sm2_p256.mont_mult8(res2);
 	EXPECT_EQ(res1.cmp(res2), 0);
+}
+
+TEST(testEcc, TestPointRecovery)
+{
+	bignum<4>	x1(d1Gx), x2(d2Gx);
+	bignum<4>	y1(d1Gy), y2(d2Gy);
+	bignum<4>	res;
+	std::cerr << "mont_A mont(-3): " << sm2_p256.montParamA() << std::endl;
+	ASSERT_TRUE(sm2_p256.point_on_curve(x1, y1));
+	ASSERT_TRUE(sm2_p256.point_on_curve(x2, y2));
+	EXPECT_TRUE(point_recovery(sm2_p256, res, x1, vli_is_even(d1Gy)));
+	EXPECT_EQ(res.cmp(d1Gy), 0);
+	EXPECT_TRUE(point_recovery(sm2_p256, res, x2, vli_is_even(d2Gy)));
+	EXPECT_EQ(res.cmp(d2Gy), 0);
 }
 
 TEST(testEcc, TestPointNeg)

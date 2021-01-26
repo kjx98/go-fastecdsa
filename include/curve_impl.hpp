@@ -119,7 +119,7 @@ public:
 	void getGy(u64 *v) const noexcept { gy.set(v); }
 	const felem_t& getGx() const noexcept { return gx; }
 	const felem_t& getGy() const noexcept { return gy; }
-	const felem_t& getB() const noexcept { return b; }
+	const felem_t& paramB() const noexcept { return b; }
 	const felem_t& montParamA() const noexcept { return _mont_a; }
 	const felem_t& paramP() const noexcept { return p; }
 	const bool a_is_pminus3() const noexcept { return _a_is_neg3; }
@@ -184,6 +184,14 @@ public:
 			res.add_to(p);
 		}
 	}
+	void
+	mod_exp(felem_t& res, const felem_t &x1, const felem_t& y1) const noexcept
+	{
+		felem_t		tmp;
+		to_montgomery(tmp, x1);
+		mont_mod_exp(res, tmp, y1);
+		from_montgomery(res, res);
+	}
 	void mont_mult2(felem_t& res, const felem_t& left) const noexcept
 	{
 #ifdef	ommit
@@ -214,16 +222,6 @@ public:
 			res.rshift1(carry);
 		}
 	}
-	// x^y modulo prime, xp is x in motgomery form
-	void mont_mod_exp(felem_t& res, const felem_t& xp, const felem_t& y)
-	const noexcept
-	{
-		res = xp;
-		for (int i = y.num_bits()-2; i >= 0; --i) {
-			mont_msqr(res, res);
-			if (y.test_bit(i)) mont_mmult(res, res, xp);
-		}
-	}
 	bool mod_sqrt(felem_t& res, const felem_t& x) const noexcept
 	{
 		felem_t	xp;
@@ -235,6 +233,23 @@ public:
 		mont_mmult(a0, res, a1);
 		from_montgomery(res, res);
 		return (a0 == this->mont_one());
+	}
+	bool point_on_curve(const felem_t& x1, const felem_t& y1) const noexcept
+	{
+		felem_t	xp, yp, tt;
+		to_montgomery(xp, x1);
+		to_montgomery(yp, y1);
+		mont_msqr(tt, xp);
+		tt.add_to(this->montParamA());
+		from_montgomery(tt, tt);
+		if (tt.add_to(this->b) || tt.cmp(this->p) >= 0) {
+			tt.sub_from(this->p);
+		}
+		mont_msqr(yp, yp);
+		from_montgomery(yp, yp);
+		//if (yp.cmp(this->p) >= 0) yp.sub_from(this->p);
+		return yp.cmp(tt) == 0;
+		//if (!mod_sqrt(tt, tt)) return false;
 	}
 	void point_double_jacobian(u64 *x3, u64 *y3, u64 *z3, const u64 *x1,
 					const u64 *y1, const u64 *z1 = nullptr) const noexcept
@@ -724,10 +739,21 @@ protected:
 		if (unlikely( !_a_is_neg3 )) {
 			if (likely(a.is_zero())) _a_is_zero = true;
 		}
+		to_montgomery(_mont_a, this->a);
 		// should verify calc K0 and RR
 		_inited = true;
 		return this->initTable();
 		//return true;
+	}
+	// x^y modulo prime, xp is x in motgomery form
+	void mont_mod_exp(felem_t& res, const felem_t& xp, const felem_t& y)
+	const noexcept
+	{
+		res = xp;
+		for (int i = y.num_bits()-2; i >= 0; --i) {
+			mont_msqr(res, res);
+			if (y.test_bit(i)) mont_mmult(res, res, xp);
+		}
 	}
 	const std::string name;
 	const felem_t gx;
