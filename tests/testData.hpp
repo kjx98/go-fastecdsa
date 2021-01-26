@@ -5,10 +5,18 @@ constexpr u64 dx1[] = {0x456490a734454105ull, 0x434764fd47d6fddull,
 				0x1a3fc4b41b76d16eull, 0x1ba56e21c7de3566ull};
 constexpr u64 dy1[] = {0xeec161d863c875c1ull, 0x94455772c85a4af3ull,
 				0x145072ff099a874eull, 0xb3c27563f4adad8eull};
+constexpr u64 dy1y1[] = {0x1e9cd01fa3da4f5aull, 0x1ae7c680de030fcbull,
+	   			0x16e863157a726ca4ull, 0x17aa34d71004a6deull};
+constexpr u64 dy1Quad[] = {0xa9fbbd8c84395fbeull, 0x5471b28c4a51c643,
+				0x9e0f832b6d599549ull, 0x6cdb0d06be037545ull};
 constexpr u64 dx2[] = {0xca65051fa6e050ffull, 0xdfa90a9f302318d6ull,
 				0xc9cbff54adc5ef1bull, 0x6a63d715c7faa226ull};
 constexpr u64 dy2[] = {0x158ea8d9c0a5601cull, 0x706e149f68929555ull,
 				0xc595111bdd1514dull, 0x52ca2e119967eeefull};
+constexpr u64 dy2y2[] = {0x30a133b2ede39f7bull, 0x873fe03ca576154aull,
+				0x52c9db0726ac15c7ull, 0x34364b435883a91cull};
+constexpr u64 dy2Quad[] = {0x1daaf4d98bac2dc6ull, 0x6e4fb0ea6083f589ull,
+				0xd135ca5e400b665aull, 0x17eb3d7e38428e71ull};
 constexpr u64 dx3[] = {0xd7731e82c7bad690ull, 0x02df40e54cf5b276ull,
 				0x5ff5c92c30e3444cull, 0xf201d844ba3e9888ull};
 constexpr u64 dy3[] = {0x8599d7a8a10da37bull, 0x785a72ba5b4dd000ull,
@@ -41,6 +49,9 @@ constexpr u64 d2Gx[] = {0xca9ad478f1770dadull, 0x6c0a05bb2f2c9125ull,
 				0x8baaa8adfa83e460ull, 0x684446fbee5167efull};
 constexpr u64 d2Gy[] = {0xf28e513642bf309ull, 0x4f8d6bfa6a6846cull,
 				0xf9965b00c6d87affull, 0xc7337843bdb886bfull};
+constexpr u64 sm2_quadP[] = {0x3fffffffffffffffull, 0xffffffffc0000000ull,
+				0xffffffffffffffffull, 0x3fffffffbfffffffull};
 bignum<4>	prime(sm2_p);
 bignum<4>	rr(sm2_p_rr);
 bignum<4>	bigOne(1);
+bignum<4>	quadPrime(sm2_quadP);

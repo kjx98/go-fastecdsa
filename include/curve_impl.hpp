@@ -218,14 +218,13 @@ public:
 	void mont_mod_exp(felem_t& res, const felem_t& xp, const felem_t& y)
 	const noexcept
 	{
-		felem_t	t1(0l);
-		t1.sub_from(this->p);
-		for (int i = y.num_bits()-1; i >= 0; --i) {
-			mont_msqr(t1, t1);
-			if (y.test_bit(i)) mont_mmult(t1, t1, xp);
+		res = xp;
+		for (int i = y.num_bits()-2; i >= 0; --i) {
+			mont_msqr(res, res);
+			if (y.test_bit(i)) mont_mmult(res, res, xp);
 		}
 	}
-	bool mont_mod_sqrt(felem_t& res, const felem_t& x) const noexcept
+	bool mod_sqrt(felem_t& res, const felem_t& x) const noexcept
 	{
 		felem_t	xp;
 		to_montgomery(xp, x);

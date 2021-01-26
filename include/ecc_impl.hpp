@@ -666,12 +666,17 @@ bool point_recovery (const curveT& curve, const bnT& x1, bnT& y1) noexcept
 {
 	bnT		t1, t2;
 	curve.to_montgomery(t1, x1);
+	// t2 = x^2 + a
 	curve.mont_msqr(t2, x1);
 	curve.mod_add_to(t2, curve.montParamA());
+	// t2 = x^3 + ax
 	curve.mont_mmult(t2, t2, t1);
 	curve.from_montgomery(t1, t2);
+	// t1 = t2 + b = x^3 + ax +b
 	curve.mod_add_to(t1, curve.getB());
 	// need mod_sqrt
+	// y^2 = x^3 + ax + b
+	return curve.mod_sqrt(y1, t1);
 }
 
 }	// namespace ecc

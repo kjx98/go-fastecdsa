@@ -109,6 +109,15 @@ static void test_div2(benchmark::State &state)
 }
 BENCHMARK(test_div2);
 
+static void test_sqrt(benchmark::State &state)
+{
+	bignum<4>	yy1(dy1y1), res;
+	for (auto _ : state) {
+		sm2_p256.mod_sqrt(res, yy1);
+	}
+}
+BENCHMARK(test_sqrt);
+
 static void test_ECADDJac(benchmark::State &state)
 {
 	u64		xx3[4], yy3[4], zz3[4];

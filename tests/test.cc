@@ -176,6 +176,50 @@ TEST(testVli, TestInverseNew)
 	EXPECT_EQ(vli_cmp<4>(res, x2_inv), 0);
 }
 
+
+template<typename bnT, typename curveT>
+forceinline static
+void mont_sqr(const curveT& curve, bnT& res, const bnT &x1) noexcept
+{
+	bnT		tmp;
+	curve.to_montgomery(tmp, x1);
+	curve.mont_msqr(res, tmp);
+	curve.from_montgomery(res, res);
+}
+
+template<typename bnT, typename curveT>
+forceinline static
+void mont_exp(const curveT& curve, bnT& res, const bnT &x1, const bnT& y1)
+	noexcept
+{
+	bnT		tmp;
+	curve.to_montgomery(tmp, x1);
+	curve.mont_mod_exp(res, tmp, y1);
+	curve.from_montgomery(res, res);
+}
+
+
+TEST(testEcc, TestModSqrt)
+{
+	bignum<4>	res, sqrT;
+	bignum<4>	tt;
+	bignum<4>	by1(dy1), by2(dy2);
+	ASSERT_EQ(sm2_p256.quadP(), quadPrime);
+	mont_sqr(sm2_p256, res, by1);
+	ASSERT_EQ(res.cmp(dy1y1), 0);
+	mont_exp(sm2_p256, tt, res, quadPrime);
+	ASSERT_EQ(tt.cmp(dy1Quad), 0);
+	EXPECT_TRUE(sm2_p256.mod_sqrt(sqrT, res));
+	EXPECT_TRUE(sqrT.cmp(by1) == 0);
+	mont_sqr(sm2_p256, res, by2);
+	mont_exp(sm2_p256, tt, res, quadPrime);
+	ASSERT_EQ(tt.cmp(dy2Quad), 0);
+	ASSERT_EQ(res.cmp(dy2y2), 0);
+	EXPECT_TRUE(sm2_p256.mod_sqrt(sqrT, res));
+	if (by2.is_even()) sqrT.sub(prime, sqrT);
+	EXPECT_TRUE(sqrT.cmp(by2) == 0);
+}
+
 TEST(testEcc, TestMult248)
 {
 	bignum<4>	x3(dx3), y3(dy3), res1, res2, hh;

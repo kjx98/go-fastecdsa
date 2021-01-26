@@ -188,6 +188,9 @@ func TestSqrtMod(t *testing.T) {
 	if ySqrt == nil {
 		t.Log("can't find sqrt of yy")
 		t.Fail()
+	} else {
+		ww := yy.Bits()
+		t.Logf("sqr y1: %x %x %x %x", ww[0], ww[1], ww[2], ww[3])
 	}
 	t0 := new(big.Int).Rsh(p, 2)
 	a1 := new(big.Int).Exp(yy, t0, p)
@@ -199,9 +202,45 @@ func TestSqrtMod(t *testing.T) {
 	if tt.Cmp(bOne) != 0 {
 		t.Log("no sqrt for yy via yy^(p/4)")
 		t.Fail()
+	} else {
+		ww := t0.Bits()
+		t.Logf("quadP : %x %x %x %x", ww[0], ww[1], ww[2], ww[3])
 	}
 	if a0.Cmp(y1) == 0 {
 		t.Log("sqrt = a * a ^ (p/4) ")
+		ww := a1.Bits()
+		t.Logf("y1 ^ quadP: %x %x %x %x", ww[0], ww[1], ww[2], ww[3])
+	}
+	yy = yy.Exp(y2, big.NewInt(2), p)
+	ySqrt = ySqrt.ModSqrt(yy, p)
+	if ySqrt == nil {
+		t.Log("can't find sqrt of yy")
+		t.Fail()
+	} else {
+		ww := yy.Bits()
+		t.Logf("sqr y2: %x %x %x %x", ww[0], ww[1], ww[2], ww[3])
+	}
+	a1 = a1.Exp(yy, t0, p)
+	a0 = a0.Mul(a1, yy)
+	a0.Mod(a0, p)
+	tt = tt.Mul(a0, a1)
+	tt.Mod(tt, p)
+	if tt.Cmp(bOne) != 0 {
+		t.Log("no sqrt for yy via yy^(p/4)")
+		t.Fail()
+	}
+	if a0.Cmp(y2) != 0 {
+		// y2 should be even
+		if y2.Bit(0) != 0 {
+			t.Log("error, y2 not even")
+			t.Fail()
+		}
+		a0.Sub(p, a0)
+	}
+	if a0.Cmp(y2) == 0 {
+		t.Log("sqrt = a * a ^ (p/4) ")
+		ww := a1.Bits()
+		t.Logf("y2 ^ quadP: %x %x %x %x", ww[0], ww[1], ww[2], ww[3])
 	}
 }
 
