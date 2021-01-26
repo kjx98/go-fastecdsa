@@ -119,12 +119,14 @@ public:
 	void getGy(u64 *v) const noexcept { gy.set(v); }
 	const felem_t& getGx() const noexcept { return gx; }
 	const felem_t& getGy() const noexcept { return gy; }
-	const felem_t& paramB() const noexcept { return b; }
 	const felem_t& montParamA() const noexcept { return _mont_a; }
 	const felem_t& paramP() const noexcept { return p; }
+	const felem_t& paramA() const noexcept { return a; }
+	const felem_t& paramB() const noexcept { return b; }
 	const bool a_is_pminus3() const noexcept { return _a_is_neg3; }
 	const bool a_is_zero() const noexcept { return _a_is_zero; }
 	const felem_t& mont_one() const noexcept { return _mont_one; }
+	const felem_t& mont_three() const noexcept { return _mont_three; }
 	const felem_t& quadP() const noexcept { return _quadP; }
 	void to_montgomery(felem_t& res, const u64 *x) const noexcept
 	{
@@ -236,19 +238,32 @@ public:
 	}
 	bool point_on_curve(const felem_t& x1, const felem_t& y1) const noexcept
 	{
-		felem_t	xp, yp, tt;
+		felem_t	xp, yp, tt, yy;
 		to_montgomery(xp, x1);
 		to_montgomery(yp, y1);
 		mont_msqr(tt, xp);
-		tt.add_to(this->montParamA());
+		// mont_a also works
+#if	__cplusplus >= 201703L
+		if constexpr(A_is_n3)
+#else
+		if (this->_a_is_neg3)
+#endif
+		{
+			tt.sub_from(this->_mont_three);
+			//if (tt.add_to(this->_mont_a)) tt.sub_from(this->p);
+		} else {
+			if (! this->_a_is_zero) return false;
+		}
+		mont_mmult(tt, tt, xp);
+		// tt = x^3 + ax, normal bignum
 		from_montgomery(tt, tt);
 		if (tt.add_to(this->b) || tt.cmp(this->p) >= 0) {
 			tt.sub_from(this->p);
 		}
-		mont_msqr(yp, yp);
-		from_montgomery(yp, yp);
-		//if (yp.cmp(this->p) >= 0) yp.sub_from(this->p);
-		return yp.cmp(tt) == 0;
+		mont_msqr(yy, yp);
+		from_montgomery(yy, yy);
+		if (yy.cmp(this->p) >= 0) yy.sub_from(this->p);
+		return yy == tt;
 		//if (!mod_sqrt(tt, tt)) return false;
 	}
 	void point_double_jacobian(u64 *x3, u64 *y3, u64 *z3, const u64 *x1,
@@ -733,6 +748,8 @@ protected:
 		felem_t	t1;
 		t1.clear();
 		_mont_one.sub(t1, p);
+		mont_mult2(_mont_three, _mont_one);
+		mod_add_to(_mont_three, _mont_one);
 		_quadP = p;
 		_quadP.rshift1();
 		_quadP.rshift1();
@@ -766,6 +783,7 @@ protected:
 	const felem_t rr_n = {};
 	gwNAF_t	g_precomps[maxBaseNAF];
 	felem_t _mont_one;
+	felem_t _mont_three;
 	felem_t _mont_a;
 	felem_t	_quadP;
 	const u64	k0_p = 0;

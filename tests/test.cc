@@ -238,17 +238,36 @@ TEST(testEcc, TestMult248)
 	EXPECT_EQ(res1.cmp(res2), 0);
 }
 
+TEST(testEcc, TestOnCurve)
+{
+	bignum<4>	x1(d1Gx), x2(d2Gx);
+	bignum<4>	y1(d1Gy), y2(d2Gy);
+	bignum<4>	res;
+	res.sub(sm2_p256.paramP(), sm2_p256.paramA());
+	ASSERT_TRUE(res.is_u64());
+	EXPECT_EQ(res.data()[0], 3);
+	sm2_p256.mont_mult2(res, sm2_p256.mont_one());
+	sm2_p256.mod_add_to(res, sm2_p256.mont_one());
+	ASSERT_EQ(res, sm2_p256.mont_three());
+	std::cerr << "mont_one: " << sm2_p256.mont_one() << std::endl;
+	std::cerr << "mont_three: " << sm2_p256.mont_three() << std::endl;
+	// res is 3 in montgomery form
+	sm2_p256.mod_add_to(res, sm2_p256.montParamA());
+	if (res.cmp(sm2_p256.paramP()) >= 0) res.sub_from(sm2_p256.paramP());
+	EXPECT_TRUE(res.is_zero());
+	std::cerr << "mont_A mont(-3): " << sm2_p256.montParamA() << std::endl;
+	ASSERT_TRUE(sm2_p256.point_on_curve(x1, y1));
+	ASSERT_TRUE(sm2_p256.point_on_curve(x2, y2));
+}
+
 TEST(testEcc, TestPointRecovery)
 {
 	bignum<4>	x1(d1Gx), x2(d2Gx);
 	bignum<4>	y1(d1Gy), y2(d2Gy);
 	bignum<4>	res;
-	std::cerr << "mont_A mont(-3): " << sm2_p256.montParamA() << std::endl;
-	ASSERT_TRUE(sm2_p256.point_on_curve(x1, y1));
-	ASSERT_TRUE(sm2_p256.point_on_curve(x2, y2));
 	EXPECT_TRUE(point_recovery(sm2_p256, res, x1, vli_is_even(d1Gy)));
-	EXPECT_EQ(res.cmp(d1Gy), 0);
-	EXPECT_TRUE(point_recovery(sm2_p256, res, x2, vli_is_even(d2Gy)));
+	EXPECT_EQ(res, y1);
+	EXPECT_TRUE(point_recovery(sm2_p256, res, x2, y2.is_even()));
 	EXPECT_EQ(res.cmp(d2Gy), 0);
 }
 

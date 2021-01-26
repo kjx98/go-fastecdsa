@@ -24,6 +24,8 @@ func TestEccCurveParam(t *testing.T) {
 	t.Logf("ECC Curve Params: %s\nP: %s\nN: %s\nB: %s\nGx: %s\nGy: %s\n",
 		c.Name, c.P.Text(16), c.N.Text(16), c.B.Text(16),
 		c.Gx.Text(16), c.Gy.Text(16))
+	ww := c.B.Bits()
+	t.Logf("Ecc B: %x %x %x %x", ww[0], ww[1], ww[2], ww[3])
 }
 
 func TestMontMultModP(t *testing.T) {

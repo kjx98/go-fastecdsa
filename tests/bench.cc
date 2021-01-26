@@ -118,6 +118,16 @@ static void test_sqrt(benchmark::State &state)
 }
 BENCHMARK(test_sqrt);
 
+static void test_ptRecovery(benchmark::State &state)
+{
+	bignum<4>	x1(d1Gx);
+	bignum<4>	y1(d1Gy), res;
+	for (auto _ : state) {
+		point_recovery(sm2_p256, res, x1, y1.is_even());
+	}
+}
+BENCHMARK(test_ptRecovery);
+
 static void test_ECADDJac(benchmark::State &state)
 {
 	u64		xx3[4], yy3[4], zz3[4];
