@@ -279,9 +279,9 @@ TEST(testEcc, TestPointRecovery)
 	bignum<4>	x1(d1Gx), x2(d2Gx);
 	bignum<4>	y1(d1Gy), y2(d2Gy);
 	bignum<4>	res;
-	EXPECT_TRUE(point_recovery(sm2_p256, res, x1, vli_is_even(d1Gy)));
+	EXPECT_TRUE(pointY_recovery(sm2_p256, res, x1, !vli_is_even(d1Gy)));
 	EXPECT_EQ(res, y1);
-	EXPECT_TRUE(point_recovery(sm2_p256, res, x2, y2.is_even()));
+	EXPECT_TRUE(pointY_recovery(sm2_p256, res, x2, y2.is_odd()));
 	EXPECT_EQ(res.cmp(d2Gy), 0);
 }
 

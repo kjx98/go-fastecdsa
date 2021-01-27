@@ -132,7 +132,7 @@ static void test_ptRecovery(benchmark::State &state)
 	bignum<4>	x1(d1Gx);
 	bignum<4>	y1(d1Gy), res;
 	for (auto _ : state) {
-		point_recovery(sm2_p256, res, x1, y1.is_even());
+		pointY_recovery(sm2_p256, res, x1, y1.is_odd());
 	}
 }
 BENCHMARK(test_ptRecovery);
@@ -142,7 +142,7 @@ static void test_ptRecoveryK(benchmark::State &state)
 	bignum<4>	x1(d1Gx);
 	bignum<4>	y1(d1Gy), res;
 	for (auto _ : state) {
-		point_recovery(sm2_k256, res, x1, y1.is_even());
+		pointY_recovery(sm2_k256, res, x1, y1.is_odd());
 	}
 }
 BENCHMARK(test_ptRecoveryK);

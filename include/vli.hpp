@@ -416,7 +416,11 @@ static bool vli_is_negative(const u64 *vli)  noexcept
 }
 
 forceinline static bool vli_is_even(const u64 *vli) noexcept {
-	return (vli[0] & 1) == 0;
+	return (vli[0] & 1) ^ 1;
+}
+
+forceinline static bool vli_is_odd(const u64 *vli) noexcept {
+	return (vli[0] & 1);
 }
 
 /* Counts the number of 64-bit "digits" in vli. */

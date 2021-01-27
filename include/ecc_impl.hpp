@@ -39,6 +39,7 @@ namespace ecc {
 
 using namespace vli;
 
+// PublicKey struct also spoint_t
 template<const uint N>
 struct spoint_t {
 	bignum<N>	x;
@@ -81,6 +82,15 @@ struct point_t {
 		return z.is_zero(); // | y.is_zero();
 	}
 };
+
+
+// definitions for Private/Public key
+using public_key_t = spoint_t<4>;
+struct	private_key_t {
+	bignum<4>	d;	// secret
+	bignum<4>	dInv;	// (1+d)^-1  for SM2 sign
+};
+
 
 template<const uint N=4> forceinline static
 bool operator==(const spoint_t<N>& p, const point_t<N>& q) noexcept {
@@ -662,7 +672,7 @@ void point_addz_jacob(const curveT& curve, bnT& x3, bnT& y3, bnT& z3,
 
 template<typename bnT, typename curveT>
 forceinline static bool
-point_recovery (const curveT& curve, bnT& y1, const bnT& x1, const bool bEven)
+pointY_recovery (const curveT& curve, bnT& y1, const bnT& x1, const bool bOdd)
 	noexcept
 {
 	bnT		t1, t2;
@@ -682,7 +692,8 @@ point_recovery (const curveT& curve, bnT& y1, const bnT& x1, const bool bEven)
 	// y^2 = x^3 + ax + b
 	auto ret = curve.mod_sqrt(y1, t1);
 	if ( likely(ret) ) {
-		if (!bEven) y1.sub(curve.paramP(), y1);
+		// odd for negative bignum
+		if (bOdd) y1.sub(curve.paramP(), y1);
 	}
 	return ret;
 }
