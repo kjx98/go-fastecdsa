@@ -84,14 +84,6 @@ struct point_t {
 };
 
 
-// definitions for Private/Public key
-using public_key_t = spoint_t<4>;
-struct	private_key_t {
-	bignum<4>	d;	// secret
-	bignum<4>	dInv;	// (1+d)^-1  for SM2 sign
-};
-
-
 template<const uint N=4> forceinline static
 bool operator==(const spoint_t<N>& p, const point_t<N>& q) noexcept {
 	if (p.x ==  q.x && p.y == q.y) return true;

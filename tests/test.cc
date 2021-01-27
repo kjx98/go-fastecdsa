@@ -5,6 +5,7 @@
 #include "vli_bn.hpp"
 #include "curve_const.hpp"
 #include "curve_defs.hpp"
+#include "ecc_key.hpp"
 #include "mont.hpp"
 
 
