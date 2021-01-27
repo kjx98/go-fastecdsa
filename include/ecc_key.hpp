@@ -38,10 +38,11 @@ using namespace vli;
 
 
 // definitions for Private/Public key
-using public_key = spoint_t<4>;
+template<const uint N=4>
 class	private_key {
 public:
-	typedef bignum<4> felem_t;
+	using felem_t = bignum<N>;
+	using public_key = spoint_t<N>;
 	private_key() = default;
 	template<typename curveT>
 	private_key(const curveT& curve, const felem_t& secret,
@@ -58,20 +59,20 @@ public:
 		curve.modN(_dInv, _dInv);
 		if (_dInv.is_zero()) return false;
 		// _dInv = (1 + d)^-1
-		mod_inv<4>(_dInv, _dInv, curve.paramN());
+		mod_inv<N>(_dInv, _dInv, curve.paramN());
 		_inited = true;
 		return true;
 	}
 	template<typename curveT>
 	void calc_pa(const curveT& curve) noexcept {
 		if ( unlikely(!_inited) ) return;
-		point_t<4>	pt;
+		point_t<N>	pt;
 		curve.scalar_mult_base(pt, _d);
 		_pa.x= pt.x;
 		_pa.y = pt.y;
 	}
-	const bignum<4>&	D() const noexcept { return *(&_d); }
-	const bignum<4>&	Di() const noexcept { return *(&_dInv); }
+	const felem_t&		D() const noexcept { return *(&_d); }
+	const felem_t&		Di() const noexcept { return *(&_dInv); }
 	const public_key&	PA() const noexcept { return *(&_pa); }
 protected:
 	bool		_inited = false;

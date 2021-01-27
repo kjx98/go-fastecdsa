@@ -121,6 +121,7 @@ public:
 	const felem_t& getGy() const noexcept { return gy; }
 	const felem_t& montParamA() const noexcept { return _mont_a; }
 	const felem_t& paramP() const noexcept { return p; }
+	const felem_t& paramN() const noexcept { return n; }
 	const felem_t& paramA() const noexcept { return a; }
 	const felem_t& paramB() const noexcept { return b; }
 	const bool a_is_pminus3() const noexcept { return _a_is_neg3; }
@@ -508,7 +509,11 @@ public:
 		spoint_t<N>	pp(p.x, p.y);
 		scalar_mult(q, pp, scalar);
 		// montgomery reduction
-		if ( unlikely(q.z.is_zero()) ) return;
+		if ( unlikely(q.z.is_zero()) ) {
+			q.x.clear();
+			q.y.clear();
+			return;
+		}
 		this->apply_z_mont(q);
 		this->from_montgomery(q.x, q.x);
 		this->from_montgomery(q.y, q.y);
@@ -547,7 +552,11 @@ public:
 			}
 		}
 		// montgomery reduction
-		if ( unlikely(q.z.is_zero()) ) return;
+		if ( unlikely(q.z.is_zero()) ) {
+			q.x.clear();
+			q.y.clear();
+			return;
+		}
 		this->apply_z_mont(q);
 		this->from_montgomery(q.x, q.x);
 		this->from_montgomery(q.y, q.y);
@@ -602,7 +611,11 @@ public:
 		if ( unlikely(scalar.is_zero()) ) return;
 		scalar_mult_base_internal(q, scalar);
 		// montgomery reduction
-		if ( unlikely(q.z.is_zero()) ) return;
+		if ( unlikely(q.z.is_zero()) ) {
+			q.x.clear();
+			q.y.clear();
+			return;
+		}
 		this->apply_z_mont(q);
 		this->from_montgomery(q.x, q.x);
 		this->from_montgomery(q.y, q.y);
@@ -622,7 +635,11 @@ public:
 			point_add(q, q, tmp);
 		}
 		// montgomery reduction
-		if ( unlikely(q.z.is_zero()) ) return;
+		if ( unlikely(q.z.is_zero()) ) {
+			q.x.clear();
+			q.y.clear();
+			return;
+		}
 		this->apply_z_mont(q);
 		this->from_montgomery(q.x, q.x);
 		this->from_montgomery(q.y, q.y);

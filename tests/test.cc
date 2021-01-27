@@ -402,6 +402,8 @@ TEST(testEcc, TestScalarMult)
 	std::cout << "res x2: " << res.x << std::endl;
 	std::cout << "res y2: " << res.y << std::endl;
 #endif
+	sm2_p256.scalar_mult(res, gg, sm2_p256.paramN());
+	EXPECT_TRUE(res.is_zero());
 }
 
 TEST(testEcc, TestBaseNAF)
@@ -529,6 +531,8 @@ TEST(testEcc, TestScalar256Mult)
 	std::cout << "res x2: " << res.x << std::endl;
 	std::cout << "res y2: " << res.y << std::endl;
 #endif
+	sm2_k256.combined_mult(res, gg, bn_zero, sm2_p256.paramN());
+	EXPECT_TRUE(res.is_zero());
 }
 
 TEST(testEcc, TestScalarMultNAF2)
@@ -606,6 +610,8 @@ TEST(testEcc, TestScalarMultBase)
 	std::cout << "res x1: " << res.x << std::endl;
 	std::cout << "res y1: " << res.y << std::endl;
 #endif
+	sm2_k256.scalar_mult_base(res, sm2_p256.paramN());
+	EXPECT_TRUE(res.is_zero());
 }
 
 TEST(testEcc, TestScalarCombinedMult)
