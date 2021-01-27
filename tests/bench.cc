@@ -5,6 +5,7 @@
 #include "vli_bn.hpp"
 #include "curve_const.hpp"
 #include "curve_defs.hpp"
+#include "ecc_key.hpp"
 #include "mont.hpp"
 
 using namespace vli;
@@ -264,6 +265,14 @@ static void test_ECScalarCMultNAF(benchmark::State &state)
 	}
 }
 BENCHMARK(test_ECScalarCMultNAF);
+
+static void test_ECGenKey(benchmark::State &state)
+{
+	for (auto _ : state) {
+		private_key<4>	priv(sm2_k256);
+	}
+}
+BENCHMARK(test_ECGenKey);
 
 int main(int argc, char ** argv) {
 	//sm2_p256.init();
