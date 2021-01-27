@@ -29,6 +29,8 @@
 #define __ECC_KEY_H__
 
 #include "cdefs.h"
+#include <time.h>
+#include <random>
 #include "ecc_impl.hpp"
 
 
@@ -36,6 +38,25 @@ namespace ecc {
 
 using namespace vli;
 
+
+template<const uint N=4>
+class	bn_random {
+public:
+	bn_random(const bn_random&) = delete;
+	static bn_random&	Instance() noexcept {
+		static	bn_random	bn_random_(clock());
+		return bn_random_;
+	}
+	bignum<N> get_random() noexcept {
+		u64		dd[N];
+		for (int i=0;i<N;++i) dd[i] = _rd();
+		return bignum<N>(dd);
+	}
+private:
+	bn_random(u64 _seed) : _rd(_seed) {
+	}
+	std::mt19937_64	_rd;
+};
 
 // definitions for Private/Public key
 template<const uint N=4>
@@ -45,6 +66,14 @@ public:
 	using public_key = spoint_t<N>;
 	private_key() = default;
 	template<typename curveT>
+	private_key(const curveT& curve)
+	{
+		auto&	rd = bn_random<N>::Instance();
+		felem_t secret = rd.get_random();
+		while ( !init(curve, secret) ) secret = rd.get_random();
+		calc_pa(curve);
+	}
+	template<typename curveT>
 	private_key(const curveT& curve, const felem_t& secret,
 				const public_key& pk) : _pa(pk)
 	{
@@ -52,6 +81,7 @@ public:
 	}
 	template<typename curveT>
 	bool init(const curveT& curve, const felem_t& secret) noexcept {
+		_inited = false;
 		curve.modN(_d, secret);
 		if (_d.is_zero()) return false;
 		_dInv = _d;
@@ -63,6 +93,11 @@ public:
 		_inited = true;
 		return true;
 	}
+	explicit operator bool() const noexcept { return _inited; }
+	const felem_t&		D() const noexcept { return *(&_d); }
+	const felem_t&		Di() const noexcept { return *(&_dInv); }
+	const public_key&	PubKey() const noexcept { return *(&_pa); }
+protected:
 	template<typename curveT>
 	void calc_pa(const curveT& curve) noexcept {
 		if ( unlikely(!_inited) ) return;
@@ -71,10 +106,6 @@ public:
 		_pa.x= pt.x;
 		_pa.y = pt.y;
 	}
-	const felem_t&		D() const noexcept { return *(&_d); }
-	const felem_t&		Di() const noexcept { return *(&_dInv); }
-	const public_key&	PA() const noexcept { return *(&_pa); }
-protected:
 	bool		_inited = false;
 	felem_t		_d;	// secret
 	felem_t		_dInv;	// (1+d)^-1  for SM2 sign

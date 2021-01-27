@@ -177,6 +177,14 @@ TEST(testVli, TestInverseNew)
 	EXPECT_EQ(vli_cmp<4>(res, x2_inv), 0);
 }
 
+TEST(testEcc, TestBigNumRandom)
+{
+	auto&  rd = bn_random<4>::Instance();
+	bignum<4>	tmp = rd.get_random();
+	EXPECT_FALSE(tmp.is_zero());
+	std::cerr << "bn_random: " << tmp << std::endl;
+}
+
 
 template<typename bnT, typename curveT>
 forceinline static
@@ -665,6 +673,18 @@ TEST(testEcc, TestScalarCombinedMultN)
 	std::cout << "res xx3: " << xx3 << std::endl;
 	std::cout << "res yy3: " << yy3 << std::endl;
 }
+
+TEST(TestECDSA, TestPrivateKey)
+{
+	private_key<4>	priv(sm2_p256);
+	EXPECT_TRUE(priv);
+	auto&	pk = priv.PubKey();
+	ASSERT_TRUE(sm2_p256.is_on_curve(pk.x, pk.y));
+	std::cerr << "PrivateKey: " << priv.D() << std::endl;
+	std::cerr << "PubX: " << pk.x << std::endl;
+	std::cerr << "PubY: " << pk.y << std::endl;
+}
+
 
 int main(int argc, char *argv[])
 {
