@@ -683,8 +683,50 @@ TEST(TestECDSA, TestPrivateKey)
 	std::cerr << "PrivateKey: " << priv.D() << std::endl;
 	std::cerr << "PubX: " << pk.x << std::endl;
 	std::cerr << "PubY: " << pk.y << std::endl;
+	bignum<4>	px, py, dd;
+	gen_keypair(sm2_k256, dd, px, py);
+	ASSERT_TRUE(sm2_k256.is_on_curve(px, py));
 }
 
+TEST(TestECDSA, TestSign)
+{
+	private_key<4>	priv(sm2_p256);
+	bignum<4>	msg = bn_random<4>::Instance().get_random();
+	bignum<4>	r, s;
+	int		ecInd;
+	ecInd = ec_sign(sm2_p256, r, s, priv, msg);
+	ASSERT_FALSE(r.is_zero());
+	ASSERT_FALSE(s.is_zero());
+	std::cerr << "signed ret: " << ecInd << std::endl;
+	bignum<4>	t;
+	if (t.add(r, s)) t.sub_from(sm2_p256.paramN());
+	sm2_p256.modN(t, t);
+	ASSERT_FALSE(t.is_zero());
+	point_t<4>	q, p(priv.PubKey().x, priv.PubKey().y);
+	sm2_p256.combined_mult(q, p, t, s);
+	bignum<4>	tmp;
+	if (tmp.add(q.x, msg)) tmp.sub_from(sm2_p256.paramN());
+	sm2_p256.modN(tmp, tmp);
+	ASSERT_EQ(tmp, r);
+	//ASSERT_TRUE(ec_verify(sm2_p256, r, s, priv.PubKey(), msg));
+}
+
+TEST(TestECDSA, TestVerify)
+{
+	private_key<4>	priv(sm2_p256);
+	bignum<4>	msg = bn_random<4>::Instance().get_random();
+	bignum<4>	r, s;
+	int		ecInd;
+	ecInd = ec_sign(sm2_p256, r, s, priv, msg);
+	ASSERT_FALSE(r.is_zero());
+	ASSERT_FALSE(s.is_zero());
+	std::cerr << "signed ret: " << ecInd << std::endl;
+	bignum<4>	t;
+	if (t.add(r, s)) t.sub_from(sm2_p256.paramN());
+	sm2_p256.modN(t, t);
+	ASSERT_FALSE(t.is_zero());
+	ASSERT_TRUE(ec_verify(sm2_p256, r, s, priv.PubKey(), msg));
+}
 
 int main(int argc, char *argv[])
 {

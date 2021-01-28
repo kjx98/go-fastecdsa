@@ -138,14 +138,27 @@ public:
 	{
 		res.mont_mult(x, rr_p, p, k0_p);
 	}
+	void to_montgomeryN(felem_t& res, const felem_t& x) const noexcept
+	{
+		res.mont_mult(x, rr_n, n, k0_n);
+	}
 	void from_montgomery(felem_t& res, const felem_t& y) const noexcept
 	{
 		res.mont_reduction(y, p, k0_p);
+	}
+	void from_montgomeryN(felem_t& res, const felem_t& y) const noexcept
+	{
+		res.mont_reduction(y, n, k0_n);
 	}
 	void from_montgomery(u64* result, const felem_t& y) const noexcept
 	{
 		felem_t   *res = reinterpret_cast<felem_t *>(result);
 		res->mont_reduction(y, p, k0_p);
+	}
+	void mont_nmult(felem_t& res, const felem_t& left, const felem_t& right)
+	const noexcept
+	{
+		res.mont_mult(left, right, n, k0_n);
 	}
 	void mont_mmult(felem_t& res, const felem_t& left, const felem_t& right)
 	const noexcept
@@ -315,11 +328,15 @@ public:
 		felem_t	t1;
 
 		if ( unlikely(z.is_one()) ) return;
+#ifdef	ommit
 		if ( unlikely(z.is_zero()) ) {
 			x1.clear();
 			y1.clear();
 			return;
 		}
+#else
+		if ( unlikely(z.is_zero()) ) return;
+#endif
 		mod_inv<N>(z, z, this->p);
 		to_montgomery(z, z);
 		this->mont_msqr(t1, z);	// t1 = z^2
@@ -509,11 +526,15 @@ public:
 		spoint_t<N>	pp(p.x, p.y);
 		scalar_mult(q, pp, scalar);
 		// montgomery reduction
+#ifdef	ommit
 		if ( unlikely(q.z.is_zero()) ) {
 			q.x.clear();
 			q.y.clear();
 			return;
 		}
+#else
+		if ( unlikely(q.z.is_zero()) ) return;
+#endif
 		this->apply_z_mont(q);
 		this->from_montgomery(q.x, q.x);
 		this->from_montgomery(q.y, q.y);
@@ -552,11 +573,15 @@ public:
 			}
 		}
 		// montgomery reduction
+#ifdef	ommit
 		if ( unlikely(q.z.is_zero()) ) {
 			q.x.clear();
 			q.y.clear();
 			return;
 		}
+#else
+		if ( unlikely(q.z.is_zero()) ) return;
+#endif
 		this->apply_z_mont(q);
 		this->from_montgomery(q.x, q.x);
 		this->from_montgomery(q.y, q.y);
@@ -611,11 +636,15 @@ public:
 		if ( unlikely(scalar.is_zero()) ) return;
 		scalar_mult_base_internal(q, scalar);
 		// montgomery reduction
+#ifdef	ommit
 		if ( unlikely(q.z.is_zero()) ) {
 			q.x.clear();
 			q.y.clear();
 			return;
 		}
+#else
+		if ( unlikely(q.z.is_zero()) ) return;
+#endif
 		this->apply_z_mont(q);
 		this->from_montgomery(q.x, q.x);
 		this->from_montgomery(q.y, q.y);
@@ -635,11 +664,15 @@ public:
 			point_add(q, q, tmp);
 		}
 		// montgomery reduction
+#ifdef	ommit
 		if ( unlikely(q.z.is_zero()) ) {
 			q.x.clear();
 			q.y.clear();
 			return;
 		}
+#else
+		if ( unlikely(q.z.is_zero()) ) return;
+#endif
 		this->apply_z_mont(q);
 		this->from_montgomery(q.x, q.x);
 		this->from_montgomery(q.y, q.y);

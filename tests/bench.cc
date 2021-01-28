@@ -274,6 +274,40 @@ static void test_ECGenKey(benchmark::State &state)
 }
 BENCHMARK(test_ECGenKey);
 
+static void test_ECGenKeyK(benchmark::State &state)
+{
+	bignum<4>	px, py, dd;
+	for (auto _ : state) {
+		gen_keypair(sm2_k256, dd, px, py);
+	}
+}
+BENCHMARK(test_ECGenKeyK);
+
+static void test_ECSign(benchmark::State &state)
+{
+	private_key<4>	priv(sm2_k256);
+	bignum<4>	msg = bn_random<4>::Instance().get_random();
+	bignum<4>	r, s;
+	int		ecInd __attribute__ ((unused));
+	for (auto _ : state) {
+		ecInd = ec_sign(sm2_k256, r, s, priv, msg);
+	}
+}
+BENCHMARK(test_ECSign);
+
+static void test_ECVerify(benchmark::State &state)
+{
+	private_key<4>	priv(sm2_k256);
+	bignum<4>	msg = bn_random<4>::Instance().get_random();
+	bignum<4>	r, s;
+	int		ecInd __attribute__ ((unused));
+	ecInd = ec_sign(sm2_k256, r, s, priv, msg);
+	for (auto _ : state) {
+		ec_verify(sm2_p256, r, s, priv.PubKey(), msg);
+	}
+}
+BENCHMARK(test_ECVerify);
+
 int main(int argc, char ** argv) {
 	//sm2_p256.init();
 	//sm2_k256.init();

@@ -49,7 +49,7 @@ public:
 	}
 	bignum<N> get_random() noexcept {
 		u64		dd[N];
-		for (int i=0;i<N;++i) dd[i] = _rd();
+		for (uint i=0;i<N;++i) dd[i] = _rd();
 		return bignum<N>(dd);
 	}
 private:
@@ -57,6 +57,7 @@ private:
 	}
 	std::mt19937_64	_rd;
 };
+
 
 // definitions for Private/Public key
 template<const uint N=4>
@@ -69,8 +70,10 @@ public:
 	private_key(const curveT& curve)
 	{
 		auto&	rd = bn_random<N>::Instance();
-		felem_t secret = rd.get_random();
-		while ( !init(curve, secret) ) secret = rd.get_random();
+		felem_t secret;
+		do {
+			secret = rd.get_random();
+		} while ( !init(curve, secret) );
 		calc_pa(curve);
 	}
 	template<typename curveT>
@@ -90,11 +93,15 @@ public:
 		if (_dInv.is_zero()) return false;
 		// _dInv = (1 + d)^-1
 		mod_inv<N>(_dInv, _dInv, curve.paramN());
+		curve.to_montgomeryN(_dInv, _dInv);
+		//curve.to_montgomeryN(mont__d, _d);
 		_inited = true;
 		return true;
 	}
 	explicit operator bool() const noexcept { return _inited; }
 	const felem_t&		D() const noexcept { return *(&_d); }
+	//const felem_t&		mont_d() const noexcept { return *(&_mont_d); }
+	// Di() return (1 + dA)^-1 in montgomery form modN
 	const felem_t&		Di() const noexcept { return *(&_dInv); }
 	const public_key&	PubKey() const noexcept { return *(&_pa); }
 protected:
@@ -107,11 +114,28 @@ protected:
 		_pa.y = pt.y;
 	}
 	bool		_inited = false;
-	felem_t		_d;	// secret
-	felem_t		_dInv;	// (1+d)^-1  for SM2 sign
+	felem_t		_d;			// secret
+	//felem_t		_mont_d;	// secret in montgomery form
+	felem_t		_dInv;		// (1+d)^-1  for SM2 sign
 	public_key	_pa;
 };
 
+
+template<const uint N=4, typename curveT>
+forceinline static
+void gen_keypair(const curveT& curve, bignum<N>& secret, bignum<N>& pubX,
+		bignum<N>& pubY) noexcept
+{
+	auto&	rd = bn_random<N>::Instance();
+	do {
+		secret = rd.get_random();
+		curve.modN(secret, secret);
+	} while (secret.is_zero());
+	point_t<N>	pt;
+	curve.scalar_mult_base(pt, secret);
+	pubX = pt.x;
+	pubY = pt.y;
+}
 
 /*
  * SM2 sign/verify
@@ -143,6 +167,73 @@ protected:
  *			Pa = (r+s)^1 * ( k*G - s*G) = (r+s)^-1 * Ps - s*(r+s)^-1 * G
  *			Pa = u1 * Ps - u2 * G
  */
+
+// sign return ecInd,  0  for Py(of sign) even, 1 odd
+template<const uint N=4, typename curveT>
+forceinline static
+int ec_sign(const curveT& curve, bignum<N>& r, bignum<N>& s,
+		const private_key<N>& priv, const bignum<N>& msg) noexcept
+{
+	bignum<N>	k, x1;	// y1 reuse tmp
+	bignum<N>	tmp;	// r+s
+	int		ret=0;
+	do {
+		do {
+			gen_keypair<N>(curve, k, x1, tmp);
+			if (r.add(msg, x1)) r.sub_from(curve.paramN());
+			curve.modN(r, r);
+		} while (r.is_zero());
+		ret = tmp.is_odd();
+#ifdef	ommit
+		bignum<N>	rp;	// r+s
+		curve.to_montgomeryN(k, k);
+		curve.to_montgomeryN(rp, r);
+		// tmp = r * dA
+		curve.mont_nmult(tmp, rp, priv.mont_d());
+		// k = k - r * dA
+		if (k.sub_from(tmp)) k.add_to(curve.paramN());
+		// tmp = (1 + dA)^-1 * (k - r * dA)
+		curve.mont_nmult(tmp, priv.Di(), k);
+		curve.from_montgomeryN(s, tmp);
+#else
+		if (tmp.add(k, r)) tmp.sub_from(curve.paramN());
+		curve.to_montgomeryN(tmp, tmp);
+		curve.mont_nmult(tmp, tmp, priv.Di());
+		curve.from_montgomeryN(tmp, tmp);
+		if (tmp.sub_from(r)) tmp.add_to(curve.paramN());
+		curve.modN(s, tmp);
+#endif
+		if (s.is_zero()) continue;
+		if (tmp.add(r, s)) tmp.sub_from(curve.paramN());
+		curve.modN(tmp, tmp);
+	} while (tmp.is_zero());
+	return ret;
+}
+
+// verify return bool, true for success(ok)
+template<const uint N=4, typename curveT>
+forceinline static
+bool ec_verify(const curveT& curve, const bignum<N>& r, const bignum<N>& s,
+		const spoint_t<N>&	pub, const bignum<N>& msg) noexcept
+{
+	bignum<N>	t;
+	if ( unlikely(r.is_zero()) ) return false;
+	if ( unlikely(s.is_zero()) ) return false;
+	if (t.add(r, s)) t.sub_from(curve.paramN());
+	curve.modN(t, t);
+	if ( unlikely(t.is_zero()) ) return false;
+	point_t<N>	q, p(pub.x, pub.y);
+	// q = s*G + t * Pub
+	// x2, y2 = s*G + t * Pub
+	curve.combined_mult(q, p, t, s);
+	if ( unlikely(q.x.is_zero()) ) return false;
+	if (t.add(q.x, msg)) t.sub_from(curve.paramN());
+	// t = x2 + msg modN
+	curve.modN(t, t);
+	if ( unlikely(t.is_zero()) ) return false;
+	return r == t;
+}
+
 
 }	// namespace ecc
 
