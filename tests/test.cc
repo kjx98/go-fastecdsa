@@ -685,9 +685,14 @@ TEST(TestECDSA, TestPrivateKey)
 	std::cerr << "PrivateKey: " << priv.D() << std::endl;
 	std::cerr << "PubX: " << pk.x << std::endl;
 	std::cerr << "PubY: " << pk.y << std::endl;
+	bignum<4>	res;
+	EXPECT_TRUE(pointY_recovery(sm2_k256, res, pk.x, pk.y.is_odd()));
+	EXPECT_EQ(res, pk.y);
 	bignum<4>	px, py, dd;
 	gen_keypair(sm2_k256, dd, px, py);
 	ASSERT_TRUE(sm2_k256.is_on_curve(px, py));
+	EXPECT_TRUE(pointY_recovery(sm2_k256, res, px, py.is_odd()));
+	EXPECT_EQ(res, py);
 }
 
 TEST(TestECDSA, TestSign)
@@ -734,5 +739,12 @@ int main(int argc, char *argv[])
 {
 	//sm2_p256.init();
     testing::InitGoogleTest(&argc, argv);//将命令行参数传递给gtest
+#ifdef	__clang__
+	std::cerr << "Built via clang " << __clang_major__ << "."
+			<< __clang_minor__ << std::endl;
+#elif	defined(__GNUC__)
+	std::cerr << "Built via GCC " << __GNUC__ << "."
+			<< __GNUC_MINOR__ << std::endl;
+#endif
     return RUN_ALL_TESTS();   //RUN_ALL_TESTS()运行所有测试案例
 }

@@ -12,6 +12,7 @@ add_definitions( "-Ofast -march=native -pthread -std=c++17 -funroll-loops" )
 add_definitions( "-Wpedantic -Wall -Wuninitialized" )
 #add_definitions( "-DWITH_ADD_2007bl" )
 #add_definitions( "-DWITH_DBL_2004hmv" )
+#add_definitions( "-DWITH_MONT_D" )
 #add_definitions( "-DNO_U64ZERO" )
 
 include(FindPkgConfig)

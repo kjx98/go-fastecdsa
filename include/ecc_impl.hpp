@@ -685,7 +685,7 @@ pointY_recovery (const curveT& curve, bnT& y1, const bnT& x1, const bool bOdd)
 	auto ret = curve.mod_sqrt(y1, t1);
 	if ( likely(ret) ) {
 		// odd for negative bignum
-		if (bOdd) y1.sub(curve.paramP(), y1);
+		if (bOdd ^ y1.is_odd()) y1.sub(curve.paramP(), y1);
 	}
 	return ret;
 }

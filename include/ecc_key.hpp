@@ -94,13 +94,17 @@ public:
 		// _dInv = (1 + d)^-1
 		mod_inv<N>(_dInv, _dInv, curve.paramN());
 		curve.to_montgomeryN(_dInv, _dInv);
-		//curve.to_montgomeryN(mont__d, _d);
+#ifdef	WITH_MONT_D
+		curve.to_montgomeryN(_mont_d, _d);
+#endif
 		_inited = true;
 		return true;
 	}
 	explicit operator bool() const noexcept { return _inited; }
 	const felem_t&		D() const noexcept { return *(&_d); }
-	//const felem_t&		mont_d() const noexcept { return *(&_mont_d); }
+#ifdef	WITH_MONT_D
+	const felem_t&		mont_d() const noexcept { return *(&_mont_d); }
+#endif
 	// Di() return (1 + dA)^-1 in montgomery form modN
 	const felem_t&		Di() const noexcept { return *(&_dInv); }
 	const public_key&	PubKey() const noexcept { return *(&_pa); }
@@ -115,7 +119,9 @@ protected:
 	}
 	bool		_inited = false;
 	felem_t		_d;			// secret
-	//felem_t		_mont_d;	// secret in montgomery form
+#ifdef	WITH_MONT_D
+	felem_t		_mont_d;	// secret in montgomery form
+#endif
 	felem_t		_dInv;		// (1+d)^-1  for SM2 sign
 	public_key	_pa;
 };
@@ -184,7 +190,7 @@ int ec_sign(const curveT& curve, bignum<N>& r, bignum<N>& s,
 			curve.modN(r, r);
 		} while (r.is_zero());
 		ret = tmp.is_odd();
-#ifdef	ommit
+#ifdef	WITH_MONT_D
 		bignum<N>	rp;	// r+s
 		curve.to_montgomeryN(k, k);
 		curve.to_montgomeryN(rp, r);
