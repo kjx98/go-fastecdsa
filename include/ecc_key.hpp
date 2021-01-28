@@ -164,7 +164,7 @@ void gen_keypair(const curveT& curve, bignum<N>& secret, bignum<N>& pubX,
  * 			x2, y2 = s*G + t*Pa
  * 			if x2 + e == r modN success else fail
  *
- *	recovery public key
+ *	recover public key
  *			Psx = r - e
  *			Psy = get_Py ( Psx, Psy_is_odd )
  *			Ps ...	Psx/Psy
@@ -240,6 +240,39 @@ bool ec_verify(const curveT& curve, const bignum<N>& r, const bignum<N>& s,
 	return r == t;
 }
 
+// vecover public key, from r/s/v/msg, v for pubY is odd
+// return true for successfully recover public key
+template<const uint N=4, typename curveT>
+forceinline static
+bool ec_recover(const curveT& curve, spoint_t<N>&  pub, const bignum<N>& r,
+				const bignum<N>& s, const int v, const bignum<N>& msg) noexcept
+{
+	point_t<N>	p;
+	if (p.x.sub(r, msg)) p.x.add_to(curve.paramN());
+	curve.modN(p.x, p.x);
+	pointY_recover(curve, p.y, p.x, v);
+	bignum<N>	u1, u2;
+	if (u1.add(r, s)) u1.sub_from(curve.paramN());
+	curve.modN(u1, u1);
+	if ( unlikely(u1.is_zero()) ) return false;
+	// u1 = (r + s)^1
+	mod_inv<N>(u1, u1, curve.paramN());
+	bignum<N>	u1p, sp;
+	curve.to_montgomeryN(sp, s);
+	curve.to_montgomeryN(u1p, u1);
+	curve.mont_nmult(u2, u2, u1p);
+	// u2 = s * u1
+	curve.from_montgomeryN(u2, u2);
+	if ( unlikely(u2.is_zero()) ) return false;
+	// u2 = -u2 = - s* u1
+	u2.sub(curve.paramN(), u2);
+	// Pa = u1 * Ps - u2 * G
+	point_t<N>	q;
+	curve.combined_mult(q, p, u1, u2);
+	pub.x = q.x;
+	pub.y = q.y;
+	return true;
+}
 
 }	// namespace ecc
 

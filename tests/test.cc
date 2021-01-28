@@ -283,14 +283,14 @@ TEST(testEcc, TestOnCurve)
 	ASSERT_TRUE(sm2_p256.is_on_curve(x2, y2));
 }
 
-TEST(testEcc, TestPointRecovery)
+TEST(testEcc, TestPointRecover)
 {
 	bignum<4>	x1(d1Gx), x2(d2Gx);
 	bignum<4>	y1(d1Gy), y2(d2Gy);
 	bignum<4>	res;
-	EXPECT_TRUE(pointY_recovery(sm2_p256, res, x1, !vli_is_even(d1Gy)));
+	EXPECT_TRUE(pointY_recover(sm2_p256, res, x1, !vli_is_even(d1Gy)));
 	EXPECT_EQ(res, y1);
-	EXPECT_TRUE(pointY_recovery(sm2_p256, res, x2, y2.is_odd()));
+	EXPECT_TRUE(pointY_recover(sm2_p256, res, x2, y2.is_odd()));
 	EXPECT_EQ(res.cmp(d2Gy), 0);
 }
 
@@ -686,12 +686,12 @@ TEST(TestECDSA, TestPrivateKey)
 	std::cerr << "PubX: " << pk.x << std::endl;
 	std::cerr << "PubY: " << pk.y << std::endl;
 	bignum<4>	res;
-	EXPECT_TRUE(pointY_recovery(sm2_k256, res, pk.x, pk.y.is_odd()));
+	EXPECT_TRUE(pointY_recover(sm2_k256, res, pk.x, pk.y.is_odd()));
 	EXPECT_EQ(res, pk.y);
 	bignum<4>	px, py, dd;
 	gen_keypair(sm2_k256, dd, px, py);
 	ASSERT_TRUE(sm2_k256.is_on_curve(px, py));
-	EXPECT_TRUE(pointY_recovery(sm2_k256, res, px, py.is_odd()));
+	EXPECT_TRUE(pointY_recover(sm2_k256, res, px, py.is_odd()));
 	EXPECT_EQ(res, py);
 }
 

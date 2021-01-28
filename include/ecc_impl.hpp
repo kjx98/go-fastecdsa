@@ -664,7 +664,7 @@ void point_addz_jacob(const curveT& curve, bnT& x3, bnT& y3, bnT& z3,
 
 template<typename bnT, typename curveT>
 forceinline static bool
-pointY_recovery (const curveT& curve, bnT& y1, const bnT& x1, const bool bOdd)
+pointY_recover(const curveT& curve, bnT& y1, const bnT& x1, const bool bOdd)
 	noexcept
 {
 	bnT		t1, t2;

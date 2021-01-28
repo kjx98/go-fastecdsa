@@ -128,25 +128,25 @@ static void test_ksqrt(benchmark::State &state)
 }
 BENCHMARK(test_ksqrt);
 
-static void test_ptRecovery(benchmark::State &state)
+static void test_ptRecover(benchmark::State &state)
 {
 	bignum<4>	x1(d1Gx);
 	bignum<4>	y1(d1Gy), res;
 	for (auto _ : state) {
-		pointY_recovery(sm2_p256, res, x1, y1.is_odd());
+		pointY_recover(sm2_p256, res, x1, y1.is_odd());
 	}
 }
-BENCHMARK(test_ptRecovery);
+BENCHMARK(test_ptRecover);
 
-static void test_ptRecoveryK(benchmark::State &state)
+static void test_ptRecoverK(benchmark::State &state)
 {
 	bignum<4>	x1(d1Gx);
 	bignum<4>	y1(d1Gy), res;
 	for (auto _ : state) {
-		pointY_recovery(sm2_k256, res, x1, y1.is_odd());
+		pointY_recover(sm2_k256, res, x1, y1.is_odd());
 	}
 }
-BENCHMARK(test_ptRecoveryK);
+BENCHMARK(test_ptRecoverK);
 
 static void test_ECADDJac(benchmark::State &state)
 {
