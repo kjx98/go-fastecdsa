@@ -230,7 +230,7 @@ public:
  */
 	int cmp(const bignum& right) const noexcept
 	{
-		for (int i = N - 1; i >= 0; i--) {
+		for (int i = N - 1; i >= 0; --i) {
 			if (this->d[i] > right.d[i]) return 1;
 			else if (this->d[i] < right.d[i]) return -1;
 		}
@@ -242,7 +242,7 @@ public:
 		auto	*rt=reinterpret_cast<const bignum<N> *>(right);
 		return this->cmp(*rt);
 #else
-		for (int i = N - 1; i >= 0; i--) {
+		for (int i = N - 1; i >= 0; --i) {
 			if (this->d[i] > right[i]) return 1;
 			else if (this->d[i] < right[i]) return -1;
 		}
@@ -313,6 +313,46 @@ public:
 	bool uadd_to(const u64 right) noexcept
 	{
 		return vli_uadd_to<N>(this->d, right);
+	}
+/* Computes result = this + right, modulo prime. Can modify in place. */
+	void mod_add(const bignum& left, const bignum &right, const bignum& prime)
+			noexcept
+	{
+		if (vli_add<N>(this->d, left.d, right.d) ||
+			vli_cmp<N>(this->d, prime.d) >= 0)
+		{
+			vli_sub_from<N>(this->d, prime.d);
+		}
+	}
+#ifdef	ommit
+/* Computes this = left + right, modulo prime. Can modify in place. */
+	void mod_uadd(const bignum& left, const u64 right, const bignum& prime)
+		noexcept
+	{
+		if (vli_uadd<N>(this->d, left.d, right) ||
+			vli_cmp<N>(this->d, prime.d) >= 0)
+		{
+			vli_sub_from<N>(this->d, prime.d);
+		}
+	}
+#endif
+/* Computes this = this + right, modulo prime. Can modify in place. */
+	void mod_add_to(const bignum& right, const bignum& prime) noexcept
+	{
+		if (vli_add_to<N>(this->d, right.d) ||
+			vli_cmp<N>(this->d, prime.d) >= 0)
+		{
+			vli_sub_from<N>(this->d, prime.d);
+		}
+	}
+/* Computes this = this + right, modulo prime. Can modify in place. */
+	void mod_uadd_to(const u64 right, const bignum& prime) noexcept
+	{
+		if (vli_uadd_to<N>(this->d, right) ||
+			vli_cmp<N>(this->d, prime.d) >= 0)
+		{
+			vli_sub_from<N>(this->d, prime.d);
+		}
 	}
 /**
  * sub() - Subtracts right from this
@@ -393,6 +433,7 @@ public:
 		for (uint i = 0; i < N; i++)
 			this->d[i] = be64toh(from[N - 1 - i]);
 	}
+#ifdef	ommit
 /* Computes this = (left + right) % mod.
  * Assumes that left < mod and right < mod, result != mod.
  */
@@ -407,6 +448,7 @@ public:
 			this->sub_from(mod);
 		return *this;
 	}
+#endif
 /* Computes this = (left - right) % mod.
  * Assumes that left < mod and right < mod, result != mod.
  */
@@ -646,10 +688,13 @@ bignum<N>& calcRR(bignum<N>& t, const bignum<N>& p) noexcept
 	t.clear();
 	t.sub_from(p);
 	for  (uint i = 256; i<512; i++) {
-		if (t.add_to(t) || t.cmp(p) >= 0) {
+		if (t.add_to(t) || t.cmp(p) >= 0)
+		//if (t.lshift1(t) || t.cmp(p) >= 0)
+		{
 			t.sub_from(p);
 		}
 	}
+	//if (t.cmp(p) >= 0) t.sub_from(p);
 	return t;
 }
 

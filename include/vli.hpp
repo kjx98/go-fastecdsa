@@ -42,7 +42,8 @@
 
 
 template<typename T> forceinline
-static T max(const T&& a, const T&& b) noexcept {
+static T max(const T&& a, const T&& b) noexcept
+{
 	static_assert(std::is_integral<T>::value, "Integral required.");
 	return (a>b)?a:b;
 }
@@ -52,13 +53,13 @@ static T max(const T&& a, const T&& b) noexcept {
 template<const uint N> forceinline
 static void vli_clear(u64 *vli) noexcept
 {
-	uint i;
-	for (i = 0; i < N; i++)
+	for (uint i = 0; i < N; i++)
 		vli[i] = 0;
 }
 
 // u64IsZero returns 1 if x is zero and zero otherwise.
-static forceinline int u64IsZero(u64 x) noexcept {
+static forceinline int u64IsZero(u64 x) noexcept
+{
 	x = ~x;
 	x &= x >> 32;
 	x &= x >> 16;
@@ -70,56 +71,164 @@ static forceinline int u64IsZero(u64 x) noexcept {
 }
 
 // u64IsOne returns 1 if x is one and zero otherwise.
-static forceinline int u64IsOne(u64 x) noexcept {
-#ifndef	ommit
+static forceinline int u64IsOne(u64 x) noexcept
+{
 	return u64IsZero(x ^ 1);
-#else
-	x = ~(x ^ 1);
-	x &= x >> 32;
-	x &= x >> 16;
-	x &= x >> 8;
-	x &= x >> 4;
-	x &= x >> 2;
-	x &= x >> 1;
-	return x & 1;
-#endif
 }
 
-static forceinline bool vli4_add_to(u64 *left, const u64 *right) noexcept {
-	bool	carry=false;
-#ifdef	__x86_64__1
-	asm volatile("movq (%%rsi), %%rdx;\n"	// mov rdx, left[0]
-				"addq (%%rdi), %%rdx;\n"		// add
-				"movq %%rdx, (%%rdi);\n"		// left[0] += right[0]
-				"movq 8(%%rsi), %%rdx;\n"
-				"adcq 8(%%rdi), %%rdx;\n"
-				"movq %%rdx, 8(%%rdi);\n"
-				"movq 16(%%rsi), %%rdx;\n"
-				"adcq 16(%%rdi), %%rdx;\n"
-				"movq %%rdx, 16(%%rdi);\n"
-				"movq 24(%%rsi), %%rdx;\n"
-				"adcq 24(%%rdi), %%rdx;\n"
-				"movq %%rdx, 24(%%rdi);\n"
-				"adcq %%rax, %%rax\n"				// set carry
-				: "=a"(carry)
-				: "a"(carry), "rsi"(right), "rdi"(left)
-				: "%rdx", "cc", "memory");
-#else
-	left[0] += right[0] + carry;
-	if (left[0] != right[0])
-		carry = (left[0] < right[0]);
-	left[1] += right[1] + carry;
-	if (left[1] != right[1])
-		carry = (left[1] < right[1]);
-	left[2] += right[2] + carry;
-	if (left[2] != right[2])
-		carry = (left[2] < right[2]);
-	left[3] += right[3] + carry;
-	if (left[2] != right[2])
-		carry = (left[3] < right[3]);
-#endif
-	return carry;
+
+#ifdef	__x86_64__
+static forceinline
+void mod4_add_to(u64 *left, const u64 *right, const u64 *mod) noexcept
+{
+	asm volatile("movq (%%rsi), %%rbx\n"	// mov bx/cx/r8/9, right
+				"movq 8(%%rsi), %%rcx\n"
+				"movq 16(%%rsi), %%r8\n"
+				"movq 24(%%rsi), %%r9\n"
+				"xorq %%rax, %%rax\n"
+				"addq (%%rdi), %%rbx\n"		// add
+				"adcq 8(%%rdi), %%rcx\n"
+				"adcq 16(%%rdi), %%r8\n"
+				"adcq 24(%%rdi), %%r9\n"
+				"adcq %%rax, %%rax\n"
+				"movq %%rbx, (%%rdi)\n"
+				"movq %%rcx, 8(%%rdi)\n"
+				"movq %%r8, 16(%%rdi)\n"
+				"movq %%r9, 24(%%rdi)\n"
+				:
+				: "S"(right), "D"(left), [mod] "rm" (mod)
+				: "%r8", "%r9", "%rbx", "%rcx" , "cc", "memory");
 }
+
+static forceinline void
+mod4_add(u64 *res, const u64 *left, const u64 *right, const u64* mod) noexcept
+{
+	asm volatile("movq (%%rsi), %%rbx\n"	// mov bx/cx/r8/9, right
+				"movq 8(%%rsi), %%rcx\n"
+				"movq 16(%%rsi), %%r8\n"
+				"movq 24(%%rsi), %%r9\n"
+				"movq %[res], %%rsi\n"		// mov rsi, res
+				"xorq %%rax, %%rax\n"
+				"addq (%%rdi), %%rbx\n"		// add
+				"adcq 8(%%rdi), %%rcx\n"
+				"adcq 16(%%rdi), %%r8\n"
+				"adcq 24(%%rdi), %%r9\n"
+				"adcq %%rax, %%rax\n"
+				"movq %%rbx, (%%rsi)\n"
+				"movq %%rcx, 8(%%rsi)\n"
+				"movq %%r8, 16(%%rsi)\n"
+				"movq %%r9, 24(%%rsi)\n"
+				:
+				: "S"(right), "D"(left), [res] "rm" (res), [mod] "rm" (mod)
+				: "%r8", "%r9", "%rbx", "%rcx" , "cc", "memory");
+}
+
+static forceinline
+void mod4_uadd_to(u64 *left, const u64 right, const u64 *mod) noexcept
+{
+	asm volatile("xorq %%rax, %%rax\n"
+				"movq (%%rdi), %%rbx\n"		// mov bx/cx/r8/r9, left
+				"movq 8(%%rdi), %%rcx\n"
+				"movq 16(%%rdi), %%r8\n"
+				"movq 24(%%rdi), %%r9\n"
+				"xorq %%rax, %%rax\n"
+				"addq %%rsi, %%rbx\n"		// add rbx, right
+				"adcq $0, %%rcx\n"
+				"adcq $0, %%r8\n"
+				"adcq $0, %%r9\n"
+				"adcq %%rax, %%rax\n"
+				"movq %%rbx, (%%rdi)\n"
+				"movq %%rcx, 8(%%rdi)\n"
+				"movq %%r8, 16(%%rdi)\n"
+				"movq %%r9, 24(%%rdi)\n"
+				:
+				: "S"(right), "D"(left), [mod] "rm" (mod)
+				: "%r8", "%r9", "%rdx", "%rbx" , "cc", "memory");
+}
+
+static forceinline
+void mod4_sub_from(u64 *left, const u64 *right, const u64 *mod) noexcept
+{
+	asm volatile("movq (%%rdi), %%rbx\n"	// mov bx/cx/r8/9, left
+				"movq 8(%%rdi), %%rcx\n"
+				"movq 16(%%rdi), %%r8\n"
+				"movq 24(%%rdi), %%r9\n"
+				"xorq %%rax, %%rax\n"
+				"subq (%%rsi), %%rbx\n"		// sub
+				"sbbq 8(%%rsi), %%rcx\n"
+				"sbbq 16(%%rsi), %%r8\n"
+				"sbbq 24(%%rsi), %%r9\n"
+				"adcq %%rax, %%rax\n"
+				"movq %%rbx, (%%rdi)\n"
+				"movq %%rcx, 8(%%rdi)\n"
+				"movq %%r8, 16(%%rdi)\n"
+				"movq %%r9, 24(%%rdi)\n"
+				:
+				: "S"(right), "D"(left), [mod] "rm" (mod)
+				: "%r8", "%r9", "%rbx", "%rcx" , "cc", "memory");
+}
+
+static forceinline void
+mod4_sub(u64 *res, const u64 *left, const u64 *right, const u64 *mod) noexcept
+{
+	asm volatile("movq (%%rdi), %%rbx\n"	// mov bx/cx/r8/9, left
+				"movq 8(%%rdi), %%rcx\n"
+				"movq 16(%%rdi), %%r8\n"
+				"movq 24(%%rdi), %%r9\n"
+				"movq %[res], %%rdi\n"	// mov rdi, res
+				"xorq %%rax, %%rax\n"
+				"subq (%%rsi), %%rbx\n"		// add
+				"sbbq 8(%%rsi), %%rcx\n"
+				"sbbq 16(%%rsi), %%r8\n"
+				"sbbq 24(%%rsi), %%r9\n"
+				"adcq %%rax, %%rax\n"
+				"movq %%rbx, (%%rdi)\n"
+				"movq %%rcx, 8(%%rdi)\n"
+				"movq %%r8, 16(%%rdi)\n"
+				"movq %%r9, 24(%%rdi)\n"
+				:
+				: "S"(right), "D"(left), [res] "rm" (res), [mod] "rm" (mod)
+				: "%r8", "%r9", "%rbx", "%rcx" , "cc", "memory");
+}
+#elif	defined(__aarch64__)
+static forceinline
+void mod4_add_to(u64 *left, const u64 *right, const u64 *mod) noexcept
+{
+	asm volatile("ldp x4, x5, [%1]\n"
+				"ldp x6, x7, [%1, 16]\n"
+				"ldp x9, x10, [%2]\n"
+				"ldp x11, x12, [%2, 16]\n"
+				"adds x4, x4, x9\n"
+				"adcs x5, x5, x10\n"
+				"adcs x6, x6, x11\n"
+				"adcs x7, x7, x12\n"
+				"stp x4, x5, [%1]\n"
+				"stp x6, x7, [%1, 16]\n"
+				"adc %0, xzr, xzr\n"
+		:
+		: "r" (left), "r" (right), [mod] "rm" (mod)
+		: "%x4", "%x5", "%x6", "%x7", "%x9", "%x10", "%x11", "%x12", "cc", "memory");
+}
+
+static forceinline void
+mod4_add(u64 *res, const u64 *left, const u64 *right, const u64 *mod) noexcept
+{
+	asm volatile("ldp x4, x5, [%2]\n"
+				"ldp x6, x7, [%2, 16]\n"
+				"ldp x9, x10, [%3]\n"
+				"ldp x11, x12, [%3, 16]\n"
+				"adds x4, x4, x9\n"
+				"adcs x5, x5, x10\n"
+				"adcs x6, x6, x11\n"
+				"adcs x7, x7, x12\n"
+				"stp x4, x5, [%1]\n"
+				"stp x6, x7, [%1, 16]\n"
+				"adc %0, xzr, xzr\n"
+		:
+		: "r" (res), "r" (left), "r" (right), [mod] "rm" (mod)
+		: "%x4", "%x5", "%x6", "%x7", "%x9", "%x10", "%x11", "%x12", "cc", "memory");
+}
+#endif
 
 /**
  * vli_is_zero() - Determine is vli is zero
@@ -276,6 +385,10 @@ static void vli_rshift1w(u64 *vli) noexcept
 template<const uint N> forceinline static
 bool vli_add(u64 *result, const u64 *left, const u64 *right) noexcept
 {
+#if	__cplusplus >= 201703L && (defined(__x86_64__) || defined(__aarch64__))
+//#if	__cplusplus >= 201703L && defined(__x86_64__)
+//	if constexpr(N == 4) return vli4_add(result, left, right);
+#endif
 	bool carry = false;
 	for (uint i = 0; i < N; i++) {
 		u64 sum;
@@ -310,6 +423,10 @@ static bool vli_uadd(u64 *result, const u64 *left, u64 right) noexcept
 template<const uint N> forceinline static
 bool vli_add_to(u64 *result, const u64 *right) noexcept
 {
+#if	__cplusplus >= 201703L && (defined(__x86_64__) || defined(__aarch64__))
+//#if	__cplusplus >= 201703L && defined(__x86_64__)
+//	if constexpr(N == 4) return vli4_add_to(result, right);
+#endif
 	bool carry = false;
 	for (uint i = 0; i < N; i++) {
 		u64 sum;
@@ -325,6 +442,9 @@ bool vli_add_to(u64 *result, const u64 *right) noexcept
 template<const uint N> forceinline
 static bool vli_uadd_to(u64 *result, u64 right) noexcept
 {
+#if	__cplusplus >= 201703L && defined(__x86_64__)
+//	if constexpr(N == 4) return vli4_uadd_to(result, right);
+#endif
 	u64 carry = right;
 	for (uint i = 0; i < N; i++) {
 		u64 sum;
@@ -353,6 +473,9 @@ static bool vli_uadd_to(u64 *result, u64 right) noexcept
 template<const uint N> forceinline static
 bool vli_sub(u64 *result, const u64 *left, const u64 *right) noexcept
 {
+#if	__cplusplus >= 201703L && defined(__x86_64__)
+//	if constexpr(N == 4) return vli4_sub(result, left, right);
+#endif
 	bool borrow = false;
 	for (uint i = 0; i < N; i++) {
 		u64 diff;
@@ -383,6 +506,9 @@ static bool vli_usub(u64 *result, const u64 *left, u64 right) noexcept
 template<const uint N> forceinline static
 bool vli_sub_from(u64 *result, const u64 *right) noexcept
 {
+#if	__cplusplus >= 201703L && defined(__x86_64__)
+//	if constexpr(N == 4) return vli4_sub_from(result, right);
+#endif
 	bool borrow = false;
 	for (uint i = 0; i < N; i++) {
 		u64 diff;
@@ -398,8 +524,7 @@ template<const uint N> forceinline
 static bool vli_usub_from(u64 *result, const u64 *left, u64 right) noexcept
 {
 	u64 borrow = right;
-	uint i;
-	for (i = 0; i < N; i++) {
+	for (uint i = 0; i < N; i++) {
 		u64 diff;
 		diff = result[i] - borrow;
 		if (diff != result[i])
@@ -416,11 +541,11 @@ static bool vli_is_negative(const u64 *vli)  noexcept
 }
 
 forceinline static bool vli_is_even(const u64 *vli) noexcept {
-	return (vli[0] & 1) ^ 1;
-}
-
-forceinline static bool vli_is_odd(const u64 *vli) noexcept {
-	return (vli[0] & 1);
+#ifdef	NO_U64ZERO
+	return (vli[0] & 1) == 0;
+#else
+	return u64IsZero(vli[0] & 1);
+#endif
 }
 
 /* Counts the number of 64-bit "digits" in vli. */

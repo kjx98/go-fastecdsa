@@ -52,7 +52,12 @@ u64 vli_asm_acc()
 
 bool bn256_add_to(u64 *left, const u64 *right)
 {
-	return vli4_add_to(left, right);
+	return vli_add_to<4>(left, right);
+}
+
+bool bn256_sub_from(u64 *left, const u64 *right)
+{
+	return vli_sub_from<4>(left, right);
 }
 
 /* Computes result = product % mod using Barrett's reduction with precomputed

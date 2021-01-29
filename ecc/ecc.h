@@ -214,6 +214,7 @@ void mont_sm2_mod_mult_p(u64 *result, const u64 *x, const u64 *y);
 void mont_sm2_mod_mult_n(u64 *result, const u64 *x, const u64 *y);
 u64 vli_asm_acc();
 bool bn256_add_to(u64 *left, const u64 *right);
+bool bn256_sub_from(u64 *left, const u64 *right);
 
 /* Computes result = (left * right) % curve_prime. */
 // SM2 use barret reduction

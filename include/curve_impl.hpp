@@ -791,7 +791,7 @@ protected:
 		return this->initTable();
 		//return true;
 	}
-	// x^y modulo prime, xp is x in motgomery form
+	// x exp y modulo prime, xp is x in motgomery form
 	void mont_mod_exp(felem_t& res, const felem_t& xp, const felem_t& y)
 	const noexcept
 	{
