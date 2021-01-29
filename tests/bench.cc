@@ -308,6 +308,20 @@ static void test_ECVerify(benchmark::State &state)
 }
 BENCHMARK(test_ECVerify);
 
+static void test_ECRecover(benchmark::State &state)
+{
+	private_key<4>	priv(sm2_k256);
+	bignum<4>	msg = bn_random<4>::Instance().get_random();
+	bignum<4>	r, s;
+	int		ecInd __attribute__ ((unused));
+	ecInd = ec_sign(sm2_k256, r, s, priv, msg);
+	spoint_t<4>	Ps;
+	for (auto _ : state) {
+		ec_recover(sm2_k256, Ps, r, s, ecInd, msg);
+	}
+}
+BENCHMARK(test_ECRecover);
+
 int main(int argc, char ** argv) {
 	//sm2_p256.init();
 	//sm2_k256.init();

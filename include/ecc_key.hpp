@@ -250,7 +250,7 @@ bool ec_recover(const curveT& curve, spoint_t<N>&  pub, const bignum<N>& r,
 	point_t<N>	p;
 	if (p.x.sub(r, msg)) p.x.add_to(curve.paramN());
 	curve.modN(p.x, p.x);
-	pointY_recover(curve, p.y, p.x, v);
+	if ( unlikely(!pointY_recover(curve, p.y, p.x, v)) ) return false;
 	bignum<N>	u1, u2;
 	if (u1.add(r, s)) u1.sub_from(curve.paramN());
 	curve.modN(u1, u1);
@@ -260,9 +260,10 @@ bool ec_recover(const curveT& curve, spoint_t<N>&  pub, const bignum<N>& r,
 	bignum<N>	u1p, sp;
 	curve.to_montgomeryN(sp, s);
 	curve.to_montgomeryN(u1p, u1);
-	curve.mont_nmult(u2, u2, u1p);
+	curve.mont_nmult(u2, sp, u1p);
 	// u2 = s * u1
 	curve.from_montgomeryN(u2, u2);
+	// 0 < u2 < N 
 	if ( unlikely(u2.is_zero()) ) return false;
 	// u2 = -u2 = - s* u1
 	u2.sub(curve.paramN(), u2);

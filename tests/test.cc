@@ -689,10 +689,14 @@ TEST(TestECDSA, TestPrivateKey)
 	EXPECT_TRUE(pointY_recover(sm2_k256, res, pk.x, pk.y.is_odd()));
 	EXPECT_EQ(res, pk.y);
 	bignum<4>	px, py, dd;
-	gen_keypair(sm2_k256, dd, px, py);
-	ASSERT_TRUE(sm2_k256.is_on_curve(px, py));
-	EXPECT_TRUE(pointY_recover(sm2_k256, res, px, py.is_odd()));
-	EXPECT_EQ(res, py);
+	for (int i=0; i<10; ++i) {
+		gen_keypair(sm2_k256, dd, px, py);
+		ASSERT_TRUE(sm2_k256.is_on_curve(px, py));
+		EXPECT_TRUE(pointY_recover(sm2_k256, res, px, py.is_odd()));
+		EXPECT_EQ(res, py);
+		std::cerr << "GenPrivKeyPair test round: " << i << "\tPointY odd: "
+				<< (bool)py.is_odd() << std::endl;
+	}
 }
 
 TEST(TestECDSA, TestSign)
@@ -735,6 +739,26 @@ TEST(TestECDSA, TestVerify)
 	sm2_p256.modN(t, t);
 	ASSERT_FALSE(t.is_zero());
 	ASSERT_TRUE(ec_verify(sm2_p256, r, s, priv.PubKey(), msg));
+}
+
+TEST(TestECDSA, TestRecover)
+{
+	private_key<4>	priv(sm2_p256);
+	bignum<4>	msg = bn_random<4>::Instance().get_random();
+	bignum<4>	r, s;
+	int		ecInd;
+	ecInd = ec_sign(sm2_p256, r, s, priv, msg);
+	ASSERT_FALSE(r.is_zero());
+	ASSERT_FALSE(s.is_zero());
+	std::cerr << "signed ret: " << ecInd << std::endl;
+	bignum<4>	t;
+	if (t.add(r, s)) t.sub_from(sm2_p256.paramN());
+	sm2_p256.modN(t, t);
+	ASSERT_FALSE(t.is_zero());
+	spoint_t<4>	Ps;
+	ASSERT_TRUE(ec_recover(sm2_p256, Ps, r, s, ecInd, msg));
+	EXPECT_EQ(Ps.x, priv.PubKey().x);
+	EXPECT_EQ(Ps.y, priv.PubKey().y);
 }
 
 int main(int argc, char *argv[])

@@ -52,6 +52,9 @@ struct spoint_t {
 		x.clear();
 		y.clear();
 	}
+	bool operator==(const spoint_t& q) const noexcept {
+		return (x ==  q.x && y == q.y);
+	}
 };
 
 
