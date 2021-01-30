@@ -103,7 +103,7 @@ void mod4_add_to(u64 *left, const u64 *right, const u64 *mod) noexcept
 				"adcq 8(%%rdi), %%r9\n"
 				"adcq 16(%%rdi), %%r10\n"
 				"adcq 24(%%rdi), %%r11\n"
-				"adcq %%rax, %%rax\n"
+				"adcq $0, %%rax\n"
 				"movq %[mod], %%rsi\n"
 				"movq %%r8, %%r12\n"
 				"movq %%r9, %%r13\n"
@@ -113,11 +113,11 @@ void mod4_add_to(u64 *left, const u64 *right, const u64 *mod) noexcept
 				"sbbq 8(%%rsi), %%r13\n"
 				"sbbq 16(%%rsi), %%r14\n"
 				"sbbq 24(%%rsi), %%r15\n"
-				"sbbq 0, %%rax\n"
-				"cmovc %%r8, %%r12\n"
-				"cmovc %%r9, %%r13\n"
-				"cmovc %%r10, %%r14\n"
-				"cmovc %%r11, %%r15\n"
+				"sbbq $0, %%rax\n"
+				"cmovcq %%r8, %%r12\n"
+				"cmovcq %%r9, %%r13\n"
+				"cmovcq %%r10, %%r14\n"
+				"cmovcq %%r11, %%r15\n"
 				"movq %%r12, (%%rdi)\n"
 				"movq %%r13, 8(%%rdi)\n"
 				"movq %%r14, 16(%%rdi)\n"
@@ -139,7 +139,7 @@ mod4_add(u64 *res, const u64 *left, const u64 *right, const u64* mod) noexcept
 				"adcq 8(%%rdi), %%r9\n"
 				"adcq 16(%%rdi), %%r10\n"
 				"adcq 24(%%rdi), %%r11\n"
-				"adcq %%rax, %%rax\n"
+				"adcq $0, %%rax\n"
 				"movq %[res], %%rdi\n"		// mov rdi, res
 				"movq %[mod], %%rsi\n"
 				"movq %%r8, %%r12\n"
@@ -150,91 +150,98 @@ mod4_add(u64 *res, const u64 *left, const u64 *right, const u64* mod) noexcept
 				"sbbq 8(%%rsi), %%r13\n"
 				"sbbq 16(%%rsi), %%r14\n"
 				"sbbq 24(%%rsi), %%r15\n"
-				"sbbq 0, %%rax\n"
-				"cmovc %%r8, %%r12\n"
-				"cmovc %%r9, %%r13\n"
-				"cmovc %%r10, %%r14\n"
-				"cmovc %%r11, %%r15\n"
+				"sbbq $0, %%rax\n"
+				"cmovcq %%r8, %%r12\n"
+				"cmovcq %%r9, %%r13\n"
+				"cmovcq %%r10, %%r14\n"
+				"cmovcq %%r11, %%r15\n"
 				"movq %%r12, (%%rdi)\n"
 				"movq %%r13, 8(%%rdi)\n"
 				"movq %%r14, 16(%%rdi)\n"
 				"movq %%r15, 24(%%rdi)\n"
 				:
-				: "S"(right), "D"(left), [res] "rm" (res), [mod] "rm" (mod)
+				: "S"(right), "D"(left), [res] "rm" (res), [mod] "m" (mod)
 				: "%r8", "%r9", "%r10", "%r11" , "%r12", "%r13", "%r14", "%r15", "cc", "memory");
 }
 
+
 static forceinline
-void mod4_uadd_to(u64 *left, const u64 right, const u64 *mod) noexcept
+bool vli4_add_to(u64 *left, const u64 *right) noexcept
 {
-	asm volatile("xorq %%rax, %%rax\n"
-				"movq (%%rdi), %%rbx\n"		// mov bx/cx/r8/r9, left
-				"movq 8(%%rdi), %%rcx\n"
-				"movq 16(%%rdi), %%r8\n"
-				"movq 24(%%rdi), %%r9\n"
+	bool carry;
+	asm volatile("movq (%%rsi), %%r8\n"	// mov r8/9/10/11, right
+				"movq 8(%%rsi), %%r9\n"
+				"movq 16(%%rsi), %%r10\n"
+				"movq 24(%%rsi), %%r11\n"
 				"xorq %%rax, %%rax\n"
-				"addq %%rsi, %%rbx\n"		// add rbx, right
-				"adcq $0, %%rcx\n"
-				"adcq $0, %%r8\n"
-				"adcq $0, %%r9\n"
-				"adcq %%rax, %%rax\n"
-				"movq %%rbx, (%%rdi)\n"
-				"movq %%rcx, 8(%%rdi)\n"
-				"movq %%r8, 16(%%rdi)\n"
-				"movq %%r9, 24(%%rdi)\n"
-				:
-				: "S"(right), "D"(left), [mod] "rm" (mod)
-				: "%r8", "%r9", "%rdx", "%rbx" , "cc", "memory");
+				"addq (%%rdi), %%r8\n"		// add
+				"adcq 8(%%rdi), %%r9\n"
+				"adcq 16(%%rdi), %%r10\n"
+				"adcq 24(%%rdi), %%r11\n"
+				"adcq $0, %%rax\n"
+				"movq %%r8, (%%rdi)\n"
+				"movq %%r9, 8(%%rdi)\n"
+				"movq %%r10, 16(%%rdi)\n"
+				"movq %%r11, 24(%%rdi)\n"
+				: "=a"(carry)
+				: "S"(right), "D"(left)
+				: "%r8", "%r9", "%r10", "%r11" , "cc", "memory");
+	return carry;
 }
 
 static forceinline
-void mod4_sub_from(u64 *left, const u64 *right, const u64 *mod) noexcept
+bool vli4_sub_from(u64 *left, const u64 *right) noexcept
 {
-	asm volatile("movq (%%rdi), %%rbx\n"	// mov bx/cx/r8/9, left
-				"movq 8(%%rdi), %%rcx\n"
-				"movq 16(%%rdi), %%r8\n"
-				"movq 24(%%rdi), %%r9\n"
+	bool carry;
+	asm volatile("movq (%%rdi), %%r8\n"	// mov r8/9/10/11, left
+				"movq 8(%%rdi), %%r9\n"
+				"movq 16(%%rdi), %%r10\n"
+				"movq 24(%%rdi), %%r11\n"
 				"xorq %%rax, %%rax\n"
-				"subq (%%rsi), %%rbx\n"		// sub
-				"sbbq 8(%%rsi), %%rcx\n"
-				"sbbq 16(%%rsi), %%r8\n"
-				"sbbq 24(%%rsi), %%r9\n"
-				"adcq %%rax, %%rax\n"
-				"movq %%rbx, (%%rdi)\n"
-				"movq %%rcx, 8(%%rdi)\n"
-				"movq %%r8, 16(%%rdi)\n"
-				"movq %%r9, 24(%%rdi)\n"
-				:
-				: "S"(right), "D"(left), [mod] "rm" (mod)
-				: "%r8", "%r9", "%rbx", "%rcx" , "cc", "memory");
+				"subq (%%rsi), %%r8\n"		// sub
+				"sbbq 8(%%rsi), %%r9\n"
+				"sbbq 16(%%rsi), %%r10\n"
+				"sbbq 24(%%rsi), %%r11\n"
+				"sbbq $0, %%rax\n"
+				"movq %%r8, (%%rdi)\n"
+				"movq %%r9, 8(%%rdi)\n"
+				"movq %%r10, 16(%%rdi)\n"
+				"movq %%r11, 24(%%rdi)\n"
+				: "=a"(carry)
+				: "S"(right), "D"(left)
+				: "%r8", "%r9", "%r10", "%r11" , "cc", "memory");
+	return carry;
 }
 
-static forceinline void
-mod4_sub(u64 *res, const u64 *left, const u64 *right, const u64 *mod) noexcept
+static forceinline
+bool vli4_sub(u64 *res, const u64 *left, const u64 *right) noexcept
 {
-	asm volatile("movq (%%rdi), %%rbx\n"	// mov bx/cx/r8/9, left
-				"movq 8(%%rdi), %%rcx\n"
-				"movq 16(%%rdi), %%r8\n"
-				"movq 24(%%rdi), %%r9\n"
-				"movq %[res], %%rdi\n"	// mov rdi, res
+	bool carry;
+	asm volatile("movq (%%rdi), %%r8\n"	// mov r8/9/10/11, left
+				"movq 8(%%rdi), %%r9\n"
+				"movq 16(%%rdi), %%r10\n"
+				"movq 24(%%rdi), %%r11\n"
 				"xorq %%rax, %%rax\n"
-				"subq (%%rsi), %%rbx\n"		// add
-				"sbbq 8(%%rsi), %%rcx\n"
-				"sbbq 16(%%rsi), %%r8\n"
-				"sbbq 24(%%rsi), %%r9\n"
-				"adcq %%rax, %%rax\n"
-				"movq %%rbx, (%%rdi)\n"
-				"movq %%rcx, 8(%%rdi)\n"
-				"movq %%r8, 16(%%rdi)\n"
-				"movq %%r9, 24(%%rdi)\n"
-				:
-				: "S"(right), "D"(left), [res] "rm" (res), [mod] "rm" (mod)
-				: "%r8", "%r9", "%rbx", "%rcx" , "cc", "memory");
+				"movq %[res], %%rdi\n"		// mov rdi, res
+				"subq (%%rsi), %%r8\n"		// sub
+				"sbbq 8(%%rsi), %%r9\n"
+				"sbbq 16(%%rsi), %%r10\n"
+				"sbbq 24(%%rsi), %%r11\n"
+				"sbbq $0, %%rax\n"
+				"movq %%r8, (%%rdi)\n"
+				"movq %%r9, 8(%%rdi)\n"
+				"movq %%r10, 16(%%rdi)\n"
+				"movq %%r11, 24(%%rdi)\n"
+				: "=a"(carry)
+				: "S"(right), "D"(left), [res] "rm" (res)
+				: "%r8", "%r9", "%r10", "%r11" , "cc", "memory");
+	return carry;
 }
 #elif	defined(__aarch64__)
 static forceinline
-void mod4_add_to(u64 *left, const u64 *right, const u64 *mod) noexcept
+bool vli4_add_to(u64 *left, const u64 *right) noexcept
 {
+	bool carry;
 	asm volatile("ldp x4, x5, [%1]\n"
 				"ldp x6, x7, [%1, 16]\n"
 				"ldp x9, x10, [%2]\n"
@@ -246,14 +253,16 @@ void mod4_add_to(u64 *left, const u64 *right, const u64 *mod) noexcept
 				"stp x4, x5, [%1]\n"
 				"stp x6, x7, [%1, 16]\n"
 				"adc %0, xzr, xzr\n"
-		:
-		: "r" (left), "r" (right), [mod] "rm" (mod)
+		: "=r"(carry)
+		: "r" (left), "r" (right)
 		: "%x4", "%x5", "%x6", "%x7", "%x9", "%x10", "%x11", "%x12", "cc", "memory");
+	return carry;
 }
 
-static forceinline void
-mod4_add(u64 *res, const u64 *left, const u64 *right, const u64 *mod) noexcept
+static forceinline
+bool vli4_add(u64 *res, const u64 *left, const u64 *right) noexcept
 {
+	bool carry;
 	asm volatile("ldp x4, x5, [%2]\n"
 				"ldp x6, x7, [%2, 16]\n"
 				"ldp x9, x10, [%3]\n"
@@ -265,9 +274,10 @@ mod4_add(u64 *res, const u64 *left, const u64 *right, const u64 *mod) noexcept
 				"stp x4, x5, [%1]\n"
 				"stp x6, x7, [%1, 16]\n"
 				"adc %0, xzr, xzr\n"
-		:
-		: "r" (res), "r" (left), "r" (right), [mod] "rm" (mod)
+		: "=r"(carry)
+		: "r" (res), "r" (left), "r" (right)
 		: "%x4", "%x5", "%x6", "%x7", "%x9", "%x10", "%x11", "%x12", "cc", "memory");
+	return carry;
 }
 #endif
 

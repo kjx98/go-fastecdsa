@@ -89,9 +89,8 @@ public:
 		//curve.modN(_d, secret);
 		if (_d.is_zero()) return false;
 		_dInv = _d;
-		_dInv.mod_uadd_to(1, curve.paramN());
-		//curve.modN(_dInv, _dInv);
-		if (_dInv.is_zero()) return false;
+		_dInv.uadd_to(1);
+		if (_dInv == curve.paramN()) return false;
 		// _dInv = (1 + d)^-1
 		mod_inv<N>(_dInv, _dInv, curve.paramN());
 		curve.to_montgomeryN(_dInv, _dInv);
@@ -213,8 +212,6 @@ int ec_sign(const curveT& curve, bignum<N>& r, bignum<N>& s,
 		curve.to_montgomeryN(tmp, tmp);
 		curve.mont_nmult(tmp, tmp, priv.Di());
 		curve.from_montgomeryN(tmp, tmp);
-		//tmp.mod_sub_from(r, curve.paramN());
-		//s = tmp;
 		s.mod_sub(tmp, r, curve.paramN());
 		//if (tmp.sub_from(r)) tmp.add_to(curve.paramN());
 		//curve.modN(s, tmp);

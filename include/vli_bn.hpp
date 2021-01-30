@@ -327,18 +327,6 @@ public:
 			vli_sub_from<N>(this->d, prime.d);
 		}
 	}
-#ifdef	ommit
-/* Computes this = left + right, modulo prime. Can modify in place. */
-	void mod_uadd(const bignum& left, const u64 right, const bignum& prime)
-		noexcept
-	{
-		if (vli_uadd<N>(this->d, left.d, right) ||
-			vli_cmp<N>(this->d, prime.d) >= 0)
-		{
-			vli_sub_from<N>(this->d, prime.d);
-		}
-	}
-#endif
 /* Computes this = this + right, modulo prime. Can modify in place. */
 	void mod_add_to(const bignum& right, const bignum& prime) noexcept
 	{
@@ -346,15 +334,6 @@ public:
 		if constexpr(N == 4) mod4_add_to(this->d, right.d, prime.d); else
 #endif
 		if (vli_add_to<N>(this->d, right.d) ||
-			vli_cmp<N>(this->d, prime.d) >= 0)
-		{
-			vli_sub_from<N>(this->d, prime.d);
-		}
-	}
-/* Computes this = this + right, modulo prime. Can modify in place. */
-	void mod_uadd_to(const u64 right, const bignum& prime) noexcept
-	{
-		if (vli_uadd_to<N>(this->d, right) ||
 			vli_cmp<N>(this->d, prime.d) >= 0)
 		{
 			vli_sub_from<N>(this->d, prime.d);
@@ -396,16 +375,21 @@ public:
  */
 	void mod_sub(const bignum& left, const bignum& right, const bignum& prime) noexcept
 	{
+#if	__cplusplus >= 201703L && defined(__x86_64__)
+		if constexpr(N == 4) {
+			if (vli4_sub(this->d, left.d, right.d)) vli4_add_to(this->d, prime.d);
+		} else
+#endif
 		if (vli_sub<N>(this->d, left.d, right.d)) vli_add_to<N>(this->d, prime.d);
 	}
 	void mod_sub_from(const bignum& right, const bignum& prime) noexcept
 	{
+#if	__cplusplus >= 201703L && defined(__x86_64__)
+		if constexpr(N == 4) {
+			if (vli4_sub_from(this->d, right.d)) vli4_add_to(this->d, prime.d);
+		} else
+#endif
 		if (vli_sub_from<N>(this->d, right.d)) vli_add_to<N>(this->d, prime.d);
-	}
-/* Computes this = this` - right, returning borrow. Can modify in place. */
-	bool usub_from(const u64 right) noexcept
-	{
-		return vli_usub_from<N>(this->d, right);
 	}
 #ifdef	ommit
 	bool is_negative() const noexcept
