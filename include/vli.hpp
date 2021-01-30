@@ -77,6 +77,19 @@ static forceinline int u64IsOne(u64 x) noexcept
 }
 
 
+/*
+ * X86_64 func param:  di/si/dx/cx/r8/r9
+ *			retutn register: ax
+ *			temp register:	r10/r11
+ *			callee-saved register: rbx/rbp,		r12/r13/r14/r15
+ *
+ * ARM64 func param:	X0-X7
+ *			retutn register: X0
+ * 			temp register: X9-X15
+ * 			callee-saved register: X19-X29
+ *
+ */
+
 #ifdef	__x86_64__
 static forceinline
 void mod4_add_to(u64 *left, const u64 *right, const u64 *mod) noexcept
