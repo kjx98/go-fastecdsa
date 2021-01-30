@@ -339,6 +339,9 @@ public:
 /* Computes this = this + right, modulo prime. Can modify in place. */
 	void mod_add_to(const bignum& right, const bignum& prime) noexcept
 	{
+#if	__cplusplus >= 201703L && defined(__x86_64__)
+		if constexpr(N == 4) mod4_add_to(this->d, right.d, prime.d); else
+#endif
 		if (vli_add_to<N>(this->d, right.d) ||
 			vli_cmp<N>(this->d, prime.d) >= 0)
 		{
