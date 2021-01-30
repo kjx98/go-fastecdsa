@@ -24,8 +24,8 @@
 #define t0 R14
 #define t1 R15
 
-DATA p256const0<>+0x00(SB)/8, $0x00000000ffffffff
-DATA p256const1<>+0x00(SB)/8, $0xffffffff00000001
+DATA p256const0<>+0x00(SB)/8, $0xffffffff00000000
+DATA p256const1<>+0x00(SB)/8, $0xfffffffeffffffff
 DATA sm2ordK0<>+0x00(SB)/8, $0x327f9e8872350975
 DATA sm2ord<>+0x00(SB)/8, $0x53bbf40939d54123
 DATA sm2ord<>+0x08(SB)/8, $0x7203df6b21c6052b
@@ -136,7 +136,7 @@ TEXT ·p256NegCond(SB),NOSPLIT,$0
 	// acc = poly
 	MOVQ $-1, acc0
 	MOVQ p256const0<>(SB), acc1
-	MOVQ $0, acc2
+	MOVQ $-1, acc2
 	MOVQ p256const1<>(SB), acc3
 	// Load the original value
 	MOVQ (8*0)(res_ptr), acc5
@@ -307,7 +307,7 @@ sqrLoop:
 	// Subtract p256
 	SUBQ $-1, acc0
 	SBBQ p256const0<>(SB) ,acc1
-	SBBQ $0, acc2
+	SBBQ $-1, acc2
 	SBBQ p256const1<>(SB), acc3
 	SBBQ $0, t0
 
@@ -508,7 +508,7 @@ TEXT ·p256Mul(SB),NOSPLIT,$0
 	// Subtract p256
 	SUBQ $-1, acc4
 	SBBQ p256const0<>(SB) ,acc5
-	SBBQ $0, acc0
+	SBBQ $-1, acc0
 	SBBQ p256const1<>(SB), acc1
 	SBBQ $0, acc2
 
@@ -587,7 +587,7 @@ TEXT ·p256FromMont(SB),NOSPLIT,$0
 
 	SUBQ $-1, acc4
 	SBBQ p256const0<>(SB), acc5
-	SBBQ $0, acc0
+	SBBQ $-1, acc0
 	SBBQ p256const1<>(SB), acc1
 
 	CMOVQCS x_ptr, acc4
@@ -1325,7 +1325,7 @@ TEXT sm2SubInternal(SB),NOSPLIT,$0
 
 	ADDQ $-1, acc4
 	ADCQ p256const0<>(SB), acc5
-	ADCQ $0, acc6
+	ADCQ $-1, acc6
 	ADCQ p256const1<>(SB), acc7
 	ANDQ $1, mul0
 
@@ -1508,7 +1508,7 @@ TEXT sm2MulInternal(SB),NOSPLIT,$0
 	// Subtract p256
 	SUBQ $-1, acc4
 	SBBQ p256const0<>(SB) ,acc5
-	SBBQ $0, acc6
+	SBBQ $-1, acc6
 	SBBQ p256const1<>(SB), acc7
 	SBBQ $0, hlp
 	// If the result of the subtraction is negative, restore the previous result
