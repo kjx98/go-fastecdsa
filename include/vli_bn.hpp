@@ -318,6 +318,9 @@ public:
 	void mod_add(const bignum& left, const bignum &right, const bignum& prime)
 			noexcept
 	{
+#if	__cplusplus >= 201703L && defined(__x86_64__)
+		if constexpr(N == 4) mod4_add(this->d, left.d, right.d, prime.d); else
+#endif
 		if (vli_add<N>(this->d, left.d, right.d) ||
 			vli_cmp<N>(this->d, prime.d) >= 0)
 		{

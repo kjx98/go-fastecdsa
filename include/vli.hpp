@@ -114,10 +114,10 @@ void mod4_add_to(u64 *left, const u64 *right, const u64 *mod) noexcept
 				"sbbq 16(%%rsi), %%r14\n"
 				"sbbq 24(%%rsi), %%r15\n"
 				"sbbq 0, %%rax\n"
-				"cmovqcs %%r8, %%r12\n"
-				"cmovqcs %%r9, %%r13\n"
-				"cmovqcs %%r10, %%r14\n"
-				"cmovqcs %%r11, %%r15\n"
+				"cmovc %%r8, %%r12\n"
+				"cmovc %%r9, %%r13\n"
+				"cmovc %%r10, %%r14\n"
+				"cmovc %%r11, %%r15\n"
 				"movq %%r12, (%%rdi)\n"
 				"movq %%r13, 8(%%rdi)\n"
 				"movq %%r14, 16(%%rdi)\n"
@@ -130,24 +130,38 @@ void mod4_add_to(u64 *left, const u64 *right, const u64 *mod) noexcept
 static forceinline void
 mod4_add(u64 *res, const u64 *left, const u64 *right, const u64* mod) noexcept
 {
-	asm volatile("movq (%%rsi), %%rbx\n"	// mov bx/cx/r8/9, right
-				"movq 8(%%rsi), %%rcx\n"
-				"movq 16(%%rsi), %%r8\n"
-				"movq 24(%%rsi), %%r9\n"
-				"movq %[res], %%rsi\n"		// mov rsi, res
+	asm volatile("movq (%%rsi), %%r8\n"	// mov r8/9/10/11, right
+				"movq 8(%%rsi), %%r9\n"
+				"movq 16(%%rsi), %%r10\n"
+				"movq 24(%%rsi), %%r11\n"
 				"xorq %%rax, %%rax\n"
-				"addq (%%rdi), %%rbx\n"		// add
-				"adcq 8(%%rdi), %%rcx\n"
-				"adcq 16(%%rdi), %%r8\n"
-				"adcq 24(%%rdi), %%r9\n"
+				"addq (%%rdi), %%r8\n"		// add
+				"adcq 8(%%rdi), %%r9\n"
+				"adcq 16(%%rdi), %%r10\n"
+				"adcq 24(%%rdi), %%r11\n"
 				"adcq %%rax, %%rax\n"
-				"movq %%rbx, (%%rsi)\n"
-				"movq %%rcx, 8(%%rsi)\n"
-				"movq %%r8, 16(%%rsi)\n"
-				"movq %%r9, 24(%%rsi)\n"
+				"movq %[res], %%rdi\n"		// mov rdi, res
+				"movq %[mod], %%rsi\n"
+				"movq %%r8, %%r12\n"
+				"movq %%r9, %%r13\n"
+				"movq %%r10, %%r14\n"
+				"movq %%r11, %%r15\n"
+				"subq (%%rsi), %%r12\n"
+				"sbbq 8(%%rsi), %%r13\n"
+				"sbbq 16(%%rsi), %%r14\n"
+				"sbbq 24(%%rsi), %%r15\n"
+				"sbbq 0, %%rax\n"
+				"cmovc %%r8, %%r12\n"
+				"cmovc %%r9, %%r13\n"
+				"cmovc %%r10, %%r14\n"
+				"cmovc %%r11, %%r15\n"
+				"movq %%r12, (%%rdi)\n"
+				"movq %%r13, 8(%%rdi)\n"
+				"movq %%r14, 16(%%rdi)\n"
+				"movq %%r15, 24(%%rdi)\n"
 				:
 				: "S"(right), "D"(left), [res] "rm" (res), [mod] "rm" (mod)
-				: "%r8", "%r9", "%rbx", "%rcx" , "cc", "memory");
+				: "%r8", "%r9", "%r10", "%r11" , "%r12", "%r13", "%r14", "%r15", "cc", "memory");
 }
 
 static forceinline
