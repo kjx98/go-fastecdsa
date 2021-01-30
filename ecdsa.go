@@ -49,6 +49,11 @@ type combinedMult interface {
 	CombinedMult(bigX, bigY *big.Int, baseScalar, scalar []byte) (x, y *big.Int)
 }
 
+type signIntf interface {
+	Sign(msg, secret, px, py *big.Int) (r, s *big.Int, err error)
+	Verify(r, s, msg, px, py *big.Int) bool
+}
+
 const (
 	aesIV = "IV for ECDSA CTR"
 )
@@ -162,6 +167,12 @@ var errZeroParam = errors.New("zero parameter")
 // returns the signature as a pair of integers. The security of the private key
 // depends on the entropy of rand.
 func Sign(rand io.Reader, priv *PrivateKey, hash []byte) (r, s *big.Int, err error) {
+	if in, ok := priv.PublicKey.Curve.(signIntf); ok {
+		c := priv.PublicKey.Curve
+		e := hashToInt(hash, c)
+		pub := priv.PublicKey
+		return in.Sign(e, priv.D, pub.X, pub.Y)
+	}
 	//randutil.MaybeReadByte(rand)
 
 	// Get min(log2(q) / 2, 256) bits of entropy from rand.
@@ -251,6 +262,10 @@ func Verify(pub *PublicKey, hash []byte, r, s *big.Int) bool {
 		return false
 	}
 	e := hashToInt(hash, c)
+
+	if in, ok := c.(signIntf); ok {
+		return in.Verify(r, s, e, pub.X, pub.Y)
+	}
 
 	var w *big.Int
 	if in, ok := c.(invertible); ok {

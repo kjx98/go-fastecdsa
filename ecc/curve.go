@@ -209,7 +209,7 @@ func (c eccCurve) Verify(rB, sB, msgB, px, py *big.Int) bool {
 		(*C.u64)(unsafe.Pointer(&msg[0])), pt, c.hnd) != 0
 }
 
-func (c eccCurve) Sign(sB, msgB, secret, px, py *big.Int) (r, s *big.Int) {
+func (c eccCurve) Sign(msgB, secret, px, py *big.Int) (r, s *big.Int, err error) {
 	var rw, sw, msg [4]big.Word
 	copy(msg[:], msgB.Bits())
 	pt := c.newPoint(px, py, secret)
