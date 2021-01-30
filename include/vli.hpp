@@ -123,7 +123,7 @@ void mod4_add_to(u64 *left, const u64 *right, const u64 *mod) noexcept
 				"movq %%r14, 16(%%rdi)\n"
 				"movq %%r15, 24(%%rdi)\n"
 				:
-				: "S"(right), "D"(left), [mod] "m" (mod)
+				: "S"(right), "D"(left), [mod] "rm" (mod)
 				: "%r8", "%r9", "%r10", "%r11" , "%r12", "%r13", "%r14", "%r15", "cc", "memory");
 }
 
@@ -160,7 +160,7 @@ mod4_add(u64 *res, const u64 *left, const u64 *right, const u64* mod) noexcept
 				"movq %%r14, 16(%%rdi)\n"
 				"movq %%r15, 24(%%rdi)\n"
 				:
-				: "S"(right), "D"(left), [res] "m" (res), [mod] "m" (mod)
+				: "S"(right), "D"(left), [res] "rm" (res), [mod] "m" (mod)
 				: "%r8", "%r9", "%r10", "%r11" , "%r12", "%r13", "%r14", "%r15", "cc", "memory");
 }
 
@@ -209,7 +209,7 @@ bool vli4_add(u64 *res, const u64 *left, const u64 *right) noexcept
 				"movq %%r10, 16(%%rdi)\n"
 				"movq %%r11, 24(%%rdi)\n"
 				: "=a"(carry)
-				: "S"(right), "D"(left), [res] "m" (res)
+				: "S"(right), "D"(left), [res] "rm" (res)
 				: "%r8", "%r9", "%r10", "%r11" , "cc", "memory");
 	return carry;
 }
@@ -258,7 +258,7 @@ bool vli4_sub(u64 *res, const u64 *left, const u64 *right) noexcept
 				"movq %%r10, 16(%%rdi)\n"
 				"movq %%r11, 24(%%rdi)\n"
 				: "=a"(carry)
-				: "S"(right), "D"(left), [res] "m" (res)
+				: "S"(right), "D"(left), [res] "mm" (res)
 				: "%r8", "%r9", "%r10", "%r11" , "cc", "memory");
 	return carry;
 }
@@ -495,7 +495,7 @@ static bool vli_uadd(u64 *result, const u64 *left, u64 right) noexcept
 template<const uint N> forceinline static
 bool vli_add_to(u64 *result, const u64 *right) noexcept
 {
-#ifdef	WITH_ASM 
+#ifdef	WITH_ASM1
 #if	__cplusplus >= 201703L && (defined(__x86_64__) || defined(__aarch64__))
 	if constexpr(N == 4) return vli4_add_to(result, right);
 #endif
