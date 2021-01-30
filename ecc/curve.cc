@@ -26,12 +26,10 @@
  */
 
 #include <errno.h>
-#ifdef	WITH_SYS_RANDOM
-#include <sys/random.h>
-#endif
 #include "ecc.h"
 #include "curve_defs.hpp"
 #include "mont.hpp"
+#include "ecc_key.hpp"
 
 #pragma GCC push_options
 #pragma GCC optimize ("unroll-loops")
@@ -201,4 +199,33 @@ void	point_cmult(Point *pt, const Point *p, const u64 *scalar,
 		const bignum<4>	*gsp = reinterpret_cast<const bignum<4> *>(gscalar);
 		curve->combined_mult(*q, *pp, *sp, *gsp);
 	}
+}
+
+
+int	ecc_verify(const u64 *rP, const u64 *sP, const u64 *msgP,
+				const Point *pubKey, CURVE_HND curveH)
+{
+	if (curveH == nullptr) return false;
+	auto	*curve=(curve_t *)curveH;
+	if (!(*curve) || curve->ndigits() != 4) return false;
+	if (rP == nullptr || sP == nullptr || msgP == nullptr || pubKey == nullptr)
+		return false;
+	bignum<4>	r(rP), s(sP), msg(msgP);
+	spoint_t<4>	pk(pubKey->x, pubKey->y);
+	return ec_verify(*curve, r, s, pk, msg);
+}
+
+void	ecc_sign(u64 *rP, u64 *sP, const u64 *msgP,
+				const Point *privKey, CURVE_HND curveH)
+{
+	if (curveH == nullptr) return;
+	auto	*curve=(curve_t *)curveH;
+	if (!(*curve) || curve->ndigits() != 4) return;
+	if (rP == nullptr || sP == nullptr || msgP == nullptr || privKey == nullptr)
+		return;
+	bignum<4>	r(rP), s(sP), msg(msgP);
+	spoint_t<4>	pk(privKey->x, privKey->y);
+	bignum<4>	secr(privKey->z);
+	private_key<4>	priv(*curve, secr, pk);
+	ec_sign(*curve, r, s, priv, msg);
 }

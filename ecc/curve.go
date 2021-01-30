@@ -1,6 +1,6 @@
 package ecc
 
-// #cgo CXXFLAGS: -O3 -Wpedantic -I../include -Wno-maybe-uninitialized -std=gnu++11
+// #cgo CXXFLAGS: -O3 -Wpedantic -I../include -Wno-maybe-uninitialized -std=gnu++17
 // #include "ecc.h"
 import "C"
 
@@ -195,5 +195,28 @@ func (c eccCurve) AffineFromJacobian(x, y, z *big.Int) (xOut, yOut *big.Int) {
 		(*C.u64)(unsafe.Pointer(&yb[0])), pt, c.hnd)
 	xOut = new(big.Int).SetBits(xb[:])
 	yOut = new(big.Int).SetBits(yb[:])
+	return
+}
+
+func (c eccCurve) Verify(rB, sB, msgB, px, py *big.Int) bool {
+	var r, s, msg [4]big.Word
+	copy(r[:], rB.Bits())
+	copy(s[:], sB.Bits())
+	copy(msg[:], msgB.Bits())
+	pt := c.newPoint(px, py, nil)
+	return C.ecc_verify((*C.u64)(unsafe.Pointer(&r[0])),
+		(*C.u64)(unsafe.Pointer(&s[0])),
+		(*C.u64)(unsafe.Pointer(&msg[0])), pt, c.hnd) != 0
+}
+
+func (c eccCurve) Sign(sB, msgB, secret, px, py *big.Int) (r, s *big.Int) {
+	var rw, sw, msg [4]big.Word
+	copy(msg[:], msgB.Bits())
+	pt := c.newPoint(px, py, secret)
+	C.ecc_sign((*C.u64)(unsafe.Pointer(&rw[0])),
+		(*C.u64)(unsafe.Pointer(&sw[0])),
+		(*C.u64)(unsafe.Pointer(&msg[0])), pt, c.hnd)
+	r = new(big.Int).SetBits(rw[:])
+	s = new(big.Int).SetBits(sw[:])
 	return
 }

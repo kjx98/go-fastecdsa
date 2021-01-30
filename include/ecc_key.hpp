@@ -30,7 +30,11 @@
 
 #include "cdefs.h"
 #include <time.h>
+#include <unistd.h>
 #include <random>
+#ifdef	__x86_64__
+#include <x86intrin.h>
+#endif
 #include "ecc_impl.hpp"
 
 
@@ -44,21 +48,57 @@ class	bn_random {
 public:
 	bn_random(const bn_random&) = delete;
 	static bn_random&	Instance() noexcept {
-		static	bn_random	bn_random_(clock());
+		static	bn_random	bn_random_;
+		static	bool	_inited = false;
+		if (!_inited) {
+			u64		seeds[4];
+			if (getentropy((void *)seeds, sizeof(seeds)) < 0) {
+				seeds[0] = clock();
+				struct timespec tp;
+				clock_gettime(CLOCK_REALTIME, &tp);
+				seeds[1] = tp.tv_sec << 24 | (tp.tv_nsec & 0xffffff);
+				clock_gettime(CLOCK_MONOTONIC, &tp);
+				seeds[2] = tp.tv_sec << 24 | (tp.tv_nsec & 0xffffff);
+#ifdef	__x86_64__
+				unsigned int aux;
+				__rdtscp(&aux);
+				seeds[3] = aux;
+#else
+				seeds[3] = clock();
+				clock_gettime(CLOCK_REALTIME, &tp);
+				seeds[3] += tp.tv_nsec;
+#endif
+			}
+			for (int i=0; i<4; ++i) bn_random_._rd[i].seed(seeds[i]);
+			_inited = true;
+		}
 		return bn_random_;
 	}
 	bignum<N> get_random() noexcept {
 		u64		dd[N];
-		for (uint i=0;i<N;++i) dd[i] = _rd();
+		for (uint i=0;i<N;++i) dd[i] = _rd[i&3]();
 		return bignum<N>(dd);
 	}
 private:
-	bn_random(u64 _seed) : _rd(_seed) {
+	bn_random() {
+		_rd[0].seed(clock());
 	}
-	std::mt19937_64	_rd;
+	std::mt19937_64	_rd[4];
 };
 
 
+/*
+ * ECC private keys are generated using the method of extra random bits,
+ * equivalent to that described in FIPS 186-4, Appendix B.4.1.
+ *
+ * d = (c mod(n–1)) + 1    where c is a string of random bits, 64 bits longer
+ *                         than requested
+ * 0 <= c mod(n-1) <= n-2  and implies that
+ * 1 <= d <= n-1
+ *
+ * This method generates a private key uniformly distributed in the range
+ * [1, n-1].
+ */
 // definitions for Private/Public key
 template<const uint N=4>
 class	private_key {
@@ -82,6 +122,15 @@ public:
 	{
 		init(curve, secret);
 	}
+	explicit operator bool() const noexcept { return _inited; }
+	const felem_t&		D() const noexcept { return *(&_d); }
+#ifdef	WITH_MONT_D
+	const felem_t&		mont_d() const noexcept { return *(&_mont_d); }
+#endif
+	// Di() return (1 + dA)^-1 in montgomery form modN
+	const felem_t&		Di() const noexcept { return *(&_dInv); }
+	const public_key&	PubKey() const noexcept { return *(&_pa); }
+protected:
 	template<typename curveT>
 	bool init(const curveT& curve, const felem_t& secret) noexcept {
 		_inited = false;
@@ -100,15 +149,6 @@ public:
 		_inited = true;
 		return true;
 	}
-	explicit operator bool() const noexcept { return _inited; }
-	const felem_t&		D() const noexcept { return *(&_d); }
-#ifdef	WITH_MONT_D
-	const felem_t&		mont_d() const noexcept { return *(&_mont_d); }
-#endif
-	// Di() return (1 + dA)^-1 in montgomery form modN
-	const felem_t&		Di() const noexcept { return *(&_dInv); }
-	const public_key&	PubKey() const noexcept { return *(&_pa); }
-protected:
 	template<typename curveT>
 	void calc_pa(const curveT& curve) noexcept {
 		if ( unlikely(!_inited) ) return;

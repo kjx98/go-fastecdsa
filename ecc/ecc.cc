@@ -26,9 +26,6 @@
  */
 
 #include <errno.h>
-#ifdef	WITH_SYS_RANDOM
-#include <sys/random.h>
-#endif
 #include "ecc.h"
 #include "ecc_impl.hpp"
 
@@ -281,100 +278,23 @@ static int __ecc_is_key_valid(const struct ecc_curve *curve,
 	return 0;
 }
 
-#ifdef	WITH_ECCKEY
-int ecc_is_key_valid(unsigned int curve_id, unsigned int ndigits,
-		     const u64 *private_key, unsigned int private_key_len)
-{
-	uint nbytes;
-	const struct ecc_curve *curve = ecc_get_curve(curve_id);
-
-	nbytes = vli_bytes(ndigit);
-
-	if (private_key_len != nbytes || ndigits != 4)
-		return -EINVAL;
-
-	return __ecc_is_key_valid<4>(curve, private_key);
-}
-#endif
-
-/*
- * ECC private keys are generated using the method of extra random bits,
- * equivalent to that described in FIPS 186-4, Appendix B.4.1.
- *
- * d = (c mod(n–1)) + 1    where c is a string of random bits, 64 bits longer
- *                         than requested
- * 0 <= c mod(n-1) <= n-2  and implies that
- * 1 <= d <= n-1
- *
- * This method generates a private key uniformly distributed in the range
- * [1, n-1].
- */
-#ifdef	WITH_SYS_RANDOM
-int ecc_gen_privkey(unsigned int curve_id, unsigned int ndigits, u64 *privkey)
-{
-	const ecc_curve *curve = ecc_get_curve(curve_id);
-	u64 priv[4];
-	unsigned int nbytes = vli_bytes(ndigits);
-	unsigned int nbits = vli_num_bits(curve->n, ndigits);
-	int err;
-
-	/* Check that N is included in Table 1 of FIPS 186-4, section 6.1.1 */
-	if (nbits < 160 || ndigits > ARRAY_SIZE(priv))
-		return -EINVAL;
-
-	/*
-	 * FIPS 186-4 recommends that the private key should be obtained from a
-	 * RBG with a security strength equal to or greater than the security
-	 * strength associated with N.
-	 *
-	 * The maximum security strength identified by NIST SP800-57pt1r4 for
-	 * ECC is 256 (N >= 512).
-	 *
-	 * This condition is met by the default RNG because it selects a favored
-	 * DRBG with a security strength of 256.
-	 */
-
-#ifdef	WITH_SYS_RANDOM
-	err = getrandom(priv, nbytes, 0);
-	if (err)
-		return err;
-#endif
-
-	/* Make sure the private key is in the valid range. */
-	if (__ecc_is_key_valid(curve, priv, ndigits))
-		return -EINVAL;
-
-	ecc_swap_digits(priv, privkey, ndigits);
-
-	return 0;
-}
-#endif
 
 int ecc_make_pub_key(unsigned int curve_id, unsigned int ndigits,
-		     const u64 *private_key, u64 *public_key)
+		     const u64 *priv_key, u64 *public_key)
 {
 	int ret = 0;
-	u64	pk_x[4];
-	u64	pk_y[4];
-	u64 priv[4];
 	const ecc_curve *curve = ecc_get_curve(curve_id);
 
-	if (!private_key || !curve || curve->ndigits != ndigits
-	|| ndigits > ARRAY_SIZE(priv)) {
+	if (!priv_key || !curve || curve->ndigits != ndigits) {
 		ret = -EINVAL;
 		return ret;
 	}
+	bignum<4>	secr(priv_key);
+	point_t<4>	pt;
+	curve->scalar_mult_base(pt, secr);
 
-	ecc_swap_digits(private_key, priv, ndigits);
-
-	ecc_point_mult<4>(pk_x, pk_y, curve->gx, curve->gy, priv, nullptr, curve);
-	if (ecc_point_is_zero<4>(pk_x, pk_y)) {
-		ret = -EAGAIN;
-		return ret;
-	}
-
-	ecc_swap_digits(pk_x, public_key, ndigits);
-	ecc_swap_digits(pk_y, &public_key[ndigits], ndigits);
+	pt.x.set(public_key);
+	pt.y.set(&public_key[4]);
 
 	return ret;
 }
@@ -384,92 +304,22 @@ int ecc_is_pubkey_valid_partial(const uint curve_id,
 				const u64 *pk_x, const u64 *pk_y)
 {
 	const ecc_curve *curve = ecc_get_curve(curve_id);
-	u64 yy[4], xxx[4], w[4];
 
 	if (curve == nullptr || curve->ndigits != 4) return -EINVAL;
+	bignum<4>	x1(pk_x), y1(pk_y);
 	uint	ndigits = curve->ndigits;
 	/* Check 1: Verify key is not the zero point. */
-	if (ecc_point_is_zero<4>(pk_x, pk_y)) return -EINVAL;
+	if (x1.is_zero() || y1.is_zero()) return -EINVAL;
 
 	/* Check 2: Verify key is in the range [1, p-1]. */
-	if (vli_cmp<4>(curve->p, pk_x) != 1)
-		return -EINVAL;
-	if (vli_cmp<4>(curve->p, pk_y) != 1)
-		return -EINVAL;
+	if (curve->p < x1) return -EINVAL;
+	if (curve->p < y1) return -EINVAL;
 
 	/* Check 3: Verify that y^2 == (x^3 + a·x + b) mod p */
-	vli_mod_square_fast<4>(yy, pk_y, curve->p); /* y^2 */
-	vli_mod_square_fast<4>(xxx, pk_x, curve->p); /* x^2 */
-	vli_mod_mult_fast(xxx, xxx, pk_x, curve->p, ndigits); /* x^3 */
-	vli_mod_mult_fast(w, curve->a, pk_x, curve->p, ndigits); /* a·x */
-	vli_mod_add<4>(w, w, curve->b, curve->p); /* a·x + b */
-	vli_mod_add<4>(w, w, xxx, curve->p); /* x^3 + a·x + b */
-	if (vli_cmp<4>(yy, w) != 0) /* Equation */
+	if (! curve->is_on_curve(x1, y1) ) /* Equation */
 		return -EINVAL;
 
 	return 0;
 }
 #endif
 
-#ifdef	WITH_SYS_RANDOM
-int crypto_ecdh_shared_secret(unsigned int curve_id, unsigned int ndigits,
-			      const u64 *private_key, const u64 *public_key,
-			      u64 *secret)
-{
-	int ret = 0;
-	struct ecc_point *product, *pk;
-	u64 priv[4];
-	u64 rand_z[4];
-	unsigned int nbytes;
-	const struct ecc_curve *curve = ecc_get_curve(curve_id);
-
-	if (!private_key || !public_key || !curve || curve->ndigits != 4 ||
-	    ndigits > ARRAY_SIZE(priv) || ndigits > ARRAY_SIZE(rand_z)) {
-		ret = -EINVAL;
-		goto out;
-	}
-
-	nbytes = vli_bytes(ndigits);
-
-#ifdef	WITH_SYS_RANDOM
-	// TODO: rng, should check return for error
-	if (getrandom(rand_z, nbytes, 0) < 0) {
-		ret = -ENOMEM;
-		goto out;
-	}
-#endif
-
-	pk = ecc_alloc_point(ndigits);
-	if (!pk) {
-		ret = -ENOMEM;
-		goto out;
-	}
-
-	ecc_swap_digits(public_key, pk->x, ndigits);
-	ecc_swap_digits(&public_key[ndigits], pk->y, ndigits);
-	ret = ecc_is_pubkey_valid_partial(curve, pk);
-	if (ret)
-		goto err_alloc_product;
-
-	ecc_swap_digits(private_key, priv, ndigits);
-
-	product = ecc_alloc_point(ndigits);
-	if (!product) {
-		ret = -ENOMEM;
-		goto err_alloc_product;
-	}
-
-	ecc_point_mult(product, pk, priv, rand_z, curve, ndigits);
-
-	ecc_swap_digits(product->x, secret, ndigits);
-
-	if (ecc_point_is_zero(product, ndigits))
-		ret = -EFAULT;
-
-	ecc_free_point(product);
-err_alloc_product:
-	ecc_free_point(pk);
-out:
-	return ret;
-}
-#endif

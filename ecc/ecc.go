@@ -2,7 +2,7 @@
 
 package ecc
 
-// #cgo CXXFLAGS: -O3 -Wall -I../include -Wuninitialized -std=gnu++11
+// #cgo CXXFLAGS: -O3 -Wall -I../include -Wuninitialized -std=gnu++17
 // #cgo CFLAGS: -O3 -Wpedantic -I../include -Wno-maybe-uninitialized -std=c11
 // #include "ecc.h"
 import "C"
