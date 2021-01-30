@@ -436,10 +436,6 @@ static void vli_rshift1w(u64 *vli) noexcept
 template<const uint N> forceinline static
 bool vli_add(u64 *result, const u64 *left, const u64 *right) noexcept
 {
-#if	__cplusplus >= 201703L && (defined(__x86_64__) || defined(__aarch64__))
-//#if	__cplusplus >= 201703L && defined(__x86_64__)
-//	if constexpr(N == 4) return vli4_add(result, left, right);
-#endif
 	bool carry = false;
 	for (uint i = 0; i < N; i++) {
 		u64 sum;
@@ -474,9 +470,10 @@ static bool vli_uadd(u64 *result, const u64 *left, u64 right) noexcept
 template<const uint N> forceinline static
 bool vli_add_to(u64 *result, const u64 *right) noexcept
 {
+#ifdef	WITH_ASM 
 #if	__cplusplus >= 201703L && (defined(__x86_64__) || defined(__aarch64__))
-//#if	__cplusplus >= 201703L && defined(__x86_64__)
-//	if constexpr(N == 4) return vli4_add_to(result, right);
+	if constexpr(N == 4) return vli4_add_to(result, right);
+#endif
 #endif
 	bool carry = false;
 	for (uint i = 0; i < N; i++) {

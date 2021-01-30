@@ -318,7 +318,7 @@ public:
 	void mod_add(const bignum& left, const bignum &right, const bignum& prime)
 			noexcept
 	{
-#if	__cplusplus >= 201703L && defined(__x86_64__)
+#if	__cplusplus >= 201703L && defined(__x86_64__) && defined(WITH_ASM)
 		if constexpr(N == 4) mod4_add(this->d, left.d, right.d, prime.d); else
 #endif
 		if (vli_add<N>(this->d, left.d, right.d) ||
@@ -330,7 +330,7 @@ public:
 /* Computes this = this + right, modulo prime. Can modify in place. */
 	void mod_add_to(const bignum& right, const bignum& prime) noexcept
 	{
-#if	__cplusplus >= 201703L && defined(__x86_64__)
+#if	__cplusplus >= 201703L && defined(__x86_64__) && defined(WITH_ASM)
 		if constexpr(N == 4) mod4_add_to(this->d, right.d, prime.d); else
 #endif
 		if (vli_add_to<N>(this->d, right.d) ||
@@ -375,7 +375,7 @@ public:
  */
 	void mod_sub(const bignum& left, const bignum& right, const bignum& prime) noexcept
 	{
-#if	__cplusplus >= 201703L && defined(__x86_64__)
+#if	__cplusplus >= 201703L && defined(__x86_64__) && defined(WITH_ASM)
 		if constexpr(N == 4) {
 			if (vli4_sub(this->d, left.d, right.d)) vli4_add_to(this->d, prime.d);
 		} else
@@ -384,7 +384,7 @@ public:
 	}
 	void mod_sub_from(const bignum& right, const bignum& prime) noexcept
 	{
-#if	__cplusplus >= 201703L && defined(__x86_64__)
+#if	__cplusplus >= 201703L && defined(__x86_64__) && defined(WITH_ASM)
 		if constexpr(N == 4) {
 			if (vli4_sub_from(this->d, right.d)) vli4_add_to(this->d, prime.d);
 		} else
