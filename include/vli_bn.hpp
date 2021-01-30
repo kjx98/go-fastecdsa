@@ -390,19 +390,11 @@ public:
  */
 	void mod_sub(const bignum& left, const bignum& right, const bignum& prime) noexcept
 	{
-		if (vli_sub<N>(this->d, left.d, right.d) ||
-			vli_cmp<N>(this->d, prime.d) >= 0)
-		{
-			vli_sub_from<N>(this->d, prime.d);
-		}
+		if (vli_sub<N>(this->d, left.d, right.d)) vli_add_to<N>(this->d, prime.d);
 	}
 	void mod_sub_from(const bignum& right, const bignum& prime) noexcept
 	{
-		if (vli_sub_from<N>(this->d, right.d) ||
-			vli_cmp<N>(this->d, prime.d) >= 0)
-		{
-			vli_sub_from<N>(this->d, prime.d);
-		}
+		if (vli_sub_from<N>(this->d, right.d)) vli_add_to<N>(this->d, prime.d);
 	}
 /* Computes this = this` - right, returning borrow. Can modify in place. */
 	bool usub_from(const u64 right) noexcept

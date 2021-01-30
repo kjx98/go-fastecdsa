@@ -213,7 +213,9 @@ int ec_sign(const curveT& curve, bignum<N>& r, bignum<N>& s,
 		curve.to_montgomeryN(tmp, tmp);
 		curve.mont_nmult(tmp, tmp, priv.Di());
 		curve.from_montgomeryN(tmp, tmp);
-		tmp.mod_sub_from(r, curve.paramN());
+		//tmp.mod_sub_from(r, curve.paramN());
+		//s = tmp;
+		s.mod_sub(tmp, r, curve.paramN());
 		//if (tmp.sub_from(r)) tmp.add_to(curve.paramN());
 		//curve.modN(s, tmp);
 #endif
@@ -268,7 +270,7 @@ bool ec_recover(const curveT& curve, spoint_t<N>&  pub, const bignum<N>& r,
 				const bignum<N>& s, const int v, const bignum<N>& msg) noexcept
 {
 	point_t<N>	p;
-	p.x.mod_sub(r, s, curve.paramN());
+	p.x.mod_sub(r, msg, curve.paramN());
 	//if (p.x.sub(r, msg)) p.x.add_to(curve.paramN());
 	//curve.modN(p.x, p.x);
 	if ( unlikely(!pointY_recover(curve, p.y, p.x, v)) ) return false;
