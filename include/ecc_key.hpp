@@ -85,11 +85,12 @@ public:
 	template<typename curveT>
 	bool init(const curveT& curve, const felem_t& secret) noexcept {
 		_inited = false;
-		curve.modN(_d, secret);
+		if (secret >= curve.paramN()) _d.sub(secret, curve.paramN()); else _d = secret;
+		//curve.modN(_d, secret);
 		if (_d.is_zero()) return false;
 		_dInv = _d;
-		_dInv.uadd_to(1);
-		curve.modN(_dInv, _dInv);
+		_dInv.mod_uadd_to(1, curve.paramN());
+		//curve.modN(_dInv, _dInv);
 		if (_dInv.is_zero()) return false;
 		// _dInv = (1 + d)^-1
 		mod_inv<N>(_dInv, _dInv, curve.paramN());
@@ -135,7 +136,8 @@ void gen_keypair(const curveT& curve, bignum<N>& secret, bignum<N>& pubX,
 	auto&	rd = bn_random<N>::Instance();
 	do {
 		secret = rd.get_random();
-		curve.modN(secret, secret);
+		if ( unlikely(secret >= curve.paramN()) ) secret.sub_from(curve.paramN());
+		//curve.modN(secret, secret);
 	} while (secret.is_zero());
 	point_t<N>	pt;
 	curve.scalar_mult_base(pt, secret);
@@ -186,8 +188,12 @@ int ec_sign(const curveT& curve, bignum<N>& r, bignum<N>& s,
 	do {
 		do {
 			gen_keypair<N>(curve, k, x1, tmp);
+#ifdef	ommit
 			if (r.add(msg, x1)) r.sub_from(curve.paramN());
 			curve.modN(r, r);
+#else
+			r.mod_add(msg, x1, curve.paramN());
+#endif
 		} while (r.is_zero());
 		ret = tmp.is_odd();
 #ifdef	WITH_MONT_D
@@ -202,16 +208,22 @@ int ec_sign(const curveT& curve, bignum<N>& r, bignum<N>& s,
 		curve.mont_nmult(tmp, priv.Di(), k);
 		curve.from_montgomeryN(s, tmp);
 #else
-		if (tmp.add(k, r)) tmp.sub_from(curve.paramN());
+		//if (tmp.add(k, r)) tmp.sub_from(curve.paramN());
+		tmp.mod_add(k, r, curve.paramN());
 		curve.to_montgomeryN(tmp, tmp);
 		curve.mont_nmult(tmp, tmp, priv.Di());
 		curve.from_montgomeryN(tmp, tmp);
-		if (tmp.sub_from(r)) tmp.add_to(curve.paramN());
-		curve.modN(s, tmp);
+		tmp.mod_sub_from(r, curve.paramN());
+		//if (tmp.sub_from(r)) tmp.add_to(curve.paramN());
+		//curve.modN(s, tmp);
 #endif
 		if (s.is_zero()) continue;
+#ifdef	ommit
 		if (tmp.add(r, s)) tmp.sub_from(curve.paramN());
-		curve.modN(tmp, tmp);
+		//curve.modN(tmp, tmp);
+#else
+		tmp.mod_add(r, s, curve.paramN());
+#endif
 	} while (tmp.is_zero());
 	return ret;
 }
@@ -225,17 +237,25 @@ bool ec_verify(const curveT& curve, const bignum<N>& r, const bignum<N>& s,
 	bignum<N>	t;
 	if ( unlikely(r.is_zero()) ) return false;
 	if ( unlikely(s.is_zero()) ) return false;
+#ifdef	ommit
 	if (t.add(r, s)) t.sub_from(curve.paramN());
 	curve.modN(t, t);
+#else
+	t.mod_add(r, s, curve.paramN());
+#endif
 	if ( unlikely(t.is_zero()) ) return false;
 	point_t<N>	q, p(pub.x, pub.y);
 	// q = s*G + t * Pub
 	// x2, y2 = s*G + t * Pub
 	curve.combined_mult(q, p, t, s);
 	if ( unlikely(q.x.is_zero()) ) return false;
-	if (t.add(q.x, msg)) t.sub_from(curve.paramN());
 	// t = x2 + msg modN
+#ifdef	ommit
+	if (t.add(q.x, msg)) t.sub_from(curve.paramN());
 	curve.modN(t, t);
+#else
+	t.mod_add(q.x, msg, curve.paramN());
+#endif
 	if ( unlikely(t.is_zero()) ) return false;
 	return r == t;
 }
@@ -248,19 +268,24 @@ bool ec_recover(const curveT& curve, spoint_t<N>&  pub, const bignum<N>& r,
 				const bignum<N>& s, const int v, const bignum<N>& msg) noexcept
 {
 	point_t<N>	p;
-	if (p.x.sub(r, msg)) p.x.add_to(curve.paramN());
-	curve.modN(p.x, p.x);
+	p.x.mod_sub(r, s, curve.paramN());
+	//if (p.x.sub(r, msg)) p.x.add_to(curve.paramN());
+	//curve.modN(p.x, p.x);
 	if ( unlikely(!pointY_recover(curve, p.y, p.x, v)) ) return false;
 	bignum<N>	u1, u2;
+#ifdef	ommit
 	if (u1.add(r, s)) u1.sub_from(curve.paramN());
 	curve.modN(u1, u1);
+#else
+	u1.mod_add(r, s, curve.paramN());
+#endif
 	if ( unlikely(u1.is_zero()) ) return false;
 	// u1 = (r + s)^1
 	mod_inv<N>(u1, u1, curve.paramN());
-	bignum<N>	u1p, sp;
-	curve.to_montgomeryN(sp, s);
+	bignum<N>	u1p;
+	curve.to_montgomeryN(u2, s);
 	curve.to_montgomeryN(u1p, u1);
-	curve.mont_nmult(u2, sp, u1p);
+	curve.mont_nmult(u2, u2, u1p);
 	// u2 = s * u1
 	curve.from_montgomeryN(u2, u2);
 	// 0 < u2 < N 

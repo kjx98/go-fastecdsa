@@ -171,6 +171,7 @@ public:
 		res.mont_sqr(left, p, k0_p);
 		for (uint i=1; i < nTimes; i++) res.mont_sqr(res, p, k0_p);
 	}
+#ifdef	ommit
 	void modP(felem_t& res, const felem_t& left) const noexcept
 	{
 		if (left.cmp(this->p) >= 0) res.sub(left, this->p); else
@@ -181,6 +182,7 @@ public:
 		if (left.cmp(this->n) >= 0) res.sub(left, this->n); else
 			res = left;
 	}
+#endif
 	// left,right less than p
 	void mod_add(felem_t& res, const felem_t& left, const felem_t& right)
 	const noexcept

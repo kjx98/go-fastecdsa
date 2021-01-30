@@ -712,14 +712,22 @@ TEST(TestECDSA, TestSign)
 		std::cerr << "sign test round: " << i << "\tsign ecInd: "
 				<< ecInd << std::endl;
 		bignum<4>	t;
+#ifdef	ommit
 		if (t.add(r, s)) t.sub_from(sm2_p256.paramN());
 		sm2_p256.modN(t, t);
+#else
+		t.mod_add(r, s, sm2_p256.paramN());
+#endif
 		ASSERT_FALSE(t.is_zero());
 		point_t<4>	q, p(priv.PubKey().x, priv.PubKey().y);
 		sm2_p256.combined_mult(q, p, t, s);
 		bignum<4>	tmp;
+#ifdef	ommit
 		if (tmp.add(q.x, msg)) tmp.sub_from(sm2_p256.paramN());
 		sm2_p256.modN(tmp, tmp);
+#else
+		tmp.mod_add(q.x, msg, sm2_p256.paramN());
+#endif
 		ASSERT_EQ(tmp, r);
 	}
 }
@@ -735,8 +743,12 @@ TEST(TestECDSA, TestVerify)
 	ASSERT_FALSE(s.is_zero());
 	std::cerr << "signed ret: " << ecInd << std::endl;
 	bignum<4>	t;
+#ifdef	ommit
 	if (t.add(r, s)) t.sub_from(sm2_p256.paramN());
 	sm2_p256.modN(t, t);
+#else
+	t.mod_add(r, s, sm2_p256.paramN());
+#endif
 	ASSERT_FALSE(t.is_zero());
 	ASSERT_TRUE(ec_verify(sm2_p256, r, s, priv.PubKey(), msg));
 }
@@ -752,8 +764,12 @@ TEST(TestECDSA, TestRecover)
 	ASSERT_FALSE(s.is_zero());
 	std::cerr << "signed ret: " << ecInd << std::endl;
 	bignum<4>	t;
+#ifdef	ommit
 	if (t.add(r, s)) t.sub_from(sm2_p256.paramN());
 	sm2_p256.modN(t, t);
+#else
+	t.mod_add(r, s, sm2_p256.paramN());
+#endif
 	ASSERT_FALSE(t.is_zero());
 	spoint_t<4>	Ps;
 	ASSERT_TRUE(ec_recover(sm2_p256, Ps, r, s, ecInd, msg));

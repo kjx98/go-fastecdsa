@@ -385,6 +385,25 @@ public:
 		auto	*rt=reinterpret_cast<const bignum<N> *>(right);
 		return sub_from(*rt);
 	}
+/* Computes this = (left - right) % mod.
+ * Assumes that left < mod and right < mod, result != mod.
+ */
+	void mod_sub(const bignum& left, const bignum& right, const bignum& prime) noexcept
+	{
+		if (vli_sub<N>(this->d, left.d, right.d) ||
+			vli_cmp<N>(this->d, prime.d) >= 0)
+		{
+			vli_sub_from<N>(this->d, prime.d);
+		}
+	}
+	void mod_sub_from(const bignum& right, const bignum& prime) noexcept
+	{
+		if (vli_sub_from<N>(this->d, right.d) ||
+			vli_cmp<N>(this->d, prime.d) >= 0)
+		{
+			vli_sub_from<N>(this->d, prime.d);
+		}
+	}
 /* Computes this = this` - right, returning borrow. Can modify in place. */
 	bool usub_from(const u64 right) noexcept
 	{
@@ -452,6 +471,7 @@ public:
 /* Computes this = (left - right) % mod.
  * Assumes that left < mod and right < mod, result != mod.
  */
+#ifdef	ommit
 	bignum& mod_sub(const bignum& left, const bignum& right, const bignum &mod)
 	noexcept
 	{
@@ -463,6 +483,7 @@ public:
 		if (borrow)
 			this->add_to(mod);
 	}
+#endif
 	template<const u64 k0> forceinline
 	friend void mont_reduction(bignum& res,  const bignum& y,
 					const bignum& prime) noexcept
