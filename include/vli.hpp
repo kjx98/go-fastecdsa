@@ -123,7 +123,7 @@ void mod4_add_to(u64 *left, const u64 *right, const u64 *mod) noexcept
 				"movq %%r14, 16(%%rdi)\n"
 				"movq %%r15, 24(%%rdi)\n"
 				:
-				: "S"(right), "D"(left), [mod] "rm" (mod)
+				: "S"(right), "D"(left), [mod] "m" (mod)
 				: "%r8", "%r9", "%r10", "%r11" , "%r12", "%r13", "%r14", "%r15", "cc", "memory");
 }
 
@@ -160,7 +160,7 @@ mod4_add(u64 *res, const u64 *left, const u64 *right, const u64* mod) noexcept
 				"movq %%r14, 16(%%rdi)\n"
 				"movq %%r15, 24(%%rdi)\n"
 				:
-				: "S"(right), "D"(left), [res] "rm" (res), [mod] "m" (mod)
+				: "S"(right), "D"(left), [res] "m" (res), [mod] "m" (mod)
 				: "%r8", "%r9", "%r10", "%r11" , "%r12", "%r13", "%r14", "%r15", "cc", "memory");
 }
 
@@ -178,13 +178,38 @@ bool vli4_add_to(u64 *left, const u64 *right) noexcept
 				"adcq 8(%%rdi), %%r9\n"
 				"adcq 16(%%rdi), %%r10\n"
 				"adcq 24(%%rdi), %%r11\n"
-				"adcq $0, %%rax\n"
+				"adcq %%rax, %%rax\n"
 				"movq %%r8, (%%rdi)\n"
 				"movq %%r9, 8(%%rdi)\n"
 				"movq %%r10, 16(%%rdi)\n"
 				"movq %%r11, 24(%%rdi)\n"
 				: "=a"(carry)
 				: "S"(right), "D"(left)
+				: "%r8", "%r9", "%r10", "%r11" , "cc", "memory");
+	return carry;
+}
+
+static forceinline
+bool vli4_add(u64 *res, const u64 *left, const u64 *right) noexcept
+{
+	bool carry;
+	asm volatile("movq (%%rsi), %%r8\n"	// mov r8/9/10/11, right
+				"movq 8(%%rsi), %%r9\n"
+				"movq 16(%%rsi), %%r10\n"
+				"movq 24(%%rsi), %%r11\n"
+				"xorq %%rax, %%rax\n"
+				"addq (%%rdi), %%r8\n"		// add
+				"adcq 8(%%rdi), %%r9\n"
+				"adcq 16(%%rdi), %%r10\n"
+				"adcq 24(%%rdi), %%r11\n"
+				"adcq %%rax, %%rax\n"
+				"movq %[res], %%rdi\n"
+				"movq %%r8, (%%rdi)\n"
+				"movq %%r9, 8(%%rdi)\n"
+				"movq %%r10, 16(%%rdi)\n"
+				"movq %%r11, 24(%%rdi)\n"
+				: "=a"(carry)
+				: "S"(right), "D"(left), [res] "m" (res)
 				: "%r8", "%r9", "%r10", "%r11" , "cc", "memory");
 	return carry;
 }
@@ -202,7 +227,7 @@ bool vli4_sub_from(u64 *left, const u64 *right) noexcept
 				"sbbq 8(%%rsi), %%r9\n"
 				"sbbq 16(%%rsi), %%r10\n"
 				"sbbq 24(%%rsi), %%r11\n"
-				"sbbq $0, %%rax\n"
+				"adcq %%rax, %%rax\n"
 				"movq %%r8, (%%rdi)\n"
 				"movq %%r9, 8(%%rdi)\n"
 				"movq %%r10, 16(%%rdi)\n"
@@ -222,18 +247,18 @@ bool vli4_sub(u64 *res, const u64 *left, const u64 *right) noexcept
 				"movq 16(%%rdi), %%r10\n"
 				"movq 24(%%rdi), %%r11\n"
 				"xorq %%rax, %%rax\n"
-				"movq %[res], %%rdi\n"		// mov rdi, res
 				"subq (%%rsi), %%r8\n"		// sub
 				"sbbq 8(%%rsi), %%r9\n"
 				"sbbq 16(%%rsi), %%r10\n"
 				"sbbq 24(%%rsi), %%r11\n"
-				"sbbq $0, %%rax\n"
+				"adcq %%rax, %%rax\n"
+				"movq %[res], %%rdi\n"		// mov rdi, res
 				"movq %%r8, (%%rdi)\n"
 				"movq %%r9, 8(%%rdi)\n"
 				"movq %%r10, 16(%%rdi)\n"
 				"movq %%r11, 24(%%rdi)\n"
 				: "=a"(carry)
-				: "S"(right), "D"(left), [res] "rm" (res)
+				: "S"(right), "D"(left), [res] "m" (res)
 				: "%r8", "%r9", "%r10", "%r11" , "cc", "memory");
 	return carry;
 }
