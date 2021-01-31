@@ -734,6 +734,28 @@ static void vli_umult(u64 *result, const u64 *left, u64 right) noexcept
 		result[k] = 0;
 }
 
+/* Compute product = left * right, reserved for mont_red/mont_mult. */
+template<const uint N> forceinline
+static void vli_umult2(u64 *result, const u64 *left, u64 right) noexcept
+{
+	uint128_t r01( 0, 0 );
+	unsigned int k;
+
+	for (k = 0; k < N; k++) {
+		uint128_t product;
+
+		{
+			product.mul_64_64(left[k], right);
+			r01 += product;
+		}
+		/* no carry */
+		result[k] = r01.m_low();
+		r01 = uint128_t(r01.m_high(), 0);
+	}
+	result[N] = r01.m_low();
+	//result[N+1] = 0;
+}
+
 template<const uint N> forceinline
 static void vli_square(u64 *result, const u64 *left) noexcept
 {

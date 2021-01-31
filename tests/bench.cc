@@ -20,6 +20,7 @@ static void test_montMult(benchmark::State &state)
 	bignum<4>	xp;
 	bignum<4>	bx1(dx1);
 	for (auto _ : state) {
+		for (int i=0; i<1000; ++i)
 		xp.mont_mult(bx1, rr, prime, sm2_p_k0);
 	}
 	tt.mont_reduction(xp, prime, sm2_p_k0);
@@ -31,7 +32,7 @@ static void test_montMultP(benchmark::State &state)
 	bignum<4>	xp;
 	bignum<4>	bx1(dx1);
 	for (auto _ : state) {
-		for (int i=0; i< 1000; ++i)
+		for (int i=0; i<1000; ++i)
 		mont_mult<sm2_p_k0>(xp, bx1, rr, prime);
 	}
 	tt.mont_reduction(xp, prime, sm2_p_k0);
@@ -44,7 +45,7 @@ static void test_montSqr(benchmark::State &state)
 	bignum<4>	bx1(dx1);
 	bp.mont_mult(bx1, rr, prime, sm2_p_k0);
 	for (auto _ : state) {
-		for (int i=0; i< 1000; ++i)
+		for (int i=0; i<1000; ++i)
 		xp.mont_sqr(bp, prime, sm2_p_k0);
 	}
 	tt.mont_reduction(xp, prime, sm2_p_k0);
@@ -57,6 +58,7 @@ static void test_bnMult(benchmark::State &state)
 	bignum<4>	bx2(dx2);
 	bn_prod<4>	xp;
 	for (auto _ : state) {
+		for (int i=0; i<1000; ++i)
 		xp.mult(bx1, bx2);
 	}
 	tt = xp.bn256();
@@ -68,6 +70,7 @@ static void test_bnSqr(benchmark::State &state)
 	bignum<4>	bx1(dx1);
 	bn_prod<4>	xp;
 	for (auto _ : state) {
+		for (int i=0; i<1000; ++i)
 		xp.square(bx1);
 	}
 	tt = xp.bn256();
@@ -98,8 +101,10 @@ static void test_mult2(benchmark::State &state)
 {
 	bignum<4>	x3(dx3), res;
 	for (auto _ : state) {
+		for (int i=0; i<1000; ++i)
 		sm2_p256.mont_mult2(res, x3);
 	}
+	tt = res;
 }
 BENCHMARK(test_mult2);
 
@@ -107,9 +112,12 @@ static void test_mult8(benchmark::State &state)
 {
 	bignum<4>	x3(dx3), res;
 	for (auto _ : state) {
-		res = x3;
-		sm2_p256.mont_mult8(res);
+		for (int i=0; i<1000; ++i) {
+			res = x3;
+			sm2_p256.mont_mult8(res);
+		}
 	}
+	tt = res;
 }
 BENCHMARK(test_mult8);
 
@@ -117,8 +125,10 @@ static void test_mult2k(benchmark::State &state)
 {
 	bignum<4>	x3(dx3), res;
 	for (auto _ : state) {
+		for (int i=0; i<1000; ++i)
 		sm2_k256.mont_mult2(res, x3);
 	}
+	tt = res;
 }
 BENCHMARK(test_mult2k);
 
@@ -126,9 +136,12 @@ static void test_mult8k(benchmark::State &state)
 {
 	bignum<4>	x3(dx3), res;
 	for (auto _ : state) {
-		res = x3;
-		sm2_k256.mont_mult8(res);
+		for (int i=0; i<1000; ++i) {
+			res = x3;
+			sm2_k256.mont_mult8(res);
+		}
 	}
+	tt = res;
 }
 BENCHMARK(test_mult8k);
 
@@ -136,9 +149,12 @@ static void test_div2(benchmark::State &state)
 {
 	bignum<4>	x3(dx3), res;
 	for (auto _ : state) {
-		res = x3;
-		sm2_p256.mont_div2(res);
+		for (int i=0; i<1000; ++i) {
+			res = x3;
+			sm2_p256.mont_div2(res);
+		}
 	}
+	tt = res;
 }
 BENCHMARK(test_div2);
 
