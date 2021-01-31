@@ -108,9 +108,13 @@ mont_reduction(u64 *result, const u64 *y, const u64 *prime,
 		vli_rshift1w<N + 2>(r);	
 	}
 #endif
+#ifdef	ommit
 	if (r[N] !=0 || vli_cmp<N>(r, prime) >= 0) {
 		vli_sub<N>(result, r, prime);
 	} else vli_set<N>(result, r);
+#else
+	vli_mod<N>(result, r, prime, r[N] != 0);
+#endif
 }
 
 template<const uint N> forceinline
@@ -140,9 +144,13 @@ mont_mult(u64 *result, const u64 *x, const u64 *y, const u64 *prime,
 		vli_add_to<N + 2>(r, s);
 		vli_rshift1w<N + 2>(r);	
 	}
+#ifdef	ommit
 	if (r[N] != 0 || vli_cmp<N>(r, prime) >= 0) {
 		vli_sub<N>(result, r, prime);
 	} else vli_set<N>(result, r);
+#else
+	vli_mod<N>(result, r, prime, r[N] != 0);
+#endif
 }
 
 template<const uint N> forceinline
@@ -170,9 +178,13 @@ mont_sqr(u64 *result, const u64 *x, const u64 *prime, const u64 k0) noexcept
 		vli_add_to<N + 2>(r, s);
 		vli_rshift1w<N + 2>(r);	
 	}
+#ifdef	ommit
 	if (r[N] != 0 || vli_cmp<N>(r, prime) >= 0) {
 		vli_sub<N>(result, r, prime);
 	} else vli_set<N>(result, r);
+#else
+	vli_mod<N>(result, r, prime, r[N] != 0);
+#endif
 }
 
 template<const uint N, const u64 k0> forceinline
@@ -203,9 +215,13 @@ mont_reduction(u64 *result, const u64 *y, const u64 *prime) noexcept
 		vli_rshift1w<N + 2>(r);	
 	}
 #endif
+#ifdef	ommit
 	if (r[N] !=0 || vli_cmp<N>(r, prime) >= 0) {
 		vli_sub<N>(result, r, prime);
 	} else vli_set<N>(result, r);
+#else
+	vli_mod<N>(result, r, prime, r[N] != 0);
+#endif
 }
 
 template<const uint N, const u64 k0> forceinline
@@ -224,9 +240,13 @@ mont_mult(u64 *result, const u64 *x, const u64 *y, const u64 *prime) noexcept
 		vli_add_to<N + 2>(r, s);
 		vli_rshift1w<N + 2>(r);	
 	}
+#ifdef	ommit
 	if (r[N] != 0 || vli_cmp<N>(r, prime) >= 0) {
 		vli_sub<N>(result, r, prime);
 	} else vli_set<N>(result, r);
+#else
+	vli_mod<N>(result, r, prime, r[N] != 0);
+#endif
 }
 
 template<const uint N, const u64 k0> forceinline
@@ -245,9 +265,13 @@ mont_sqr(u64 *result, const u64 *x, const u64 *prime) noexcept
 		vli_add_to<N + 2>(r, s);
 		vli_rshift1w<N + 2>(r);	
 	}
+#ifdef	ommit
 	if (r[N] != 0 || vli_cmp<N>(r, prime) >= 0) {
 		vli_sub<N>(result, r, prime);
 	} else vli_set<N>(result, r);
+#else
+	vli_mod<N>(result, r, prime, r[N] != 0);
+#endif
 }
 
 #endif	//	__MONT_HPP__

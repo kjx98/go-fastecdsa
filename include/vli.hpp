@@ -795,6 +795,21 @@ static void vli_square(u64 *result, const u64 *left) noexcept
 	result[N * 2 - 1] = r01.m_low();
 }
 
+/* Computes result = left % mod w/ carry.
+ */
+template<uint N> forceinline
+static void
+vli_mod(u64 *result, const u64 *left, const u64 *mod, const int carry) noexcept
+{
+	/* result > mod (result = mod + remainder), so subtract mod to
+	 * get remainder.
+	 */
+	if (carry || vli_cmp<N>(left, mod) >= 0) {
+		vli_sub<N>(result, left, mod);
+	} else vli_set<N>(result, left);
+}
+
+#ifdef	ommit
 /* Computes result = (left + right) % mod.
  * Assumes that left < mod and right < mod, result != mod.
  */
@@ -827,5 +842,6 @@ static void vli_mod_sub(u64 *result, const u64 *left, const u64 *right,
 	if (borrow)
 		vli_add_to<N>(result, mod);
 }
+#endif
 
 #endif	//	__VLI_HPP__
