@@ -721,7 +721,6 @@ static void vli_umult(u64 *result, const u64 *left, u64 right) noexcept
 	for (k = 0; k < N; k++) {
 		uint128_t product;
 
-		//if (likely(left[k] != 0))
 		{
 			product.mul_64_64(left[k], right);
 			r01 += product;

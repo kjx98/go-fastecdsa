@@ -13,6 +13,7 @@ using namespace ecc;
 
 #include "testData.hpp"
 //#define	sm2_p256	(*sm2_p256p)
+bignum<4>	tt;
 
 static void test_montMult(benchmark::State &state)
 {
@@ -21,6 +22,7 @@ static void test_montMult(benchmark::State &state)
 	for (auto _ : state) {
 		xp.mont_mult(bx1, rr, prime, sm2_p_k0);
 	}
+	tt.mont_reduction(xp, prime, sm2_p_k0);
 }
 BENCHMARK(test_montMult);
 
@@ -29,20 +31,48 @@ static void test_montMultP(benchmark::State &state)
 	bignum<4>	xp;
 	bignum<4>	bx1(dx1);
 	for (auto _ : state) {
+		for (int i=0; i< 1000; ++i)
 		mont_mult<sm2_p_k0>(xp, bx1, rr, prime);
 	}
+	tt.mont_reduction(xp, prime, sm2_p_k0);
 }
 BENCHMARK(test_montMultP);
 
 static void test_montSqr(benchmark::State &state)
 {
-	bignum<4>	xp;
+	bignum<4>	xp, bp;
 	bignum<4>	bx1(dx1);
+	bp.mont_mult(bx1, rr, prime, sm2_p_k0);
 	for (auto _ : state) {
-		xp.mont_sqr(bx1, prime, sm2_p_k0);
+		for (int i=0; i< 1000; ++i)
+		xp.mont_sqr(bp, prime, sm2_p_k0);
 	}
+	tt.mont_reduction(xp, prime, sm2_p_k0);
 }
 BENCHMARK(test_montSqr);
+
+static void test_bnMult(benchmark::State &state)
+{
+	bignum<4>	bx1(dx1);
+	bignum<4>	bx2(dx2);
+	bn_prod<4>	xp;
+	for (auto _ : state) {
+		xp.mult(bx1, bx2);
+	}
+	tt = xp.bn256();
+}
+BENCHMARK(test_bnMult);
+
+static void test_bnSqr(benchmark::State &state)
+{
+	bignum<4>	bx1(dx1);
+	bn_prod<4>	xp;
+	for (auto _ : state) {
+		xp.square(bx1);
+	}
+	tt = xp.bn256();
+}
+BENCHMARK(test_bnSqr);
 
 static void test_inverse(benchmark::State &state)
 {
@@ -50,6 +80,7 @@ static void test_inverse(benchmark::State &state)
 	for (auto _ : state) {
 		vli_mod_inv<4>(res, dx1, sm2_p);
 	}
+	tt = bignum<4>(res);
 }
 BENCHMARK(test_inverse);
 
@@ -59,6 +90,7 @@ static void test_inverseNew(benchmark::State &state)
 	for (auto _ : state) {
 		vli_mod_inv_new<4>(res, dx1, sm2_p);
 	}
+	tt = bignum<4>(res);
 }
 BENCHMARK(test_inverseNew);
 

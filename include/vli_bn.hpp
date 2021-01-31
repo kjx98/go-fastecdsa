@@ -472,6 +472,7 @@ public:
 	{
 		u64	s[N*2];
 		u64	r[N+2];
+#ifdef	ommit
 		vli_clear<N + 2>(r);
 		for (uint i=0; i < N; i++) {
 			u64	u = (r[0] + y.d[i]) * k0;
@@ -480,6 +481,17 @@ public:
 			vli_add_to<N + 2>(r, s);
 			vli_rshift1w<N + 2>(r);	
 		}
+#else
+		vli_set<N>(r, y.d);
+		r[N] = 0;
+		r[N+1] = 0;
+		for (uint i=0; i < N; i++) {
+			u64	u = r[0] * k0;
+			vli_umult<N>(s, prime.d, u);
+			vli_add_to<N + 2>(r, s);
+			vli_rshift1w<N + 2>(r);	
+		}
+#endif
 		if (r[N] !=0 || vli_cmp<N>(r, prime.d) >= 0) {
 			vli_sub<N>(res.d, r, prime.d);
 		} else vli_set<N>(res.d, r);
@@ -489,6 +501,7 @@ public:
 	{
 		u64	s[N*2];
 		u64	r[N+2];
+#ifdef	ommit
 		vli_clear<N + 2>(r);
 		for (uint i=0; i < N; i++) {
 			u64	u = (r[0] + y.d[i]) * k0;
@@ -497,6 +510,17 @@ public:
 			vli_add_to<N + 2>(r, s);
 			vli_rshift1w<N + 2>(r);	
 		}
+#else
+		vli_set<N>(r, y.d);
+		r[N] = 0;
+		r[N+1] = 0;
+		for (uint i=0; i < N; i++) {
+			u64	u = r[0] * k0;
+			vli_umult<N>(s, prime.d, u);
+			vli_add_to<N + 2>(r, s);
+			vli_rshift1w<N + 2>(r);	
+		}
+#endif
 		if (r[N] !=0 || vli_cmp<N>(r, prime.d) >= 0) {
 			vli_sub<N>(this->d, r, prime.d);
 		} else vli_set<N>(this->d, r);
@@ -720,7 +744,7 @@ public:
 			if (k < N) min = 0; else min = (k + 1) - N;
 			for (uint i = min; i <= k && i < N; i++) {
 				uint128_t product;
-				product.mul_64_64(left.d[i], right.d[k - i]);
+				product.mul_64_64(left.data()[i], right.data()[k - i]);
 				r01 += product;
 				r2 += (r01.m_high() < product.m_high());
 			}
@@ -760,7 +784,7 @@ public:
 			if (k < N) min = 0; else min = (k + 1) - N;
 			for (uint i = min; i <= k && i <= k - i; i++) {
 				uint128_t product;
-				product.mul_64_64(left.d[i], left.d[k - i]);
+				product.mul_64_64(left.data()[i], left.data()[k - i]);
 				if (i < k - i) {
 					r2 += product.m_high() >> 63;
 					u64 _high=(product.m_high() << 1) | (product.m_low() >> 63);
