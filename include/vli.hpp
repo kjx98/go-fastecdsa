@@ -91,6 +91,39 @@ static forceinline int u64IsOne(u64 x) noexcept
  */
 
 #ifdef	__x86_64__
+static forceinline void
+vli4_mod(u64 *res, const u64 *left, const u64 *mod, const bool carry) noexcept
+{
+	/* result > mod (result = mod + remainder), so subtract mod to
+	 * get remainder.
+	 */
+	asm volatile("movq (%%rsi), %%r8\n"	// mov r8/9/10/11, right
+				"movq 8(%%rsi), %%r9\n"
+				"movq 16(%%rsi), %%r10\n"
+				"movq 24(%%rsi), %%r11\n"
+				"movq %[mod], %%rsi\n"
+				"movq %%r8, %%r12\n"
+				"movq %%r9, %%r13\n"
+				"movq %%r10, %%r14\n"
+				"movq %%r11, %%r15\n"
+				"subq (%%rsi), %%r12\n"
+				"sbbq 8(%%rsi), %%r13\n"
+				"sbbq 16(%%rsi), %%r14\n"
+				"sbbq 24(%%rsi), %%r15\n"
+				"sbbq $0, %%rax\n"
+				"cmovcq %%r8, %%r12\n"
+				"cmovcq %%r9, %%r13\n"
+				"cmovcq %%r10, %%r14\n"
+				"cmovcq %%r11, %%r15\n"
+				"movq %%r12, (%%rdi)\n"
+				"movq %%r13, 8(%%rdi)\n"
+				"movq %%r14, 16(%%rdi)\n"
+				"movq %%r15, 24(%%rdi)\n"
+				:
+				: "S"(left), "D"(res), "a" (carry), [mod] "rm" (mod)
+				: "%r8", "%r9", "%r10", "%r11" , "%r12", "%r13", "%r14", "%r15", "cc", "memory");
+}
+
 static forceinline
 void mod4_add_to(u64 *left, const u64 *right, const u64 *mod) noexcept
 {
@@ -804,11 +837,15 @@ vli_mod(u64 *result, const u64 *left, const u64 *mod, const bool carry) noexcept
 	/* result > mod (result = mod + remainder), so subtract mod to
 	 * get remainder.
 	 */
-#ifndef	ommit
+#if	__cplusplus >= 201703L && defined(__x86_64__)
+	if constexpr(N == 4) {
+		vli4_mod(result, left, mod, carry);
+	} else
+#endif
 	if (carry || vli_cmp<N>(left, mod) >= 0) {
 		vli_sub<N>(result, left, mod);
 	} else vli_set<N>(result, left);
-#else
+#ifdef	ommit
 	// maybe copy_conditional faster?
 	bool s_carry = vli_sub<N>(result, left, mod);
 	if ( !carry && s_carry) vli_set<N>(result, left);

@@ -82,8 +82,8 @@ static void test_inverse(benchmark::State &state)
 	u64	res[4];
 	for (auto _ : state) {
 		vli_mod_inv<4>(res, dx1, sm2_p);
+		//tt = bignum<4>(res);
 	}
-	tt = bignum<4>(res);
 }
 BENCHMARK(test_inverse);
 
@@ -92,8 +92,8 @@ static void test_inverseNew(benchmark::State &state)
 	u64	res[4];
 	for (auto _ : state) {
 		vli_mod_inv_new<4>(res, dx1, sm2_p);
+		//tt = bignum<4>(res);
 	}
-	tt = bignum<4>(res);
 }
 BENCHMARK(test_inverseNew);
 
