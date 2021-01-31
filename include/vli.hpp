@@ -799,14 +799,20 @@ static void vli_square(u64 *result, const u64 *left) noexcept
  */
 template<uint N> forceinline
 static void
-vli_mod(u64 *result, const u64 *left, const u64 *mod, const int carry) noexcept
+vli_mod(u64 *result, const u64 *left, const u64 *mod, const bool carry) noexcept
 {
 	/* result > mod (result = mod + remainder), so subtract mod to
 	 * get remainder.
 	 */
+#ifndef	ommit
 	if (carry || vli_cmp<N>(left, mod) >= 0) {
 		vli_sub<N>(result, left, mod);
 	} else vli_set<N>(result, left);
+#else
+	// maybe copy_conditional faster?
+	bool s_carry = vli_sub<N>(result, left, mod);
+	if ( !carry && s_carry) vli_set<N>(result, left);
+#endif
 }
 
 #ifdef	ommit
