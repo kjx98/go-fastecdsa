@@ -48,7 +48,6 @@ static void vli_sm2_multP(u64 *result, const u64 u) noexcept
 	r[1] = t_low;
 	r[2] = t_high;
 	r[3] =0;
-	//vli_sub_from<5>(result, t);	// ^256 - ^224 - ^96
 	if (vli_sub_from<4>(result, r)) result[4]--;
 	r[2] = 0;
 	r[1] = u-1;
@@ -87,6 +86,7 @@ mont_reduction(u64 *result, const u64 *y, const u64 *prime,
 	u64	s[N * 2];
 	u64	r[N + 2];
 #endif
+#ifdef	ommit
 	vli_clear<N + 2>(r);
 	for (uint i=0; i < N; i++) {
 		u64	u = (r[0] + y[i]) * k0;
@@ -95,6 +95,17 @@ mont_reduction(u64 *result, const u64 *y, const u64 *prime,
 		vli_add_to<N + 2>(r, s);
 		vli_rshift1w<N + 2>(r);	
 	}
+#else
+	vli_set<N>(r, y);
+	r[N] = 0;
+	r[N+1] = 0;
+	for (uint i=0; i < N; i++) {
+		u64	u = r[0] * k0;
+		vli_umult<N>(s, prime, u);
+		vli_add_to<N + 2>(r, s);
+		vli_rshift1w<N + 2>(r);	
+	}
+#endif
 	if (r[N] !=0 || vli_cmp<N>(r, prime) >= 0) {
 		vli_sub<N>(result, r, prime);
 	} else vli_set<N>(result, r);
@@ -166,6 +177,7 @@ mont_reduction(u64 *result, const u64 *y, const u64 *prime) noexcept
 {
 	u64	s[N * 2];
 	u64	r[N + 2];
+#ifdef	ommit
 	vli_clear<N + 2>(r);
 	for (uint i=0; i < N; i++) {
 		u64	u = (r[0] + y[i]) * k0;
@@ -174,6 +186,17 @@ mont_reduction(u64 *result, const u64 *y, const u64 *prime) noexcept
 		vli_add_to<N + 2>(r, s);
 		vli_rshift1w<N + 2>(r);	
 	}
+#else
+	vli_set<N>(r, y);
+	r[N] = 0;
+	r[N+1] = 0;
+	for (uint i=0; i < N; i++) {
+		u64	u = r[0] * k0;
+		vli_umult<N>(s, prime, u);
+		vli_add_to<N + 2>(r, s);
+		vli_rshift1w<N + 2>(r);	
+	}
+#endif
 	if (r[N] !=0 || vli_cmp<N>(r, prime) >= 0) {
 		vli_sub<N>(result, r, prime);
 	} else vli_set<N>(result, r);
