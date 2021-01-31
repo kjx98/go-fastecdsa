@@ -223,9 +223,11 @@ void	ecc_sign(u64 *rP, u64 *sP, const u64 *msgP,
 	if (!(*curve) || curve->ndigits() != 4) return;
 	if (rP == nullptr || sP == nullptr || msgP == nullptr || privKey == nullptr)
 		return;
-	bignum<4>	r(rP), s(sP), msg(msgP);
+	bignum<4>	r, s, msg(msgP);
 	spoint_t<4>	pk(privKey->x, privKey->y);
 	bignum<4>	secr(privKey->z);
 	private_key<4>	priv(*curve, secr, pk);
 	ec_sign(*curve, r, s, priv, msg);
+	r.set(rP);
+	s.set(sP);
 }

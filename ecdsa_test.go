@@ -32,6 +32,7 @@ func testKeyGeneration(t *testing.T, c elliptic.Curve, tag string) {
 	if !c.IsOnCurve(priv.PublicKey.X, priv.PublicKey.Y) {
 		t.Errorf("%s: public key invalid: %v", tag, err)
 	}
+	t.Log(tag, " KeyGen test PASS")
 	/*
 		t.Logf("%s priv D: %s", tag, priv.D.Text(16))
 		t.Logf("%s curve X: %s, Y: %s", tag, priv.PublicKey.X.Text(16),
@@ -186,12 +187,15 @@ func testSignAndVerify(t *testing.T, c elliptic.Curve, tag string) {
 
 	if !Verify(&priv.PublicKey, hashed, r, s) {
 		t.Errorf("%s: Verify failed", tag)
+		t.Logf("Pubkey X: %s\nY: %s\nr: %s", priv.PublicKey.X.Text(16),
+			priv.PublicKey.Y.Text(16), r.Text(16))
 	}
 
 	hashed[0] ^= 0xff
 	if Verify(&priv.PublicKey, hashed, r, s) {
 		t.Errorf("%s: Verify always works!", tag)
 	}
+	t.Log(tag, " SignAndVerify test PASS")
 }
 
 func TestSignAndVerify(t *testing.T) {
@@ -202,6 +206,8 @@ func TestSignAndVerify(t *testing.T) {
 	testSignAndVerify(t, elliptic.P256(), "p256")
 	testSignAndVerify(t, elliptic.P384(), "p384")
 	testSignAndVerify(t, elliptic.P521(), "p521")
+	testSignAndVerify(t, sm2.P256(), "SM2go")
+	testSignAndVerify(t, ecc.SM2C(), "SM2C")
 }
 
 func testNonceSafety(t *testing.T, c elliptic.Curve, tag string) {
