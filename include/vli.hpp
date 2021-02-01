@@ -303,7 +303,7 @@ bool vli4_sub(u64 *res, const u64 *left, const u64 *right) noexcept
 static forceinline
 bool vli4_add_to(u64 *left, const u64 *right) noexcept
 {
-	bool carry;
+	u64 carry;
 	asm volatile("ldp x4, x5, [%1]\n"
 				"ldp x6, x7, [%1, 16]\n"
 				"ldp x9, x10, [%2]\n"
@@ -324,7 +324,7 @@ bool vli4_add_to(u64 *left, const u64 *right) noexcept
 static forceinline
 bool vli4_add(u64 *res, const u64 *left, const u64 *right) noexcept
 {
-	bool carry;
+	u64 carry;
 	asm volatile("ldp x4, x5, [%2]\n"
 				"ldp x6, x7, [%2, 16]\n"
 				"ldp x9, x10, [%3]\n"
@@ -360,7 +360,6 @@ static int vli_is_zero(const u64 *vli) noexcept
 	return true;
 #else
 	int	ret = u64IsZero(vli[0]);
-#pragma clang unroll(full)
 	for (uint i = 1; i < N; i++) {
 		ret &= u64IsZero(vli[i]);
 	}
@@ -378,7 +377,6 @@ static int vli_is_one(const u64 *vli) noexcept
 	}
 	return true;
 #else
-#pragma clang unroll(full)
 	int	ret = u64IsOne(vli[0]);
 	for (uint i = 1; i < N; i++) {
 		ret &= u64IsZero(vli[i]);
@@ -391,7 +389,6 @@ static int vli_is_one(const u64 *vli) noexcept
 template<const uint N> forceinline
 static void vli_set(u64 *dest, const u64 *src) noexcept
 {
-#pragma clang unroll(full)
 	for (uint i = 0; i < N; i++)
 		dest[i] = src[i];
 }
@@ -521,25 +518,6 @@ bool vli_add(u64 *result, const u64 *left, const u64 *right) noexcept
 #endif
 }
 
-#ifdef	ommit
-/* Computes result = left + right, returning carry. Can modify in place. */
-template<const uint N> forceinline
-static bool vli_uadd(u64 *result, const u64 *left, u64 right) noexcept
-{
-	u64 carry = right;
-	for (uint i = 0; i < N; i++) {
-		u64 sum;
-		sum = left[i] + carry;
-		if (sum != left[i])
-			carry = (sum < left[i]);
-		else
-			carry = !!carry;
-		result[i] = sum;
-	}
-	return carry != 0;
-}
-#endif
-
 /* Computes result = left + right, returning carry. Can modify in place. */
 template<const uint N> forceinline static
 bool vli_add_to(u64 *result, const u64 *right) noexcept
@@ -549,6 +527,7 @@ bool vli_add_to(u64 *result, const u64 *right) noexcept
 	if constexpr(N == 4) return vli4_add_to(result, right);
 #endif
 #endif
+#ifdef	NO_BUILTIN_ADDC
 	bool carry = false;
 	for (uint i = 0; i < N; i++) {
 		u64 sum;
@@ -558,6 +537,14 @@ bool vli_add_to(u64 *result, const u64 *right) noexcept
 		result[i] = sum;
 	}
 	return carry;
+#else
+	u64 carry = 0, c_out;
+	for (uint i = 0; i < N; i++) {
+		result[i] = __builtin_addcl(result[i], right[i], carry, &c_out);
+		carry = c_out;
+	}
+	return carry != 0;
+#endif
 }
 
 /* Computes result = left + right, returning carry. Can modify in place. */
@@ -568,6 +555,7 @@ static bool vli_uadd_to(u64 *result, u64 right) noexcept
 //	if constexpr(N == 4) return vli4_uadd_to(result, right);
 #endif
 	u64 carry = right;
+#ifdef	NO_BUILTIN_ADDC
 	for (uint i = 0; i < N; i++) {
 		u64 sum;
 		sum = result[i] + carry;
@@ -577,6 +565,14 @@ static bool vli_uadd_to(u64 *result, u64 right) noexcept
 			carry = !!carry;
 		result[i] = sum;
 	}
+#else
+	result[i] = __builtin_addcl(result[i], carry, 0, &c_out);
+	carry = c_out;
+	for (uint i = 1; i < N; i++) {
+		result[i] = __builtin_addcl(result[i], 0, carry, &c_out);
+		carry = c_out;
+	}
+#endif
 	return carry != 0;
 }
 
@@ -598,6 +594,7 @@ bool vli_sub(u64 *result, const u64 *left, const u64 *right) noexcept
 #if	__cplusplus >= 201703L && defined(__x86_64__)
 //	if constexpr(N == 4) return vli4_sub(result, left, right);
 #endif
+#ifdef	NO_BUILTIN_ADDC
 	bool borrow = false;
 	for (uint i = 0; i < N; i++) {
 		u64 diff;
@@ -606,24 +603,16 @@ bool vli_sub(u64 *result, const u64 *left, const u64 *right) noexcept
 		result[i] = diff;
 	}
 	return borrow;
-}
-
-#ifdef	ommit
-/* Computes result = left - right, returning borrow. Can modify in place. */
-template<const uint N> forceinline
-static bool vli_usub(u64 *result, const u64 *left, u64 right) noexcept
-{
-	u64 borrow = right;
+#else
+	u64 borrow = 0, c_out;
 	for (uint i = 0; i < N; i++) {
 		u64 diff;
-		diff = left[i] - borrow;
-		if (diff != left[i])
-			borrow = (diff > left[i]);
-		result[i] = diff;
+		result[i] = __builtin_subcl(left[i], right[i], borrow, &c_out);
+		borrow = c_out;
 	}
 	return borrow != 0;
-}
 #endif
+}
 
 template<const uint N> forceinline static
 bool vli_sub_from(u64 *result, const u64 *right) noexcept
@@ -631,6 +620,7 @@ bool vli_sub_from(u64 *result, const u64 *right) noexcept
 #if	__cplusplus >= 201703L && defined(__x86_64__)
 //	if constexpr(N == 4) return vli4_sub_from(result, right);
 #endif
+#ifdef	NO_BUILTIN_ADDC
 	bool borrow = false;
 	for (uint i = 0; i < N; i++) {
 		u64 diff;
@@ -639,13 +629,22 @@ bool vli_sub_from(u64 *result, const u64 *right) noexcept
 		result[i] = diff;
 	}
 	return borrow;
+#else
+	u64 borrow = 0, c_out;
+	for (uint i = 0; i < N; i++) {
+		result[i] = __builtin_subcl(result[i], right[i], borrow, &c_out);
+		borrow = c_out;
+	}
+	return borrow != 0;
+#endif
 }
 
 /* Computes result = left - right, returning borrow. Can modify in place. */
 template<const uint N> forceinline
-static bool vli_usub_from(u64 *result, const u64 *left, u64 right) noexcept
+static bool vli_usub(u64 *result, const u64 *left, u64 right) noexcept
 {
 	u64 borrow = right;
+#ifdef	NO_BUILTIN_ADDC
 	for (uint i = 0; i < N; i++) {
 		u64 diff;
 		diff = result[i] - borrow;
@@ -653,6 +652,14 @@ static bool vli_usub_from(u64 *result, const u64 *left, u64 right) noexcept
 			borrow = (diff > result[i]);
 		result[i] = diff;
 	}
+#else
+	result[0] = __builtin_subcl(left[0], borrow, 0, &c_out);
+	borrow = c_out;
+	for (uint i = 1; i < N; i++) {
+		result[i] = __builtin_subcl(left[i], 0, borrow, &c_out);
+		borrow = c_out;
+	}
+#endif
 	return borrow != 0;
 }
 
