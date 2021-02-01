@@ -165,7 +165,7 @@ void mod4_add_to(u64 *left, const u64 *right, const u64 *mod) noexcept
 				"movq %%r15, 24(%%rdi)\n"
 				:
 				: "S"(right), "D"(left), [mod] "rm" (mod)
-				: "%r8", "%r9", "%r10", "%r11" , "%r12", "%r13", "%r14", "%r15", "cc", "memory");
+				: "rax", "%r8", "%r9", "%r10", "%r11" , "%r12", "%r13", "%r14", "%r15", "cc", "memory");
 }
 
 static forceinline void
@@ -202,7 +202,7 @@ mod4_add(u64 *res, const u64 *left, const u64 *right, const u64* mod) noexcept
 				"movq %%r15, 24(%%rdi)\n"
 				:
 				: "S"(right), "D"(left), [res] "rm" (res), [mod] "m" (mod)
-				: "%r8", "%r9", "%r10", "%r11" , "%r12", "%r13", "%r14", "%r15", "cc", "memory");
+				: "rax", "%r8", "%r9", "%r10", "%r11" , "%r12", "%r13", "%r14", "%r15", "cc", "memory");
 }
 
 
