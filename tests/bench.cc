@@ -82,7 +82,7 @@ static void test_inverse(benchmark::State &state)
 	u64	res[4];
 	for (auto _ : state) {
 		vli_mod_inv<4>(res, dx1, sm2_p);
-		//tt = bignum<4>(res);
+		tt = bignum<4>(res);
 	}
 }
 BENCHMARK(test_inverse);
@@ -92,7 +92,7 @@ static void test_inverseNew(benchmark::State &state)
 	u64	res[4];
 	for (auto _ : state) {
 		vli_mod_inv_new<4>(res, dx1, sm2_p);
-		//tt = bignum<4>(res);
+		tt = bignum<4>(res);
 	}
 }
 BENCHMARK(test_inverseNew);
@@ -101,10 +101,11 @@ static void test_mult2(benchmark::State &state)
 {
 	bignum<4>	x3(dx3), res;
 	for (auto _ : state) {
-		for (int i=0; i<1000; ++i)
-		sm2_p256.mont_mult2(res, x3);
+		for (int i=0; i<1000; ++i) {
+			sm2_p256.mont_mult2(res, x3);
+			tt = res;
+		}
 	}
-	tt = res;
 }
 BENCHMARK(test_mult2);
 
@@ -115,9 +116,9 @@ static void test_mult8(benchmark::State &state)
 		for (int i=0; i<1000; ++i) {
 			res = x3;
 			sm2_p256.mont_mult8(res);
+			tt = res;
 		}
 	}
-	tt = res;
 }
 BENCHMARK(test_mult8);
 
@@ -125,10 +126,11 @@ static void test_mult2k(benchmark::State &state)
 {
 	bignum<4>	x3(dx3), res;
 	for (auto _ : state) {
-		for (int i=0; i<1000; ++i)
-		sm2_k256.mont_mult2(res, x3);
+		for (int i=0; i<1000; ++i) {
+			sm2_k256.mont_mult2(res, x3);
+			tt = res;
+		}
 	}
-	tt = res;
 }
 BENCHMARK(test_mult2k);
 
@@ -139,9 +141,9 @@ static void test_mult8k(benchmark::State &state)
 		for (int i=0; i<1000; ++i) {
 			res = x3;
 			sm2_k256.mont_mult8(res);
+			tt = res;
 		}
 	}
-	tt = res;
 }
 BENCHMARK(test_mult8k);
 
@@ -152,9 +154,9 @@ static void test_div2(benchmark::State &state)
 		for (int i=0; i<1000; ++i) {
 			res = x3;
 			sm2_p256.mont_div2(res);
+			tt = res;
 		}
 	}
-	tt = res;
 }
 BENCHMARK(test_div2);
 

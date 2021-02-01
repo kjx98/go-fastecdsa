@@ -300,6 +300,33 @@ bool vli4_sub(u64 *res, const u64 *left, const u64 *right) noexcept
 	return carry;
 }
 #elif	defined(__aarch64__)
+static forceinline void
+vli4_mod(u64 *res, const u64 *left, const u64 *mod, const bool carry) noexcept
+{
+	/* result > mod (result = mod + remainder), so subtract mod to
+	 * get remainder.
+	 */
+	asm volatile("ldp x4, x5, [%2]\n"
+				"ldp x6, x7, [%2, 16]\n"
+				"ldp x9, x10, [%3]\n"
+				"ldp x11, x12, [%3, 16]\n"
+				"subs x9, x4, x9\n"
+				"sbcs x10, x5, x10\n"
+				"sbcs x11, x6, x11\n"
+				"sbcs x12, x7, x12\n"
+				"sbcs %0, %0, xzr\n"
+				"csel x4, x4, x9, cc\n"
+				"csel x5, x5, x10, cc\n"
+				"csel x6, x6 , x11, cc\n"
+				"csel x7, x7, x12, cc\n"
+				"stp x4, x5, [%1]\n"
+				"stp x6, x7, [%1, 16]\n"
+				"adc %0, xzr, xzr\n"
+		:
+		: "r" ((u64)carry), "r" (res), "r" (left), "r" (mod)
+		: "%x4", "%x5", "%x6", "%x7", "%x9", "%x10", "%x11", "%x12", "cc", "memory");
+}
+
 static forceinline
 bool vli4_add_to(u64 *left, const u64 *right) noexcept
 {
@@ -860,6 +887,7 @@ vli_mod(u64 *result, const u64 *left, const u64 *mod, const bool carry) noexcept
 	/* result > mod (result = mod + remainder), so subtract mod to
 	 * get remainder.
 	 */
+//#if	__cplusplus >= 201703L && (defined(__x86_64__) || defined(__aarch64__))
 #if	__cplusplus >= 201703L && defined(__x86_64__)
 	if constexpr(N == 4) {
 		vli4_mod(result, left, mod, carry);
