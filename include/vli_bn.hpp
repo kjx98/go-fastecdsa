@@ -120,16 +120,15 @@ public:
 #else
 #if	__cplusplus > 201703L
 		if constexpr(N == 4) {
-			return u64IsZero(this->d[0] ^ bn.d[0]) &
-					u64IsZero(this->d[1] ^ bn.d[1]) &
-					u64IsZero(this->d[2] ^ bn.d[2]) &
-					u64IsZero(this->d[3] ^ bn.d[3]);
+			return u64IsZero((this->d[0] ^ bn.d[0]) |
+					(this->d[1] ^ bn.d[1]) | (this->d[2] ^ bn.d[2]) |
+					(this->d[3] ^ bn.d[3]));
 		} else
 #endif
 		{
-			int	ret = u64IsZero(this->d[0] ^ bn.d[0]);
-			for (uint i=1; i < N; ++i) ret &= u64IsZero(this->d[i] ^ bn.d[i]);
-			return ret;
+			u64	ret = (this->d[0] ^ bn.d[0]);
+			for (uint i=1; i < N; ++i) ret |= (this->d[i] ^ bn.d[i]);
+			return u64IsZero(ret);
 		}
 #endif
 	}
@@ -143,14 +142,14 @@ public:
 #ifndef	NO_U64ZERO
 #if	__cplusplus > 201703L
 		if constexpr(N == 4) {
-			return u64IsZero(this->d[0]) & u64IsZero(this->d[1]) &
-					u64IsZero(this->d[2]) & u64IsZero(this->d[3]);
+			return u64IsZero(this->d[0] | this->d[1] |
+					this->d[2] | this->d[3]);
 		} else
 #endif
 		{
-			int		ret=u64IsZero(this->d[0]);
-			for (uint i = 1; i < N; i++) ret &= u64IsZero(this->d[i]);
-			return ret;
+			u64		ret=this->d[0];
+			for (uint i = 1; i < N; i++) ret |= this->d[i];
+			return u64IsZero(ret);
 		}
 #else
 		for (uint i = 0; i < N; i++) {
@@ -167,14 +166,15 @@ public:
 #ifndef	NO_U64ZERO
 #if	__cplusplus > 201703L
 		if constexpr(N == 4) {
-			return u64IsOne(this->d[0]) & u64IsZero(this->d[1]) &
-					u64IsZero(this->d[2]) & u64IsZero(this->d[3]);
+			return u64IsOne(this->d[0]) & u64IsZero(this->d[1] |
+					this->d[2] | this->d[3]);
 		} else
 #endif
 		{
 			int	ret = u64IsOne(this->d[0]);
-			for (uint i = 1; i < N; i++) ret &= u64IsZero(this->d[i]);
-			return ret;
+			u64	v=this->d[1];
+			for (uint i = 2; i < N; i++) ret |= this->d[i];
+			return ret & u64IsZero(v);
 		}
 #else
 		if (this->d[0] != 1) return 0;

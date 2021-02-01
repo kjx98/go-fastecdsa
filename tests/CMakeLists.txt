@@ -4,6 +4,7 @@ enable_language(C)
 
 option(WITH_TCMALLOC	"Use tcmalloc from gperftools" OFF)
 option(WITH_JEMALLOC	"Use jemalloc from FaceBook" OFF)
+option(WITH_ENTROPY		"Use getentropy() from glibc 2.25 or above" ON)
 
 set(CMAKE_BUILD_TYPE "Release")
 #set(CMAKE_BUILD_TYPE "Debug")
@@ -15,9 +16,12 @@ add_definitions( "-Wpedantic -Wall -Wuninitialized" )
 #add_definitions( "-DWITH_DBL_2004hmv" )
 #add_definitions( "-DWITH_MONT_D" )
 #add_definitions( "-DWITH_ASM" )
-#add_definitions( "-DNO_U64ZERO" )
+add_definitions( "-DNO_U64ZERO" )
 # WITH_GETENTROPY only for glibc 2.25 or above (CentOS8...)
+
+if(WITH_ENTROPY)
 add_definitions( "-DWITH_GETENTROPY" )
+endif()
 
 include(FindPkgConfig)
 

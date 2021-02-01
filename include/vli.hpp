@@ -38,6 +38,10 @@
 # error "C++ std MUST at least c++11"
 #endif
 
+#if __cplusplus < 201703L
+#undef	WITH_ASM
+#endif
+
 #if	__clang__ < 9
 #define	NO_BUILTIN_ADDC
 #endif
@@ -124,7 +128,7 @@ vli4_mod(u64 *res, const u64 *left, const u64 *mod, const bool carry) noexcept
 				"movq %%r14, 16(%%rdi)\n"
 				"movq %%r15, 24(%%rdi)\n"
 				:
-				: "S"(left), "D"(res), "a" (carry), [mod] "rm" (mod)
+				: "S"(left), "D"(res), "a" ((u64)carry), [mod] "rm" (mod)
 				: "%r8", "%r9", "%r10", "%r11" , "%r12", "%r13", "%r14", "%r15", "cc", "memory");
 }
 
@@ -386,11 +390,11 @@ static int vli_is_zero(const u64 *vli) noexcept
 	}
 	return true;
 #else
-	int	ret = u64IsZero(vli[0]);
+	u64	v=vli[0];
 	for (uint i = 1; i < N; i++) {
-		ret &= u64IsZero(vli[i]);
+		v |= vli[i];
 	}
-	return ret;
+	return u64IsZero(v);
 #endif
 }
 
@@ -405,9 +409,11 @@ static int vli_is_one(const u64 *vli) noexcept
 	return true;
 #else
 	int	ret = u64IsOne(vli[0]);
-	for (uint i = 1; i < N; i++) {
-		ret &= u64IsZero(vli[i]);
+	u64	v = vli[1];
+	for (uint i = 2; i < N; i++) {
+		v |= vli[i];
 	}
+	ret &= u64IsZero(v);
 	return ret;
 #endif
 }
@@ -549,10 +555,8 @@ bool vli_add(u64 *result, const u64 *left, const u64 *right) noexcept
 template<const uint N> forceinline static
 bool vli_add_to(u64 *result, const u64 *right) noexcept
 {
-#ifdef	WITH_ASM1
-#if	__cplusplus >= 201703L && (defined(__x86_64__) || defined(__aarch64__))
+#if	defined(WITH_ASM) && (defined(__x86_64__) || defined(__aarch64__))
 	if constexpr(N == 4) return vli4_add_to(result, right);
-#endif
 #endif
 #ifdef	NO_BUILTIN_ADDC
 	bool carry = false;
@@ -888,7 +892,7 @@ vli_mod(u64 *result, const u64 *left, const u64 *mod, const bool carry) noexcept
 	 * get remainder.
 	 */
 //#if	__cplusplus >= 201703L && (defined(__x86_64__) || defined(__aarch64__))
-#if	__cplusplus >= 201703L && defined(__x86_64__)
+#if	defined(WITH_ASM) && defined(__x86_64__)
 	if constexpr(N == 4) {
 		vli4_mod(result, left, mod, carry);
 	} else
