@@ -38,6 +38,10 @@
 # error "C++ std MUST at least c++11"
 #endif
 
+#if	__clang__ < 9
+#define	NO_BUILTIN_ADDC
+#endif
+
 #include "u128.hpp"
 
 
@@ -356,6 +360,7 @@ static int vli_is_zero(const u64 *vli) noexcept
 	return true;
 #else
 	int	ret = u64IsZero(vli[0]);
+#pragma clang unroll(full)
 	for (uint i = 1; i < N; i++) {
 		ret &= u64IsZero(vli[i]);
 	}
@@ -373,6 +378,7 @@ static int vli_is_one(const u64 *vli) noexcept
 	}
 	return true;
 #else
+#pragma clang unroll(full)
 	int	ret = u64IsOne(vli[0]);
 	for (uint i = 1; i < N; i++) {
 		ret &= u64IsZero(vli[i]);
@@ -385,6 +391,7 @@ static int vli_is_one(const u64 *vli) noexcept
 template<const uint N> forceinline
 static void vli_set(u64 *dest, const u64 *src) noexcept
 {
+#pragma clang unroll(full)
 	for (uint i = 0; i < N; i++)
 		dest[i] = src[i];
 }
@@ -494,6 +501,7 @@ static void vli_rshift1w(u64 *vli) noexcept
 template<const uint N> forceinline static
 bool vli_add(u64 *result, const u64 *left, const u64 *right) noexcept
 {
+#ifdef	NO_BUILTIN_ADDC
 	bool carry = false;
 	for (uint i = 0; i < N; i++) {
 		u64 sum;
@@ -503,6 +511,14 @@ bool vli_add(u64 *result, const u64 *left, const u64 *right) noexcept
 		result[i] = sum;
 	}
 	return carry;
+#else
+	u64 carry_in = 0, c_out;
+	for (uint i = 0; i < N; ++i) {
+		result[i] = __builtin_addcl(left[i], right[i], carry_in, &c_out);
+		carry_in = c_out;
+	}
+	return carry_in != 0;
+#endif
 }
 
 #ifdef	ommit

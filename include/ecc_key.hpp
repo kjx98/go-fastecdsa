@@ -52,7 +52,10 @@ public:
 		static	bool	_inited = false;
 		if (!_inited) {
 			u64		seeds[4];
-			if (getentropy((void *)seeds, sizeof(seeds)) < 0) {
+#ifdef	WITH_GETENTROPY
+			if (getentropy((void *)seeds, sizeof(seeds)) < 0)
+#endif
+			{
 				seeds[0] = clock();
 				struct timespec tp;
 				clock_gettime(CLOCK_REALTIME, &tp);
