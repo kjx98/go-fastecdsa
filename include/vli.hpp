@@ -668,7 +668,7 @@ static bool vli_uadd_to(u64 *result, u64 right) noexcept
 template<const uint N> forceinline static
 bool vli_sub(u64 *result, const u64 *left, const u64 *right) noexcept
 {
-#if	defined(WITH_ASM) && defined(__x86_64__)
+#if	defined(WITH_ASM) //&& defined(__x86_64__)
 #if	__cplusplus >= 201703L
 	if constexpr(N == 4) return vli4_sub(result, left, right);
 #else
@@ -698,7 +698,7 @@ bool vli_sub(u64 *result, const u64 *left, const u64 *right) noexcept
 template<const uint N> forceinline static
 bool vli_sub_from(u64 *result, const u64 *right) noexcept
 {
-#if	defined(WITH_ASM) && defined(__x86_64__)
+#if	defined(WITH_ASM) //&& defined(__x86_64__)
 #if	__cplusplus >= 201703L
 	if constexpr(N == 4) return vli4_sub_from(result, right);
 #else
