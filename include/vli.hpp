@@ -368,6 +368,48 @@ bool vli4_add(u64 *res, const u64 *left, const u64 *right) noexcept
 		: "%x4", "%x5", "%x6", "%x7", "%x9", "%x10", "%x11", "%x12", "cc", "memory");
 	return carry;
 }
+
+static forceinline
+bool vli4_sub_from(u64 *left, const u64 *right) noexcept
+{
+	u64 carry;
+	asm volatile("ldp x4, x5, [%1]\n"
+				"ldp x6, x7, [%1, 16]\n"
+				"ldp x9, x10, [%2]\n"
+				"ldp x11, x12, [%2, 16]\n"
+				"subs x4, x4, x9\n"
+				"sbcs x5, x5, x10\n"
+				"sbcs x6, x6, x11\n"
+				"sbcs x7, x7, x12\n"
+				"stp x4, x5, [%1]\n"
+				"stp x6, x7, [%1, 16]\n"
+				"sbc %0, xzr, xzr\n"
+		: "=r"(carry)
+		: "r" (left), "r" (right)
+		: "%x4", "%x5", "%x6", "%x7", "%x9", "%x10", "%x11", "%x12", "cc", "memory");
+	return carry;
+}
+
+static forceinline
+bool vli4_sub(u64 *res, const u64 *left, const u64 *right) noexcept
+{
+	u64 carry;
+	asm volatile("ldp x4, x5, [%2]\n"
+				"ldp x6, x7, [%2, 16]\n"
+				"ldp x9, x10, [%3]\n"
+				"ldp x11, x12, [%3, 16]\n"
+				"subs x4, x4, x9\n"
+				"sbcs x5, x5, x10\n"
+				"sbcs x6, x6, x11\n"
+				"sbcs x7, x7, x12\n"
+				"stp x4, x5, [%1]\n"
+				"stp x6, x7, [%1, 16]\n"
+				"sbc %0, xzr, xzr\n"
+		: "=r"(carry)
+		: "r" (res), "r" (left), "r" (right)
+		: "%x4", "%x5", "%x6", "%x7", "%x9", "%x10", "%x11", "%x12", "cc", "memory");
+	return carry;
+}
 #endif
 
 /**
