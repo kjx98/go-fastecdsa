@@ -527,8 +527,12 @@ static void vli_rshift1w(u64 *vli) noexcept
 template<const uint N> forceinline static
 bool vli_add(u64 *result, const u64 *left, const u64 *right) noexcept
 {
-#if	__cplusplus >= 201703L && defined(WITH_ASM) // && defined(__x86_64__)
+#if	defined(WITH_ASM) // && defined(__x86_64__)
+#if	__cplusplus >= 201703L
 	if constexpr(N == 4) return vli4_add(result, left, right);
+#else
+	if ( likely(N == 4) ) return vli4_add(result, left, right);
+#endif
 #endif
 #ifdef	NO_BUILTIN_ADDC
 	bool carry = false;
@@ -554,8 +558,12 @@ bool vli_add(u64 *result, const u64 *left, const u64 *right) noexcept
 template<const uint N> forceinline static
 bool vli_add_to(u64 *result, const u64 *right) noexcept
 {
-#if	__cplusplus >= 201703L && defined(WITH_ASM) // && defined(__x86_64__)
+#if	defined(WITH_ASM) // && defined(__x86_64__)
+#if	__cplusplus >= 201703L
 	if constexpr(N == 4) return vli4_add_to(result, right);
+#else
+	if  ( likely(N == 4) ) return vli4_add_to(result, right);
+#endif
 #endif
 #ifdef	NO_BUILTIN_ADDC
 	bool carry = false;
@@ -618,8 +626,12 @@ static bool vli_uadd_to(u64 *result, u64 right) noexcept
 template<const uint N> forceinline static
 bool vli_sub(u64 *result, const u64 *left, const u64 *right) noexcept
 {
-#if	__cplusplus >= 201703L && defined(WITH_ASM) && defined(__x86_64__)
-//	if constexpr(N == 4) return vli4_sub(result, left, right);
+#if	defined(WITH_ASM) && defined(__x86_64__)
+#if	__cplusplus >= 201703L
+	if constexpr(N == 4) return vli4_sub(result, left, right);
+#else
+	if ( likely(N == 4) ) return vli4_sub(result, left, right);
+#endif
 #endif
 #ifdef	NO_BUILTIN_ADDC
 	bool borrow = false;
@@ -644,8 +656,12 @@ bool vli_sub(u64 *result, const u64 *left, const u64 *right) noexcept
 template<const uint N> forceinline static
 bool vli_sub_from(u64 *result, const u64 *right) noexcept
 {
-#if	__cplusplus >= 201703L && defined(WITH_ASM) && defined(__x86_64__)
-//	if constexpr(N == 4) return vli4_sub_from(result, right);
+#if	defined(WITH_ASM) && defined(__x86_64__)
+#if	__cplusplus >= 201703L
+	if constexpr(N == 4) return vli4_sub_from(result, right);
+#else
+	if ( likely(N == 4) ) return vli4_sub_from(result, right);
+#endif
 #endif
 #ifdef	NO_BUILTIN_ADDC
 	bool borrow = false;
