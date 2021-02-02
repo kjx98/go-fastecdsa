@@ -124,7 +124,7 @@ vli4_mod(u64 *res, const u64 *left, const u64 *mod, const bool carry) noexcept
 				"movq %%r14, 16(%%rdi)\n"
 				"movq %%r15, 24(%%rdi)\n"
 				:
-				: "S"(left), "D"(res), "a" ((u64)carry), [mod] "rm" (mod)
+				: "S"(left), "D"(res), "a" ((u64)carry), [mod] "m" (mod)
 				: "%r8", "%r9", "%r10", "%r11" , "%r12", "%r13", "%r14", "%r15", "cc", "memory");
 }
 
@@ -295,7 +295,7 @@ bool vli4_sub(u64 *res, const u64 *left, const u64 *right) noexcept
 				"movq %%r10, 16(%%rdi)\n"
 				"movq %%r11, 24(%%rdi)\n"
 				: "=a"(carry)
-				: "S"(right), "D"(left), [res] "mm" (res)
+				: "S"(right), "D"(left), [res] "rm" (res)
 				: "%r8", "%r9", "%r10", "%r11" , "cc", "memory");
 	return carry;
 }
@@ -569,7 +569,7 @@ static void vli_rshift1w(u64 *vli) noexcept
 template<const uint N> forceinline static
 bool vli_add(u64 *result, const u64 *left, const u64 *right) noexcept
 {
-#if	defined(WITH_ASM) // && defined(__x86_64__)
+#if	defined(WITH_ASM)
 #if	__cplusplus >= 201703L
 	if constexpr(N == 4) return vli4_add(result, left, right);
 #else
@@ -600,7 +600,7 @@ bool vli_add(u64 *result, const u64 *left, const u64 *right) noexcept
 template<const uint N> forceinline static
 bool vli_add_to(u64 *result, const u64 *right) noexcept
 {
-#if	defined(WITH_ASM) // && defined(__x86_64__)
+#if	defined(WITH_ASM)
 #if	__cplusplus >= 201703L
 	if constexpr(N == 4) return vli4_add_to(result, right);
 #else
@@ -668,7 +668,7 @@ static bool vli_uadd_to(u64 *result, u64 right) noexcept
 template<const uint N> forceinline static
 bool vli_sub(u64 *result, const u64 *left, const u64 *right) noexcept
 {
-#if	defined(WITH_ASM) //&& defined(__x86_64__)
+#if	defined(WITH_ASM)
 #if	__cplusplus >= 201703L
 	if constexpr(N == 4) return vli4_sub(result, left, right);
 #else
@@ -698,7 +698,7 @@ bool vli_sub(u64 *result, const u64 *left, const u64 *right) noexcept
 template<const uint N> forceinline static
 bool vli_sub_from(u64 *result, const u64 *right) noexcept
 {
-#if	defined(WITH_ASM) //&& defined(__x86_64__)
+#if	defined(WITH_ASM)
 #if	__cplusplus >= 201703L
 	if constexpr(N == 4) return vli4_sub_from(result, right);
 #else
@@ -945,7 +945,7 @@ vli_mod(u64 *result, const u64 *left, const u64 *mod, const bool carry) noexcept
 	/* result > mod (result = mod + remainder), so subtract mod to
 	 * get remainder.
 	 */
-#if	defined(WITH_ASM)
+#if	defined(WITH_ASM) // || defined(__aarch64__)
 #if	__cplusplus >= 201703L
 	if constexpr(N == 4) {
 		vli4_mod(result, left, mod, carry);
@@ -956,49 +956,16 @@ vli_mod(u64 *result, const u64 *left, const u64 *mod, const bool carry) noexcept
 	} else
 #endif
 #endif
-	if (carry || vli_cmp<N>(left, mod) >= 0) {
-		vli_sub<N>(result, left, mod);
-	} else vli_set<N>(result, left);
-#ifdef	ommit
+#ifdef ommit
 	// maybe copy_conditional faster?
 	bool s_carry = vli_sub<N>(result, left, mod);
 	if ( !carry && s_carry) vli_set<N>(result, left);
+#else
+	if (carry || vli_cmp<N>(left, mod) >= 0) {
+		vli_sub<N>(result, left, mod);
+	} else vli_set<N>(result, left);
 #endif
 }
 
-#ifdef	ommit
-/* Computes result = (left + right) % mod.
- * Assumes that left < mod and right < mod, result != mod.
- */
-template<uint N> forceinline
-static void vli_mod_add(u64 *result, const u64 *left, const u64 *right,
-			const u64 *mod) noexcept
-{
-	auto carry = vli_add<N>(result, left, right);
-
-	/* result > mod (result = mod + remainder), so subtract mod to
-	 * get remainder.
-	 */
-	if (carry || vli_cmp<N>(result, mod) >= 0)
-		vli_sub_from<N>(result, mod);
-}
-
-/* Computes result = (left - right) % mod.
- * Assumes that left < mod and right < mod, result != mod.
- */
-template<uint N> forceinline
-static void vli_mod_sub(u64 *result, const u64 *left, const u64 *right,
-			const u64 *mod) noexcept
-{
-	auto borrow = vli_sub<N>(result, left, right);
-
-	/* In this case, p_result == -diff == (max int) - diff.
-	 * Since -x % d == d - x, we can get the correct result from
-	 * result + mod (with overflow).
-	 */
-	if (borrow)
-		vli_add_to<N>(result, mod);
-}
-#endif
 
 #endif	//	__VLI_HPP__

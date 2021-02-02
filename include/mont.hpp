@@ -69,6 +69,7 @@ static void vli_sm2_multR(u64 *result, const u64 u) noexcept
 	return;
 }
 
+
 template<const uint N> forceinline
 static void
 #ifdef	WITH_C2GO_1
@@ -91,7 +92,7 @@ mont_reduction(u64 *result, const u64 *y, const u64 *prime,
 	s[N+1] = 0;
 	for (uint i=0; i < N; i++) {
 		u64	u = (r[0] + y[i]) * k0;
-		vli_umulti2<N>(s, prime, u);
+		vli_umult2<N>(s, prime, u);
 		vli_uadd_to<N + 2>(r, y[i]);
 		vli_add_to<N + 2>(r, s);
 		vli_rshift1w<N + 2>(r);	

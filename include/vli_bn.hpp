@@ -52,6 +52,7 @@ public:
 	bn_words(const bn_words &) = default;
 	explicit bn_words(const u64 v) : d{v, 0, 0, 0}
 	{
+		static_assert(N >= 4, "ndigits >= 4 required.");
 #if	__cplusplus >= 201703L
 		if constexpr(N > 4)
 #else
@@ -85,7 +86,7 @@ public:
 	}
 	void clear() noexcept
 	{
-		for (uint i = 0; i < N; i++)
+		for (uint i = 0; i < N; ++i)
 			this->d[i] = 0;
 	}
 	friend std::ostream& operator<<(std::ostream& os, const bignum& x) noexcept
@@ -94,7 +95,7 @@ public:
 		if (x.is_u64()) {
 			os << x.d[0];
 		} else {
-			for (uint i=0; i < N; i++) {
+			for (uint i=0; i < N; ++i) {
 				os << " " << x.d[i];
 			}
 		}
@@ -102,7 +103,7 @@ public:
 		return os;
 	}
 	bool operator<(const bignum& bn) const noexcept {
-		for (int i = N - 1; i >= 0; i--) {
+		for (int i = N - 1; i >= 0; --i) {
 			if (this->d[i] > bn.d[i]) return false;
 			else if (this->d[i] < bn.d[i]) return true;
 		}
@@ -113,7 +114,7 @@ public:
 	}
 	bool operator==(const bignum& bn) const noexcept {
 #ifdef	NO_U64ZERO
-		for (int i = N - 1; i >= 0; i--) {
+		for (uint i = 0; i < N; ++i) {
 			if (this->d[i] != bn.d[i]) return false;
 		}
 		return true;
@@ -148,11 +149,11 @@ public:
 #endif
 		{
 			u64		ret=this->d[0];
-			for (uint i = 1; i < N; i++) ret |= this->d[i];
+			for (uint i = 1; i < N; ++i) ret |= this->d[i];
 			return u64IsZero(ret);
 		}
 #else
-		for (uint i = 0; i < N; i++) {
+		for (uint i = 0; i < N; ++i) {
 			if (this->d[i]) return 0;
 		}
 		return true;
@@ -397,7 +398,6 @@ public:
  */
 	void mod_sub(const bignum& left, const bignum& right, const bignum& prime) noexcept
 	{
-//#if	defined(__x86_64__) && defined(WITH_ASM)
 #if	defined(WITH_ASM)
 #if	__cplusplus >= 201703L
 		if constexpr(N == 4) {
@@ -415,7 +415,6 @@ public:
 	}
 	void mod_sub_from(const bignum& right, const bignum& prime) noexcept
 	{
-//#if	defined(__x86_64__) && defined(WITH_ASM)
 #if	defined(WITH_ASM)
 #if	__cplusplus >= 201703L
 		if constexpr(N == 4) {
@@ -472,64 +471,23 @@ public:
 		for (uint i = 0; i < N; i++)
 			this->d[i] = be64toh(from[N - 1 - i]);
 	}
-#ifdef	ommit
-/* Computes this = (left + right) % mod.
- * Assumes that left < mod and right < mod, result != mod.
- */
-	bignum& mod_add(const bignum& left, const bignum &right, const bignum &mod)
-	noexcept
-	{
-		auto carry = this->add(left, right);
-		/* result > mod (result = mod + remainder), so subtract mod to
-		 * get remainder.
-		 */
-		if (carry || this->cmp(mod) >= 0)
-			this->sub_from(mod);
-		return *this;
-	}
-#endif
-/* Computes this = (left - right) % mod.
- * Assumes that left < mod and right < mod, result != mod.
- */
-#ifdef	ommit
-	bignum& mod_sub(const bignum& left, const bignum& right, const bignum &mod)
-	noexcept
-	{
-		auto borrow = this->sub(left, right);
-		/* In this case, p_result == -diff == (max int) - diff.
-		 * Since -x % d == d - x, we can get the correct result from
-		 * result + mod (with overflow).
-		 */
-		if (borrow)
-			this->add_to(mod);
-	}
-#endif
 	template<const u64 k0> forceinline
 	friend void mont_reduction(bignum& res,  const bignum& y,
 					const bignum& prime) noexcept
 	{
 		u64	s[N*2];
 		u64	r[N+2];
-#ifdef	ommit
-		vli_clear<N + 2>(r);
-		for (uint i=0; i < N; i++) {
-			u64	u = (r[0] + y.d[i]) * k0;
-			vli_umult<N>(s, prime.d, u);
-			vli_uadd_to<N + 2>(r, y.d[i]);
-			vli_add_to<N + 2>(r, s);
-			vli_rshift1w<N + 2>(r);	
-		}
-#else
 		vli_set<N>(r, y.d);
 		r[N] = 0;
 		r[N+1] = 0;
+		s[N] = 0;
+		s[N+1] = 0;
 		for (uint i=0; i < N; i++) {
 			u64	u = r[0] * k0;
-			vli_umult<N>(s, prime.d, u);
+			vli_umult2<N>(s, prime.d, u);
 			vli_add_to<N + 2>(r, s);
 			vli_rshift1w<N + 2>(r);	
 		}
-#endif
 #ifdef	ommit
 		if (r[N] !=0 || vli_cmp<N>(r, prime.d) >= 0) {
 			vli_sub<N>(res.d, r, prime.d);
@@ -543,26 +501,17 @@ public:
 	{
 		u64	s[N*2];
 		u64	r[N+2];
-#ifdef	ommit
-		vli_clear<N + 2>(r);
-		for (uint i=0; i < N; i++) {
-			u64	u = (r[0] + y.d[i]) * k0;
-			vli_umult<N>(s, prime.d, u);
-			vli_uadd_to<N + 2>(r, y.d[i]);
-			vli_add_to<N + 2>(r, s);
-			vli_rshift1w<N + 2>(r);	
-		}
-#else
 		vli_set<N>(r, y.d);
 		r[N] = 0;
 		r[N+1] = 0;
+		s[N] = 0;
+		s[N+1] = 0;
 		for (uint i=0; i < N; i++) {
 			u64	u = r[0] * k0;
-			vli_umult<N>(s, prime.d, u);
+			vli_umult2<N>(s, prime.d, u);
 			vli_add_to<N + 2>(r, s);
 			vli_rshift1w<N + 2>(r);	
 		}
-#endif
 #ifdef	ommit
 		if (r[N] !=0 || vli_cmp<N>(r, prime.d) >= 0) {
 			vli_sub<N>(this->d, r, prime.d);
@@ -571,6 +520,22 @@ public:
 		vli_mod<N>(this->d, r, prime.d, r[N] != 0);
 #endif
 	}
+	void mont_reductionK01(const bignum& y, const bignum& prime) noexcept
+	{
+		u64	s[N*2];
+		u64	r[N+2];
+		vli_set<N>(r, y.d);
+		r[N] = 0;
+		r[N+1] = 0;
+		s[N] = 0;
+		s[N+1] = 0;
+		for (uint i=0; i < N; i++) {
+			vli_umult2<N>(s, prime.d, r[0]);
+			vli_add_to<N + 2>(r, s);
+			vli_rshift1w<N + 2>(r);	
+		}
+		vli_mod<N>(this->d, r, prime.d, r[N] != 0);
+	}
 	template<const u64 k0> forceinline
 	friend void mont_mult(bignum& res, const bignum& x, const bignum& y,
 					const bignum& prime) noexcept
@@ -578,11 +543,13 @@ public:
 		u64	s[N*2];
 		u64	r[N+2];
 		vli_clear<N + 2>(r);
+		s[N] = 0;
+		s[N+1] = 0;
 		for (uint i=0; i < N;i++) {
 			u64	u = (r[0] + y.d[i]*x.d[0]) * k0;
-			vli_umult<N>(s, prime.d, u);
+			vli_umult2<N>(s, prime.d, u);
 			vli_add_to<N + 2>(r, s);
-			vli_umult<N>(s, x.d, y.d[i]);
+			vli_umult2<N>(s, x.d, y.d[i]);
 			vli_add_to<N + 2>(r, s);
 			vli_rshift1w<N + 2>(r);	
 		}
@@ -601,11 +568,13 @@ public:
 		u64	s[N*2];
 		u64	r[N+2];
 		vli_clear<N + 2>(r);
+		s[N] = 0;
+		s[N+1] = 0;
 		for (uint i=0; i < N;i++) {
 			u64	u = (r[0] + y.d[i]*x[0]) * k0;
-			vli_umult<N>(s, prime.d, u);
+			vli_umult2<N>(s, prime.d, u);
 			vli_add_to<N + 2>(r, s);
-			vli_umult<N>(s, x, y.d[i]);
+			vli_umult2<N>(s, x, y.d[i]);
 			vli_add_to<N + 2>(r, s);
 			vli_rshift1w<N + 2>(r);	
 		}
@@ -623,11 +592,37 @@ public:
 		u64	s[N*2];
 		u64	r[N+2];
 		vli_clear<N + 2>(r);
+		s[N] = 0;
+		s[N+1] = 0;
 		for (uint i=0; i < N;i++) {
 			u64	u = (r[0] + y.d[i]*x.d[0]) * k0;
-			vli_umult<N>(s, prime.d, u);
+			vli_umult2<N>(s, prime.d, u);
 			vli_add_to<N + 2>(r, s);
-			vli_umult<N>(s, x.d, y.d[i]);
+			vli_umult2<N>(s, x.d, y.d[i]);
+			vli_add_to<N + 2>(r, s);
+			vli_rshift1w<N + 2>(r);	
+		}
+#ifdef	ommit
+		if (r[N] != 0 || vli_cmp<N>(r, prime.d) >= 0) {
+			vli_sub<N>(this->d, r, prime.d);
+		} else vli_set<N>(this->d, r);
+#else
+		vli_mod<N>(this->d, r, prime.d, r[N] != 0);
+#endif
+	}
+	void
+	mont_multK01(const bignum& x, const bignum& y, const bignum& prime) noexcept
+	{
+		u64	s[N*2];
+		u64	r[N+2];
+		vli_clear<N + 2>(r);
+		s[N] = 0;
+		s[N+1] = 0;
+		for (uint i=0; i < N;i++) {
+			u64	u = r[0] + y.d[i]*x.d[0];
+			vli_umult2<N>(s, prime.d, u);
+			vli_add_to<N + 2>(r, s);
+			vli_umult2<N>(s, x.d, y.d[i]);
 			vli_add_to<N + 2>(r, s);
 			vli_rshift1w<N + 2>(r);	
 		}
@@ -645,11 +640,13 @@ public:
 		u64	s[N*2];
 		u64	r[N+2];
 		vli_clear<N + 2>(r);
+		s[N] = 0;
+		s[N+1] = 0;
 		for (uint i=0; i < N;i++) {
 			u64	u = (r[0] + x.d[i]*x.d[0]) * k0;
-			vli_umult<N>(s, prime.d, u);
+			vli_umult2<N>(s, prime.d, u);
 			vli_add_to<N + 2>(r, s);
-			vli_umult<N>(s, x.d, x.d[i]);
+			vli_umult2<N>(s, x.d, x.d[i]);
 			vli_add_to<N + 2>(r, s);
 			vli_rshift1w<N + 2>(r);	
 		}
@@ -666,11 +663,36 @@ public:
 		u64	s[N*2];
 		u64	r[N+2];
 		vli_clear<N + 2>(r);
+		s[N] = 0;
+		s[N+1] = 0;
 		for (uint i=0; i < N;i++) {
 			u64	u = (r[0] + x.d[i]*x.d[0]) * k0;
-			vli_umult<N>(s, prime.d, u);
+			vli_umult2<N>(s, prime.d, u);
 			vli_add_to<N + 2>(r, s);
-			vli_umult<N>(s, x.d, x.d[i]);
+			vli_umult2<N>(s, x.d, x.d[i]);
+			vli_add_to<N + 2>(r, s);
+			vli_rshift1w<N + 2>(r);	
+		}
+#ifdef	ommit
+		if (r[N] != 0 || vli_cmp<N>(r, prime.d) >= 0) {
+			vli_sub<N>(this->d, r, prime.d);
+		} else vli_set<N>(this->d, r);
+#else
+		vli_mod<N>(this->d, r, prime.d, r[N] != 0);
+#endif
+	}
+	void mont_sqrK01(const bignum& x, const bignum& prime) noexcept
+	{
+		u64	s[N*2];
+		u64	r[N+2];
+		vli_clear<N + 2>(r);
+		s[N] = 0;
+		s[N+1] = 0;
+		for (uint i=0; i < N;i++) {
+			u64	u = r[0] + x.d[i]*x.d[0];
+			vli_umult2<N>(s, prime.d, u);
+			vli_add_to<N + 2>(r, s);
+			vli_umult2<N>(s, x.d, x.d[i]);
 			vli_add_to<N + 2>(r, s);
 			vli_rshift1w<N + 2>(r);	
 		}
