@@ -15,7 +15,7 @@ add_definitions( "-Wpedantic -Wall -Wuninitialized" )
 #add_definitions( "-DWITH_ADD_2007bl" )
 #add_definitions( "-DWITH_DBL_2004hmv" )
 #add_definitions( "-DWITH_MONT_D" )
-#add_definitions( "-DWITH_ASM" )
+add_definitions( "-DWITH_ASM" )
 add_definitions( "-DNO_U64ZERO" )
 # WITH_GETENTROPY only for glibc 2.25 or above (CentOS8...)
 
