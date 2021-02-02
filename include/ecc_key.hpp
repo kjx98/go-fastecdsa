@@ -198,7 +198,8 @@ void gen_keypair(const curveT& curve, bignum<N>& secret, bignum<N>& pubX,
  * 			x1, y1 = k * G
  * 			r = e + x1
  *			if r == 0 modN  goto getk
- *			s = (1 + dA)^-1 * (k - r * dA) = (1 + dA)^-1 * (k + r) - r
+ *			s = (1 + dA)^-1 * (k - r * dA)
+ *			s = (1 + dA)^-1 * (k + r) - r
  *			if s == 0 modN goto getk
  *			if r + s == 0 modN goto getk
  *			return r, s, y1_is_odd

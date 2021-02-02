@@ -17,6 +17,7 @@ constexpr u64 nist_p192_b[] = { 0xFEB8DEECC146B9B1ull, 0x0FA7E9AB72243049ull,
 */
 
 /* NIST P-256: a = p - 3 */
+// nist p256 p: 2^256 - 2^224 + 2^192 + 2^96 -1
 constexpr u64 nist_p256_p[] = { 0xFFFFFFFFFFFFFFFFull, 0x00000000FFFFFFFFull,
 				0x0000000000000000ull, 0xFFFFFFFF00000001ull };
 constexpr u64 nist_p256_n[] = { 0xF3B9CAC2FC632551ull, 0xBCE6FAADA7179E84ull,
@@ -32,6 +33,7 @@ constexpr u64 nist_p256_gy[]= { 0xCBB6406837BF51F5ull, 0x2BCE33576B315ECEull,
 
 /* GM/T 0003.5-2012 SM2: a = p - 3 */
 /* prime following mu for Barrett's reduction */
+// SM2 p: 2^256 - 2^224 - 2^96 + 2^64 -1
 constexpr u64 sm2_p[] = { 0xFFFFFFFFFFFFFFFFull, 0xffffffff00000000ull,
 				0xffffffffffffffffull, 0xfffffffeffffffffull };
 constexpr u64 sm2_p_mu[] = {0x200000003, 0x200000002, 0x100000001,
@@ -56,6 +58,7 @@ constexpr u64 sm2_gy[]= { 0x2DF32E52139F0A0ull, 0xD0A9877CC62A4740ull,
 				0x59BDCEE36B692153ull, 0xBC3736A2F4F6779Cull };
 
 // ECC const for secp256k1, used by BTC/ETH...
+// secp256k1 p: 2^256 + 2^32 - 0x3d1
 constexpr u64 secp256k1_p[] = { 0xFFFFFFFEFFFFFC2Full, 0xFFFFFFFFFFFFFFFFull,
 				0xffffffffffffffffull, 0xFFFFFFFFFFFFFFFFull };
 constexpr u64 secp256k1_n[] = { 0xbfd25e8cd0364141ull, 0xbaaedce6af48a03bull,

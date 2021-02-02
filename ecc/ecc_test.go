@@ -66,6 +66,22 @@ func TestSM2MultP(t *testing.T) {
 	} else {
 		t.Log("polynomial Prime OK")
 	}
+	mp := new(big.Int).Mul(p, big.NewInt(0x33445566))
+	polyP = vliSM2MultP(0x33445566)
+	if polyP.Cmp(mp) != 0 {
+		ww := polyP.Bits()
+		t.Logf("sm2 polyP diff P: %X %X %X %X", ww[0], ww[1], ww[2], ww[3])
+		ww = mp.Bits()
+		t.Logf("sm2 P: %X %X %X %X %X", ww[0], ww[1], ww[2], ww[3], ww[4])
+		t.Fail()
+	} else {
+		t.Log("polynomial Prime OK")
+		/*
+			ww := polyP.Bits()
+			t.Logf("sm2 polyP diff P: %X %X %X %X %X", ww[0], ww[1], ww[2],
+				ww[3], ww[4])
+		*/
+	}
 }
 
 func TestMontMultMod(t *testing.T) {

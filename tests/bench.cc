@@ -15,6 +15,16 @@ using namespace ecc;
 //#define	sm2_p256	(*sm2_p256p)
 bignum<4>	tt;
 
+static void test_sm2MultP(benchmark::State &state)
+{
+	u64		r[5];
+	for (auto _ : state) {
+		for (int i=0; i<1000; ++i)
+		vli_sm2_multP(r, 0x33445566);
+	}
+}
+BENCHMARK(test_sm2MultP);
+
 static void test_montMult(benchmark::State &state)
 {
 	bignum<4>	xp;

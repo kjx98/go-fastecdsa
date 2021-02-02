@@ -171,19 +171,7 @@ public:
 		res.mont_sqr(left, p, k0_p);
 		for (uint i=1; i < nTimes; i++) res.mont_sqr(res, p, k0_p);
 	}
-#ifdef	ommit
-	void modP(felem_t& res, const felem_t& left) const noexcept
-	{
-		if (left.cmp(this->p) >= 0) res.sub(left, this->p); else
-			res = left;
-	}
-	void modN(felem_t& res, const felem_t& left) const noexcept
-	{
-		if (left.cmp(this->n) >= 0) res.sub(left, this->n); else
-			res = left;
-	}
-#endif
-	// left,right less than p
+	// left,right less than p, result may large than p
 	void mod_add(felem_t& res, const felem_t& left, const felem_t& right)
 	const noexcept
 	{
@@ -191,7 +179,7 @@ public:
 			res.sub_from(p);
 		}
 	}
-	// left,right less than p
+	// left,right less than p, result may large than p
 	void mod_add_to(felem_t& res, const felem_t& right) const noexcept
 	{
 		if (res.add_to(right)) {
@@ -276,16 +264,15 @@ public:
 #endif
 		{
 			if ( tt.sub_from(this->_mont_three) ) tt.add_to(this->p);
-			//if ( tt.add_to(this->_mont_a) ) tt.sub_from(this->p);
 		} else {
 			if (! this->_a_is_zero) return false;
+			//if ( tt.add_to(this->_mont_a) ) tt.sub_from(this->p);
 		}
+		// tt = x^3 + ax
 		mont_mmult(tt, tt, xp);
-		// tt = x^3 + ax, normal bignum
+		// tt = x^3 + ax, to normal bignum
 		from_montgomery(tt, tt);
-		if (tt.add_to(this->b) || tt.cmp(this->p) >= 0) {
-			tt.sub_from(this->p);
-		}
+		tt.mod_add_to(this->b, this->p);
 		mont_msqr(yy, yp);
 		from_montgomery(yy, yy);
 		if (yy.cmp(this->p) >= 0) yy.sub_from(this->p);
@@ -938,11 +925,11 @@ public:
 					const u64 *y1, const u64 *z1 = nullptr) const noexcept
 	{
 		if ((z1 != nullptr && vli_is_zero<4>(z1)) || vli_is_zero<4>(y1)) {
-			/* P_y == 0 || P_z == 0 => [1:1:0] */
+			/* P_y == 0 || P_z == 0 => [0:1:0] */
 			vli_clear<4>(x3);
 			vli_clear<4>(y3);
 			vli_clear<4>(z3);
-			x3[0] = 1;
+			//x3[0] = 1;
 			y3[0] = 1;
 			return;
 		}

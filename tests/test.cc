@@ -27,6 +27,18 @@ TEST(testEcc, TestCalcK0RR)
 	ASSERT_TRUE(rrN.cmp(calcRR<4>(trr, primeN)) == 0);
 }
 
+TEST(testEcc, TestSM2umultP)
+{
+	u64		r[5];
+	vli_sm2_multP(r, 1);
+	ASSERT_EQ(prime.cmp(r), 0);
+	u64	v3456[]={0xFFFFFFFFCCBBAA9Aull, 0xCCBBAA9A33445565ull,
+		   			0xFFFFFFFFFFFFFFFFull, 0xCCBBAA99FFFFFFFFull, 0x33445565};
+	bignum<5>	bv(v3456);
+	vli_sm2_multP(r, 0x33445566);
+	EXPECT_EQ(bv.cmp(r), 0);
+}
+
 static void mont_mul(bignum<4>& res, const bignum<4>& x, const bignum<4>& y)
 {
 	bignum<4>	xp, yp;

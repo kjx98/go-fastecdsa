@@ -37,11 +37,12 @@
 forceinline
 static void vli_sm2_multP(u64 *result, const u64 u) noexcept
 {
-	u64	r[4];
+	u64	r[5];
 	u64	t_low, t_high;
 	t_low = u << 32;	// ^192
 	t_high = ((u >> 32) & 0xffffffff);
 	vli_clear<6>(result);
+#ifdef	ommit
 	result[3] = 0 - t_low;		// ^256 - ^224
 	result[4] = u - t_high -1;
 	r[0] =0;
@@ -53,6 +54,17 @@ static void vli_sm2_multP(u64 *result, const u64 u) noexcept
 	r[1] = u-1;
 	r[0] = -u;		// ^64 -1
 	if (vli_add_to<4>(result, r)) result[4]++;
+#else
+	// result = 2^256 + 2^64 - r[4]
+	result[4] = u - t_high;
+	result[1] = u;
+	// r = 2^224 + 2^96 + 1
+	r[0] = u;
+	r[1] = t_low;
+	r[2] = t_high;
+	r[3] = t_low;
+	result[4] -= vli_sub_from<4>(result, r);
+#endif
 }
 
 // u * 2^256 mod sm2 prime
