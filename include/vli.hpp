@@ -64,6 +64,14 @@ static void vli_clear(u64 *vli) noexcept
 // u64IsZero returns 1 if x is zero and zero otherwise.
 static forceinline int u64IsZero(u64 x) noexcept
 {
+#ifdef	__x86_64__
+	bool	ret;
+	asm volatile("orq %%rax, %%rax\n"
+				: "=@ccz" (ret)
+				: "a" (x)
+				: "cc");
+	return (int)ret;
+#else
 	x = ~x;
 	x &= x >> 32;
 	x &= x >> 16;
@@ -72,12 +80,22 @@ static forceinline int u64IsZero(u64 x) noexcept
 	x &= x >> 2;
 	x &= x >> 1;
 	return x & 1;
+#endif
 }
 
 // u64IsOne returns 1 if x is one and zero otherwise.
 static forceinline int u64IsOne(u64 x) noexcept
 {
+#ifdef	__x86_64__
+	bool	ret;
+	asm volatile("subq $1, %%rax\n"
+				: "=@ccz" (ret)
+				: "a" (x)
+				: "cc");
+	return (int)ret;
+#else
 	return u64IsZero(x ^ 1);
+#endif
 }
 
 
