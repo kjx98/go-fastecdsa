@@ -198,7 +198,7 @@ void gen_keypair(const curveT& curve, bignum<N>& secret, bignum<N>& pubX,
  * 			x1, y1 = k * G
  * 			r = e + x1
  *			if r == 0 modN  goto getk
- *			s = (1 + dA)^-1 * (k - r * dA)
+ *			s = (1 + dA)^-1 * (k - r * dA) = (1 + dA)^-1 * (k + r) - r
  *			if s == 0 modN goto getk
  *			if r + s == 0 modN goto getk
  *			return r, s, y1_is_odd
@@ -246,14 +246,11 @@ int ec_sign(const curveT& curve, bignum<N>& r, bignum<N>& s,
 		curve.mont_nmult(tmp, priv.Di(), k);
 		curve.from_montgomeryN(s, tmp);
 #else
-		//if (tmp.add(k, r)) tmp.sub_from(curve.paramN());
 		tmp.mod_add(k, r, curve.paramN());
 		curve.to_montgomeryN(tmp, tmp);
 		curve.mont_nmult(tmp, tmp, priv.Di());
 		curve.from_montgomeryN(tmp, tmp);
 		s.mod_sub(tmp, r, curve.paramN());
-		//if (tmp.sub_from(r)) tmp.add_to(curve.paramN());
-		//curve.modN(s, tmp);
 #endif
 		if (s.is_zero()) continue;
 		tmp.mod_add(r, s, curve.paramN());
@@ -291,9 +288,8 @@ bool ec_recover(const curveT& curve, spoint_t<N>&  pub, const bignum<N>& r,
 				const bignum<N>& s, const int v, const bignum<N>& msg) noexcept
 {
 	point_t<N>	p;
+	// p.x = r - msg
 	p.x.mod_sub(r, msg, curve.paramN());
-	//if (p.x.sub(r, msg)) p.x.add_to(curve.paramN());
-	//curve.modN(p.x, p.x);
 	if ( unlikely(!pointY_recover(curve, p.y, p.x, v)) ) return false;
 	bignum<N>	u1, u2;
 	u1.mod_add(r, s, curve.paramN());
