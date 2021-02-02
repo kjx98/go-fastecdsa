@@ -488,18 +488,12 @@ public:
 			vli_add_to<N + 2>(r, s);
 			vli_rshift1w<N + 2>(r);	
 		}
-#ifdef	ommit
-		if (r[N] !=0 || vli_cmp<N>(r, prime.d) >= 0) {
-			vli_sub<N>(res.d, r, prime.d);
-		} else vli_set<N>(res.d, r);
-#else
-#if	__cplusplus >= 201703L
+#if	__cplusplus >= 201703L  && defined(WITH_ASM)
 		if constexpr(N==4 && k0 == 1) {
 			sm2p_mod(res.d, r, prime.d, r[N] != 0);
 		} else
 #endif
 		vli_mod<N>(res.d, r, prime.d, r[N] != 0);
-#endif
 	}
 	void mont_reduction(const bignum& y, const bignum& prime, const u64 k0)
 	noexcept
@@ -517,13 +511,7 @@ public:
 			vli_add_to<N + 2>(r, s);
 			vli_rshift1w<N + 2>(r);	
 		}
-#ifdef	ommit
-		if (r[N] !=0 || vli_cmp<N>(r, prime.d) >= 0) {
-			vli_sub<N>(this->d, r, prime.d);
-		} else vli_set<N>(this->d, r);
-#else
 		vli_mod<N>(this->d, r, prime.d, r[N] != 0);
-#endif
 	}
 	void mont_reductionK01(const bignum& y, const bignum& prime) noexcept
 	{
@@ -539,7 +527,7 @@ public:
 			vli_add_to<N + 2>(r, s);
 			vli_rshift1w<N + 2>(r);	
 		}
-#if	__cplusplus >= 201703L
+#if	__cplusplus >= 201703L && defined(WITH_ASM)
 		if constexpr(N==4) {
 			sm2p_mod(this->d, r, prime.d, r[N] != 0);
 		} else
@@ -563,18 +551,12 @@ public:
 			vli_add_to<N + 2>(r, s);
 			vli_rshift1w<N + 2>(r);	
 		}
-#ifdef	ommit
-		if (r[N] != 0 || vli_cmp<N>(r, prime.d) >= 0) {
-			vli_sub<N>(res.d, r, prime.d);
-		} else vli_set<N>(res.d, r);
-#else
-#if	__cplusplus >= 201703L
+#if	__cplusplus >= 201703L && defined(WITH_ASM)
 		if constexpr(N==4 && k0 == 1) {
 			sm2p_mod(res.d, r, prime.d, r[N] != 0);
 		} else
 #endif
 		vli_mod<N>(res.d, r, prime.d, r[N] != 0);
-#endif
 	}
 	template<const u64 k0> forceinline
 	friend void mont_mult(bignum& res, const u64 *x, const bignum& y,
@@ -593,18 +575,12 @@ public:
 			vli_add_to<N + 2>(r, s);
 			vli_rshift1w<N + 2>(r);	
 		}
-#ifdef	ommit
-		if (r[N] != 0 || vli_cmp<N>(r, prime.d) >= 0) {
-			vli_sub<N>(res.d, r, prime.d);
-		} else vli_set<N>(res.d, r);
-#else
-#if	__cplusplus >= 201703L
+#if	__cplusplus >= 201703L && defined(WITH_ASM)
 		if constexpr(N==4 && k0 == 1) {
 			sm2p_mod(res.d, r, prime.d, r[N] != 0);
 		} else
 #endif
 		vli_mod<N>(res.d, r, prime.d, r[N] != 0);
-#endif
 	}
 	void mont_mult(const bignum& x, const bignum& y, const bignum& prime,
 					const u64 k0) noexcept
@@ -622,13 +598,7 @@ public:
 			vli_add_to<N + 2>(r, s);
 			vli_rshift1w<N + 2>(r);	
 		}
-#ifdef	ommit
-		if (r[N] != 0 || vli_cmp<N>(r, prime.d) >= 0) {
-			vli_sub<N>(this->d, r, prime.d);
-		} else vli_set<N>(this->d, r);
-#else
 		vli_mod<N>(this->d, r, prime.d, r[N] != 0);
-#endif
 	}
 	void
 	mont_multK01(const bignum& x, const bignum& y, const bignum& prime) noexcept
@@ -646,18 +616,12 @@ public:
 			vli_add_to<N + 2>(r, s);
 			vli_rshift1w<N + 2>(r);	
 		}
-#ifdef	ommit
-		if (r[N] != 0 || vli_cmp<N>(r, prime.d) >= 0) {
-			vli_sub<N>(this->d, r, prime.d);
-		} else vli_set<N>(this->d, r);
-#else
-#if	__cplusplus >= 201703L
+#if	__cplusplus >= 201703L && defined(WITH_ASM)
 		if constexpr(N==4) {
 			sm2p_mod(this->d, r, prime.d, r[N] != 0);
 		} else
 #endif
 		vli_mod<N>(this->d, r, prime.d, r[N] != 0);
-#endif
 	}
 	template<const u64 k0> forceinline friend
 	void mont_sqr(bignum& res, const bignum& x, const bignum& prime) noexcept
@@ -675,18 +639,12 @@ public:
 			vli_add_to<N + 2>(r, s);
 			vli_rshift1w<N + 2>(r);	
 		}
-#ifdef	ommit
-		if (r[N] != 0 || vli_cmp<N>(r, prime.d) >= 0) {
-			vli_sub<N>(res.d, r, prime.d);
-		} else vli_set<N>(res.d, r);
-#else
-#if	__cplusplus >= 201703L
+#if	__cplusplus >= 201703L && defined(WITH_ASM)
 		if constexpr(N==4 && k0 == 1) {
 			sm2p_mod(res.d, r, prime.d, r[N] != 0);
 		} else
 #endif
 		vli_mod<N>(res.d, r, prime.d, r[N] != 0);
-#endif
 	}
 	void mont_sqr(const bignum& x, const bignum& prime, const u64 k0) noexcept
 	{
@@ -703,13 +661,7 @@ public:
 			vli_add_to<N + 2>(r, s);
 			vli_rshift1w<N + 2>(r);	
 		}
-#ifdef	ommit
-		if (r[N] != 0 || vli_cmp<N>(r, prime.d) >= 0) {
-			vli_sub<N>(this->d, r, prime.d);
-		} else vli_set<N>(this->d, r);
-#else
 		vli_mod<N>(this->d, r, prime.d, r[N] != 0);
-#endif
 	}
 	void mont_sqrK01(const bignum& x, const bignum& prime) noexcept
 	{
@@ -726,18 +678,12 @@ public:
 			vli_add_to<N + 2>(r, s);
 			vli_rshift1w<N + 2>(r);	
 		}
-#ifdef	ommit
-		if (r[N] != 0 || vli_cmp<N>(r, prime.d) >= 0) {
-			vli_sub<N>(this->d, r, prime.d);
-		} else vli_set<N>(this->d, r);
-#else
-#if	__cplusplus >= 201703L
+#if	__cplusplus >= 201703L && defined(WITH_ASM)
 		if constexpr(N==4) {
 			sm2p_mod(this->d, r, prime.d, r[N] != 0);
 		} else
 #endif
 		vli_mod<N>(this->d, r, prime.d, r[N] != 0);
-#endif
 	}
 };
 

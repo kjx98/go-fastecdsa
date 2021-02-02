@@ -142,9 +142,9 @@ sm2p_mod(u64 *res, const u64 *left, const u64 *mod, const bool carry) noexcept
 				"movq %%r9, %%r13\n"
 				"movq %%r10, %%r14\n"
 				"movq %%r11, %%r15\n"
-				"subq $-1, %%r12\n"
+				"subq -1, %%r12\n"
 				"sbbq %[mod0], %%r13\n"
-				"sbbq $-1, %%r14\n"
+				"sbbq -1, %%r14\n"
 				"sbbq %[mod1], %%r15\n"
 				"sbbq $0, %%rax\n"
 				"cmovcq %%r8, %%r12\n"
@@ -338,12 +338,12 @@ sm2p_mod(u64 *res, const u64 *left, const u64 *mod, const bool carry) noexcept
 	/* result > mod (result = mod + remainder), so subtract mod to
 	 * get remainder.
 	 */
-	asm volatile("ldp x4, x5, [%2]\n"
+	asm volatile( "mov x9, -1\n"
+				"mov x10, %3\n"
+				"mov x11, -1\n"
+				"mov x12, %4\n"
+				"ldp x4, x5, [%2]\n"
 				"ldp x6, x7, [%2, 16]\n"
-				"movd x9, $-1\n"
-				"movd x10, %[mod0]\n"
-				"movd x11, $-1\n"
-				"movd x12, %[mod1]\n"
 				"subs x9, x4, x9\n"
 				"sbcs x10, x5, x10\n"
 				"sbcs x11, x6, x11\n"
@@ -355,9 +355,9 @@ sm2p_mod(u64 *res, const u64 *left, const u64 *mod, const bool carry) noexcept
 				"csel x7, x7, x12, cc\n"
 				"stp x4, x5, [%1]\n"
 				"stp x6, x7, [%1, 16]\n"
-				"adc %0, xzr, $0\n"
+				"adc %0, xzr, xzr\n"
 		:
-		: "r" ((u64)carry), "r" (res), "r" (left), [mod0] "m" (mod[1]), [mod1] "m" (mod[3])
+		: "r" ((u64)carry), "r" (res), "r" (left), "r" (mod[1]), "r" (mod[3])
 		: "%x4", "%x5", "%x6", "%x7", "%x9", "%x10", "%x11", "%x12", "cc", "memory");
 }
 
