@@ -328,7 +328,7 @@ public:
 #elif	__cplusplus >= 201703L
 		if constexpr(N == 4) {
 			bool carry = vli4_add(this->d, left.d, right.d);
-			vli4_mod(this->d, this->d, prime.d);
+			vli4_mod(this->d, this->d, prime.d, carry);
 		} else
 #endif
 #endif
@@ -351,7 +351,7 @@ public:
 #elif	__cplusplus >= 201703L
 		if constexpr(N == 4) {
 			bool carry = vli4_add_to(this->d, right.d);
-			vli4_mod(this->d, this->d, prime.d);
+			vli4_mod(this->d, this->d, prime.d, carry);
 		} else
 #endif
 #endif
