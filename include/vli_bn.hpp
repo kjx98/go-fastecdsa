@@ -493,6 +493,11 @@ public:
 			vli_sub<N>(res.d, r, prime.d);
 		} else vli_set<N>(res.d, r);
 #else
+#if	__cplusplus >= 201703L
+		if constexpr(N==4 && k0 == 1) {
+			sm2p_mod(res.d, r, prime.d, r[N] != 0);
+		} else
+#endif
 		vli_mod<N>(res.d, r, prime.d, r[N] != 0);
 #endif
 	}
@@ -534,6 +539,11 @@ public:
 			vli_add_to<N + 2>(r, s);
 			vli_rshift1w<N + 2>(r);	
 		}
+#if	__cplusplus >= 201703L
+		if constexpr(N==4) {
+			sm2p_mod(this->d, r, prime.d, r[N] != 0);
+		} else
+#endif
 		vli_mod<N>(this->d, r, prime.d, r[N] != 0);
 	}
 	template<const u64 k0> forceinline
@@ -558,6 +568,11 @@ public:
 			vli_sub<N>(res.d, r, prime.d);
 		} else vli_set<N>(res.d, r);
 #else
+#if	__cplusplus >= 201703L
+		if constexpr(N==4 && k0 == 1) {
+			sm2p_mod(res.d, r, prime.d, r[N] != 0);
+		} else
+#endif
 		vli_mod<N>(res.d, r, prime.d, r[N] != 0);
 #endif
 	}
@@ -583,6 +598,11 @@ public:
 			vli_sub<N>(res.d, r, prime.d);
 		} else vli_set<N>(res.d, r);
 #else
+#if	__cplusplus >= 201703L
+		if constexpr(N==4 && k0 == 1) {
+			sm2p_mod(res.d, r, prime.d, r[N] != 0);
+		} else
+#endif
 		vli_mod<N>(res.d, r, prime.d, r[N] != 0);
 #endif
 	}
@@ -631,6 +651,11 @@ public:
 			vli_sub<N>(this->d, r, prime.d);
 		} else vli_set<N>(this->d, r);
 #else
+#if	__cplusplus >= 201703L
+		if constexpr(N==4) {
+			sm2p_mod(this->d, r, prime.d, r[N] != 0);
+		} else
+#endif
 		vli_mod<N>(this->d, r, prime.d, r[N] != 0);
 #endif
 	}
@@ -655,6 +680,11 @@ public:
 			vli_sub<N>(res.d, r, prime.d);
 		} else vli_set<N>(res.d, r);
 #else
+#if	__cplusplus >= 201703L
+		if constexpr(N==4 && k0 == 1) {
+			sm2p_mod(res.d, r, prime.d, r[N] != 0);
+		} else
+#endif
 		vli_mod<N>(res.d, r, prime.d, r[N] != 0);
 #endif
 	}
@@ -701,6 +731,11 @@ public:
 			vli_sub<N>(this->d, r, prime.d);
 		} else vli_set<N>(this->d, r);
 #else
+#if	__cplusplus >= 201703L
+		if constexpr(N==4) {
+			sm2p_mod(this->d, r, prime.d, r[N] != 0);
+		} else
+#endif
 		vli_mod<N>(this->d, r, prime.d, r[N] != 0);
 #endif
 	}

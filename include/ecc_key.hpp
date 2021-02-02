@@ -178,7 +178,8 @@ void gen_keypair(const curveT& curve, bignum<N>& secret, bignum<N>& pubX,
 	auto&	rd = bn_random<N>::Instance();
 	do {
 		secret = rd.get_random();
-		if ( unlikely(secret >= curve.paramN()) ) secret.sub_from(curve.paramN());
+		if ( unlikely(secret >= curve.paramN()) )
+			secret.sub_from(curve.paramN());
 		//curve.modN(secret, secret);
 	} while (secret.is_zero());
 	point_t<N>	pt;
@@ -230,12 +231,7 @@ int ec_sign(const curveT& curve, bignum<N>& r, bignum<N>& s,
 	do {
 		do {
 			gen_keypair<N>(curve, k, x1, tmp);
-#ifdef	ommit
-			if (r.add(msg, x1)) r.sub_from(curve.paramN());
-			curve.modN(r, r);
-#else
 			r.mod_add(msg, x1, curve.paramN());
-#endif
 		} while (r.is_zero());
 		ret = tmp.is_odd();
 #ifdef	WITH_MONT_D
@@ -260,12 +256,7 @@ int ec_sign(const curveT& curve, bignum<N>& r, bignum<N>& s,
 		//curve.modN(s, tmp);
 #endif
 		if (s.is_zero()) continue;
-#ifdef	ommit
-		if (tmp.add(r, s)) tmp.sub_from(curve.paramN());
-		//curve.modN(tmp, tmp);
-#else
 		tmp.mod_add(r, s, curve.paramN());
-#endif
 	} while (tmp.is_zero());
 	return ret;
 }
@@ -279,12 +270,7 @@ bool ec_verify(const curveT& curve, const bignum<N>& r, const bignum<N>& s,
 	bignum<N>	t;
 	if ( unlikely(r.is_zero()) ) return false;
 	if ( unlikely(s.is_zero()) ) return false;
-#ifdef	ommit
-	if (t.add(r, s)) t.sub_from(curve.paramN());
-	curve.modN(t, t);
-#else
 	t.mod_add(r, s, curve.paramN());
-#endif
 	if ( unlikely(t.is_zero()) ) return false;
 	point_t<N>	q, p(pub.x, pub.y);
 	// q = s*G + t * Pub
@@ -292,12 +278,7 @@ bool ec_verify(const curveT& curve, const bignum<N>& r, const bignum<N>& s,
 	curve.combined_mult(q, p, t, s);
 	if ( unlikely(q.x.is_zero()) ) return false;
 	// t = x2 + msg modN
-#ifdef	ommit
-	if (t.add(q.x, msg)) t.sub_from(curve.paramN());
-	curve.modN(t, t);
-#else
 	t.mod_add(q.x, msg, curve.paramN());
-#endif
 	if ( unlikely(t.is_zero()) ) return false;
 	return r == t;
 }
@@ -315,12 +296,7 @@ bool ec_recover(const curveT& curve, spoint_t<N>&  pub, const bignum<N>& r,
 	//curve.modN(p.x, p.x);
 	if ( unlikely(!pointY_recover(curve, p.y, p.x, v)) ) return false;
 	bignum<N>	u1, u2;
-#ifdef	ommit
-	if (u1.add(r, s)) u1.sub_from(curve.paramN());
-	curve.modN(u1, u1);
-#else
 	u1.mod_add(r, s, curve.paramN());
-#endif
 	if ( unlikely(u1.is_zero()) ) return false;
 	// u1 = (r + s)^1
 	mod_inv<N>(u1, u1, curve.paramN());

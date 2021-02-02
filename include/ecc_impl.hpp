@@ -680,9 +680,7 @@ pointY_recover(const curveT& curve, bnT& y1, const bnT& x1, const bool bOdd)
 	// t1 = t2 reduction
 	curve.from_montgomery(t1, t2);
 	// t1 = t1 + b = x^3 + ax +b
-	if (t1.add_to(curve.paramB()) || t1.cmp(curve.paramP()) >= 0) {
-		t1.sub_from(curve.paramP());
-	}
+	t1.mod_add_to(curve.paramB(), curve.paramP());
 	// need mod_sqrt
 	// y^2 = x^3 + ax + b
 	auto ret = curve.mod_sqrt(y1, t1);
