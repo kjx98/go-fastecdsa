@@ -38,10 +38,6 @@
 # error "C++ std MUST at least c++11"
 #endif
 
-#if __cplusplus < 201703L
-#undef	WITH_ASM
-#endif
-
 #if	__clang__ < 9
 #define	NO_BUILTIN_ADDC
 #endif
@@ -531,6 +527,9 @@ static void vli_rshift1w(u64 *vli) noexcept
 template<const uint N> forceinline static
 bool vli_add(u64 *result, const u64 *left, const u64 *right) noexcept
 {
+#if	__cplusplus >= 201703L && defined(WITH_ASM) // && defined(__x86_64__)
+	if constexpr(N == 4) return vli4_add(result, left, right);
+#endif
 #ifdef	NO_BUILTIN_ADDC
 	bool carry = false;
 	for (uint i = 0; i < N; i++) {
@@ -555,7 +554,7 @@ bool vli_add(u64 *result, const u64 *left, const u64 *right) noexcept
 template<const uint N> forceinline static
 bool vli_add_to(u64 *result, const u64 *right) noexcept
 {
-#if	defined(WITH_ASM) && (defined(__x86_64__) || defined(__aarch64__))
+#if	__cplusplus >= 201703L && defined(WITH_ASM) // && defined(__x86_64__)
 	if constexpr(N == 4) return vli4_add_to(result, right);
 #endif
 #ifdef	NO_BUILTIN_ADDC
@@ -582,9 +581,6 @@ bool vli_add_to(u64 *result, const u64 *right) noexcept
 template<const uint N> forceinline
 static bool vli_uadd_to(u64 *result, u64 right) noexcept
 {
-#if	__cplusplus >= 201703L && defined(__x86_64__)
-//	if constexpr(N == 4) return vli4_uadd_to(result, right);
-#endif
 	u64 carry = right;
 #ifdef	NO_BUILTIN_ADDC
 	for (uint i = 0; i < N; i++) {
@@ -622,7 +618,7 @@ static bool vli_uadd_to(u64 *result, u64 right) noexcept
 template<const uint N> forceinline static
 bool vli_sub(u64 *result, const u64 *left, const u64 *right) noexcept
 {
-#if	__cplusplus >= 201703L && defined(__x86_64__)
+#if	__cplusplus >= 201703L && defined(WITH_ASM) && defined(__x86_64__)
 //	if constexpr(N == 4) return vli4_sub(result, left, right);
 #endif
 #ifdef	NO_BUILTIN_ADDC
@@ -648,7 +644,7 @@ bool vli_sub(u64 *result, const u64 *left, const u64 *right) noexcept
 template<const uint N> forceinline static
 bool vli_sub_from(u64 *result, const u64 *right) noexcept
 {
-#if	__cplusplus >= 201703L && defined(__x86_64__)
+#if	__cplusplus >= 201703L && defined(WITH_ASM) && defined(__x86_64__)
 //	if constexpr(N == 4) return vli4_sub_from(result, right);
 #endif
 #ifdef	NO_BUILTIN_ADDC
@@ -891,11 +887,16 @@ vli_mod(u64 *result, const u64 *left, const u64 *mod, const bool carry) noexcept
 	/* result > mod (result = mod + remainder), so subtract mod to
 	 * get remainder.
 	 */
-//#if	__cplusplus >= 201703L && (defined(__x86_64__) || defined(__aarch64__))
-#if	defined(WITH_ASM) && defined(__x86_64__)
+#if	defined(WITH_ASM)
+#if	__cplusplus >= 201703L
 	if constexpr(N == 4) {
 		vli4_mod(result, left, mod, carry);
 	} else
+#else
+	if ( likely(N == 4) ) {
+		vli4_mod(result, left, mod, carry);
+	} else
+#endif
 #endif
 	if (carry || vli_cmp<N>(left, mod) >= 0) {
 		vli_sub<N>(result, left, mod);

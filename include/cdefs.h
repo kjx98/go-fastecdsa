@@ -55,6 +55,11 @@ typedef	unsigned int	uint;
 # define likely(cond)	__builtin_expect (!!(cond), 1)
 # define forceinline __inline__ __attribute__((always_inline))
 
+// WITH_ASM only for x86_64 and arm64
+#if	defined(WITH_ASM) && !defined(__x86_64__) && !defined(__aarch64__)
+#undef	WITH_ASM
+#endif
+
 typedef u64	bn_words_t[4];
 
 typedef	struct {
