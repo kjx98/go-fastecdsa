@@ -58,6 +58,26 @@ TEST(testVli, TestSquare)
 	ASSERT_EQ(res, res1);
 }
 
+TEST(testVli, TestSquareN)
+{
+	bignum<4>	bx1(dx1), by1(dy1);
+	bignum<4>	bx2(dx2);
+	bn_prod<4>	res;
+	u64			res1[8];
+	res.square(bx1);
+	vli_squareN<4>(res1, dx1);
+	EXPECT_EQ(vli_cmp<8>(res.data(), res1), 0);
+	ASSERT_TRUE(res == res1);
+	res.square(by1);
+	vli_squareN<4>(res1, dy1);
+	EXPECT_EQ(vli_cmp<8>(res.data(), res1), 0);
+	ASSERT_TRUE(res == res1);
+	res.square(bx2);
+	vli_squareN<4>(res1, dx2);
+	EXPECT_EQ(res.cmp(res1), 0);
+	ASSERT_TRUE(res == res1);
+}
+
 static void mont_mul(bignum<4>& res, const bignum<4>& x, const bignum<4>& y)
 {
 	bignum<4>	xp, yp;

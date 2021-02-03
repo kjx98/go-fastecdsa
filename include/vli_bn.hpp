@@ -133,6 +133,27 @@ public:
 		}
 #endif
 	}
+	bool operator==(const u64* bn) const noexcept {
+#ifdef	NO_U64ZERO
+		for (uint i = 0; i < N; ++i) {
+			if (this->d[i] != bn[i]) return false;
+		}
+		return true;
+#else
+#if	__cplusplus > 201703L
+		if constexpr(N == 4) {
+			return u64IsZero((this->d[0] ^ bn[0]) |
+					(this->d[1] ^ bn[1]) | (this->d[2] ^ bn[2]) |
+					(this->d[3] ^ bn[3]));
+		} else
+#endif
+		{
+			u64	ret = (this->d[0] ^ bn[0]);
+			for (uint i=1; i < N; ++i) ret |= (this->d[i] ^ bn[i]);
+			return u64IsZero(ret);
+		}
+#endif
+	}
 	bool operator!=(const bignum& bn) const noexcept {
 		return ! (*this == bn);
 	}

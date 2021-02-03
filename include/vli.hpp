@@ -1015,6 +1015,34 @@ static void vli_square(u64 *result, const u64 *left) noexcept
 	result[N * 2 - 1] = r01.m_low();
 }
 
+template<const uint N> forceinline
+static void vli_squareN(u64 *result, const u64 *left) noexcept
+{
+	vli_clear<N*2>(result);
+	for (uint k = 0; k < N - 1; ++k) {
+		uint128_t r01( 0, 0 );
+		for (uint i = k+1; i < N; ++i) {
+			uint128_t product;
+			bool		carry;
+			product.mul_64_64(left[i], left[k]);
+			r01 += product;
+			result[i+k] += r01.m_low();
+			carry = result[i+k] < r01.m_low();
+			r01 = uint128_t(r01.m_high() + carry, 0);
+		}
+		result[k+N] += r01.m_low();
+	}
+	vli_lshift1<N*2-1>(result, result);
+	u64		dd[N*2];
+	for (uint i=0; i < N; ++i) {
+		uint128_t product;
+		product.mul_64_64(left[i], left[i]);
+		dd[i+i] = product.m_low();
+		dd[i+i+1] = product.m_high();
+	}
+	vli_add_to<N*2>(result, dd);
+}
+
 /* Computes result = left % mod w/ carry.
  */
 template<uint N> forceinline
