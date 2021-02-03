@@ -29,7 +29,7 @@ TEST(testEcc, TestCalcK0RR)
 
 TEST(testEcc, TestSM2umultP)
 {
-	u64		r[5];
+	u64		r[6];
 	vli_sm2_multP(r, 1);
 	ASSERT_EQ(prime.cmp(r), 0);
 	u64	v3456[]={0xFFFFFFFFCCBBAA9Aull, 0xCCBBAA9A33445565ull,
@@ -37,6 +37,16 @@ TEST(testEcc, TestSM2umultP)
 	bignum<5>	bv(v3456);
 	vli_sm2_multP(r, 0x33445566);
 	EXPECT_EQ(bv.cmp(r), 0);
+}
+
+TEST(testVli, TestSquare)
+{
+	bignum<4>	bx1(dx1), by1(dy1);
+	bn_prod<4>	res, res1;
+	res.square(bx1);
+	res1.squareN(bx1);
+	EXPECT_EQ(vli_cmp<8>(res.data(), res1.data()), 0);
+	ASSERT_EQ(res, res1);
 }
 
 static void mont_mul(bignum<4>& res, const bignum<4>& x, const bignum<4>& y)

@@ -1035,10 +1035,16 @@ vli_mod(u64 *result, const u64 *left, const u64 *mod, const bool carry) noexcept
 	} else
 #endif
 #endif
-#ifdef ommit
-	// maybe copy_conditional faster?
-	bool s_carry = vli_sub<N>(result, left, mod);
-	if ( !carry && s_carry) vli_set<N>(result, left);
+#ifndef ommit
+	{
+		// maybe copy_conditional faster?
+		bool s_carry = !vli_sub<N>(result, left, mod) | carry;
+		u64	mask = (!s_carry) - 1;
+		for (uint i = 0; i < N; ++i) {
+			const u64 tmp = mask & (left[i] ^ result[i]);
+			result[i] ^= tmp;
+		}
+	}
 #else
 	if (carry || vli_cmp<N>(left, mod) >= 0) {
 		vli_sub<N>(result, left, mod);

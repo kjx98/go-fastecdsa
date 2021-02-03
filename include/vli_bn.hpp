@@ -894,6 +894,30 @@ public:
 		}
 		this->d[N * 2 - 1] = r01.m_low();
 	}
+
+	void squareN(const bignum<N>& left) noexcept
+	{
+		vli_clear<N*2>(this->d);
+		for (uint k = 0; k < N - 1; ++k) {
+			uint128_t r01( 0, 0 );
+			for (uint i = k+1; i < N; ++i) {
+				uint128_t product;
+				product.mul_64_64(left.data()[i], left.data()[k]);
+				r01 += product;
+				this->d[i+k] += r01.m_low();
+				r01 = uint128_t(r01.m_high(), 0);
+			}
+			this->d[k+N] += r01.m_low();
+		}
+		vli_lshift1<N*2-1>(this->d, this->d);
+		for (uint i=0; i < N; ++i) {
+			uint128_t product;
+			product.mul_64_64(left.data()[i], left.data()[i]);
+			this->d[i+i] += product.m_low();
+			this->d[i+i+1] += product.m_high();
+		}
+	}
+
 	void div_barrett(bignum<N>& result, const bignum<N+1>& mu) noexcept
 	{
 		u64	q[N*2];

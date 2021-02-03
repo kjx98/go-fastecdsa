@@ -26,6 +26,19 @@ static void test_sm2MultP(benchmark::State &state)
 }
 BENCHMARK(test_sm2MultP);
 
+static void test_montRed(benchmark::State &state)
+{
+	bignum<4>	xp;
+	bignum<4>	bx1(dx1);
+	xp.mont_mult(bx1, rr, prime, sm2_p_k0);
+	for (auto _ : state) {
+		for (int i=0; i<1000; ++i)
+		bx1.mont_reduction(xp, prime, sm2_p_k0);
+	}
+	tt = bx1;
+}
+BENCHMARK(test_montRed);
+
 static void test_montMult(benchmark::State &state)
 {
 	bignum<4>	xp;
@@ -112,6 +125,18 @@ static void test_bnSqr(benchmark::State &state)
 	tt = xp.bn256();
 }
 BENCHMARK(test_bnSqr);
+
+static void test_bnSqrN(benchmark::State &state)
+{
+	bignum<4>	bx1(dx1);
+	bn_prod<4>	xp;
+	for (auto _ : state) {
+		for (int i=0; i<1000; ++i)
+		xp.squareN(bx1);
+	}
+	tt = xp.bn256();
+}
+BENCHMARK(test_bnSqrN);
 
 static void test_inverse(benchmark::State &state)
 {
