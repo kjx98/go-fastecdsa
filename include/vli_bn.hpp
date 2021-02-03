@@ -79,7 +79,7 @@ public:
 		auto	*ss=reinterpret_cast<const bignum<N> *>(src);
 		*this = *ss;
 	}
-	bignum<4>& bn256() noexcept {
+	const bignum<4>& bn256() noexcept {
 		static_assert(N >= 4, "ndigits >= 4 required.");
 		bignum<4>	*res=reinterpret_cast<bignum<4> *>(this->d);
 		return *res;
@@ -174,7 +174,7 @@ public:
 		{
 			int	ret = u64IsOne(this->d[0]);
 			u64	v=this->d[1];
-			for (uint i = 2; i < N; i++) ret |= this->d[i];
+			for (uint i = 2; i < N; i++) v |= this->d[i];
 			return ret & u64IsZero(v);
 		}
 #else
@@ -187,11 +187,11 @@ public:
 	}
 	int is_u64() const noexcept
 	{
-		int	ret = u64IsZero(this->d[1]);
+		u64 v = this->d[1];
 		for (uint i = 2; i < N; i++) {
-			ret &= u64IsZero(this->d[i]);
+			v |= this->d[i];
 		}
-		return ret;
+		return u64IsZero(v);
 	}
 	/* Sets dest = this, copyout */
 	void set(u64 *dest) const noexcept
@@ -825,6 +825,16 @@ class bn_prod: public bignum<N*2> {
 public:
 	bn_prod() = default;
 	bn_prod(const bn_prod &) = default;
+	const bignum<N>& m_low() noexcept {
+		static_assert(N >= 4, "ndigits >= 4 required.");
+		bignum<N>	*res=reinterpret_cast<bignum<N> *>(this->d);
+		return *res;
+	}
+	const bignum<N>& m_high() noexcept {
+		static_assert(N >= 4, "ndigits >= 4 required.");
+		bignum<N>	*res=reinterpret_cast<bignum<N> *>(this->d + N);
+		return *res;
+	}
 	// this = left * right
 	void mult(const bignum<N>& left, const bignum<N>& right)
 	noexcept

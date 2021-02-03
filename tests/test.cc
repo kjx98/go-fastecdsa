@@ -42,10 +42,19 @@ TEST(testEcc, TestSM2umultP)
 TEST(testVli, TestSquare)
 {
 	bignum<4>	bx1(dx1), by1(dy1);
+	bignum<4>	bx2(dx2);
 	bn_prod<4>	res, res1;
 	res.square(bx1);
 	res1.squareN(bx1);
 	EXPECT_EQ(vli_cmp<8>(res.data(), res1.data()), 0);
+	ASSERT_EQ(res, res1);
+	res.square(by1);
+	res1.squareN(by1);
+	EXPECT_EQ(vli_cmp<8>(res.data(), res1.data()), 0);
+	ASSERT_EQ(res, res1);
+	res.square(bx2);
+	res1.squareN(bx2);
+	EXPECT_EQ(res.cmp(res1), 0);
 	ASSERT_EQ(res, res1);
 }
 
@@ -85,6 +94,13 @@ TEST(testEcc, TestMontMult)
 	bignum<4>	bx2(dx2), by2(dy2);
 	mont_mul(res, bx2, by2);
 	EXPECT_TRUE(res.cmp(xy2mod) == 0);
+	bn_prod<4>	pd;
+	pd.mult(bx2, by2);
+	bignum<4>	res2;
+	res2.mont_reductionK01(pd.m_low(), prime);
+	if (res2.add_to(pd.m_high()) ) res.sub_from(prime);
+	if (prime < res2) res.sub_from(prime);
+	EXPECT_EQ(res2, res);
 }
 
 TEST(testEcc, TestMontMultK01)

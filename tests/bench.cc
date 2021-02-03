@@ -39,6 +39,19 @@ static void test_montRed(benchmark::State &state)
 }
 BENCHMARK(test_montRed);
 
+static void test_montRedK01(benchmark::State &state)
+{
+	bignum<4>	xp;
+	bignum<4>	bx1(dx1);
+	xp.mont_mult(bx1, rr, prime, sm2_p_k0);
+	for (auto _ : state) {
+		for (int i=0; i<1000; ++i)
+		bx1.mont_reductionK01(xp, prime);
+	}
+	tt = bx1;
+}
+BENCHMARK(test_montRedK01);
+
 static void test_montMult(benchmark::State &state)
 {
 	bignum<4>	xp;
@@ -107,11 +120,21 @@ static void test_bnMult(benchmark::State &state)
 	bignum<4>	bx2(dx2);
 	bn_prod<4>	xp;
 	for (auto _ : state) {
-		for (int i=0; i<1000; ++i) xp.mult(bx1, bx2);
+		for (int i=0; i<1000; ++i) xp.mult(bx1, bx1);
 	}
 	tt = xp.bn256();
 }
 BENCHMARK(test_bnMult);
+
+static void test_vliSqr(benchmark::State &state)
+{
+	u64		res[8];
+	for (auto _ : state) {
+		for (int i=0; i<1000; ++i) vli_square<4>(res, dx1);
+	}
+	tt = bignum<4>(res);
+}
+BENCHMARK(test_vliSqr);
 
 static void test_bnSqr(benchmark::State &state)
 {
