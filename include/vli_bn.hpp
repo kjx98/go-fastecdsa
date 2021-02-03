@@ -902,20 +902,24 @@ public:
 			uint128_t r01( 0, 0 );
 			for (uint i = k+1; i < N; ++i) {
 				uint128_t product;
+				bool		carry;
 				product.mul_64_64(left.data()[i], left.data()[k]);
 				r01 += product;
 				this->d[i+k] += r01.m_low();
-				r01 = uint128_t(r01.m_high(), 0);
+				carry = this->d[i+k] < r01.m_low();
+				r01 = uint128_t(r01.m_high() + carry, 0);
 			}
 			this->d[k+N] += r01.m_low();
 		}
 		vli_lshift1<N*2-1>(this->d, this->d);
+		u64		dd[N*2];
 		for (uint i=0; i < N; ++i) {
 			uint128_t product;
 			product.mul_64_64(left.data()[i], left.data()[i]);
-			this->d[i+i] += product.m_low();
-			this->d[i+i+1] += product.m_high();
+			dd[i+i] = product.m_low();
+			dd[i+i+1] = product.m_high();
 		}
+		vli_add_to<N*2>(this->d, dd);
 	}
 
 	void div_barrett(bignum<N>& result, const bignum<N+1>& mu) noexcept

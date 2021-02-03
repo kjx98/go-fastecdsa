@@ -107,8 +107,7 @@ static void test_bnMult(benchmark::State &state)
 	bignum<4>	bx2(dx2);
 	bn_prod<4>	xp;
 	for (auto _ : state) {
-		for (int i=0; i<1000; ++i)
-		xp.mult(bx1, bx2);
+		for (int i=0; i<1000; ++i) xp.mult(bx1, bx2);
 	}
 	tt = xp.bn256();
 }
@@ -119,8 +118,7 @@ static void test_bnSqr(benchmark::State &state)
 	bignum<4>	bx1(dx1);
 	bn_prod<4>	xp;
 	for (auto _ : state) {
-		for (int i=0; i<1000; ++i)
-		xp.square(bx1);
+		for (int i=0; i<1000; ++i) xp.square(bx1);
 	}
 	tt = xp.bn256();
 }
@@ -131,8 +129,7 @@ static void test_bnSqrN(benchmark::State &state)
 	bignum<4>	bx1(dx1);
 	bn_prod<4>	xp;
 	for (auto _ : state) {
-		for (int i=0; i<1000; ++i)
-		xp.squareN(bx1);
+		for (int i=0; i<1000; ++i) xp.squareN(bx1);
 	}
 	tt = xp.bn256();
 }
