@@ -72,8 +72,9 @@ static void vli_sm2_multP(u64 *result, const u64 u) noexcept
 // R(2^256) - p = 2^224 + 2^96 - 2^64 + 1
 // u < 2^32
 forceinline
-static void vli_sm2_multR(u64 *result, const u64 u) noexcept
+static void vli_sm2_multR(u64 *result, const u64 uv) noexcept
 {
+	u64 u = uv & 0xffffffff;
 	result[0] = u;
 	result[1] = (u << 32) - u;
 	result[2] = 0;

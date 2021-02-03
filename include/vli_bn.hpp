@@ -288,7 +288,7 @@ public:
 		}
 		this->d[N-1] = 0;
 	}
-/* Computes result = this + right, returning carry. Can modify in place. */
+/* Computes result = left + right, returning carry. Can modify in place. */
 	bool add(const bignum& left, const bignum &right) noexcept
 	{
 		return vli_add<N>(this->d, left.d, right.d);
@@ -315,7 +315,19 @@ public:
 	{
 		return vli_uadd_to<N>(this->d, right);
 	}
-/* Computes result = this + right, modulo prime. Can modify in place. */
+/* Computes result = left modulo prime, modulo prime. Can modify in place. */
+	void mod(const bignum& left, const bignum& prime, const bool carry) noexcept
+	{
+#ifndef	ommit
+		bignum	in;
+		*this = left;
+		bool mask = carry | !in.sub(left, prime);
+		this->copy_conditional(in, (!mask)-1);
+#else
+		if (carry || prime < left) this->sub(left, prime); else *this = left;
+#endif
+	}
+/* Computes result = left + right, modulo prime. Can modify in place. */
 	void mod_add(const bignum& left, const bignum &right, const bignum& prime)
 			noexcept
 	{
@@ -333,11 +345,18 @@ public:
 		} else
 #endif
 #endif
+#ifdef	ommit
 		if (vli_add<N>(this->d, left.d, right.d) ||
 			vli_cmp<N>(this->d, prime.d) >= 0)
 		{
 			vli_sub_from<N>(this->d, prime.d);
 		}
+#else
+		{
+			auto	carry = this->add(left, right);
+			this->mod(*this, prime, carry);
+		}
+#endif
 	}
 /* Computes this = this + right, modulo prime. Can modify in place. */
 	void mod_add_to(const bignum& right, const bignum& prime) noexcept
@@ -356,11 +375,18 @@ public:
 		} else
 #endif
 #endif
+#ifdef	ommit
 		if (vli_add_to<N>(this->d, right.d) ||
 			vli_cmp<N>(this->d, prime.d) >= 0)
 		{
 			vli_sub_from<N>(this->d, prime.d);
 		}
+#else
+		{
+			auto	carry = this->add_to(right);
+			this->mod(*this, prime, carry);
+		}
+#endif
 	}
 /**
  * sub() - Subtracts right from this

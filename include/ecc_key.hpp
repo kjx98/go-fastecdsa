@@ -254,6 +254,13 @@ int ec_sign(const curveT& curve, bignum<N>& r, bignum<N>& s,
 		s.mod_sub(tmp, r, curve.paramN());
 #endif
 		if (s.is_zero()) continue;
+		// SM2 sign s may above halfN
+#ifdef	WITH_HALF_N_ommit
+		if (curve.halfN() < s) {
+			if (r == s) continue;
+			s.sub(curve.paramN(), s);
+		}
+#endif
 		tmp.mod_add(r, s, curve.paramN());
 	} while (tmp.is_zero());
 	return ret;

@@ -21,6 +21,7 @@ static void test_sm2MultP(benchmark::State &state)
 	for (auto _ : state) {
 		for (int i=0; i<1000; ++i)
 		vli_sm2_multP(r, 0x33445566);
+		tt = bignum<4>(r);
 	}
 }
 BENCHMARK(test_sm2MultP);

@@ -129,6 +129,9 @@ public:
 	const felem_t& mont_one() const noexcept { return _mont_one; }
 	const felem_t& mont_three() const noexcept { return _mont_three; }
 	const felem_t& quadP() const noexcept { return _quadP; }
+#ifdef	WITH_HALF_N
+	const felem_t& halfN() const noexcept { return _half_n; }
+#endif
 	void to_montgomery(felem_t& res, const u64 *x) const noexcept
 	{
 		felem_t   *xx = reinterpret_cast<felem_t *>(const_cast<u64 *>(x));
@@ -771,6 +774,10 @@ protected:
 		_quadP = p;
 		_quadP.rshift1();
 		_quadP.rshift1();
+#ifdef	WITH_HALF_N
+		_half_n = n;
+		_half_n.rshift1();
+#endif
 		if (unlikely( !_a_is_neg3 )) {
 			if (likely(a.is_zero())) _a_is_zero = true;
 		}
@@ -804,6 +811,9 @@ protected:
 	felem_t _mont_three;
 	felem_t _mont_a;
 	felem_t	_quadP;
+#ifdef	WITH_HALF_N
+	felem_t _half_n;
+#endif
 	const u64	k0_p = 0;
 	const u64	k0_n = 0;
 	const uint _ndigits = N;
