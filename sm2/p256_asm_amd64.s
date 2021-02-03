@@ -253,10 +253,13 @@ sqrLoop:
 	MOVQ acc0, t1
 	SHLQ $32, acc0
 	MULQ p256const1<>(SB)
+	SUBQ t1, acc0
 	SHRQ $32, t1
-	ADDQ acc0, acc1
-	ADCQ t1, acc2
-	ADCQ AX, acc3
+	SBBQ $0, t1
+	SUBQ acc0, acc1
+	SBBQ t1, acc2
+	SBBQ $0, AX
+	ADDQ AX, acc3
 	ADCQ $0, DX
 	MOVQ DX, acc0
 	// Second reduction step
@@ -264,10 +267,13 @@ sqrLoop:
 	MOVQ acc1, t1
 	SHLQ $32, acc1
 	MULQ p256const1<>(SB)
+	SUBQ t1, acc1
 	SHRQ $32, t1
-	ADDQ acc1, acc2
-	ADCQ t1, acc3
-	ADCQ AX, acc0
+	SBBQ $0, t1
+	SUBQ acc1, acc2
+	SBBQ t1, acc3
+	SBBQ $0, AX
+	ADDQ AX, acc0
 	ADCQ $0, DX
 	MOVQ DX, acc1
 	// Third reduction step
@@ -275,9 +281,12 @@ sqrLoop:
 	MOVQ acc2, t1
 	SHLQ $32, acc2
 	MULQ p256const1<>(SB)
+	SUBQ t1, acc2
 	SHRQ $32, t1
-	ADDQ acc2, acc3
-	ADCQ t1, acc0
+	SBBQ $0, t1
+	SUBQ acc2, acc3
+	SBBQ t1, acc0
+	SBBQ $0, AX
 	ADCQ AX, acc1
 	ADCQ $0, DX
 	MOVQ DX, acc2
@@ -287,10 +296,13 @@ sqrLoop:
 	MOVQ acc3, t1
 	SHLQ $32, acc3
 	MULQ p256const1<>(SB)
+	SUBQ t1, acc3
 	SHRQ $32, t1
-	ADDQ acc3, acc0
-	ADCQ t1, acc1
-	ADCQ AX, acc2
+	SBBQ $0, t1
+	SUBQ acc3, acc0
+	SBBQ t1, acc1
+	SBBQ $0, AX
+	ADDQ AX, acc2
 	ADCQ $0, DX
 	MOVQ DX, acc3
 	// Add bits [511:256] of the sqr result

@@ -17,7 +17,7 @@ bignum<4>	tt;
 
 static void test_sm2MultP(benchmark::State &state)
 {
-	u64		r[5];
+	u64		r[6];
 	for (auto _ : state) {
 		for (int i=0; i<1000; ++i)
 		vli_sm2_multP(r, 0x33445566);
