@@ -46,17 +46,17 @@
 #define const2 t2
 #define const3 t3
 
-DATA p256const0<>+0x00(SB)/8, $0x00000000ffffffff
-DATA p256const1<>+0x00(SB)/8, $0xffffffff00000001
-DATA p256ordK0<>+0x00(SB)/8, $0xccd1c8aaee00bc4f
+DATA p256const0<>+0x00(SB)/8, $0xffffffff00000000
+DATA p256const1<>+0x00(SB)/8, $0xfffffffeffffffff
+DATA p256ordK0<>+0x00(SB)/8, $0x327f9e8872350975
 DATA p256ord<>+0x00(SB)/8, $0x53bbf40939d54123
 DATA p256ord<>+0x08(SB)/8, $0x7203df6b21c6052b
 DATA p256ord<>+0x10(SB)/8, $0xffffffffffffffff
 DATA p256ord<>+0x18(SB)/8, $0xfffffffeffffffff
 DATA p256one<>+0x00(SB)/8, $0x0000000000000001
-DATA p256one<>+0x08(SB)/8, $0xffffffff00000000
-DATA p256one<>+0x10(SB)/8, $0xffffffffffffffff
-DATA p256one<>+0x18(SB)/8, $0x00000000fffffffe
+DATA p256one<>+0x08(SB)/8, $0x00000000ffffffff
+DATA p256one<>+0x10(SB)/8, $0x0000000000000000
+DATA p256one<>+0x18(SB)/8, $0x0000000100000000
 GLOBL p256const0<>(SB), 8, $8
 GLOBL p256const1<>(SB), 8, $8
 GLOBL p256ordK0<>(SB), 8, $8
@@ -139,7 +139,7 @@ TEXT ·p256NegCond(SB),NOSPLIT,$0
 	// acc = poly
 	MOVD	$-1, acc0
 	MOVD	p256const0<>(SB), acc1
-	MOVD	$0, acc2
+	MOVD	$-1, acc2
 	MOVD	p256const1<>(SB), acc3
 	// Load the original value
 	LDP	0*16(a_ptr), (t0, t1)
@@ -253,7 +253,7 @@ TEXT ·p256FromMont(SB),NOSPLIT,$0
 
 	SUBS	$-1, acc0, t0
 	SBCS	const0, acc1, t1
-	SBCS	$0, acc2, t2
+//	SBCS	$-1, acc2, t2
 	SBCS	const1, acc3, t3
 
 	CSEL	CS, t0, acc0, acc0
@@ -794,7 +794,7 @@ TEXT sm2SubInternal<>(SB),NOSPLIT,$0
 
 	ADDS	$-1, acc0, acc4
 	ADCS	const0, acc1, acc5
-	ADCS	$0, acc2, acc6
+//	ADCS	$-1, acc2, acc6
 	ADC	const1, acc3, acc7
 
 	ANDS	$1, t0
@@ -904,7 +904,7 @@ TEXT sm2SqrInternal<>(SB),NOSPLIT,$0
 
 	SUBS	$-1, acc0, t0
 	SBCS	const0, acc1, t1
-	SBCS	$0, acc2, t2
+//	SBCS	$-1, acc2, t2
 	SBCS	const1, acc3, t3
 	SBCS	$0, acc4, acc4
 
@@ -1038,7 +1038,7 @@ TEXT sm2MulInternal<>(SB),NOSPLIT,$0
 
 	SUBS	$-1, acc0, t0
 	SBCS	const0, acc1, t1
-	SBCS	$0, acc2, t2
+//	SBCS	$-1, acc2, t2
 	SBCS	const1, acc3, t3
 	SBCS	$0, acc4, acc4
 
@@ -1113,16 +1113,17 @@ TEXT ·p256PointAddAffineAsm(SB),0,$264-96
 	LDP	2*16(b_ptr), (y0, y1)
 	LDP	3*16(b_ptr), (y2, y3)
 	MOVD	$-1, acc0
+	MOVD	$-1, acc2
 
 	SUBS	y0, acc0, acc0
 	SBCS	y1, const0, acc1
-	SBCS	y2, ZR, acc2
+	SBCS	y2, acc2, acc2
 	SBCS	y3, const1, acc3
 	SBC	$0, ZR, t0
 
 	ADDS	$-1, acc0, acc4
 	ADCS	const0, acc1, acc5
-	ADCS	$0, acc2, acc6
+//	ADCS	$-1, acc2, acc6
 	ADCS	const1, acc3, acc7
 	ADC	$0, t0, t0
 
@@ -1338,7 +1339,7 @@ TEXT ·p256PointDoubleAsm(SB),NOSPLIT,$136-48
 	// Divide by 2
 	ADDS	$-1, y0, t0
 	ADCS	const0, y1, t1
-	ADCS	$0, y2, t2
+//	ADCS	$-1, y2, t2
 	ADCS	const1, y3, t3
 	ADC	$0, ZR, hlp0
 
@@ -1431,6 +1432,7 @@ TEXT ·p256PointAddAsm(SB),0,$392-80
 
 	EOR	$-1, x0, t0
 	EOR	const0, x1, t1
+	EOR	$-1, x2, t2
 	EOR	const1, x3, t3
 
 	ORR	t0, t1, t0
@@ -1462,6 +1464,7 @@ TEXT ·p256PointAddAsm(SB),0,$392-80
 
 	EOR	$-1, x0, t0
 	EOR	const0, x1, t1
+	EOR	$-1, x2, t2
 	EOR	const1, x3, t3
 
 	ORR	t0, t1, t0
