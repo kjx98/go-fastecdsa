@@ -339,20 +339,6 @@ public:
 	{
 		return vli_uadd_to<N>(this->d, right);
 	}
-#ifdef	ommit
-/* Computes result = left modulo prime, modulo prime. Can modify in place. */
-	void mod(const bignum& left, const bignum& prime, const bool carry) noexcept
-	{
-#ifndef	ommit
-		bignum	in;
-		*this = left;
-		bool mask = carry | !in.sub(left, prime);
-		this->copy_conditional(in, (!mask)-1);
-#else
-		if (carry || prime < left) this->sub(left, prime); else *this = left;
-#endif
-	}
-#endif
 /* Computes result = left + right, modulo prime. Can modify in place. */
 	void mod_add(const bignum& left, const bignum &right, const bignum& prime)
 			noexcept
@@ -371,18 +357,10 @@ public:
 		} else
 #endif
 #endif
-#ifdef	ommit
-		if (vli_add<N>(this->d, left.d, right.d) ||
-			vli_cmp<N>(this->d, prime.d) >= 0)
-		{
-			vli_sub_from<N>(this->d, prime.d);
-		}
-#else
 		{
 			auto	carry = vli_add<N>(this->d, left, right);
 			vli_mod<N>(this->d, this->d, prime.d, carry);
 		}
-#endif
 	}
 /* Computes this = this + right, modulo prime. Can modify in place. */
 	void mod_add_to(const bignum& right, const bignum& prime) noexcept
@@ -401,18 +379,10 @@ public:
 		} else
 #endif
 #endif
-#ifdef	ommit
-		if (vli_add_to<N>(this->d, right.d) ||
-			vli_cmp<N>(this->d, prime.d) >= 0)
-		{
-			vli_sub_from<N>(this->d, prime.d);
-		}
-#else
 		{
 			auto	carry = this->add_to(right);
 			this->mod(*this, prime, carry);
 		}
-#endif
 	}
 /**
  * sub() - Subtracts right from this
@@ -711,7 +681,6 @@ public:
 		}
 		vli_mod<N>(this->d, r, prime.d, r[N] != 0);
 	}
-	//void mont_sqrK01(const bignum& x, const bignum& prime) noexcept
 	friend
 	void mont_sqrK01(bignum& res, const bignum& x, const bignum& prime) noexcept
 	{
@@ -863,110 +832,23 @@ public:
 	void mult(const bignum<N>& left, const bignum<N>& right)
 	noexcept
 	{
-#ifdef	ommit
-		uint128_t r01( 0, 0 );
-	/* Compute each digit of result in sequence, maintaining the
-	 * carries.
-	 */
-		for (uint k = 0; k < N * 2 - 1; k++) {
-			u64 r2 = 0;
-			unsigned int min;
-			if (k < N) min = 0; else min = (k + 1) - N;
-			for (uint i = min; i <= k && i < N; i++) {
-				uint128_t product;
-				product.mul_64_64(left.data()[i], right.data()[k - i]);
-				r01 += product;
-				r2 += (r01.m_high() < product.m_high());
-			}
-			this->d[k] = r01.m_low();
-			r01 = uint128_t(r01.m_high(), r2);
-			r2 = 0;
-		}
-		this->d[N * 2 - 1] = r01.m_low();
-#else
 		vli_mult<N>(this->d, left.data(), right.data());
-#endif
 	}
 
 	/* Compute product = left * right, for a small right value. */
 	void umult(const bignum<N>&left, const u64 right) noexcept
 	{
-#ifdef	ommit
-		uint128_t r01( 0, 0 );
-		unsigned int k;
-		for (k = 0; k < N; k++) {
-			uint128_t product;
-			product.mul_64_64(left.data()[k], right);
-			r01 += product;
-			/* no carry */
-			this->d[k] = r01.m_low();
-			r01 = uint128_t(r01.m_high(), 0);
-		}
-		this->d[N] = r01.m_low();
-		for (k = N+1; k < N * 2; k++) this->d[k] = 0;
-#else
 		vli_umult<N>(this->d, left.data(), right);
-#endif
 	}
 
 	void square(const bignum<N>& left) noexcept
 	{
-#ifdef	ommit
-		uint128_t r01( 0, 0 );
-		for (uint k = 0; k < N * 2 - 1; k++) {
-			unsigned int min;
-			u64 r2 = 0;
-			if (k < N) min = 0; else min = (k + 1) - N;
-			for (uint i = min; i <= k && i <= k - i; i++) {
-				uint128_t product;
-				product.mul_64_64(left.data()[i], left.data()[k - i]);
-				if (i < k - i) {
-					r2 += product.m_high() >> 63;
-					u64 _high=(product.m_high() << 1) | (product.m_low() >> 63);
-					u64 _low = product.m_low() << 1;
-					product = uint128_t(_low, _high);
-				}
-				r01 += product;
-				r2 += (r01.m_high() < product.m_high());
-			}
-			this->d[k] = r01.m_low();
-			r01 = uint128_t(r01.m_high(), r2);
-		}
-		this->d[N * 2 - 1] = r01.m_low();
-#else
 		vli_square<N>(this->d, left.data());
-#endif
 	}
 
 	void squareN(const bignum<N>& left) noexcept
 	{
-#ifdef	ommit
-		vli_clear<N*2>(this->d);
-		for (uint k = 0; k < N - 1; ++k) {
-			uint128_t r01( 0, 0 );
-			for (uint i = k+1; i < N; ++i) {
-				uint128_t product;
-				bool		carry;
-				product.mul_64_64(left.data()[i], left.data()[k]);
-				r01 += product;
-				this->d[i+k] += r01.m_low();
-				carry = this->d[i+k] < r01.m_low();
-				r01 = uint128_t(r01.m_high() + carry, 0);
-			}
-			this->d[k+N] += r01.m_low();
-		}
-		vli_lshift1<N*2-1>(this->d, this->d);
-		u64		dd[N*2];
-		for (uint i=0; i < N; ++i) {
-			uint128_t product;
-			product.mul_64_64(left.data()[i], left.data()[i]);
-			dd[i+i] = product.m_low();
-			dd[i+i+1] = product.m_high();
-		}
-		vli_add_to<N*2>(this->d, dd);
-#else
 		vli_squareN<N>(this->d, left.data());
-#endif
 	}
 
 #ifdef	ommit

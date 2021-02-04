@@ -593,13 +593,13 @@ static int vli_cmp(const u64 *left, const u64 *right) noexcept
 	return 0;
 }
 
-#ifdef	ommit
 /* Computes result = in << c, returning carry. Can modify in place
- * (if result == in). 0 < shift < 64.
+ * (if result == in). 0 < shift < 32.
  */
-template<const uint N> forceinline static
-u64 vli_lshift(u64 *result, const u64 *in, unsigned int shift) noexcept
+template<const uint N, const uint shift> forceinline static
+u64 vli_lshift(u64 *result, const u64 *in) noexcept
 {
+	static_assert(shift < 32, "shift MUST less 32");
 	u64 carry = 0;
 	for (uint i = 0; i < N; i++) {
 		u64 temp = in[i];
@@ -608,7 +608,6 @@ u64 vli_lshift(u64 *result, const u64 *in, unsigned int shift) noexcept
 	}
 	return carry;
 }
-#endif
 
 template<const uint N> forceinline static
 u64 vli_lshift1(u64 *result, const u64 *in) noexcept
@@ -710,8 +709,8 @@ bool vli_add_to(u64 *result, const u64 *right) noexcept
 template<const uint N> forceinline
 static bool vli_uadd_to(u64 *result, u64 right) noexcept
 {
-	u64 carry = right;
 #ifdef	NO_BUILTIN_ADDC
+	u64 carry = right;
 	for (uint i = 0; i < N; i++) {
 		u64 sum;
 		sum = result[i] + carry;
@@ -722,7 +721,8 @@ static bool vli_uadd_to(u64 *result, u64 right) noexcept
 		result[i] = sum;
 	}
 #else
-	result[i] = __builtin_addcl(result[i], carry, 0, &c_out);
+	u64 carry, c_out;
+	result[0] = __builtin_addcl(result[0], right, 0, &c_out);
 	carry = c_out;
 	for (uint i = 1; i < N; i++) {
 		result[i] = __builtin_addcl(result[i], 0, carry, &c_out);
@@ -807,8 +807,8 @@ bool vli_sub_from(u64 *result, const u64 *right) noexcept
 template<const uint N> forceinline
 static bool vli_usub(u64 *result, const u64 *left, u64 right) noexcept
 {
-	u64 borrow = right;
 #ifdef	NO_BUILTIN_ADDC
+	u64 borrow = right;
 	for (uint i = 0; i < N; i++) {
 		u64 diff;
 		diff = result[i] - borrow;
@@ -817,7 +817,8 @@ static bool vli_usub(u64 *result, const u64 *left, u64 right) noexcept
 		result[i] = diff;
 	}
 #else
-	result[0] = __builtin_subcl(left[0], borrow, 0, &c_out);
+	u64 borrow, c_out;
+	result[0] = __builtin_subcl(left[0], right, 0, &c_out);
 	borrow = c_out;
 	for (uint i = 1; i < N; i++) {
 		result[i] = __builtin_subcl(left[i], 0, borrow, &c_out);
@@ -948,6 +949,7 @@ static void vli_umult(u64 *result, const u64 *left, u64 right) noexcept
 }
 
 /* Compute product = left * right, reserved for mont_red/mont_mult. */
+// result MUST be u64[N+1]
 template<const uint N> forceinline
 static void vli_umult2(u64 *result, const u64 *left, u64 right) noexcept
 {
@@ -963,7 +965,6 @@ static void vli_umult2(u64 *result, const u64 *left, u64 right) noexcept
 		r01 = uint128_t(r01.m_high(), 0);
 	}
 	result[N] = r01.m_low();
-	//result[N+1] = 0;
 }
 
 template<const uint N> forceinline
@@ -975,7 +976,6 @@ static void vli_square(u64 *result, const u64 *left) noexcept
 
 	for (k = 0; k < N * 2 - 1; k++) {
 		unsigned int min;
-
 		min = (k < N)?0:( (k + 1) - N);
 
 		for (i = min; i <= k && i <= k - i; i++) {
@@ -1049,9 +1049,10 @@ vli_mod(u64 *result, const u64 *left, const u64 *mod, const bool carry) noexcept
 	} else
 #endif
 #endif
-#ifndef ommit
+#ifndef NO_CONDITIONAL_COPY
 	{
 		// maybe copy_conditional faster?
+		// mask 0, or all 1
 		bool s_carry = !vli_sub<N>(result, left, mod) | carry;
 		u64	mask = (!s_carry) - 1;
 		for (uint i = 0; i < N; ++i) {

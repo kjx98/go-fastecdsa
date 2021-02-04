@@ -70,6 +70,7 @@ static void vli_sm2_multR(u64 *result, const u64 uv) noexcept
 }
 
 
+#ifdef	ommit
 template<const uint N> forceinline
 static void
 #ifdef	WITH_C2GO_1
@@ -175,6 +176,7 @@ mont_sqr(u64 *result, const u64 *x, const u64 *prime, const u64 k0) noexcept
 	vli_mod<N>(result, r, prime, r[N] != 0);
 #endif
 }
+#endif
 
 template<const uint N, const u64 k0> forceinline
 static void
