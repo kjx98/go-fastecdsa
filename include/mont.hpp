@@ -57,10 +57,11 @@ static void vli_sm2_multP(u64 *result, const u64 u) noexcept
 forceinline
 static void vli_sm2_multPh(u64 *result, const u64 u) noexcept
 {
-	u64	r[4];
 	u64	t_low, t_high;
 	t_low = u << 32;	// ^192
-	t_high = ((u >> 32) & 0xffffffff);
+	t_high = u >> 32;
+#ifdef	NO_BUILTIN_ADDC
+	u64	r[4];
 	// result = 2^256 + 2^64 - u*2^224 (high 32 bits)
 	result[0] = u;
 	result[1] = 0;
@@ -72,6 +73,13 @@ static void vli_sm2_multPh(u64 *result, const u64 u) noexcept
 	r[2] = t_low;
 	r[3] = t_high;
 	vli_sub_from<4>(result, r);
+#else
+	u64		carry;
+	result[0] = u - t_low;
+	result[1] = __builtin_subcl(0, t_high, 0, &carry);
+	result[2] = __builtin_subcl(0, t_low, carry, &carry);
+	result[3] = u - t_high - carry;
+#endif
 }
 
 // u * 2^256 mod sm2 prime

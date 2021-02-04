@@ -537,35 +537,26 @@ public:
 	friend void mont_reductionK01(bignum& res,  const bignum& y,
 					const bignum& prime) noexcept
 	{
-		u64	s[N+2];
-		u64	r[N+2];
+		u64	s[N];
+		u64	r[N];
 		vli_set<N>(r, y.d);
-		r[N] = 0;
-		//r[N+1] = 0;
-		//s[N] = 0;
-		//s[N+1] = 0;
+		u64 carry = 0;
 		for (uint i=0; i < N; i++) {
-#ifdef	ommit
-			vli_umult2<N>(s, prime.d, r[0]);
-			r[N+1] = vli_add_to<N+1>(r, s);
-			vli_rshift1w<N + 2>(r);	
-#else
 #ifndef	NO_SM2_PH
 			vli_sm2_multPh(s, r[0]);
 #else
 			vli_umult2<N-1>(s, prime.d+1, r[0]);
 			vli_uadd_to<N>(s, r[0]);
 #endif
-			r[N+1] = vli_add_to<N>(r+1, s);
-			vli_rshift1w<N + 2>(r);	
-#endif
+			vli_rshift1w<N>(r, carry);	
+			carry = vli_add_to<N>(r, s);
 		}
 #if	__cplusplus >= 201703L && defined(WITH_ASM)
 		if constexpr(N==4) {
-			sm2p_mod(res.d, r, prime.d, r[N] != 0);
+			sm2p_mod(res.d, r, prime.d, carry != 0);
 		} else
 #endif
-		vli_mod<N>(res.d, r, prime.d, r[N] != 0);
+		vli_mod<N>(res.d, r, prime.d, carry != 0);
 	}
 	template<const u64 k0> forceinline
 	friend void mont_mult(bignum& res, const bignum& x, const bignum& y,

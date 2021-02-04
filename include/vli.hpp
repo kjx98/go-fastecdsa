@@ -637,24 +637,20 @@ static void vli_rshift1(u64 *vli, u64 carry=0) noexcept
 
 /* Computes vli = vli >> 1. */
 template<const uint N> forceinline
-static void vli_rshift1w(u64 *vli) noexcept
+static void vli_rshift1w(u64 *vli, const u64 carry=0) noexcept
 {
 	for (uint i = 1; i < N; i++) {
 		vli[i-1] = vli[i];
 	}
-	vli[N-1] = 0;
+	vli[N-1] = carry;
 }
 
 /* Computes result = left + right, returning carry. Can modify in place. */
 template<const uint N> forceinline static
 bool vli_add(u64 *result, const u64 *left, const u64 *right) noexcept
 {
-#if	defined(WITH_ASM)
-#if	__cplusplus >= 201703L
+#if	defined(WITH_ASM) && __cplusplus >= 201703L
 	if constexpr(N == 4) return vli4_add(result, left, right);
-#else
-	if ( likely(N == 4) ) return vli4_add(result, left, right);
-#endif
 #endif
 #ifdef	NO_BUILTIN_ADDC
 	bool carry = false;
@@ -1051,12 +1047,12 @@ vli_mod(u64 *result, const u64 *left, const u64 *mod, const bool carry) noexcept
 	} else
 #endif
 #endif
-#ifndef NO_CONDITIONAL_COPY
+#ifdef CONDITIONAL_COPY
 	{
 		// maybe copy_conditional faster?
 		// mask 0, or all 1
-		bool s_carry = !vli_sub<N>(result, left, mod) | carry;
-		u64	mask = (!s_carry) - 1;
+		bool s_carry = vli_sub<N>(result, left, mod) & !carry;
+		u64	mask = (u64)(!s_carry) - 1;
 		for (uint i = 0; i < N; ++i) {
 			const u64 tmp = mask & (left[i] ^ result[i]);
 			result[i] ^= tmp;
