@@ -645,6 +645,17 @@ static void vli_rshift1w(u64 *vli, const u64 carry=0) noexcept
 	vli[N-1] = carry;
 }
 
+/* copy_conditional copies in to out if enabled, set mask to all ones. */
+template<const uint N> forceinline
+void vli_copy_conditional(u64 *res, const u64 *in, const bool enabled)
+{
+	u64	mask = (u64)!enabled - 1;
+	for (uint i = 0; i < N; ++i) {
+		const u64 tmp = mask & (in[i] ^ res[i]);
+		res[i] ^= tmp;
+	}
+}
+
 /* Computes result = left + right, returning carry. Can modify in place. */
 template<const uint N> forceinline static
 bool vli_add(u64 *result, const u64 *left, const u64 *right) noexcept
@@ -1047,16 +1058,12 @@ vli_mod(u64 *result, const u64 *left, const u64 *mod, const bool carry) noexcept
 	} else
 #endif
 #endif
-#ifdef	WITH_CONDITIONAL_COPY
+#ifdef	NO_CONDITIONAL_COPY
 	{
 		// maybe copy_conditional faster?
 		// mask 0, or all 1
-		bool s_carry = !vli_sub<N>(result, left, mod) | carry;
-		u64	mask = (u64)(s_carry) - 1;
-		for (uint i = 0; i < N; ++i) {
-			const u64 tmp = mask & (left[i] ^ result[i]);
-			result[i] ^= tmp;
-		}
+		bool s_carry = carry | !vli_sub<N>(result, left, mod);
+		vli_copy_conditional<N>(result, left, !s_carry);
 	}
 #else
 	if (carry || vli_cmp<N>(left, mod) >= 0) {

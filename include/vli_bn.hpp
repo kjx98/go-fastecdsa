@@ -238,12 +238,10 @@ public:
 		return (this->d[off] >> rem) & 1;
 	}
 	/* copy_conditional copies in to out if mask is all ones. */
-	void copy_conditional(const bignum& in, u64 mask)
+	//void copy_conditional(const bignum& in, u64 mask)
+	void copy_conditional(const bignum& in, const bool mask)
 	{
-		for (uint i = 0; i < N; ++i) {
-			const u64 tmp = mask & (in.d[i] ^ this->d[i]);
-			this->d[i] ^= tmp;
-		}
+		vli_copy_conditional<N>(this->d, in.d, mask);
 	}
 /**
  * cmp() - compare this and right vlis
