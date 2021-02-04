@@ -133,6 +133,9 @@ public:
 		}
 #endif
 	}
+	bool operator==(std::nullptr_t) const noexcept {
+		return this->is_zero();
+	}
 	bool operator==(const u64* bn) const noexcept {
 #ifdef	NO_U64ZERO
 		for (uint i = 0; i < N; ++i) {
@@ -336,6 +339,7 @@ public:
 	{
 		return vli_uadd_to<N>(this->d, right);
 	}
+#ifdef	ommit
 /* Computes result = left modulo prime, modulo prime. Can modify in place. */
 	void mod(const bignum& left, const bignum& prime, const bool carry) noexcept
 	{
@@ -348,6 +352,7 @@ public:
 		if (carry || prime < left) this->sub(left, prime); else *this = left;
 #endif
 	}
+#endif
 /* Computes result = left + right, modulo prime. Can modify in place. */
 	void mod_add(const bignum& left, const bignum &right, const bignum& prime)
 			noexcept
@@ -374,8 +379,8 @@ public:
 		}
 #else
 		{
-			auto	carry = this->add(left, right);
-			this->mod(*this, prime, carry);
+			auto	carry = vli_add<N>(this->d, left, right);
+			vli_mod<N>(this->d, this->d, prime.d, carry);
 		}
 #endif
 	}
@@ -475,12 +480,6 @@ public:
 #endif
 		if (vli_sub_from<N>(this->d, right.d)) vli_add_to<N>(this->d, prime.d);
 	}
-#ifdef	ommit
-	bool is_negative() const noexcept
-	{
-		return (this->d[N-1] & ((u64)1 << 63)) != 0;
-	}
-#endif
 	int is_even() const noexcept {
 		return (this->d[0] & 1) ^ 1;
 	}
@@ -560,7 +559,9 @@ public:
 		}
 		vli_mod<N>(this->d, r, prime.d, r[N] != 0);
 	}
-	void mont_reductionK01(const bignum& y, const bignum& prime) noexcept
+	//void mont_reductionK01(const bignum& y, const bignum& prime) noexcept
+	friend void mont_reductionK01(bignum& res,  const bignum& y,
+					const bignum& prime) noexcept
 	{
 		u64	s[N*2];
 		u64	r[N+2];
@@ -576,10 +577,10 @@ public:
 		}
 #if	__cplusplus >= 201703L && defined(WITH_ASM)
 		if constexpr(N==4) {
-			sm2p_mod(this->d, r, prime.d, r[N] != 0);
+			sm2p_mod(res.d, r, prime.d, r[N] != 0);
 		} else
 #endif
-		vli_mod<N>(this->d, r, prime.d, r[N] != 0);
+		vli_mod<N>(res.d, r, prime.d, r[N] != 0);
 	}
 	template<const u64 k0> forceinline
 	friend void mont_mult(bignum& res, const bignum& x, const bignum& y,
@@ -710,7 +711,9 @@ public:
 		}
 		vli_mod<N>(this->d, r, prime.d, r[N] != 0);
 	}
-	void mont_sqrK01(const bignum& x, const bignum& prime) noexcept
+	//void mont_sqrK01(const bignum& x, const bignum& prime) noexcept
+	friend
+	void mont_sqrK01(bignum& res, const bignum& x, const bignum& prime) noexcept
 	{
 		u64	s[N*2];
 		u64	r[N+2];
@@ -727,10 +730,10 @@ public:
 		}
 #if	__cplusplus >= 201703L && defined(WITH_ASM)
 		if constexpr(N==4) {
-			sm2p_mod(this->d, r, prime.d, r[N] != 0);
+			sm2p_mod(res.d, r, prime.d, r[N] != 0);
 		} else
 #endif
-		vli_mod<N>(this->d, r, prime.d, r[N] != 0);
+		vli_mod<N>(res.d, r, prime.d, r[N] != 0);
 	}
 };
 
@@ -860,6 +863,7 @@ public:
 	void mult(const bignum<N>& left, const bignum<N>& right)
 	noexcept
 	{
+#ifdef	ommit
 		uint128_t r01( 0, 0 );
 	/* Compute each digit of result in sequence, maintaining the
 	 * carries.
@@ -879,30 +883,35 @@ public:
 			r2 = 0;
 		}
 		this->d[N * 2 - 1] = r01.m_low();
+#else
+		vli_mult<N>(this->d, left.data(), right.data());
+#endif
 	}
 
 	/* Compute product = left * right, for a small right value. */
 	void umult(const bignum<N>&left, const u64 right) noexcept
 	{
+#ifdef	ommit
 		uint128_t r01( 0, 0 );
 		unsigned int k;
 		for (k = 0; k < N; k++) {
 			uint128_t product;
-			//if (likely(left[k] != 0))
-			{
-				product.mul_64_64(left.data()[k], right);
-				r01 += product;
-			}
+			product.mul_64_64(left.data()[k], right);
+			r01 += product;
 			/* no carry */
 			this->d[k] = r01.m_low();
 			r01 = uint128_t(r01.m_high(), 0);
 		}
 		this->d[N] = r01.m_low();
 		for (k = N+1; k < N * 2; k++) this->d[k] = 0;
+#else
+		vli_umult<N>(this->d, left.data(), right);
+#endif
 	}
 
 	void square(const bignum<N>& left) noexcept
 	{
+#ifdef	ommit
 		uint128_t r01( 0, 0 );
 		for (uint k = 0; k < N * 2 - 1; k++) {
 			unsigned int min;
@@ -924,10 +933,14 @@ public:
 			r01 = uint128_t(r01.m_high(), r2);
 		}
 		this->d[N * 2 - 1] = r01.m_low();
+#else
+		vli_square<N>(this->d, left.data());
+#endif
 	}
 
 	void squareN(const bignum<N>& left) noexcept
 	{
+#ifdef	ommit
 		vli_clear<N*2>(this->d);
 		for (uint k = 0; k < N - 1; ++k) {
 			uint128_t r01( 0, 0 );
@@ -951,8 +964,12 @@ public:
 			dd[i+i+1] = product.m_high();
 		}
 		vli_add_to<N*2>(this->d, dd);
+#else
+		vli_squareN<N>(this->d, left.data());
+#endif
 	}
 
+#ifdef	ommit
 	void div_barrett(bignum<N>& result, const bignum<N+1>& mu) noexcept
 	{
 		u64	q[N*2];
@@ -995,6 +1012,7 @@ public:
 		vli_set<N>(const_cast<u64 *>(result.data()), q);
 		//result = bignum<N>(q);
 	}
+#endif
 };
 
 }

@@ -56,6 +56,13 @@ TEST(testVli, TestSquare)
 	res1.squareN(bx2);
 	EXPECT_EQ(res.cmp(res1), 0);
 	ASSERT_EQ(res, res1);
+	for(int i=0; i<10; ++i) {
+		auto&  rd = bn_random<4>::Instance();
+		bignum<4>	tmp = rd.get_random();
+		res.square(tmp);
+		res1.squareN(tmp);
+		ASSERT_EQ(res, res1);
+	}
 }
 
 TEST(testVli, TestSquareN)
@@ -102,7 +109,7 @@ static void mont_mulK01(bignum<4>& res, const bignum<4>& x, const bignum<4>& y)
 	xp.mont_multK01(x, rr, prime);
 	yp.mont_multK01(y, rr, prime);
 	res.mont_multK01(xp, yp, prime);
-	res.mont_reductionK01(res, prime);
+	mont_reductionK01(res, res, prime);
 }
 
 TEST(testEcc, TestMontMult)
@@ -118,7 +125,7 @@ TEST(testEcc, TestMontMult)
 	bn_prod<4>	pd;
 	pd.mult(bx2, by2);
 	bignum<4>	res2;
-	res2.mont_reductionK01(pd.m_low(), prime);
+	mont_reductionK01(res2, pd.m_low(), prime);
 	res2.mod_add_to(pd.m_high(), prime);
 	EXPECT_EQ(res2, res);
 #endif

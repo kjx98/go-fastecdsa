@@ -46,7 +46,7 @@ static void test_montRedK01(benchmark::State &state)
 	xp.mont_mult(bx1, rr, prime, sm2_p_k0);
 	for (auto _ : state) {
 		for (int i=0; i<1000; ++i)
-		bx1.mont_reductionK01(xp, prime);
+		mont_reductionK01(bx1, xp, prime);
 	}
 	tt = bx1;
 }
@@ -84,7 +84,7 @@ static void test_montMultK01(benchmark::State &state)
 		for (int i=0; i<1000; ++i)
 		xp.mont_multK01(bx1, rr, prime);
 	}
-	tt.mont_reductionK01(xp, prime);
+	mont_reductionK01(tt, xp, prime);
 }
 BENCHMARK(test_montMultK01);
 
@@ -108,9 +108,9 @@ static void test_montSqrK01(benchmark::State &state)
 	bp.mont_multK01(bx1, rr, prime);
 	for (auto _ : state) {
 		for (int i=0; i<1000; ++i)
-		xp.mont_sqrK01(bp, prime);
+		mont_sqrK01(xp, bp, prime);
 	}
-	tt.mont_reductionK01(xp, prime);
+	mont_reductionK01(tt, xp, prime);
 }
 BENCHMARK(test_montSqrK01);
 

@@ -909,14 +909,10 @@ void vli_mult(u64 *result, const u64 *left, const u64 *right) noexcept
 	 */
 	for (k = 0; k < N * 2 - 1; k++) {
 		unsigned int min;
-		if (k < N)
-			min = 0;
-		else
-			min = (k + 1) - N;
+		min = (k < N)?0:( (k + 1) - N);
 
 		for (i = min; i <= k && i < N; i++) {
 			uint128_t product;
-
 			product.mul_64_64(left[i], right[k - i]);
 
 			r01 += product;
@@ -940,11 +936,8 @@ static void vli_umult(u64 *result, const u64 *left, u64 right) noexcept
 
 	for (k = 0; k < N; k++) {
 		uint128_t product;
-
-		{
-			product.mul_64_64(left[k], right);
-			r01 += product;
-		}
+		product.mul_64_64(left[k], right);
+		r01 += product;
 		/* no carry */
 		result[k] = r01.m_low();
 		r01 = uint128_t(r01.m_high(), 0);
@@ -963,11 +956,8 @@ static void vli_umult2(u64 *result, const u64 *left, u64 right) noexcept
 
 	for (k = 0; k < N; k++) {
 		uint128_t product;
-
-		{
-			product.mul_64_64(left[k], right);
-			r01 += product;
-		}
+		product.mul_64_64(left[k], right);
+		r01 += product;
 		/* no carry */
 		result[k] = r01.m_low();
 		r01 = uint128_t(r01.m_high(), 0);
@@ -986,23 +976,17 @@ static void vli_square(u64 *result, const u64 *left) noexcept
 	for (k = 0; k < N * 2 - 1; k++) {
 		unsigned int min;
 
-		if (k < N)
-			min = 0;
-		else
-			min = (k + 1) - N;
+		min = (k < N)?0:( (k + 1) - N);
 
 		for (i = min; i <= k && i <= k - i; i++) {
 			uint128_t product;
-
 			product.mul_64_64(left[i], left[k - i]);
-
 			if (i < k - i) {
 				r2 += product.m_high() >> 63;
 				u64 _high = (product.m_high() << 1) | (product.m_low() >> 63);
 				u64 _low = product.m_low() << 1;
 				product = uint128_t(_low, _high);
 			}
-
 			r01 += product;
 			r2 += (r01.m_high() < product.m_high());
 		}
@@ -1023,16 +1007,18 @@ static void vli_squareN(u64 *result, const u64 *left) noexcept
 		uint128_t r01( 0, 0 );
 		for (uint i = k+1; i < N; ++i) {
 			uint128_t product;
-			bool		carry;
+			bool		carry, h_carry;
 			product.mul_64_64(left[i], left[k]);
 			r01 += product;
+			h_carry = (r01.m_high() < product.m_high());
 			result[i+k] += r01.m_low();
 			carry = result[i+k] < r01.m_low();
-			r01 = uint128_t(r01.m_high() + carry, 0);
+			r01 = uint128_t(r01.m_high() + carry, h_carry);
 		}
 		result[k+N] += r01.m_low();
+		result[k+N+1] += r01.m_high();
 	}
-	vli_lshift1<N*2-1>(result, result);
+	vli_lshift1<N*2>(result, result);
 	u64		dd[N*2];
 	for (uint i=0; i < N; ++i) {
 		uint128_t product;
