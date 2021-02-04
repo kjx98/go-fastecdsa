@@ -593,6 +593,7 @@ static int vli_cmp(const u64 *left, const u64 *right) noexcept
 	return 0;
 }
 
+#ifdef	ommit
 /* Computes result = in << c, returning carry. Can modify in place
  * (if result == in). 0 < shift < 32.
  */
@@ -608,6 +609,7 @@ u64 vli_lshift(u64 *result, const u64 *in) noexcept
 	}
 	return carry;
 }
+#endif
 
 template<const uint N> forceinline static
 u64 vli_lshift1(u64 *result, const u64 *in) noexcept

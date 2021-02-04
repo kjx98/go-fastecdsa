@@ -28,8 +28,6 @@
 #define __MONT_HPP__
 
 #include "vli.hpp"
-#include "vli_bn.hpp"
-#include "ecc_impl.hpp"
 
 
 // SM2 prime optimize
@@ -70,14 +68,13 @@ static void vli_sm2_multR(u64 *result, const u64 uv) noexcept
 }
 
 
-#ifdef	ommit
 template<const uint N> forceinline
 static void
 #ifdef	WITH_C2GO_1
-mont_reduction(u64 *result, const u64 *y, const u64 *prime,
+vli_mont_reduction(u64 *result, const u64 *y, const u64 *prime,
 			const u64 k0, u64 *buff) noexcept
 #else
-mont_reduction(u64 *result, const u64 *y, const u64 *prime,
+vli_mont_reduction(u64 *result, const u64 *y, const u64 *prime,
 			const u64 k0) noexcept
 #endif
 {
@@ -98,22 +95,16 @@ mont_reduction(u64 *result, const u64 *y, const u64 *prime,
 		vli_add_to<N + 2>(r, s);
 		vli_rshift1w<N + 2>(r);	
 	}
-#ifdef	ommit
-	if (r[N] !=0 || vli_cmp<N>(r, prime) >= 0) {
-		vli_sub<N>(result, r, prime);
-	} else vli_set<N>(result, r);
-#else
 	vli_mod<N>(result, r, prime, r[N] != 0);
-#endif
 }
 
 template<const uint N> forceinline
 static void
 #ifdef	WITH_C2GO_1
-mont_mult(u64 *result, const u64 *x, const u64 *y, const u64 *prime,
+vli_mont_mult(u64 *result, const u64 *x, const u64 *y, const u64 *prime,
 				const u64 k0, u64 *buff) noexcept
 #else
-mont_mult(u64 *result, const u64 *x, const u64 *y, const u64 *prime,
+vli_mont_mult(u64 *result, const u64 *x, const u64 *y, const u64 *prime,
 				const u64 k0) noexcept
 #endif
 {
@@ -134,21 +125,15 @@ mont_mult(u64 *result, const u64 *x, const u64 *y, const u64 *prime,
 		vli_add_to<N + 2>(r, s);
 		vli_rshift1w<N + 2>(r);	
 	}
-#ifdef	ommit
-	if (r[N] != 0 || vli_cmp<N>(r, prime) >= 0) {
-		vli_sub<N>(result, r, prime);
-	} else vli_set<N>(result, r);
-#else
 	vli_mod<N>(result, r, prime, r[N] != 0);
-#endif
 }
 
 template<const uint N> forceinline
 static void
 #ifdef	WITH_C2GO_1
-mont_sqr(u64 *result, const u64 *x, const u64 *prime, const u64 k0, u64 *buff) noexcept
+vli_mont_sqr(u64 *result, const u64 *x, const u64 *prime, const u64 k0, u64 *buff) noexcept
 #else
-mont_sqr(u64 *result, const u64 *x, const u64 *prime, const u64 k0) noexcept
+vli_mont_sqr(u64 *result, const u64 *x, const u64 *prime, const u64 k0) noexcept
 #endif
 {
 #ifdef	WITH_C2GO_1
@@ -168,15 +153,9 @@ mont_sqr(u64 *result, const u64 *x, const u64 *prime, const u64 k0) noexcept
 		vli_add_to<N + 2>(r, s);
 		vli_rshift1w<N + 2>(r);	
 	}
-#ifdef	ommit
-	if (r[N] != 0 || vli_cmp<N>(r, prime) >= 0) {
-		vli_sub<N>(result, r, prime);
-	} else vli_set<N>(result, r);
-#else
 	vli_mod<N>(result, r, prime, r[N] != 0);
-#endif
 }
-#endif
+
 
 template<const uint N, const u64 k0> forceinline
 static void
@@ -194,13 +173,7 @@ mont_reduction(u64 *result, const u64 *y, const u64 *prime) noexcept
 		vli_add_to<N + 2>(r, s);
 		vli_rshift1w<N + 2>(r);	
 	}
-#ifdef	ommit
-	if (r[N] !=0 || vli_cmp<N>(r, prime) >= 0) {
-		vli_sub<N>(result, r, prime);
-	} else vli_set<N>(result, r);
-#else
 	vli_mod<N>(result, r, prime, r[N] != 0);
-#endif
 }
 
 template<const uint N, const u64 k0> forceinline
@@ -219,13 +192,7 @@ mont_mult(u64 *result, const u64 *x, const u64 *y, const u64 *prime) noexcept
 		vli_add_to<N + 2>(r, s);
 		vli_rshift1w<N + 2>(r);	
 	}
-#ifdef	ommit
-	if (r[N] != 0 || vli_cmp<N>(r, prime) >= 0) {
-		vli_sub<N>(result, r, prime);
-	} else vli_set<N>(result, r);
-#else
 	vli_mod<N>(result, r, prime, r[N] != 0);
-#endif
 }
 
 template<const uint N, const u64 k0> forceinline
@@ -244,13 +211,7 @@ mont_sqr(u64 *result, const u64 *x, const u64 *prime) noexcept
 		vli_add_to<N + 2>(r, s);
 		vli_rshift1w<N + 2>(r);	
 	}
-#ifdef	ommit
-	if (r[N] != 0 || vli_cmp<N>(r, prime) >= 0) {
-		vli_sub<N>(result, r, prime);
-	} else vli_set<N>(result, r);
-#else
 	vli_mod<N>(result, r, prime, r[N] != 0);
-#endif
 }
 
 #endif	//	__MONT_HPP__

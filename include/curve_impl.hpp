@@ -36,6 +36,7 @@
 namespace ecc {
 
 using namespace vli;
+
 constexpr int W = 5;
 constexpr int wSize = 1<<(W-1);
 constexpr int BaseW = 6;	// 7 for 37 *64 pre computed Points, 6 for 43*32

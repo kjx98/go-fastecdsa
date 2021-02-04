@@ -36,6 +36,7 @@
 //#include <iomanip>
 #include "cdefs.h"
 #include "vli.hpp"
+#include "mont.hpp"
 
 #if	__cplusplus < 201103L
 # error "C++ std MUST at least c++11"
@@ -514,6 +515,7 @@ public:
 	void mont_reduction(const bignum& y, const bignum& prime, const u64 k0)
 	noexcept
 	{
+#ifdef	ommit
 		u64	s[N*2];
 		u64	r[N+2];
 		vli_set<N>(r, y.d);
@@ -528,8 +530,10 @@ public:
 			vli_rshift1w<N + 2>(r);	
 		}
 		vli_mod<N>(this->d, r, prime.d, r[N] != 0);
+#else
+		vli_mont_reduction<N>(this->d, y.d, prime.d, k0);
+#endif
 	}
-	//void mont_reductionK01(const bignum& y, const bignum& prime) noexcept
 	friend void mont_reductionK01(bignum& res,  const bignum& y,
 					const bignum& prime) noexcept
 	{
@@ -537,12 +541,12 @@ public:
 		u64	r[N+2];
 		vli_set<N>(r, y.d);
 		r[N] = 0;
-		r[N+1] = 0;
-		s[N] = 0;
-		s[N+1] = 0;
+		//r[N+1] = 0;
+		//s[N] = 0;
+		//s[N+1] = 0;
 		for (uint i=0; i < N; i++) {
 			vli_umult2<N>(s, prime.d, r[0]);
-			vli_add_to<N + 2>(r, s);
+			r[N+1] = vli_add_to<N+1>(r, s);
 			vli_rshift1w<N + 2>(r);	
 		}
 #if	__cplusplus >= 201703L && defined(WITH_ASM)
@@ -603,6 +607,7 @@ public:
 	void mont_mult(const bignum& x, const bignum& y, const bignum& prime,
 					const u64 k0) noexcept
 	{
+#ifdef	ommit
 		u64	s[N*2];
 		u64	r[N+2];
 		vli_clear<N + 2>(r);
@@ -617,6 +622,9 @@ public:
 			vli_rshift1w<N + 2>(r);	
 		}
 		vli_mod<N>(this->d, r, prime.d, r[N] != 0);
+#else
+		vli_mont_mult<N>(this->d, x.d, y.d, prime.d, k0);
+#endif
 	}
 	void
 	mont_multK01(const bignum& x, const bignum& y, const bignum& prime) noexcept
@@ -666,6 +674,7 @@ public:
 	}
 	void mont_sqr(const bignum& x, const bignum& prime, const u64 k0) noexcept
 	{
+#ifdef	ommit
 		u64	s[N*2];
 		u64	r[N+2];
 		vli_clear<N + 2>(r);
@@ -680,6 +689,9 @@ public:
 			vli_rshift1w<N + 2>(r);	
 		}
 		vli_mod<N>(this->d, r, prime.d, r[N] != 0);
+#else
+		vli_mont_sqr<N>(this->d, x.d, prime.d, k0);
+#endif
 	}
 	friend
 	void mont_sqrK01(bignum& res, const bignum& x, const bignum& prime) noexcept
