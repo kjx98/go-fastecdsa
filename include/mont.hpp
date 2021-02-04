@@ -51,6 +51,29 @@ static void vli_sm2_multP(u64 *result, const u64 u) noexcept
 	result[4] -= vli_sub_from<4>(result, r);
 }
 
+
+// p is 2^256 - 2^224 - 2^96 + 2^64 -1
+// vli_sm2_multPh return u * (p + 1) >> 64
+forceinline
+static void vli_sm2_multPh(u64 *result, const u64 u) noexcept
+{
+	u64	r[4];
+	u64	t_low, t_high;
+	t_low = u << 32;	// ^192
+	t_high = ((u >> 32) & 0xffffffff);
+	// result = 2^256 + 2^64 - u*2^224 (high 32 bits)
+	result[0] = u;
+	result[1] = 0;
+	result[2] = 0;
+	result[3] = u;
+	// r = 2^224 + 2^96 + 1
+	r[0] = t_low;
+	r[1] = t_high;
+	r[2] = t_low;
+	r[3] = t_high;
+	vli_sub_from<4>(result, r);
+}
+
 // u * 2^256 mod sm2 prime
 // p is 2^256 - 2^224 - 2^96 + 2^64 -1
 // R(2^256) - p = 2^224 + 2^96 - 2^64 + 1
