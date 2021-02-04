@@ -620,13 +620,22 @@ public:
 		u64	s[N+1];
 		u64	r[N+1];
 		vli_clear<N + 1>(r);
+		r[N] = 0;
 		for (uint i=0; i < N;i++) {
 			u64	u = r[0] + y.d[i]*x.d[0];
+#ifdef	WITH_SM2_PH
+			vli_sm2_multPh(s, u);
+			vli_rshift1w<N>(r, r[N]);
+			r[N] = vli_add_to<N>(r, s);
+			vli_umult2<N-1>(s, x.d + 1, y.d[i]);
+			r[N] += vli_add_to<N>(r, s);
+#else
 			vli_umult2<N>(s, prime.d, u);
 			u = vli_add_to<N + 1>(r, s);
 			vli_umult2<N>(s, x.d, y.d[i]);
 			u += vli_add_to<N + 1>(r, s);
 			vli_rshift1w<N + 1>(r, u);	
+#endif
 		}
 #if	__cplusplus >= 201703L && defined(WITH_ASM)
 		if constexpr(N==4) {
