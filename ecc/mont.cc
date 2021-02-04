@@ -29,7 +29,8 @@
 #endif
 #include "ecc.h"
 #include "curve_const.hpp"
-#include "mont.hpp"
+#include "curve_impl.hpp"
+//#include "mont.hpp"
 
 //#pragma GCC push_options
 //#pragma GCC optimize ("unroll-loops")
@@ -105,14 +106,14 @@ void to_montgomery(u64 *res, const u64 *x, const montParams *pa)
 	const u64	*rr = pa->rr;
 	const u64	*prime = pa->p;
 	const u64	k0 = pa->k0;
-	mont_mult<4>(res, x, rr, prime, k0);
+	vli_mont_mult<4>(res, x, rr, prime, k0);
 }
 
 void from_montgomery(u64 *res, const u64 *y, const montParams *pa)
 {
 	const u64	*prime = pa->p;
 	const u64	k0 = pa->k0;
-	mont_reduction<4>(res, y, prime, k0);
+	vli_mont_reduction<4>(res, y, prime, k0);
 }
 
 //static u64 montOne[]={1, 0, 0, 0};
@@ -120,16 +121,16 @@ void mont_mod_mult(u64 *res, const u64 *x, const u64 *y, const montParams *pa)
 {
 	const u64	*prime = pa->p;
 	const u64	k0 = pa->k0;
-	mont_mult<4>(res, x, y, prime, k0);
+	vli_mont_mult<4>(res, x, y, prime, k0);
 }
 
 void mont_mod_sqr(u64 *res, const u64 *x, const montParams *pa, const u64 n)
 {
 	const u64	*prime = pa->p;
 	const u64	k0 = pa->k0;
-	mont_sqr<4>(res, x, prime, k0);
+	vli_mont_sqr<4>(res, x, prime, k0);
 	for (uint i=1; i < n; i++) {
-		mont_sqr<4>(res, res, prime, k0);
+		vli_mont_sqr<4>(res, res, prime, k0);
 	}
 }
 
@@ -142,19 +143,19 @@ void mont_mod_exp(u64 *result, const u64 *x, const u64 *y, const montParams *pa)
 	u64	xp[4];
 	u64	t[4];
 	int	num_bits = vli_num_bits<4>(y);
-	mont_mult<4>(xp, x, rr, prime, k0);
+	vli_mont_mult<4>(xp, x, rr, prime, k0);
 #ifdef	ommit
-	mont_reduction<4>(t, rr, prime, k0);
+	vli_mont_reduction<4>(t, rr, prime, k0);
 #else
 	vli_clear<4>(t);
 	vli_sub_from<4>(t, prime);
 #endif
 	for (int i = num_bits - 1;i >= 0; i--) {
-		mont_sqr<4>(t, t, prime, k0);
-		if (vli_test_bit<4>(y, i)) mont_mult<4>(t, t, xp, prime, k0);
+		vli_mont_sqr<4>(t, t, prime, k0);
+		if (vli_test_bit<4>(y, i)) vli_mont_mult<4>(t, t, xp, prime, k0);
 	}
 	//mont_mult<4>(result, montOne, t, prime, k0);
-	mont_reduction<4>(result, t, prime, k0);
+	vli_mont_reduction<4>(result, t, prime, k0);
 }
 
 // sqrt of x mod P, P = 4k + 3

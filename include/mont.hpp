@@ -113,18 +113,16 @@ vli_mont_reduction(u64 *result, const u64 *y, const u64 *prime,
 	u64	*s = buff;
 	u64	*r = s + N * 2;
 #else
-	u64	s[N * 2];
-	u64	r[N + 2];
+	u64	s[N + 1];
+	u64	r[N + 1];
 #endif
 	vli_set<N>(r, y);
 	r[N] = 0;
-	r[N+1] = 0;
-	s[N+1] = 0;
 	for (uint i=0; i < N; i++) {
 		u64	u = r[0] * k0;
 		vli_umult2<N>(s, prime, u);
-		vli_add_to<N + 2>(r, s);
-		vli_rshift1w<N + 2>(r);	
+		u = vli_add_to<N + 1>(r, s);
+		vli_rshift1w<N + 1>(r, u);	
 	}
 	vli_mod<N>(result, r, prime, r[N] != 0);
 }
@@ -143,18 +141,17 @@ vli_mont_mult(u64 *result, const u64 *x, const u64 *y, const u64 *prime,
 	u64	*s = buff;
 	u64	*r = s + N * 2;
 #else
-	u64	s[N * 2];
-	u64	r[N + 2];
+	u64	s[N + 1];
+	u64	r[N + 1];
 #endif
-	vli_clear<N + 2>(r);
-	s[N+1] = 0;
+	vli_clear<N + 1>(r);
 	for (uint i=0; i < N;i++) {
 		u64	u = (r[0] + y[i]*x[0]) * k0;
 		vli_umult2<N>(s, prime, u);
-		vli_add_to<N + 2>(r, s);
+		u = vli_add_to<N + 1>(r, s);
 		vli_umult2<N>(s, x, y[i]);
-		vli_add_to<N + 2>(r, s);
-		vli_rshift1w<N + 2>(r);	
+		u += vli_add_to<N + 1>(r, s);
+		vli_rshift1w<N + 1>(r, u);	
 	}
 	vli_mod<N>(result, r, prime, r[N] != 0);
 }
@@ -171,18 +168,17 @@ vli_mont_sqr(u64 *result, const u64 *x, const u64 *prime, const u64 k0) noexcept
 	u64	*s = buff;
 	u64	*r = s + N * 2;
 #else
-	u64	s[N * 2];
-	u64	r[N + 2];
+	u64	s[N + 1];
+	u64	r[N + 1];
 #endif
-	vli_clear<N + 2>(r);
-	s[N+1] = 0;
+	vli_clear<N + 1>(r);
 	for (uint i=0; i < N;i++) {
 		u64	u = (r[0] + x[i]*x[0]) * k0;
 		vli_umult2<N>(s, prime, u);
-		vli_add_to<N + 2>(r, s);
+		u = vli_add_to<N + 1>(r, s);
 		vli_umult2<N>(s, x, x[i]);
-		vli_add_to<N + 2>(r, s);
-		vli_rshift1w<N + 2>(r);	
+		u += vli_add_to<N + 1>(r, s);
+		vli_rshift1w<N + 1>(r, u);	
 	}
 	vli_mod<N>(result, r, prime, r[N] != 0);
 }
@@ -192,17 +188,15 @@ template<const uint N, const u64 k0> forceinline
 static void
 mont_reduction(u64 *result, const u64 *y, const u64 *prime) noexcept
 {
-	u64	s[N * 2];
-	u64	r[N + 2];
+	u64	s[N + 1];
+	u64	r[N + 1];
 	vli_set<N>(r, y);
 	r[N] = 0;
-	r[N+1] = 0;
-	s[N+1] = 0;
 	for (uint i=0; i < N; i++) {
 		u64	u = r[0] * k0;
 		vli_umult2<N>(s, prime, u);
-		vli_add_to<N + 2>(r, s);
-		vli_rshift1w<N + 2>(r);	
+		u = vli_add_to<N + 1>(r, s);
+		vli_rshift1w<N + 1>(r, u);	
 	}
 	vli_mod<N>(result, r, prime, r[N] != 0);
 }
@@ -211,17 +205,16 @@ template<const uint N, const u64 k0> forceinline
 static void
 mont_mult(u64 *result, const u64 *x, const u64 *y, const u64 *prime) noexcept
 {
-	u64	s[N * 2];
-	u64	r[N + 2];
-	vli_clear<N + 2>(r);
-	s[N+1] = 0;
+	u64	s[N + 1];
+	u64	r[N + 1];
+	vli_clear<N + 1>(r);
 	for (uint i=0; i < N;i++) {
 		u64	u = (r[0] + y[i]*x[0]) * k0;
 		vli_umult2<N>(s, prime, u);
-		vli_add_to<N + 2>(r, s);
+		u = vli_add_to<N + 1>(r, s);
 		vli_umult2<N>(s, x, y[i]);
-		vli_add_to<N + 2>(r, s);
-		vli_rshift1w<N + 2>(r);	
+		u += vli_add_to<N + 1>(r, s);
+		vli_rshift1w<N + 1>(r, u);	
 	}
 	vli_mod<N>(result, r, prime, r[N] != 0);
 }
@@ -230,17 +223,16 @@ template<const uint N, const u64 k0> forceinline
 static void
 mont_sqr(u64 *result, const u64 *x, const u64 *prime) noexcept
 {
-	u64	s[N * 2];
-	u64	r[N + 2];
-	vli_clear<N + 2>(r);
-	s[N+1] = 0;
+	u64	s[N + 1];
+	u64	r[N + 1];
+	vli_clear<N + 1>(r);
 	for (uint i=0; i < N;i++) {
 		u64	u = (r[0] + x[i]*x[0]) * k0;
 		vli_umult2<N>(s, prime, u);
-		vli_add_to<N + 2>(r, s);
+		u = vli_add_to<N + 1>(r, s);
 		vli_umult2<N>(s, x, x[i]);
-		vli_add_to<N + 2>(r, s);
-		vli_rshift1w<N + 2>(r);	
+		u += vli_add_to<N + 1>(r, s);
+		vli_rshift1w<N + 1>(r, u);	
 	}
 	vli_mod<N>(result, r, prime, r[N] != 0);
 }

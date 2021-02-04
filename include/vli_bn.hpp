@@ -492,18 +492,15 @@ public:
 	friend void mont_reduction(bignum& res,  const bignum& y,
 					const bignum& prime) noexcept
 	{
-		u64	s[N*2];
-		u64	r[N+2];
+		u64	s[N+1];
+		u64	r[N+1];
 		vli_set<N>(r, y.d);
 		r[N] = 0;
-		r[N+1] = 0;
-		s[N] = 0;
-		s[N+1] = 0;
 		for (uint i=0; i < N; i++) {
 			u64	u = r[0] * k0;
 			vli_umult2<N>(s, prime.d, u);
-			vli_add_to<N + 2>(r, s);
-			vli_rshift1w<N + 2>(r);	
+			u = vli_add_to<N + 1>(r, s);
+			vli_rshift1w<N + 1>(r, u);	
 		}
 #if	__cplusplus >= 201703L  && defined(WITH_ASM)
 		if constexpr(N==4 && k0 == 1) {
@@ -516,18 +513,15 @@ public:
 	noexcept
 	{
 #ifdef	ommit
-		u64	s[N*2];
-		u64	r[N+2];
+		u64	s[N+1];
+		u64	r[N+1];
 		vli_set<N>(r, y.d);
 		r[N] = 0;
-		r[N+1] = 0;
-		s[N] = 0;
-		s[N+1] = 0;
 		for (uint i=0; i < N; i++) {
 			u64	u = r[0] * k0;
 			vli_umult2<N>(s, prime.d, u);
-			vli_add_to<N + 2>(r, s);
-			vli_rshift1w<N + 2>(r);	
+			u = vli_add_to<N + 1>(r, s);
+			vli_rshift1w<N + 1>(r, u);	
 		}
 		vli_mod<N>(this->d, r, prime.d, r[N] != 0);
 #else
@@ -562,18 +556,16 @@ public:
 	friend void mont_mult(bignum& res, const bignum& x, const bignum& y,
 					const bignum& prime) noexcept
 	{
-		u64	s[N*2];
-		u64	r[N+2];
-		vli_clear<N + 2>(r);
-		s[N] = 0;
-		s[N+1] = 0;
+		u64	s[N+1];
+		u64	r[N+1];
+		vli_clear<N + 1>(r);
 		for (uint i=0; i < N;i++) {
 			u64	u = (r[0] + y.d[i]*x.d[0]) * k0;
 			vli_umult2<N>(s, prime.d, u);
-			vli_add_to<N + 2>(r, s);
+			u = vli_add_to<N + 1>(r, s);
 			vli_umult2<N>(s, x.d, y.d[i]);
-			vli_add_to<N + 2>(r, s);
-			vli_rshift1w<N + 2>(r);	
+			u += vli_add_to<N + 1>(r, s);
+			vli_rshift1w<N + 1>(r, u);	
 		}
 #if	__cplusplus >= 201703L && defined(WITH_ASM)
 		if constexpr(N==4 && k0 == 1) {
@@ -586,18 +578,16 @@ public:
 	friend void mont_mult(bignum& res, const u64 *x, const bignum& y,
 					const bignum& prime) noexcept
 	{
-		u64	s[N*2];
-		u64	r[N+2];
-		vli_clear<N + 2>(r);
-		s[N] = 0;
-		s[N+1] = 0;
+		u64	s[N+1];
+		u64	r[N+1];
+		vli_clear<N + 1>(r);
 		for (uint i=0; i < N;i++) {
 			u64	u = (r[0] + y.d[i]*x[0]) * k0;
 			vli_umult2<N>(s, prime.d, u);
-			vli_add_to<N + 2>(r, s);
+			u = vli_add_to<N + 1>(r, s);
 			vli_umult2<N>(s, x, y.d[i]);
-			vli_add_to<N + 2>(r, s);
-			vli_rshift1w<N + 2>(r);	
+			u += vli_add_to<N + 1>(r, s);
+			vli_rshift1w<N + 1>(r, u);	
 		}
 #if	__cplusplus >= 201703L && defined(WITH_ASM)
 		if constexpr(N==4 && k0 == 1) {
@@ -610,18 +600,16 @@ public:
 					const u64 k0) noexcept
 	{
 #ifdef	ommit
-		u64	s[N*2];
-		u64	r[N+2];
-		vli_clear<N + 2>(r);
-		s[N] = 0;
-		s[N+1] = 0;
+		u64	s[N+1];
+		u64	r[N+1];
+		vli_clear<N + 1>(r);
 		for (uint i=0; i < N;i++) {
 			u64	u = (r[0] + y.d[i]*x.d[0]) * k0;
 			vli_umult2<N>(s, prime.d, u);
-			vli_add_to<N + 2>(r, s);
+			u = vli_add_to<N + 1>(r, s);
 			vli_umult2<N>(s, x.d, y.d[i]);
-			vli_add_to<N + 2>(r, s);
-			vli_rshift1w<N + 2>(r);	
+			u += vli_add_to<N + 1>(r, s);
+			vli_rshift1w<N + 1>(r, u);	
 		}
 		vli_mod<N>(this->d, r, prime.d, r[N] != 0);
 #else
@@ -631,18 +619,16 @@ public:
 	void
 	mont_multK01(const bignum& x, const bignum& y, const bignum& prime) noexcept
 	{
-		u64	s[N*2];
-		u64	r[N+2];
-		vli_clear<N + 2>(r);
-		s[N] = 0;
-		s[N+1] = 0;
+		u64	s[N+1];
+		u64	r[N+1];
+		vli_clear<N + 1>(r);
 		for (uint i=0; i < N;i++) {
 			u64	u = r[0] + y.d[i]*x.d[0];
 			vli_umult2<N>(s, prime.d, u);
-			vli_add_to<N + 2>(r, s);
+			u = vli_add_to<N + 1>(r, s);
 			vli_umult2<N>(s, x.d, y.d[i]);
-			vli_add_to<N + 2>(r, s);
-			vli_rshift1w<N + 2>(r);	
+			u += vli_add_to<N + 1>(r, s);
+			vli_rshift1w<N + 1>(r, u);	
 		}
 #if	__cplusplus >= 201703L && defined(WITH_ASM)
 		if constexpr(N==4) {
@@ -654,18 +640,16 @@ public:
 	template<const u64 k0> forceinline friend
 	void mont_sqr(bignum& res, const bignum& x, const bignum& prime) noexcept
 	{
-		u64	s[N*2];
-		u64	r[N+2];
-		vli_clear<N + 2>(r);
-		s[N] = 0;
-		s[N+1] = 0;
+		u64	s[N+1];
+		u64	r[N+1];
+		vli_clear<N + 1>(r);
 		for (uint i=0; i < N;i++) {
 			u64	u = (r[0] + x.d[i]*x.d[0]) * k0;
 			vli_umult2<N>(s, prime.d, u);
-			vli_add_to<N + 2>(r, s);
+			u = vli_add_to<N + 1>(r, s);
 			vli_umult2<N>(s, x.d, x.d[i]);
-			vli_add_to<N + 2>(r, s);
-			vli_rshift1w<N + 2>(r);	
+			u += vli_add_to<N + 1>(r, s);
+			vli_rshift1w<N + 1>(r, u);	
 		}
 #if	__cplusplus >= 201703L && defined(WITH_ASM)
 		if constexpr(N==4 && k0 == 1) {
@@ -677,18 +661,16 @@ public:
 	void mont_sqr(const bignum& x, const bignum& prime, const u64 k0) noexcept
 	{
 #ifdef	ommit
-		u64	s[N*2];
-		u64	r[N+2];
-		vli_clear<N + 2>(r);
-		s[N] = 0;
-		s[N+1] = 0;
+		u64	s[N+1];
+		u64	r[N+1];
+		vli_clear<N + 1>(r);
 		for (uint i=0; i < N;i++) {
 			u64	u = (r[0] + x.d[i]*x.d[0]) * k0;
 			vli_umult2<N>(s, prime.d, u);
-			vli_add_to<N + 2>(r, s);
+			u = vli_add_to<N + 1>(r, s);
 			vli_umult2<N>(s, x.d, x.d[i]);
-			vli_add_to<N + 2>(r, s);
-			vli_rshift1w<N + 2>(r);	
+			u += vli_add_to<N + 1>(r, s);
+			vli_rshift1w<N + 1>(r, u);	
 		}
 		vli_mod<N>(this->d, r, prime.d, r[N] != 0);
 #else
@@ -698,18 +680,16 @@ public:
 	friend
 	void mont_sqrK01(bignum& res, const bignum& x, const bignum& prime) noexcept
 	{
-		u64	s[N*2];
-		u64	r[N+2];
-		vli_clear<N + 2>(r);
-		s[N] = 0;
-		s[N+1] = 0;
+		u64	s[N+1];
+		u64	r[N+1];
+		vli_clear<N + 1>(r);
 		for (uint i=0; i < N;i++) {
 			u64	u = r[0] + x.d[i]*x.d[0];
 			vli_umult2<N>(s, prime.d, u);
-			vli_add_to<N + 2>(r, s);
+			u = vli_add_to<N + 1>(r, s);
 			vli_umult2<N>(s, x.d, x.d[i]);
-			vli_add_to<N + 2>(r, s);
-			vli_rshift1w<N + 2>(r);	
+			u += vli_add_to<N + 1>(r, s);
+			vli_rshift1w<N + 1>(r, u);	
 		}
 #if	__cplusplus >= 201703L && defined(WITH_ASM)
 		if constexpr(N==4) {
@@ -865,7 +845,6 @@ public:
 		vli_squareN<N>(this->d, left.data());
 	}
 
-#ifdef	ommit
 	void div_barrett(bignum<N>& result, const bignum<N+1>& mu) noexcept
 	{
 		u64	q[N*2];
@@ -908,7 +887,6 @@ public:
 		vli_set<N>(const_cast<u64 *>(result.data()), q);
 		//result = bignum<N>(q);
 	}
-#endif
 };
 
 }
