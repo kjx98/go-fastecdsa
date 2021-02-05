@@ -238,4 +238,23 @@ mont_sqr(u64 *result, const u64 *x, const u64 *prime) noexcept
 	vli_mod<N>(result, r, prime, r[N] != 0);
 }
 
+template<const uint N, const u64 k0> forceinline
+static void
+mont_sqrN(u64 *result, const u64 *x, const u64 *prime) noexcept
+{
+	u64	r[N * 2];
+	u64	s[N + 1];
+	vli_square<N>(r, x);
+	vli_set<N>(result, r + N);
+	r[N] = 0;
+	for (uint i=0; i < N; i++) {
+		u64	u = r[0] * k0;
+		vli_umult2<N>(s, prime, u);
+		u = vli_add_to<N + 1>(r, s);
+		vli_rshift1w<N + 1>(r, u);	
+	}
+	r[N] += vli_add_to<N>(r, result);
+	vli_mod<N>(result, r, prime, r[N] != 0);
+}
+
 #endif	//	__MONT_HPP__

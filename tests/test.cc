@@ -94,6 +94,18 @@ static void mont_mul(bignum<4>& res, const bignum<4>& x, const bignum<4>& y)
 	res.mont_reduction(res, prime, sm2_p_k0);
 }
 
+static void mont_mulPr(bignum<4>& res, const bignum<4>& x, const bignum<4>& y)
+{
+	bignum<4>	xp, yp;
+	xp.mont_mult(x, rr, prime, sm2_p_k0);
+	yp.mont_mult(y, rr, prime, sm2_p_k0);
+	bn_prod<4>	pd;
+	pd.mult(xp, yp);
+	mont_reductionK01(res, pd.m_low(), prime);
+	res.mod_add_to(pd.m_high(), prime);
+	res.mont_reduction(res, prime, sm2_p_k0);
+}
+
 static void mont_mulp(bignum<4>& res, const bignum<4>& x, const bignum<4>& y)
 {
 	bignum<4>	xp, yp;
@@ -112,6 +124,14 @@ static void mont_mulK01(bignum<4>& res, const bignum<4>& x, const bignum<4>& y)
 	mont_reductionK01(res, res, prime);
 }
 
+static void mont_sqrN(u64 *res, const bignum<4>& x)
+{
+	bignum<4>	xp;
+	xp.mont_mult(x, rr, prime, sm2_p_k0);
+	mont_sqrN<4,sm2_p_k0>(res, xp.data(), prime.data());
+	mont_reduction<4,sm2_p_k0>(res, res, prime.data());
+}
+
 TEST(testEcc, TestMontRedK01)
 {
 	auto&  rd = bn_random<4>::Instance();
@@ -126,21 +146,27 @@ TEST(testEcc, TestMontRedK01)
 
 TEST(testEcc, TestMontMult)
 {
-	bignum<4>	res;
+	bignum<4>	res, res2;
 	bignum<4>	bx1(dx1), by1(dy1);
 	mont_mul(res, bx1, by1);
 	EXPECT_TRUE(res.cmp(xy1mod) == 0);
+	mont_mulPr(res2, bx1, by1);
+	EXPECT_EQ(res2, res);
 	bignum<4>	bx2(dx2), by2(dy2);
 	mont_mul(res, bx2, by2);
 	EXPECT_TRUE(res.cmp(xy2mod) == 0);
-#ifdef	ommit
-	bn_prod<4>	pd;
-	pd.mult(bx2, by2);
-	bignum<4>	res2;
-	mont_reductionK01(res2, pd.m_low(), prime);
-	res2.mod_add_to(pd.m_high(), prime);
+	mont_mulPr(res2, bx2, by2);
 	EXPECT_EQ(res2, res);
-#endif
+}
+
+TEST(testEcc, TestMontSqr)
+{
+	bignum<4>	res;
+	u64			res2[4];
+	bignum<4>	bx1(dx1), by1(dy1);
+	mont_mul(res, bx1, bx1);
+	mont_sqrN(res2, bx1);
+	EXPECT_TRUE(res.cmp(res2) == 0);
 }
 
 TEST(testEcc, TestMontMultK01)
