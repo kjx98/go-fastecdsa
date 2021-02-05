@@ -74,7 +74,7 @@ static constexpr int nwBaseNAF() { return (64*N -1 + BaseW) / BaseW; }
  * @b:		Curve parameter b.
  */
 template<const uint N=4, const bool A_is_n3=true>
-class ecc_curve {
+class alignas(64) ecc_curve {
 public:
 	using felem_t = bignum<N>;
 	typedef spoint_t<N>	gwNAF_t[wBaseSize];
@@ -827,7 +827,7 @@ protected:
 
 
 template <const u64 Pk0=1, const bool A_is_n3=true>
-class curve256 : public ecc_curve<4,A_is_n3> {
+class alignas(64) curve256 : public ecc_curve<4,A_is_n3> {
 public:
 	using felem_t = bignum<4>;
 	curve256(const char *_name, const u64 *_gx, const u64 *_gy, const u64 *_p,
