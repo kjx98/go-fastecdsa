@@ -803,8 +803,8 @@ bignum<N>& calcRR(bignum<N>& t, const bignum<N>& p) noexcept
 	t.clear();
 	t.sub_from(p);
 	for  (uint i = 256; i<512; i++) {
-		//if (t.add_to(t) || t.cmp(p) >= 0)
-		if (t.lshift1(t) || t.cmp(p) >= 0)
+		//if (t.lshift1(t) || t.cmp(p) >= 0)
+		if (t.add_to(t) || t.cmp(p) >= 0)
 		{
 			t.sub_from(p);
 		}

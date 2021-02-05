@@ -783,6 +783,9 @@ bool vli_add_to(u64 *result, const u64 *right) noexcept
 	if  ( likely(N == 4) ) return vli4_add_to(result, right);
 #endif
 #endif
+	if ( unlikely(result == right) ) {
+		return vli_lshift1<N>(result, right);
+	}
 	u64 carry = 0;
 	for (uint i = 0; i < N; ++i) {
 		u64	tmp = u64_addc(result[i], right[i], carry);
