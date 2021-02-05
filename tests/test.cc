@@ -39,6 +39,29 @@ TEST(testEcc, TestSM2umultP)
 	EXPECT_EQ(bv.cmp(r), 0);
 }
 
+TEST(testVli, TestU64Addc)
+{
+	u64		x=12, y= 10, carry=1;
+	ASSERT_EQ(u64_addc(x, y, carry), 23);
+	ASSERT_EQ(carry, 0);
+	y = -10;
+	ASSERT_EQ(u64_addc(x, y, carry), 2);
+	ASSERT_EQ(carry, 1);
+	ASSERT_EQ(u64_addc(x, y, carry), 3);
+	ASSERT_EQ(carry, 1);
+	ASSERT_EQ(u64_addcz(x, carry), 13);
+	ASSERT_EQ(carry, 0);
+	ASSERT_EQ(u64_addcz(x, carry), 12);
+	ASSERT_EQ(carry, 0);
+	ASSERT_EQ(u64_addcz(y, carry), -10);
+	ASSERT_EQ(carry, 0);
+	carry = 1;
+	y = -1;
+	ASSERT_EQ(u64_addcz(y, carry), 0);
+	ASSERT_EQ(carry, 1);
+}
+
+
 TEST(testVli, TestSquare)
 {
 	bignum<4>	bx1(dx1), by1(dy1);

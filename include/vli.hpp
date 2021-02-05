@@ -38,7 +38,7 @@
 # error "C++ std MUST at least c++11"
 #endif
 
-#if	__clang__ < 9
+#if	__clang__ < 4
 #define	NO_BUILTIN_ADDC
 #endif
 
@@ -98,6 +98,55 @@ static forceinline int u64IsOne(u64 x) noexcept
 #endif
 }
 
+static forceinline u64 u64_addc(const u64 a, const u64 b, u64& carry)
+{
+#ifdef	__x86_64__
+	u64		ret=a;
+	asm volatile("addq %1, %0\n"
+				"movq $0, %1\n"
+				"adcq $0, %1\n"
+				"addq %2, %0\n"
+				"adcq $0, %1\n"
+				: "+r" (ret), "+r" (carry)
+				: "r" (b) 
+				: "cc");
+	return ret;
+#elif	__clang__ > 3
+	u64		ret, c_out;
+	ret = __builtin_addcl(a, b, carry, &c_out);
+	carry = c_out;
+	return ret;
+#else
+	u64		ret;
+	ret = a + b + carry;
+	if (ret != a) carry = ret < a;
+	return ret;
+#endif
+}
+
+static forceinline u64 u64_addcz(const u64 a, u64& carry)
+{
+#ifdef	__x86_64__
+	u64		ret=a;
+	asm volatile("addq %1, %0\n"
+				"movq $0, %1\n"
+				"adcq $0, %1\n"
+				: "+r" (ret), "+r" (carry)
+				:
+				: "cc");
+	return ret;
+#elif	__clang__ > 3
+	u64		ret, c_out;
+	ret = __builtin_addcl(a, 0, carry, &c_out);
+	carry = c_out;
+	return ret;
+#else
+	u64		ret;
+	ret = a + carry;
+	if (ret != a) carry = ret < a;
+	return ret;
+#endif
+}
 
 /*
  * X86_64 func param:  di/si/dx/cx/r8/r9
