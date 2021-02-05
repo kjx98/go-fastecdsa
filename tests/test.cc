@@ -20,11 +20,11 @@ TEST(testEcc, TestCalcK0RR)
 {
 	bignum<4>	trr;
 	ASSERT_EQ(calcK0<4>(prime), sm2_p_k0);
-	ASSERT_TRUE(rr.cmp(calcRR<4>(trr, prime)) == 0);
+	EXPECT_TRUE(rr.cmp(calcRR<4>(trr, prime)) == 0);
 	bignum<4>	primeN(sm2_n);
 	bignum<4>	rrN(sm2_n_rr);
 	ASSERT_EQ(calcK0<4>(primeN), sm2_n_k0);
-	ASSERT_TRUE(rrN.cmp(calcRR<4>(trr, primeN)) == 0);
+	EXPECT_TRUE(rrN.cmp(calcRR<4>(trr, primeN)) == 0);
 }
 
 TEST(testEcc, TestSM2umultP)

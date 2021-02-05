@@ -60,27 +60,11 @@ static void vli_sm2_multPh(u64 *result, const u64 u) noexcept
 	u64	t_low, t_high;
 	t_low = u << 32;	// ^192
 	t_high = u >> 32;
-#ifdef	NO_BUILTIN_ADDC
-	u64	r[4];
-	// r = 2^224 + 2^96
-	r[0] = t_low;
-	r[1] = t_high;
-	r[2] = t_low;
-	r[3] = t_high;
-	// result = 2^256 + 2^64
-	result[0] = u;
-	result[1] = 0;
-	result[2] = 0;
-	result[3] = u;
-	// result = 2^256 + 2^64 - u*2^224 - u * 2 ^96
-	vli_sub_from<4>(result, r);
-#else
-	u64		carry, in_carry;
-	result[0] = u - t_low;
-	result[1] = __builtin_subcl(0, t_high, 0, &carry);
-	result[2] = __builtin_subcl(0, t_low, carry, &in_carry);
-	result[3] = u - t_high - in_carry;
-#endif
+	u64		carry = 0;
+	result[0] = u64_subc(u, t_low, carry);
+	result[1] = u64_subc(0, t_high, carry);
+	result[2] = u64_subc(0, t_low, carry);
+	result[3] = u64_subc(u, t_high, carry);
 }
 
 // u * 2^256 mod sm2 prime

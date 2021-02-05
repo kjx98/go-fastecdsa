@@ -622,12 +622,12 @@ public:
 		vli_clear<N + 1>(r);
 		for (uint i=0; i < N;i++) {
 			u64	u = r[0] + y.d[i]*x.d[0];
-#ifdef	WITH_SM2_PH
+#ifdef	NO_WITH_SM2_PH
 			vli_sm2_multPh(s, u);
 			vli_rshift1w<N>(r, r[N]);
 			r[N] = vli_add_to<N>(r, s);
-			vli_umult2<N-1>(s, x.d + 1, y.d[i]);
-			r[N] += vli_add_to<N>(r, s);
+			vli_umult2<N>(s, x.d, y.d[i]);
+			r[N] += vli_add_to<N>(r, s+1);
 #else
 			vli_umult2<N>(s, prime.d, u);
 			u = vli_add_to<N + 1>(r, s);
@@ -803,8 +803,8 @@ bignum<N>& calcRR(bignum<N>& t, const bignum<N>& p) noexcept
 	t.clear();
 	t.sub_from(p);
 	for  (uint i = 256; i<512; i++) {
-		if (t.add_to(t) || t.cmp(p) >= 0)
-		//if (t.lshift1(t) || t.cmp(p) >= 0)
+		//if (t.add_to(t) || t.cmp(p) >= 0)
+		if (t.lshift1(t) || t.cmp(p) >= 0)
 		{
 			t.sub_from(p);
 		}

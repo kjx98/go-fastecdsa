@@ -765,24 +765,11 @@ bool vli_add(u64 *result, const u64 *left, const u64 *right) noexcept
 #if	defined(WITH_ASM) && __cplusplus >= 201703L
 	if constexpr(N == 4) return vli4_add(result, left, right);
 #endif
-#ifdef	NO_BUILTIN_ADDC
-	bool carry = false;
-	for (uint i = 0; i < N; i++) {
-		u64 sum;
-		sum = left[i] + right[i] + carry;
-		if (sum != left[i])
-			carry = (sum < left[i]);
-		result[i] = sum;
-	}
-	return carry;
-#else
-	u64 carry_in = 0, c_out;
+	u64 carry = 0;
 	for (uint i = 0; i < N; ++i) {
-		result[i] = __builtin_addcl(left[i], right[i], carry_in, &c_out);
-		carry_in = c_out;
+		result[i] = u64_addc(left[i], right[i], carry);
 	}
-	return carry_in != 0;
-#endif
+	return carry != 0;
 }
 
 /* Computes result = left + right, returning carry. Can modify in place. */
@@ -796,50 +783,23 @@ bool vli_add_to(u64 *result, const u64 *right) noexcept
 	if  ( likely(N == 4) ) return vli4_add_to(result, right);
 #endif
 #endif
-#ifdef	NO_BUILTIN_ADDC
-	bool carry = false;
-	for (uint i = 0; i < N; i++) {
-		u64 sum;
-		sum = result[i] + right[i] + carry;
-		if (sum != result[i])
-			carry = (sum < result[i]);
-		result[i] = sum;
-	}
-	return carry;
-#else
-	u64 carry = 0, c_out;
-	for (uint i = 0; i < N; i++) {
-		result[i] = __builtin_addcl(result[i], right[i], carry, &c_out);
-		carry = c_out;
+	u64 carry = 0;
+	for (uint i = 0; i < N; ++i) {
+		u64	tmp = u64_addc(result[i], right[i], carry);
+		result[i] = tmp;
 	}
 	return carry != 0;
-#endif
 }
 
 /* Computes result = left + right, returning carry. Can modify in place. */
 template<const uint N> forceinline
 static bool vli_uadd_to(u64 *result, u64 right) noexcept
 {
-#ifdef	NO_BUILTIN_ADDC
-	u64 carry = right;
-	for (uint i = 0; i < N; i++) {
-		u64 sum;
-		sum = result[i] + carry;
-		if (sum != result[i])
-			carry = (sum < result[i]);
-		else
-			carry = !!carry;
-		result[i] = sum;
-	}
-#else
-	u64 carry, c_out;
-	result[0] = __builtin_addcl(result[0], right, 0, &c_out);
-	carry = c_out;
+	u64 carry=0;
+	result[0] = u64_addc(result[0], right, carry);
 	for (uint i = 1; i < N; i++) {
-		result[i] = __builtin_addcl(result[i], 0, carry, &c_out);
-		carry = c_out;
+		result[i] = u64_addcz(result[i], carry);
 	}
-#endif
 	return carry != 0;
 }
 
@@ -865,24 +825,11 @@ bool vli_sub(u64 *result, const u64 *left, const u64 *right) noexcept
 	if ( likely(N == 4) ) return vli4_sub(result, left, right);
 #endif
 #endif
-#ifdef	NO_BUILTIN_ADDC
-	bool borrow = false;
+	u64 borrow = 0;
 	for (uint i = 0; i < N; i++) {
-		u64 diff;
-		diff = left[i] - right[i] - borrow;
-		if (diff != left[i]) borrow = (diff > left[i]);
-		result[i] = diff;
-	}
-	return borrow;
-#else
-	u64 borrow = 0, c_out;
-	for (uint i = 0; i < N; i++) {
-		u64 diff;
-		result[i] = __builtin_subcl(left[i], right[i], borrow, &c_out);
-		borrow = c_out;
+		result[i] = u64_subc(left[i], right[i], borrow);
 	}
 	return borrow != 0;
-#endif
 }
 
 template<const uint N> forceinline static
@@ -895,47 +842,22 @@ bool vli_sub_from(u64 *result, const u64 *right) noexcept
 	if ( likely(N == 4) ) return vli4_sub_from(result, right);
 #endif
 #endif
-#ifdef	NO_BUILTIN_ADDC
-	bool borrow = false;
+	u64 borrow = 0;
 	for (uint i = 0; i < N; i++) {
-		u64 diff;
-		diff = result[i] - right[i] - borrow;
-		if (diff != result[i]) borrow = (diff > result[i]);
-		result[i] = diff;
-	}
-	return borrow;
-#else
-	u64 borrow = 0, c_out;
-	for (uint i = 0; i < N; i++) {
-		result[i] = __builtin_subcl(result[i], right[i], borrow, &c_out);
-		borrow = c_out;
+		result[i] = u64_subc(result[i], right[i], borrow);
 	}
 	return borrow != 0;
-#endif
 }
 
 /* Computes result = left - right, returning borrow. Can modify in place. */
 template<const uint N> forceinline
 static bool vli_usub(u64 *result, const u64 *left, u64 right) noexcept
 {
-#ifdef	NO_BUILTIN_ADDC
-	u64 borrow = right;
-	for (uint i = 0; i < N; i++) {
-		u64 diff;
-		diff = result[i] - borrow;
-		if (diff != result[i])
-			borrow = (diff > result[i]);
-		result[i] = diff;
-	}
-#else
-	u64 borrow, c_out;
-	result[0] = __builtin_subcl(left[0], right, 0, &c_out);
-	borrow = c_out;
+	u64 borrow = 0;
+	result[0] = u64_subc(left[0], right, borrow);
 	for (uint i = 1; i < N; i++) {
-		result[i] = __builtin_subcl(left[i], 0, borrow, &c_out);
-		borrow = c_out;
+		result[i] = u64_subcz(left[i], borrow);
 	}
-#endif
 	return borrow != 0;
 }
 
