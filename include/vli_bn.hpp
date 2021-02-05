@@ -304,12 +304,12 @@ public:
 		}
 	}	
 /* Computes vli = vli >> 1 word (64 Bits). */
-	void rshift1w() noexcept
+	void rshift1w(const u64 carry=0) noexcept
 	{
 		for (uint i = 1; i < N; i++) {
 			this->d[i-1] = this->d[i];
 		}
-		this->d[N-1] = 0;
+		this->d[N-1] = carry;
 	}
 /* Computes result = left + right, returning carry. Can modify in place. */
 	bool add(const bignum& left, const bignum &right) noexcept
@@ -614,13 +614,12 @@ public:
 		vli_mont_mult<N>(this->d, x.d, y.d, prime.d, k0);
 #endif
 	}
-	void
-	mont_multK01(const bignum& x, const bignum& y, const bignum& prime) noexcept
+	void friend mont_multK01(bignum& res, const bignum& x, const bignum& y,
+			const bignum& prime) noexcept
 	{
 		u64	s[N+1];
 		u64	r[N+1];
 		vli_clear<N + 1>(r);
-		r[N] = 0;
 		for (uint i=0; i < N;i++) {
 			u64	u = r[0] + y.d[i]*x.d[0];
 #ifdef	WITH_SM2_PH
@@ -639,10 +638,10 @@ public:
 		}
 #if	__cplusplus >= 201703L && defined(WITH_ASM)
 		if constexpr(N==4) {
-			sm2p_mod(this->d, r, prime.d, r[N] != 0);
+			sm2p_mod(res.d, r, prime.d, r[N] != 0);
 		} else
 #endif
-		vli_mod<N>(this->d, r, prime.d, r[N] != 0);
+		vli_mod<N>(res.d, r, prime.d, r[N] != 0);
 	}
 	template<const u64 k0> forceinline friend
 	void mont_sqr(bignum& res, const bignum& x, const bignum& prime) noexcept

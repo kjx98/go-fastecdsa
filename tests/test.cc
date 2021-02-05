@@ -106,10 +106,22 @@ static void mont_mulp(bignum<4>& res, const bignum<4>& x, const bignum<4>& y)
 static void mont_mulK01(bignum<4>& res, const bignum<4>& x, const bignum<4>& y)
 {
 	bignum<4>	xp, yp;
-	xp.mont_multK01(x, rr, prime);
-	yp.mont_multK01(y, rr, prime);
-	res.mont_multK01(xp, yp, prime);
+	mont_multK01(xp, x, rr, prime);
+	mont_multK01(yp, y, rr, prime);
+	mont_multK01(res, xp, yp, prime);
 	mont_reductionK01(res, res, prime);
+}
+
+TEST(testEcc, TestMontRedK01)
+{
+	auto&  rd = bn_random<4>::Instance();
+	bignum<4>	xp, res;
+	for (int i=0; i<10; ++i) {
+		bignum<4>	tmp = rd.get_random();
+		mont_mult<sm2_p_k0>(xp, tmp, rr, prime);
+		mont_reductionK01(res, xp, prime);
+		EXPECT_EQ(res, tmp);
+	}
 }
 
 TEST(testEcc, TestMontMult)

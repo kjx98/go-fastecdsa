@@ -82,7 +82,7 @@ static void test_montMultK01(benchmark::State &state)
 	bignum<4>	bx1(dx1);
 	for (auto _ : state) {
 		for (int i=0; i<1000; ++i)
-		xp.mont_multK01(bx1, rr, prime);
+		mont_multK01(xp, bx1, rr, prime);
 	}
 	mont_reductionK01(tt, xp, prime);
 }
@@ -101,11 +101,24 @@ static void test_montSqr(benchmark::State &state)
 }
 BENCHMARK(test_montSqr);
 
+static void test_montSqrP(benchmark::State &state)
+{
+	bignum<4>	xp, bp;
+	bignum<4>	bx1(dx1);
+	bp.mont_mult(bx1, rr, prime, sm2_p_k0);
+	for (auto _ : state) {
+		for (int i=0; i<1000; ++i)
+		mont_sqr<sm2_p_k0>(xp, bp, prime);
+	}
+	tt.mont_reduction(xp, prime, sm2_p_k0);
+}
+BENCHMARK(test_montSqrP);
+
 static void test_montSqrK01(benchmark::State &state)
 {
 	bignum<4>	xp, bp;
 	bignum<4>	bx1(dx1);
-	bp.mont_multK01(bx1, rr, prime);
+	mont_multK01(bp, bx1, rr, prime);
 	for (auto _ : state) {
 		for (int i=0; i<1000; ++i)
 		mont_sqrK01(xp, bp, prime);
