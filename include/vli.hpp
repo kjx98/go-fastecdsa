@@ -103,14 +103,15 @@ static forceinline int u64IsOne(u64 x) noexcept
 static forceinline u64 u64_addc(const u64 a, const u64 b, u64& carry)
 {
 #ifdef	__x86_64__
-	u64		ret=a;
-	asm volatile("addq %1, %0\n"
-				"movq $0, %1\n"
-				"adcq $0, %1\n"
+	u64		ret=0;
+	asm volatile("movq %1, %0\n"
+				"xorq %1, %1\n"
 				"addq %2, %0\n"
 				"adcq $0, %1\n"
+				"addq %3, %0\n"
+				"adcq $0, %1\n"
 				: "+r" (ret), "+r" (carry)
-				: "r" (b) 
+				: "r" (a),"r" (b)
 				: "cc");
 	return ret;
 #elif	__clang__ > 3
@@ -783,9 +784,11 @@ bool vli_add_to(u64 *result, const u64 *right) noexcept
 	if  ( likely(N == 4) ) return vli4_add_to(result, right);
 #endif
 #endif
+#ifdef	ommit
 	if ( unlikely(result == right) ) {
 		return vli_lshift1<N>(result, right);
 	}
+#endif
 	u64 carry = 0;
 	for (uint i = 0; i < N; ++i) {
 		u64	tmp = u64_addc(result[i], right[i], carry);
