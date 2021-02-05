@@ -253,8 +253,16 @@ mont_sqrN(u64 *result, const u64 *x, const u64 *prime) noexcept
 		u = vli_add_to<N + 1>(r, s);
 		vli_rshift1w<N + 1>(r, u);	
 	}
-	r[N] += vli_add_to<N>(r, result);
-	vli_mod<N>(result, r, prime, r[N] != 0);
+#if	__cplusplus >= 201703L
+	if constexpr(N==4) {
+		r[N] += vli4_add_to(r, result);
+		vli4_mod(result, r, prime, r[N] != 0);
+	} else
+#endif
+	{
+		r[N] += vli_add_to<N>(r, result);
+		vli_mod<N>(result, r, prime, r[N] != 0);
+	}
 }
 
 #endif	//	__MONT_HPP__
