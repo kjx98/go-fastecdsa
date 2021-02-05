@@ -98,6 +98,8 @@ static forceinline int u64IsOne(u64 x) noexcept
 #endif
 }
 
+
+// result = a + b + carry, set new carry
 static forceinline u64 u64_addc(const u64 a, const u64 b, u64& carry)
 {
 #ifdef	__x86_64__
@@ -144,6 +146,57 @@ static forceinline u64 u64_addcz(const u64 a, u64& carry)
 	u64		ret;
 	ret = a + carry;
 	if (ret != a) carry = ret < a;
+	return ret;
+#endif
+}
+
+// result = a - b - carry, set new carry
+static forceinline u64 u64_subc(const u64 a, const u64 b, u64& carry)
+{
+#ifdef	__x86_64__
+	u64		ret=a;
+	asm volatile("subq %1, %0\n"
+				"movq $0, %1\n"
+				"adcq $0, %1\n"
+				"subq %2, %0\n"
+				"adcq $0, %1\n"
+				: "+r" (ret), "+r" (carry)
+				: "r" (b) 
+				: "cc");
+	return ret;
+#elif	__clang__ > 3
+	u64		ret, c_out;
+	ret = __builtin_subcl(a, b, carry, &c_out);
+	carry = c_out;
+	return ret;
+#else
+	u64		ret;
+	ret = a - b - carry;
+	if (ret != a) carry = ret > a;
+	return ret;
+#endif
+}
+
+static forceinline u64 u64_subcz(const u64 a, u64& carry)
+{
+#ifdef	__x86_64__
+	u64		ret=a;
+	asm volatile("subq %1, %0\n"
+				"movq $0, %1\n"
+				"adcq $0, %1\n"
+				: "+r" (ret), "+r" (carry)
+				:
+				: "cc");
+	return ret;
+#elif	__clang__ > 3
+	u64		ret, c_out;
+	ret = __builtin_subcl(a, 0, carry, &c_out);
+	carry = c_out;
+	return ret;
+#else
+	u64		ret;
+	ret = a - carry;
+	if (ret != a) carry = ret > a;
 	return ret;
 #endif
 }

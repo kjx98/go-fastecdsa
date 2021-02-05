@@ -61,6 +61,28 @@ TEST(testVli, TestU64Addc)
 	ASSERT_EQ(carry, 1);
 }
 
+TEST(testVli, TestU64Subc)
+{
+	u64		x=12, y= 10, carry=1;
+	ASSERT_EQ(u64_subc(x, y, carry), 1);
+	ASSERT_EQ(carry, 0);
+	y = -14;
+	ASSERT_EQ(u64_subc(x, y, carry), 26);
+	ASSERT_EQ(carry, 1);
+	ASSERT_EQ(u64_subc(x, y, carry), 25);
+	ASSERT_EQ(carry, 1);
+	ASSERT_EQ(u64_subcz(x, carry), 11);
+	ASSERT_EQ(carry, 0);
+	ASSERT_EQ(u64_subcz(x, carry), 12);
+	ASSERT_EQ(carry, 0);
+	ASSERT_EQ(u64_subcz(y, carry), -14);
+	ASSERT_EQ(carry, 0);
+	carry = 1;
+	y = 1;
+	ASSERT_EQ(u64_subcz(y, carry), 0);
+	ASSERT_EQ(carry, 0);
+}
+
 
 TEST(testVli, TestSquare)
 {
