@@ -87,57 +87,68 @@ forceinline static void
 sm2p_reduction(u64 *result, const u64 *y, const bool isProd=false) noexcept
 {
 #ifdef	__x86_64__1
-/*
-	MOVQ (8*0)(x_ptr), acc0
-	MOVQ (8*1)(x_ptr), acc1
-	MOVQ (8*2)(x_ptr), acc2
-	MOVQ (8*3)(x_ptr), acc3
-	XORQ acc4, acc4
+	asm volatile("MOVQ (8*0)(%%rsi), acc0\n"
+			MOVQ (8*1)(%%rsi), acc1
+			MOVQ (8*2)(%%rsi), acc2
+			MOVQ (8*3)(%%rsi), acc3
+			XORQ acc4, acc4
 
 	// Only reduce, no multiplications are needed
 	// First stage
-	MOVQ acc0, AX
-	MOVQ acc0, t1
-	SHLQ $32, acc0
-	MULQ p256const1<>(SB)
-	SHRQ $32, t1
-	ADDQ acc0, acc1
-	ADCQ t1, acc2
-	ADCQ AX, acc3
-	ADCQ DX, acc4
+			MOVQ acc0, AX
+			MOVQ acc0, t1
+			SHLQ $32, acc0
+			SHRQ $32, t1
+			ADDQ %%rax, acc1
+			ADCQ $0, acc2
+			ADCQ $0, acc3
+			ADCQ %%rax, acc4
+			subq acc0, acc1
+			sbbq t1, acc2
+			sbbq acc0, acc3
+			sbbq t1, acc4
 	XORQ acc5, acc5
 	// Second stage
-	MOVQ acc1, AX
-	MOVQ acc1, t1
-	SHLQ $32, acc1
-	MULQ p256const1<>(SB)
-	SHRQ $32, t1
-	ADDQ acc1, acc2
-	ADCQ t1, acc3
-	ADCQ AX, acc4
-	ADCQ DX, acc5
+			MOVQ acc1, AX
+			MOVQ acc1, t1
+			SHLQ $32, acc1
+			SHRQ $32, t1
+			ADDQ %%rax, acc2
+			adcq $0, acc3
+			adcq $0, acc4
+			adcq %%rax, acc5
+			subq acc1, acc2
+			sbbq t1, acc3
+			sbbq acc1, acc4
+			sbbq t1, acc5
 	XORQ acc0, acc0
 	// Third stage
 	MOVQ acc2, AX
 	MOVQ acc2, t1
 	SHLQ $32, acc2
-	MULQ p256const1<>(SB)
 	SHRQ $32, t1
-	ADDQ acc2, acc3
-	ADCQ t1, acc4
-	ADCQ AX, acc5
-	ADCQ DX, acc0
+	ADDQ %%rax, acc3
+	adcq $0, acc4
+	adcq $0, acc5
+	adcq %%rax, acc0
+	subq acc2, acc3
+	sbbq t1, acc4
+	sbbq acc2, acc5
+	sbbq t1, acc0
 	XORQ acc1, acc1
 	// Last stage
 	MOVQ acc3, AX
 	MOVQ acc3, t1
 	SHLQ $32, acc3
-	MULQ p256const1<>(SB)
 	SHRQ $32, t1
-	ADDQ acc3, acc4
-	ADCQ t1, acc5
-	ADCQ AX, acc0
-	ADCQ DX, acc1
+	ADDQ %%rax, acc4
+	adcq $0, acc5
+	adcq $0, acc0
+	adcq %%rax, acc1
+	subq acc3, acc4
+	sbbq t1, acc5
+	sbbq acc3, acc0
+	sbbq t1, acc1
 
 	MOVQ acc4, x_ptr
 	MOVQ acc5, acc3
@@ -154,11 +165,13 @@ sm2p_reduction(u64 *result, const u64 *y, const bool isProd=false) noexcept
 	CMOVQCS t0, acc0
 	CMOVQCS t1, acc1
 
-	MOVQ acc4, (8*0)(res_ptr)
-	MOVQ acc5, (8*1)(res_ptr)
-	MOVQ acc0, (8*2)(res_ptr)
-	MOVQ acc1, (8*3)(res_ptr)
-*/
+	MOVQ acc4, (8*0)(%%rdi)
+	MOVQ acc5, (8*1)(%%rdi)
+	MOVQ acc0, (8*2)(%%rdi)
+	MOVQ acc1, (8*3)(%%rdi)
+				: 			// acc4/5/0/1
+				: "S" (y), "D" (result)
+				: "cc", "memory");
 #else
 	u64	r[4];
 	vli_set<4>(r, y);
@@ -363,11 +376,14 @@ mont_sqrN(u64 *result, const u64 *x, const u64 *prime) noexcept
 }
 
 forceinline static void
-sm2p_sqrN(u64 *result, const u64 *x) noexcept
+sm2p_sqrN(u64 *result, const u64 *x, const int nTimes=1) noexcept
 {
 	u64	r[8];
-	vli_squareN<4>(r, x);
-	sm2p_reduction(result, r, true);
+	vli_set<4>(result, x);
+	for (int i=0; i < nTimes; ++i) {
+		vli_squareN<4>(r, result);
+		sm2p_reduction(result, r, true);
+	}
 }
 
 #endif	//	__MONT_HPP__

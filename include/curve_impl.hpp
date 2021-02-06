@@ -880,8 +880,7 @@ public:
 		for (uint i=1; i < nTimes; i++) mont_sqr<1>(res, res, this->p);
 #else
 		u64   *resp = reinterpret_cast<u64 *>(&res);
-		sm2p_sqrN(resp, left.data());
-		for (uint i=1; i < nTimes; i++) sm2p_sqrN(resp, resp);
+		sm2p_sqrN(resp, left.data(), nTimes);
 #endif
 	}
 	void mont_mult2(felem_t& res, const felem_t& left) const noexcept
