@@ -932,58 +932,6 @@ vli_mod_inv(u64 *result, const u64 *input, const u64 *mod) noexcept
  * The binary extended gcd algorithm was first described by Knuth
  */
 // x is mod, prime > 2
-#ifdef	ommit
-using namespace vli;
-template<const uint N> forceinline
-static void
-vli_mod_inv_new(u64 *result, const u64 *y, const u64 *x) noexcept
-{
-	// mod should be prime, >3 MUST BE odd
-	bignum<N>	*res = reinterpret_cast<bignum<N> *>(result);
-	if ( vli_is_even(x) ) {
-		res->clear();
-		return;
-	}
-	bignumz<N>	b(0l), d(1);
-	bignum<N>	u(x), v(y);
-
-	while ( !u.is_zero() ) {
-		while (u.is_even()) {
-			u.rshift1();
-			if (b.is_even()) {
-				b.rshift1();
-			} else {
-				b.sub(b, x);
-				b.rshift1();
-			}
-		}
-
-		while (v.is_even()) {
-			v.rshift1();
-			if (d.is_even()) {
-				d.rshift1();
-			} else {
-				d.sub(d, x);
-				d.rshift1();
-			}
-		}
-
-		if (u >= v) {
-			u.sub_from(v);
-			b.sub(b, d);
-		} else {
-			v.sub_from(u);
-			d.sub(d, b);
-		}
-	}
-	if (!v.is_one()) {
-		res->clear();
-	} else {
-		if (d.is_negative()) d.add(d, x);
-		*res = d.abs();
-	}
-}
-#else
 template<const uint N> forceinline
 static void
 vli_mod_inv_new(u64 *result, const u64 *y, const u64 *x) noexcept
@@ -1005,13 +953,11 @@ vli_mod_inv_new(u64 *result, const u64 *y, const u64 *x) noexcept
 		while (vli_is_even(u)) {
 			vli_rshift1<N>(u);
 			if (vli_is_even(b)) {
-				vli_rshift1<N>(b);
-				if (bc & 1) b[N-1] |= (1L << 63);
+				vli_rshift1<N>(b, bc & 1);
 				bc >>= 1;
 			} else {
 				if (vli_sub_from<N>(b, x)) bc--;
-				vli_rshift1<N>(b);
-				if (bc & 1) b[N-1] |= (1L << 63);
+				vli_rshift1<N>(b, bc & 1);
 				bc >>= 1;
 			}
 		}
@@ -1019,25 +965,25 @@ vli_mod_inv_new(u64 *result, const u64 *y, const u64 *x) noexcept
 		while (vli_is_even(v)) {
 			vli_rshift1<N>(v);
 			if (vli_is_even(d)) {
-				vli_rshift1<N>(d);
-				if (dc & 1) d[N-1] |= (1L << 63);
+				vli_rshift1<N>(d, dc & 1);
 				dc >>= 1;
 			} else {
 				if (vli_sub_from<N>(d, x)) dc--;
-				vli_rshift1<N>(d);
-				if (dc & 1) d[N-1] |= (1L << 63);
+				vli_rshift1<N>(d, dc & 1);
 				dc >>= 1;
 			}
 		}
 
-		if (vli_cmp<N>(u,v) >= 0) {
+		//if (!vli_less<N>(u, v))
+		if (vli_cmp<N>(u, v) >= 0)
+		{
 			vli_sub_from<N>(u, v);
 			bc -= dc;
-			if (vli_sub_from<N>(b, d)) bc--;
+			bc -= vli_sub_from<N>(b, d);
 		} else {
 			vli_sub_from<N>(v, u);
 			dc -= bc;
-			if (vli_sub_from<N>(d, b)) dc--;
+			dc -= vli_sub_from<N>(d, b);
 		}
 	}
 	if (!vli_is_one<N>(v)) {
@@ -1048,7 +994,6 @@ vli_mod_inv_new(u64 *result, const u64 *y, const u64 *x) noexcept
 		vli_set<N>(result, d);
 	}
 }
-#endif
 
 using namespace vli;
 template<const uint N> forceinline

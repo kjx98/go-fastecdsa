@@ -28,7 +28,7 @@
 #define __MONT_HPP__
 
 #include "vli.hpp"
-
+#include "curve_const.hpp"		// include sm2_p, sm2_p_rr
 
 // SM2 prime optimize
 // p is 2^256 - 2^224 - 2^96 + 2^64 -1
@@ -36,19 +36,17 @@ forceinline
 static void vli_sm2_multP(u64 *result, const u64 u) noexcept
 {
 	u64	t_low, t_high;
-	t_low = u << 32;	// ^192
-	t_high = ((u >> 32) & 0xffffffff);
-	vli_clear<6>(result);
+	t_low = u << 32;	// ^192, ^96
+	t_high = u >> 32;
 	// result = 2^256 + 2^64 - u*2^224 (high 32 bits)
-	result[1] = u;
-	result[4] = u - t_high;
-	u64	r[4];
 	// r = 2^224 + 2^96 + 1
-	r[0] = u;
-	r[1] = t_low;
-	r[2] = t_high;
-	r[3] = t_low;
-	result[4] -= vli_sub_from<4>(result, r);
+	u64		carry = 0;
+	result[0] = u64_subc(0, u, carry);
+	result[1] = u64_subc(u, t_low, carry);
+	result[2] = u64_subc(0, t_high, carry);
+	result[3] = u64_subc(0, t_low, carry);
+	result[4] = u64_subc(u, t_high, carry);
+	result[5] = carry;
 }
 
 
@@ -81,6 +79,121 @@ static void vli_sm2_multR(u64 *result, const u64 uv) noexcept
 	result[2] = 0;
 	result[3] = u << 32;
 	return;
+}
+
+
+
+forceinline static void
+sm2p_reduction(u64 *result, const u64 *y, const bool isProd=false) noexcept
+{
+#ifdef	__x86_64__1
+/*
+	MOVQ (8*0)(x_ptr), acc0
+	MOVQ (8*1)(x_ptr), acc1
+	MOVQ (8*2)(x_ptr), acc2
+	MOVQ (8*3)(x_ptr), acc3
+	XORQ acc4, acc4
+
+	// Only reduce, no multiplications are needed
+	// First stage
+	MOVQ acc0, AX
+	MOVQ acc0, t1
+	SHLQ $32, acc0
+	MULQ p256const1<>(SB)
+	SHRQ $32, t1
+	ADDQ acc0, acc1
+	ADCQ t1, acc2
+	ADCQ AX, acc3
+	ADCQ DX, acc4
+	XORQ acc5, acc5
+	// Second stage
+	MOVQ acc1, AX
+	MOVQ acc1, t1
+	SHLQ $32, acc1
+	MULQ p256const1<>(SB)
+	SHRQ $32, t1
+	ADDQ acc1, acc2
+	ADCQ t1, acc3
+	ADCQ AX, acc4
+	ADCQ DX, acc5
+	XORQ acc0, acc0
+	// Third stage
+	MOVQ acc2, AX
+	MOVQ acc2, t1
+	SHLQ $32, acc2
+	MULQ p256const1<>(SB)
+	SHRQ $32, t1
+	ADDQ acc2, acc3
+	ADCQ t1, acc4
+	ADCQ AX, acc5
+	ADCQ DX, acc0
+	XORQ acc1, acc1
+	// Last stage
+	MOVQ acc3, AX
+	MOVQ acc3, t1
+	SHLQ $32, acc3
+	MULQ p256const1<>(SB)
+	SHRQ $32, t1
+	ADDQ acc3, acc4
+	ADCQ t1, acc5
+	ADCQ AX, acc0
+	ADCQ DX, acc1
+
+	MOVQ acc4, x_ptr
+	MOVQ acc5, acc3
+	MOVQ acc0, t0
+	MOVQ acc1, t1
+
+	SUBQ $-1, acc4
+	SBBQ p256const0<>(SB), acc5
+	SBBQ $-1, acc0
+	SBBQ p256const1<>(SB), acc1
+
+	CMOVQCS x_ptr, acc4
+	CMOVQCS acc3, acc5
+	CMOVQCS t0, acc0
+	CMOVQCS t1, acc1
+
+	MOVQ acc4, (8*0)(res_ptr)
+	MOVQ acc5, (8*1)(res_ptr)
+	MOVQ acc0, (8*2)(res_ptr)
+	MOVQ acc1, (8*3)(res_ptr)
+*/
+#else
+	u64	r[4];
+	vli_set<4>(r, y);
+	u64 carry = 0;
+	for (uint i=0; i < 4; i++) {
+		u64	u = r[0];
+		u64	t_low, t_high;
+		t_low = u << 32;	// ^192
+		t_high = u >> 32;
+		vli_rshift1w<4>(r, carry);	
+		u64 cc = 0;
+		r[0] = u64_addc(r[0], u, cc);
+		r[1] = u64_addcz(r[1], cc);
+		r[2] = u64_addcz(r[2], cc);
+		r[3] = u64_addc(r[3], u, cc);
+		carry = cc;
+		cc = 0;
+		r[0] = u64_subc(r[0], t_low, cc);
+		r[1] = u64_subc(r[1], t_high, cc);
+		r[2] = u64_subc(r[2], t_low, cc);
+		r[3] = u64_subc(r[3], t_high, cc);
+		carry -= cc;
+	}
+	// add high 256 bits
+	if ( unlikely(isProd) )
+	{
+		u64	cc=0;
+		r[0] = u64_addc(r[0], y[4], cc);
+		r[1] = u64_addc(r[1], y[5], cc);
+		r[2] = u64_addc(r[2], y[6], cc);
+		r[3] = u64_addc(r[3], y[7], cc);
+		carry += cc;
+	}
+	sm2p_mod(result, r, sm2_p, carry != 0);
+#endif
 }
 
 
@@ -247,6 +360,14 @@ mont_sqrN(u64 *result, const u64 *x, const u64 *prime) noexcept
 		r[N] += vli_add_to<N>(r, result);
 		vli_mod<N>(result, r, prime, r[N] != 0);
 	}
+}
+
+forceinline static void
+sm2p_sqrN(u64 *result, const u64 *x) noexcept
+{
+	u64	r[8];
+	vli_squareN<4>(r, x);
+	sm2p_reduction(result, r, true);
 }
 
 #endif	//	__MONT_HPP__

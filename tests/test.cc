@@ -177,6 +177,14 @@ static void mont_sqrN(u64 *res, const bignum<4>& x)
 	mont_reduction<4,sm2_p_k0>(res, res, prime.data());
 }
 
+static void sm2p_mont_sqrN(u64 *res, const bignum<4>& x)
+{
+	bignum<4>	xp;
+	xp.mont_mult(x, rr, prime, sm2_p_k0);
+	sm2p_sqrN(res, xp.data());
+	mont_reduction<4,sm2_p_k0>(res, res, prime.data());
+}
+
 TEST(testEcc, TestMontRedK01)
 {
 	auto&  rd = bn_random<4>::Instance();
@@ -186,6 +194,19 @@ TEST(testEcc, TestMontRedK01)
 		mont_mult<sm2_p_k0>(xp, tmp, rr, prime);
 		mont_reductionK01(res, xp, prime);
 		EXPECT_EQ(res, tmp);
+	}
+}
+
+TEST(testEcc, TestSM2pRed)
+{
+	auto&  rd = bn_random<4>::Instance();
+	bignum<4>	xp;
+	u64		res[4];
+	for (int i=0; i<10; ++i) {
+		bignum<4>	tmp = rd.get_random();
+		mont_mult<sm2_p_k0>(xp, tmp, rr, prime);
+		sm2p_reduction(res, xp.data());
+		EXPECT_TRUE(tmp == res);
 	}
 }
 
@@ -211,6 +232,13 @@ TEST(testEcc, TestMontSqr)
 	bignum<4>	bx1(dx1), by1(dy1);
 	mont_mul(res, bx1, bx1);
 	mont_sqrN(res2, bx1);
+	EXPECT_TRUE(res.cmp(res2) == 0);
+	sm2p_mont_sqrN(res2, bx1);
+	EXPECT_TRUE(res.cmp(res2) == 0);
+	mont_mul(res, by1, by1);
+	mont_sqrN(res2, by1);
+	EXPECT_TRUE(res.cmp(res2) == 0);
+	sm2p_mont_sqrN(res2, by1);
 	EXPECT_TRUE(res.cmp(res2) == 0);
 }
 

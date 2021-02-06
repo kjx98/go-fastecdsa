@@ -66,7 +66,7 @@ static forceinline int u64IsZero(u64 x) noexcept
 {
 #ifdef	__x86_64__
 	bool	ret;
-	asm volatile("orq %%rax, %%rax\n"
+	asm volatile("subq $0, %%rax\n"
 				: "=@ccz" (ret)
 				: "a" (x)
 				: "cc");
@@ -226,11 +226,11 @@ vli4_mod(u64 *res, const u64 *left, const u64 *mod, const bool carry) noexcept
 				"movq 8(%%rsi), %%r9\n"
 				"movq 16(%%rsi), %%r10\n"
 				"movq 24(%%rsi), %%r11\n"
-				"movq %[mod], %%rsi\n"
 				"movq %%r8, %%r12\n"
 				"movq %%r9, %%r13\n"
 				"movq %%r10, %%r14\n"
 				"movq %%r11, %%r15\n"
+				"movq %[mod], %%rsi\n"
 				"subq (%%rsi), %%r12\n"
 				"sbbq 8(%%rsi), %%r13\n"
 				"sbbq 16(%%rsi), %%r14\n"
@@ -294,11 +294,11 @@ void mod4_add_to(u64 *left, const u64 *right, const u64 *mod) noexcept
 				"adcq 16(%%rdi), %%r10\n"
 				"adcq 24(%%rdi), %%r11\n"
 				"adcq $0, %%rax\n"
-				"movq %[mod], %%rsi\n"
 				"movq %%r8, %%r12\n"
 				"movq %%r9, %%r13\n"
 				"movq %%r10, %%r14\n"
 				"movq %%r11, %%r15\n"
+				"movq %[mod], %%rsi\n"
 				"subq (%%rsi), %%r12\n"
 				"sbbq 8(%%rsi), %%r13\n"
 				"sbbq 16(%%rsi), %%r14\n"
@@ -313,7 +313,7 @@ void mod4_add_to(u64 *left, const u64 *right, const u64 *mod) noexcept
 				"movq %%r14, 16(%%rdi)\n"
 				"movq %%r15, 24(%%rdi)\n"
 				:
-				: "S"(right), "D"(left), [mod] "rm" (mod)
+				: "S"(right), "D"(left), [mod] "m" (mod)
 				: "rax", "%r8", "%r9", "%r10", "%r11" , "%r12", "%r13", "%r14", "%r15", "cc", "memory");
 }
 
@@ -350,7 +350,7 @@ mod4_add(u64 *res, const u64 *left, const u64 *right, const u64* mod) noexcept
 				"movq %%r14, 16(%%rdi)\n"
 				"movq %%r15, 24(%%rdi)\n"
 				:
-				: "S"(right), "D"(left), [res] "rm" (res), [mod] "m" (mod)
+				: "S"(right), "D"(left), [res] "m" (res), [mod] "m" (mod)
 				: "rax", "%r8", "%r9", "%r10", "%r11" , "%r12", "%r13", "%r14", "%r15", "cc", "memory");
 }
 
@@ -448,7 +448,7 @@ bool vli4_sub(u64 *res, const u64 *left, const u64 *right) noexcept
 				"movq %%r10, 16(%%rdi)\n"
 				"movq %%r11, 24(%%rdi)\n"
 				: "=a"(carry)
-				: "S"(right), "D"(left), [res] "m" (res)
+				: "S"(right), "D"(left), [res] "rm" (res)
 				: "%r8", "%r9", "%r10", "%r11" , "cc", "memory");
 	return carry;
 }
@@ -689,11 +689,21 @@ static uint vli_get_bits(const u64 *vli, const int bit) noexcept
 template<const uint N> forceinline
 static int vli_cmp(const u64 *left, const u64 *right) noexcept
 {
-	for (int i = N - 1; i >= 0; i--) {
+	for (uint i = N - 1; i < N; i--) {
 		if (left[i] > right[i]) return 1;
 		else if (left[i] < right[i]) return -1;
 	}
 	return 0;
+}
+
+template<const uint N> forceinline
+static int vli_less(const u64 *left, const u64 *right) noexcept
+{
+	u64		carry=0;
+	for (uint i = 0; i < N; ++i) {
+		u64_subc(left[i], right[i], carry);
+	}
+	return carry != 0;
 }
 
 #ifdef	ommit
@@ -791,8 +801,7 @@ bool vli_add_to(u64 *result, const u64 *right) noexcept
 #endif
 	u64 carry = 0;
 	for (uint i = 0; i < N; ++i) {
-		u64	tmp = u64_addc(result[i], right[i], carry);
-		result[i] = tmp;
+		result[i] = u64_addc(result[i], right[i], carry);
 	}
 	return carry != 0;
 }
@@ -1077,7 +1086,7 @@ vli_mod(u64 *result, const u64 *left, const u64 *mod, const bool carry) noexcept
 	/* result > mod (result = mod + remainder), so subtract mod to
 	 * get remainder.
 	 */
-#if	defined(WITH_ASM) // || defined(__aarch64__)
+#if	defined(WITH_ASM)
 #if	__cplusplus >= 201703L
 	if constexpr(N == 4) {
 		vli4_mod(result, left, mod, carry);
@@ -1092,11 +1101,14 @@ vli_mod(u64 *result, const u64 *left, const u64 *mod, const bool carry) noexcept
 	{
 		// maybe copy_conditional faster?
 		// mask 0, or all 1
-		bool s_carry = carry | !vli_sub<N>(result, left, mod);
-		vli_copy_conditional<N>(result, left, !s_carry);
+		bool s_carry = vli_sub<N>(result, left, mod);
+		s_carry &= !carry;
+		vli_copy_conditional<N>(result, left, s_carry);
 	}
 #else
-	if (carry || vli_cmp<N>(left, mod) >= 0) {
+	//if (carry || vli_cmp<N>(left, mod) >= 0)
+	if (carry || !vli_less<N>(left, mod))
+	{
 		vli_sub<N>(result, left, mod);
 	} else vli_set<N>(result, left);
 #endif

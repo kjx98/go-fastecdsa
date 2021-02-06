@@ -104,11 +104,19 @@ public:
 		return os;
 	}
 	bool operator<(const bignum& bn) const noexcept {
+#ifdef	ommit
 		for (int i = N - 1; i >= 0; --i) {
 			if (this->d[i] > bn.d[i]) return false;
 			else if (this->d[i] < bn.d[i]) return true;
 		}
 		return false;
+#else
+		u64		cc=0;
+		for (uint i=0; i<N; ++i) {
+			u64_subc(this->d[i], bn.d[i], cc);
+		}
+		return cc != 0;
+#endif
 	}
 	bool operator>=(const bignum& bn) const noexcept {
 		return !(*this < bn);
@@ -398,13 +406,11 @@ public:
 	{
 		return vli_sub<N>(this->d, left.d, right.d);
 	}
-#ifdef	ommit
 /* Computes this = left - right, returning borrow. Can modify in place. */
 	bool usub(const bignum& left, const u64 right) noexcept
 	{
 		return vli_usub<N>(this->d, left.d, right);
 	}
-#endif
 	bool sub_from(const bignum& right) noexcept
 	{
 		return vli_sub_from<N>(this->d, right.d);

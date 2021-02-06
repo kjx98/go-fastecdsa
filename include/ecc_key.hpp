@@ -176,10 +176,12 @@ void gen_keypair(const curveT& curve, bignum<N>& secret, bignum<N>& pubX,
 		bignum<N>& pubY) noexcept
 {
 	auto&	rd = bn_random<N>::Instance();
+	bignum<N>	n1;
+	n1.usub(curve.paramN(), 1);
 	do {
 		secret = rd.get_random();
-		if ( unlikely(secret >= curve.paramN()) )
-			secret.sub_from(curve.paramN());
+		if ( unlikely(secret >= n1) ) 
+			secret.sub_from(n1);
 		//curve.modN(secret, secret);
 	} while (secret.is_zero());
 	point_t<N>	pt;

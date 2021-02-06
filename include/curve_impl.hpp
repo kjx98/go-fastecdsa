@@ -451,7 +451,6 @@ public:
 		uint	nbits = N*64; //scalar.num_bits();
 		q.clear();
 		if ( unlikely(scalar.is_zero()) ) return;
-		//if ( unlikely(nbits == 0) ) return;
 #ifdef	PRECOMPUTE_INSTACK
 		point_t<N>	pres[wSize];
 #else
@@ -470,7 +469,6 @@ public:
 			uint	bits;
 			uint	digit;
 			bits = vli_get_bits<N, W+1>(scalar.data(), idx);
-			//bits = bn_get_bits<W+1>(scalar, idx);
 			recode_scalar_bits<W>(digit, bits);
 			if (digit != 0) {
 				--digit;
@@ -487,7 +485,6 @@ public:
 			uint	bits;
 			uint	digit;
 			bits = vli_get_bits<N, W+1>(scalar.data(), idx);
-			//bits = bignum<N>::bn_get_bits<W+1>(scalar, idx);
 			auto sign = recode_scalar_bits<W>(digit, bits);
 			if (digit == 0) continue;
 			--digit;
@@ -554,7 +551,6 @@ public:
 			if (i & 1) continue;
 			uint	bits;
 			bits = vli_get_bits<N, 2>(scalar.data(), i);
-			//bits = bn_get_bits<2>(scalar, idx);
 			bool	sign = (bits & 2);
 			int digit = (sign)?(bits - 4):bits;
 			if (i > 0 && scalar.get_bit(i-1)) ++digit;
@@ -740,7 +736,6 @@ protected:
 			if ( unlikely(select_base_point(tmp, digit, iLvl)) ) {
 				// assert, should panic
 			}
-			//tmp = g_precomps[iLvl][digit];
 			felem_t	ny;
 			ny.sub(this->p, tmp.y);
 			ny.copy_conditional(tmp.y, sign-1);
@@ -793,7 +788,7 @@ protected:
 	const noexcept
 	{
 		res = xp;
-		for (int i = y.num_bits()-2; i >= 0; --i) {
+		for (uint i = y.num_bits()-2; i < N*64; --i) {
 			mont_msqr(res, res);
 			if (y.test_bit(i)) mont_mmult(res, res, xp);
 		}
