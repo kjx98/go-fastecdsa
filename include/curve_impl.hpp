@@ -821,33 +821,40 @@ protected:
 };
 
 
-template <const u64 Pk0=1, const bool A_is_n3=true>
-class alignas(64) curve256 : public ecc_curve<4,A_is_n3> {
+class alignas(64) curve256 : public ecc_curve<4,true> {
 public:
 	using felem_t = bignum<4>;
 	curve256(const char *_name, const u64 *_gx, const u64 *_gy, const u64 *_p,
 			const u64 *_n, const u64 *_a, const u64 *_b) :
 		ecc_curve<4>(_name, _gx, _gy, _p, _n, _a, _b, sm2_p_rr, sm2_n_rr,
 					sm2_p_k0, sm2_n_k0)
-	{ }
+	{
+		static_assert(sm2_p_k0 == 1, "MUST be sm2");
+	}
 	const felem_t& mont_one() const noexcept { return this->_mont_one; }
 	void to_montgomery(felem_t& res, const u64 *x) const noexcept
 	{
 		felem_t   *xx = reinterpret_cast<felem_t *>(const_cast<u64 *>(x));
-		mont_mult<Pk0>(res, *xx, this->rr_p, this->p);
+		mont_mult<1>(res, *xx, this->rr_p, this->p);
 	}
 	void to_montgomery(felem_t& res, const felem_t& x) const noexcept
 	{
-		mont_mult<Pk0>(res, x, this->rr_p, this->p);
+		mont_mult<1>(res, x, this->rr_p, this->p);
 	}
 	void from_montgomery(felem_t& res, const felem_t& y) const noexcept
 	{
-		mont_reduction<Pk0>(res, y, this->p);
+		//mont_reduction<1>(res, y, this->p);
+		u64   *resp = reinterpret_cast<u64 *>(&res);
+		sm2p_reduction(resp, y.data());
 	}
 	void from_montgomery(u64* result, const felem_t& y) const noexcept
 	{
+#ifdef	ommit
 		felem_t   *res = reinterpret_cast<felem_t *>(result);
-		mont_reduction<Pk0>(*res, y, this->p);
+		mont_reduction<1>(*res, y, this->p);
+#else
+		sm2p_reduction(result, y.data());
+#endif
 	}
 	void apply_z_mont(point_t<4>& pt) const noexcept
 	{
@@ -864,12 +871,18 @@ public:
 	}
 	void mont_mmult(felem_t& res, const felem_t& left, const felem_t& right)
 	const noexcept {
-		mont_mult<Pk0>(res, left, right, this->p);
+		mont_mult<1>(res, left, right, this->p);
 	}
 	void mont_msqr(felem_t& res, const felem_t left, const uint nTimes=1)
 	const noexcept {
-		mont_sqr<Pk0>(res, left, this->p);
-		for (uint i=1; i < nTimes; i++) mont_sqr<Pk0>(res, res, this->p);
+#ifdef	ommit
+		mont_sqr<1>(res, left, this->p);
+		for (uint i=1; i < nTimes; i++) mont_sqr<1>(res, res, this->p);
+#else
+		u64   *resp = reinterpret_cast<u64 *>(&res);
+		sm2p_sqrN(resp, left.data());
+		for (uint i=1; i < nTimes; i++) sm2p_sqrN(resp, resp);
+#endif
 	}
 	void mont_mult2(felem_t& res, const felem_t& left) const noexcept
 	{
@@ -884,7 +897,6 @@ public:
 	}
 	void mont_mult4(felem_t& res) const noexcept
 	{
-		static_assert(Pk0 == 1, "MUST be sm2");
 		u64	carry;
 		if ((carry=res.lshift(2)) != 0) {
 			this->carry_reduce(res, carry);
@@ -892,7 +904,6 @@ public:
 	}
 	void mont_mult8(felem_t& res) const noexcept
 	{
-		static_assert(Pk0 == 1, "MUST be sm2");
 		u64	carry;
 		if ((carry=res.lshift(3)) != 0) {
 			this->carry_reduce(res, carry);
@@ -951,9 +962,9 @@ public:
 			to_montgomery(zp, z1);
 		}
 		if (z_is_one)
-			point_doublez_jacob<A_is_n3>(*this, *x3p, *y3p, *z3p, xp, yp);
+			point_doublez_jacob<true>(*this, *x3p, *y3p, *z3p, xp, yp);
 		else
-			point_double_jacob<A_is_n3>(*this, *x3p, *y3p, *z3p, xp, yp, zp);
+			point_double_jacob<true>(*this, *x3p, *y3p, *z3p, xp, yp, zp);
 		// montgomery reduction
 		from_montgomery(x3, *x3p);
 		from_montgomery(y3, *y3p);
@@ -996,10 +1007,10 @@ public:
 			to_montgomery(z2p, z2);
 		}
 		if (z2_is_one) {
-			point_addz_jacob<A_is_n3>(*this, *x3p, *y3p, *z3p, x1p, y1p, z1p,
+			point_addz_jacob<true>(*this, *x3p, *y3p, *z3p, x1p, y1p, z1p,
 							x2p, y2p);
 		} else {
-			point_add_jacob<A_is_n3>(*this, *x3p, *y3p, *z3p, x1p, y1p, z1p,
+			point_add_jacob<true>(*this, *x3p, *y3p, *z3p, x1p, y1p, z1p,
 							x2p, y2p, z2p);
 		}
 		// montgomery reduction
@@ -1084,25 +1095,25 @@ public:
 	void point_double(point_t<4>& q, const point_t<4>& p) const noexcept
 	{
 		if ( p.z == this->mont_one() )
-			point_doublez_jacob<A_is_n3>(*this, q.x, q.y, q.z, p.x, p.y);
+			point_doublez_jacob<true>(*this, q.x, q.y, q.z, p.x, p.y);
 		else
-			point_double_jacob<A_is_n3>(*this, q.x, q.y, q.z, p.x, p.y, p.z);
+			point_double_jacob<true>(*this, q.x, q.y, q.z, p.x, p.y, p.z);
 	}
 	void point_double(point_t<4>& q, const felem_t& x1, const felem_t& y1)
 	const noexcept
 	{
-		point_doublez_jacob<A_is_n3>(*this, q.x, q.y, q.z, x1, y1);
+		point_doublez_jacob<true>(*this, q.x, q.y, q.z, x1, y1);
 	}
 	void point_add(point_t<4>& q, const point_t<4>& p1, const point_t<4>& p2)
 	const noexcept
 	{
-		point_add_jacob<A_is_n3>(*this, q.x, q.y, q.z, p1.x, p1.y, p1.z,
+		point_add_jacob<true>(*this, q.x, q.y, q.z, p1.x, p1.y, p1.z,
 						p2.x, p2.y, p2.z);
 	}
 	void point_add(point_t<4>& q, const point_t<4>& p1, const felem_t& x2,
 			const felem_t& y2) const noexcept
 	{
-		point_addz_jacob<A_is_n3>(*this, q.x, q.y, q.z, p1.x, p1.y, p1.z, x2, y2);
+		point_addz_jacob<true>(*this, q.x, q.y, q.z, p1.x, p1.y, p1.z, x2, y2);
 	}
 	void scalar_mult_base(point_t<4>& q, const felem_t& scalar) const noexcept
 	{
@@ -1143,7 +1154,7 @@ public:
 private:
 	void carry_reduce(felem_t& res, const u64 carry) const noexcept
 	{
-		static_assert(Pk0 == 1, "MUST be sm2");
+		//static_assert(Pk0 == 1, "MUST be sm2");
 		// carry < 2^32
 		u64		u = carry & ((1L<<32) -1);
 		u64		cc[4];
@@ -1159,6 +1170,7 @@ private:
 	{
 		res = xp;
 		for (int i = y.num_bits()-2; i >= 0; --i) {
+			//mont_msqr(res, res);
 			mont_msqr(res, res);
 			if (y.test_bit(i)) mont_mmult(res, res, xp);
 		}

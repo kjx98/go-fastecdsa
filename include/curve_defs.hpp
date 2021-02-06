@@ -65,7 +65,7 @@ static ecc::ecc_curve<4>	sm2_p256(//.name
 const auto sm2_p256p = &sm2_p256;
 #endif
 
-static ecc::curve256<1> sm2_k256(//.name
+static ecc::curve256 sm2_k256(//.name
 	"sm2k256",
 	// .gx
 	sm2_gx,
