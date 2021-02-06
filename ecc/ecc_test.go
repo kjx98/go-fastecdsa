@@ -31,8 +31,8 @@ func TestEccMMod(t *testing.T) {
 	bFMA := vliTestFMA()
 	t.Log("CPU support FMA: ", bFMA)
 	p := sm2.P256().Params().P
-	xy := new(big.Int).Mul(x1, y1)
-	xyMod := new(big.Int).Mod(xy, p)
+	//xy := new(big.Int).Mul(x1, y1)
+	//xyMod := new(big.Int).Mod(xy, p)
 	pb := make([]big.Word, 9)
 	copy(pb, p.Bits())
 	mu := new(big.Int).SetUint64(1)
@@ -40,18 +40,20 @@ func TestEccMMod(t *testing.T) {
 	mu.Div(mu, p)
 	copy(pb[4:], mu.Bits())
 	t.Logf("P0: %x, P3: %x, Mu0: %x, Mu3: %x", pb[0], pb[3], pb[4], pb[7])
-	bMod := vliModMultBarrett(x1, y1, pb)
-	if bMod.Cmp(xyMod) != 0 {
-		t.Logf("big.mulmod diff barrett ModMultBarrett:\n%s vs\n%s\n",
-			xyMod.Text(16), bMod.Text(16))
-		t.Fail()
-	}
-	bMod = vliModMult(x1.Bits(), y1.Bits(), pb)
-	if bMod.Cmp(xyMod) != 0 {
-		t.Logf("big.mulmod diff vliModMult:\n%s vs\n%s\n",
-			xyMod.Text(16), bMod.Text(16))
-		t.Fail()
-	}
+	/*
+		bMod := vliModMultBarrett(x1, y1, pb)
+		if bMod.Cmp(xyMod) != 0 {
+			t.Logf("big.mulmod diff barrett ModMultBarrett:\n%s vs\n%s\n",
+				xyMod.Text(16), bMod.Text(16))
+			t.Fail()
+		}
+		bMod = vliModMult(x1.Bits(), y1.Bits(), pb)
+		if bMod.Cmp(xyMod) != 0 {
+			t.Logf("big.mulmod diff vliModMult:\n%s vs\n%s\n",
+				xyMod.Text(16), bMod.Text(16))
+			t.Fail()
+		}
+	*/
 }
 
 func TestSM2MultP(t *testing.T) {
@@ -337,6 +339,7 @@ func TestEccInverse(t *testing.T) {
 	}
 }
 
+/*
 func TestBarrettDiv(t *testing.T) {
 	cParams := sm2.P256().Params()
 	prod := new(big.Int).Mul(x1, y1)
@@ -372,6 +375,7 @@ func TestBarrettDiv(t *testing.T) {
 		t.Fail()
 	}
 }
+*/
 
 func BenchmarkInverse(b *testing.B) {
 	b.StopTimer()
@@ -381,6 +385,35 @@ func BenchmarkInverse(b *testing.B) {
 	b.RunParallel(func(pb *testing.PB) {
 		for pb.Next() {
 			_ = vliModInv(x1.Bits(), p)
+		}
+	})
+}
+
+func BenchmarkInverseGo(b *testing.B) {
+	b.StopTimer()
+	p := sm2.P256().Params().P
+
+	inv := new(big.Int)
+	b.StartTimer()
+	b.RunParallel(func(pb *testing.PB) {
+		for pb.Next() {
+			inv.ModInverse(x1, p)
+		}
+	})
+}
+
+func BenchmarkInverseFermat(b *testing.B) {
+	b.StopTimer()
+	p := sm2.P256().Params().P
+	two := big.NewInt(2)
+	nMinus2 := new(big.Int).Sub(p, two)
+
+	inv := new(big.Int)
+	b.StartTimer()
+	b.RunParallel(func(pb *testing.PB) {
+		for pb.Next() {
+			inv.Exp(x1, nMinus2, p)
+			//inv.ModInverse(x1, p)
 		}
 	})
 }
