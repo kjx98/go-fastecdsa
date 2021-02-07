@@ -1097,12 +1097,11 @@ vli_mod(u64 *result, const u64 *left, const u64 *mod, const bool carry) noexcept
 	} else
 #endif
 #endif
-#ifdef	NO_CONDITIONAL_COPY
+#ifdef	W_CONDITIONAL_COPY
 	{
 		// maybe copy_conditional faster?
 		// mask 0, or all 1
-		bool s_carry = vli_sub<N>(result, left, mod);
-		s_carry &= !carry;
+		bool s_carry = carry < vli_sub<N>(result, left, mod);
 		vli_copy_conditional<N>(result, left, s_carry);
 	}
 #else

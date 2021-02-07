@@ -87,91 +87,122 @@ forceinline static void
 sm2p_reduction(u64 *result, const u64 *y, const bool isProd=false) noexcept
 {
 #ifdef	__x86_64__1
-	asm volatile("MOVQ (8*0)(%%rsi), acc0\n"
-			MOVQ (8*1)(%%rsi), acc1
-			MOVQ (8*2)(%%rsi), acc2
-			MOVQ (8*3)(%%rsi), acc3
-			XORQ acc4, acc4
+	register u64 res0 asm("r12");
+	register u64 res1 asm("r13");
+	register u64 res2 asm("r8");
+	register u64 res3 asm("r9");
+#ifdef	__x86_64__1
+	asm volatile("MOVQ (8*0)(%%rsi), %%r8\n"
+			MOVQ (8*1)(%%rsi), %%r9
+			MOVQ (8*2)(%%rsi), %%r10
+			MOVQ (8*3)(%%rsi), %%r11
+			XORQ %%r12, %%r12
 
 	// Only reduce, no multiplications are needed
 	// First stage
-			MOVQ acc0, AX
-			MOVQ acc0, t1
-			SHLQ $32, acc0
-			SHRQ $32, t1
-			ADDQ %%rax, acc1
-			ADCQ $0, acc2
-			ADCQ $0, acc3
-			ADCQ %%rax, acc4
-			subq acc0, acc1
-			sbbq t1, acc2
-			sbbq acc0, acc3
-			sbbq t1, acc4
-	XORQ acc5, acc5
+			MOVQ %%r8, AX
+			MOVQ %%r8, %%r15
+			SHLQ $32, %%r8
+			SHRQ $32, %%r15
+			ADDQ %%rax, %%r9
+			ADCQ $0, %%r10
+			ADCQ $0, %%r11
+			ADCQ %%rax, %%r12
+			subq %%r8, %%r9
+			sbbq %%r15, %%r10
+			sbbq %%r8, %%r11
+			sbbq %%r15, %%r12
+	XORQ %%r13, %%r13
 	// Second stage
-			MOVQ acc1, AX
-			MOVQ acc1, t1
-			SHLQ $32, acc1
-			SHRQ $32, t1
-			ADDQ %%rax, acc2
-			adcq $0, acc3
-			adcq $0, acc4
-			adcq %%rax, acc5
-			subq acc1, acc2
-			sbbq t1, acc3
-			sbbq acc1, acc4
-			sbbq t1, acc5
-	XORQ acc0, acc0
+			MOVQ %%r9, AX
+			MOVQ %%r9, %%r15
+			SHLQ $32, %%r9
+			SHRQ $32, %%r15
+			ADDQ %%rax, %%r10
+			adcq $0, %%r11
+			adcq $0, %%r12
+			adcq %%rax, %%r13
+			subq %%r9, %%r10
+			sbbq %%r15, %%r11
+			sbbq %%r9, %%r12
+			sbbq %%r15, %%r13
+	XORQ %%r8, %%r8
 	// Third stage
-	MOVQ acc2, AX
-	MOVQ acc2, t1
-	SHLQ $32, acc2
-	SHRQ $32, t1
-	ADDQ %%rax, acc3
-	adcq $0, acc4
-	adcq $0, acc5
-	adcq %%rax, acc0
-	subq acc2, acc3
-	sbbq t1, acc4
-	sbbq acc2, acc5
-	sbbq t1, acc0
-	XORQ acc1, acc1
+	MOVQ %%r10, AX
+	MOVQ %%r10, %%r15
+	SHLQ $32, %%r10
+	SHRQ $32, %%r15
+	ADDQ %%rax, %%r11
+	adcq $0, %%r12
+	adcq $0, %%r13
+	adcq %%rax, %%r8
+	subq %%r10, %%r11
+	sbbq %%r15, %%r12
+	sbbq %%r10, %%r13
+	sbbq %%r15, %%r8
+	XORQ %%r9, %%r9
 	// Last stage
-	MOVQ acc3, AX
-	MOVQ acc3, t1
-	SHLQ $32, acc3
-	SHRQ $32, t1
-	ADDQ %%rax, acc4
-	adcq $0, acc5
-	adcq $0, acc0
-	adcq %%rax, acc1
-	subq acc3, acc4
-	sbbq t1, acc5
-	sbbq acc3, acc0
-	sbbq t1, acc1
-
-	MOVQ acc4, x_ptr
-	MOVQ acc5, acc3
-	MOVQ acc0, t0
-	MOVQ acc1, t1
-
-	SUBQ $-1, acc4
-	SBBQ p256const0<>(SB), acc5
-	SBBQ $-1, acc0
-	SBBQ p256const1<>(SB), acc1
-
-	CMOVQCS x_ptr, acc4
-	CMOVQCS acc3, acc5
-	CMOVQCS t0, acc0
-	CMOVQCS t1, acc1
-
-	MOVQ acc4, (8*0)(%%rdi)
-	MOVQ acc5, (8*1)(%%rdi)
-	MOVQ acc0, (8*2)(%%rdi)
-	MOVQ acc1, (8*3)(%%rdi)
+	MOVQ %%r11, AX
+	MOVQ %%r11, %%r15
+	SHLQ $32, %%r11
+	SHRQ $32, %%r15
+	ADDQ %%rax, %%r12
+	adcq $0, %%r13
+	adcq $0, %%r8
+	adcq %%rax, %%r9
+	subq %%r11, %%r12
+	sbbq %%r15, %%r13
+	sbbq %%r11, %%r8
+	sbbq %%r15, %%r9
 				: 			// acc4/5/0/1
 				: "S" (y), "D" (result)
 				: "cc", "memory");
+#endif
+
+	// add high 256 bits
+	u64	carry = 0;
+	if ( unlikely(isProd) )
+	{
+		u64	cc=0;
+		res0 = u64_addc(res0, y[4], cc);
+		res1 = u64_addc(res1, y[5], cc);
+		res2 = u64_addc(res2, y[6], cc);
+		res3 = u64_addc(res3, y[7], cc);
+		carry += cc;
+	}
+	result[0] = res0;
+	result[1] = res1;
+	result[2] = res2;
+	result[3] = res3;
+	// sm2p_mod
+	sm2p_mod(result, result, sm2_p, carry != 0);
+
+#ifdef	__x86_64__1
+	// mod prime
+	asm volatile(
+	MOVQ %%r12, x_ptr
+	MOVQ %%r13, %%r11
+	MOVQ %%r8, %%r14
+	MOVQ %%r9, %%r15
+
+	SUBQ $-1, %%r12
+	SBBQ p256cons%%r14<>(SB), %%r13
+	SBBQ $-1, %%r8
+	SBBQ p256cons%%r15<>(SB), %%r9
+
+	CMOVQCS x_ptr, %%r12
+	CMOVQCS %%r11, %%r13
+	CMOVQCS %%r14, %%r8
+	CMOVQCS %%r15, %%r9
+
+	MOVQ %%r12, (8*0)(%%rdi)
+	MOVQ %%r13, (8*1)(%%rdi)
+	MOVQ %%r8, (8*2)(%%rdi)
+	MOVQ %%r9, (8*3)(%%rdi)
+				: 			// acc4/5/0/1
+				: "S" (y), "D" (result)
+				: "cc", "memory");
+#endif
 #else
 	u64	r[4];
 	vli_set<4>(r, y);
