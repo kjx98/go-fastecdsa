@@ -86,79 +86,79 @@ static void vli_sm2_multR(u64 *result, const u64 uv) noexcept
 forceinline static void
 sm2p_reduction(u64 *result, const u64 *y, const bool isProd=false) noexcept
 {
-#ifdef	__x86_64__
-	register u64 res0 asm("r12");
-	register u64 res1 asm("r13");
-	register u64 res2 asm("r8");
-	register u64 res3 asm("r9");
-	asm volatile("MOVQ (8*0)(%%rsi), %%r8\n"
-		"MOVQ (8*1)(%%rsi), %%r9\n"
+#ifdef	__x86_64__2
+	u64 res0, res1, res2, res3;
+	u64	carry;
+	asm volatile("MOVQ (8*0)(%%rsi), %[r8]\n"
+		"MOVQ (8*1)(%%rsi), %[r9]\n"
 		"MOVQ (8*2)(%%rsi), %%r10\n"
 		"MOVQ (8*3)(%%rsi), %%r11\n"
-		"XORQ %%r12, %%r12\n"
+		"XORQ %[r12], %%r12\n"
 
 	// Only reduce, no multiplications are needed
 	// First stage
-"MOVQ %%r8, %%rax\n"
-"MOVQ %%r8, %%r15\n"
-"SHLQ $32, %%r8\n"
+"MOVQ %[r8], %%rax\n"
+"MOVQ %[r8], %%r15\n"
+"SHLQ $32, %[r8]\n"
 "SHRQ $32, %%r15\n"
-"ADDQ %%rax, %%r9\n"
+"ADDQ %%rax, %[r9]\n"
 "ADCQ $0, %%r10\n"
 "ADCQ $0, %%r11\n"
-"ADCQ %%rax, %%r12\n"
-"subq %%r8, %%r9\n"
+"ADCQ %%rax, %[r12]\n"
+"subq %[r8], %[r9]\n"
 "sbbq %%r15, %%r10\n"
-"sbbq %%r8, %%r11\n"
-"sbbq %%r15, %%r12\n"
-"XORQ %%r13, %%r13\n"
+"sbbq %[r8], %%r11\n"
+"sbbq %%r15, %[r12]\n"
+"XORQ %[r13], %%r13\n"
 	// Second stage
-"MOVQ %%r9, %%rax\n"
-"MOVQ %%r9, %%r15\n"
-"SHLQ $32, %%r9\n"
+"MOVQ %[r9], %%rax\n"
+"MOVQ %[r9], %%r15\n"
+"SHLQ $32, %[r9]\n"
 "SHRQ $32, %%r15\n"
 "ADDQ %%rax, %%r10\n"
 "adcq $0, %%r11\n"
-"adcq $0, %%r12\n"
-"adcq %%rax, %%r13\n"
-"subq %%r9, %%r10\n"
+"adcq $0, %[r12]\n"
+"adcq %%rax, %[r13]\n"
+"subq %[r9], %%r10\n"
 "sbbq %%r15, %%r11\n"
-"sbbq %%r9, %%r12\n"
-"sbbq %%r15, %%r13\n"
-"XORQ %%r8, %%r8\n"
+"sbbq %[r9], %[r12]\n"
+"sbbq %%r15, %[r13]\n"
+"XORQ %[r8], %%r8\n"
 	// Third stage
 "MOVQ %%r10, %%rax\n"
 "MOVQ %%r10, %%r15\n"
 "SHLQ $32, %%r10\n"
 "SHRQ $32, %%r15\n"
 "ADDQ %%rax, %%r11\n"
-"adcq $0, %%r12\n"
-"adcq $0, %%r13\n"
-"adcq %%rax, %%r8\n"
+"adcq $0, %[r12]\n"
+"adcq $0, %[r13]\n"
+"adcq %%rax, %[r8]\n"
 "subq %%r10, %%r11\n"
-"sbbq %%r15, %%r12\n"
-"sbbq %%r10, %%r13\n"
-"sbbq %%r15, %%r8\n"
-"XORQ %%r9, %%r9\n"
+"sbbq %%r15, %[r12]\n"
+"sbbq %%r10, %[r13]\n"
+"sbbq %%r15, %[r8]\n"
+"XORQ %[r9], %%r9\n"
 	// Last stage
 "MOVQ %%r11, %%rax\n"
 "MOVQ %%r11, %%r15\n"
 "SHLQ $32, %%r11\n"
 "SHRQ $32, %%r15\n"
-"ADDQ %%rax, %%r12\n"
-"adcq $0, %%r13\n"
-"adcq $0, %%r8\n"
-"adcq %%rax, %%r9\n"
-"subq %%r11, %%r12\n"
-"sbbq %%r15, %%r13\n"
-"sbbq %%r11, %%r8\n"
-"sbbq %%r15, %%r9\n"
-				: 			// acc4/5/0/1
+"ADDQ %%rax, %[r12]\n"
+"adcq $0, %[r13]\n"
+"adcq $0, %[r8]\n"
+"adcq %%rax, %[r9]\n"
+"movq $0, %%rax\n"
+"adcq $0, %%rax\n"
+"subq %%r11, %[r12]\n"
+"sbbq %%r15, %[r13]\n"
+"sbbq %%r11, %[r8]\n"
+"sbbq %%r15, %[r9]\n"
+"sbbq $0, %%rax\n"
+				: "=a" (carry), [r12] "=r" (res0), [r13] "=r" (res1), [r8] "=r" (res2), [r9] "=r" (res3)
 				: "S" (y)
-				: "rax", "r10", "r11", "r14", "r15", "cc", "memory");
+				: "r10", "r11", "r14", "r15", "cc");
 
 	// add high 256 bits
-	u64	carry = 0;
 	if ( unlikely(isProd) )
 	{
 		u64	cc=0;
@@ -169,7 +169,7 @@ sm2p_reduction(u64 *result, const u64 *y, const bool isProd=false) noexcept
 		carry += cc;
 	}
 
-#ifdef	__x86_64__
+#ifdef	__x86_64__1
 	// mod prime
 	asm volatile(
 		"MOVQ %%r12, %%r10\n"
