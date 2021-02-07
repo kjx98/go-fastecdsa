@@ -127,34 +127,33 @@ void point_double_jacob(const curveT& curve, bnT& x3, bnT& y3, bnT& z3,
 	{
 		/* Use the faster case.  */
 		/* L1 = 3(X - Z^2)(X + Z^2) */
+		/* square is faster than multiple	*/
+		// L1 = 3(X^2 - Z^4)
 		/*						T1: used for Z^2. */
 		/*						T2: used for the right term. */
 		if ( unlikely(z_is_one) ) {
-			// l1 = X - Z^2
-			curve.mod_sub(l1, x1, curve.mont_one());
-			// 3(X - Z^2) = 2(X - Z^2) + (X - Z^2)
+			// l1 = X^2
+			curve.mont_msqr(l1, x1);
+			// l1 = x^2 - z^4
+			curve.mod_sub_from(l1, curve.mont_one());
+			// 3(X^2 - Z^4) = 2(X^2 - Z^4) + (X^2 - Z^4)
 			// t1 = 2 * l1
 			curve.mont_mult2(t1, l1);
-			// l1 = 2 * l1 + l1 = 3(X - Z^2)
 			curve.mod_add_to(l1, t1);
-			// t1 = X + Z^2
-			curve.mod_add(t1, x1, curve.mont_one());
-			// l1 = 3(X - Z^2)(X + Z^2)
-			curve.mont_mmult(l1, l1, t1);
 		} else {
 			// t1 = Z^2
 			curve.mont_msqr(t1, z1);
-			// l1 = X - Z^2
-			curve.mod_sub(l1, x1, t1);
-			// 3(X - Z^2) = 2(X - Z^2) + (X - Z^2)
+			// t2 = t1 ^2 = Z^4
+			curve.mont_msqr(t2, t1);
+			// l1 = X^2
+			curve.mont_msqr(l1, x1);
+			// l1 = x^2 - z^4
+			curve.mod_sub_from(l1, t2);
+			// 3(X^2 - Z^4) = 2(X^2 - Z^4) + (X^2 - Z^4)
 			// t2 = 2 * l1
 			curve.mont_mult2(t2, l1);
 			// l1 = l1 + 2 * l1 = 3(X - Z^2)
 			curve.mod_add_to(l1, t2);
-			// t2 = X + Z^2
-			curve.mod_add(t2, x1, t1);
-			// l1 = 3(X - Z^2)(X + Z^2)
-			curve.mont_mmult(l1, l1, t2);
 		}
 	} else {
 		/* Standard case. */
@@ -236,19 +235,18 @@ void point_doublez_jacob(const curveT& curve, bnT& x3, bnT& y3, bnT& z3,
 	{
 		/* Use the faster case.  */
 		/* L1 = 3(X - Z^2)(X + Z^2) */
+		/* square is faster than multiple	*/
+		// L1 = 3(X^2 - Z^4)
 		/*						T1: used for Z^2. */
 		/*						T2: used for the right term. */
-		// l1 = X - Z^2
-		curve.mod_sub(l1, x1, curve.mont_one());
-		// 3(X - Z^2) = 2(X - Z^2) + (X - Z^2)
+		// l1 = X^2
+		curve.mont_msqr(l1, x1);
+		// l1 = x^2 - z^4
+		curve.mod_sub_from(l1, curve.mont_one());
+		// 3(X^2 - Z^4) = 2(X^2 - Z^4) + (X^2 - Z^4)
 		// t1 = 2 * l1
 		curve.mont_mult2(t1, l1);
-		// l1 = 2 * l1 + l1 = 3(X - Z^2)
 		curve.mod_add_to(l1, t1);
-		// t1 = X + Z^2
-		curve.mod_add(t1, x1, curve.mont_one());
-		// l1 = 3(X - Z^2)(X + Z^2)
-		curve.mont_mmult(l1, l1, t1);
 	} else {
 		/* Standard case. */
 		/* L1 = 3X^2 + aZ^4 */
