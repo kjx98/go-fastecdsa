@@ -320,26 +320,22 @@ void point_double3n_jacob(const curveT& curve, bnT& x3, bnT& y3, bnT& z3,
 #endif
 	bool	z_is_one = (curve.mont_one() == z1);
 	bnT	t1, t2, t3;
-	// t2 = 3(x1 + z1^2)(x1 - z1^2)
+	// t2 = 3(x1^2 - z1^4)
 	if ( unlikely(z_is_one) ) {
-		// t2 = X - Z^2
-		curve.mod_sub(t2, x1, curve.mont_one());
-		curve.mod_add(t1, x1, curve.mont_one());
-		curve.mont_mmult(t2, t2, t1);
+		// t2 = X^2 - Z^4
+		curve.mont_msqr(t2, x1);
+		curve.mod_sub_from(t2, curve.mont_one());
 		curve.mont_mult2(t1, t2);
 		curve.mod_add_to(t2, t1);
 	} else {
-		// t1 = Z^2
-		curve.mont_msqr(t1, z1);
-		// t2 = X - Z^2
-		curve.mod_sub(t2, x1, t1);
-		// t1 = X + Z^2
-		curve.mod_add_to(t1, x1);
-		curve.mont_mmult(t2, t2, t1);
-		// t2 = (x1 + z1^2) ( x1 - z1^2)
+		// t1 = Z^4
+		curve.mont_msqr(t1, z1, 2);
+		// t2 = X^2 - Z^4
+		curve.mont_msqr(t2, x1);
+		curve.mod_sub_from(t2, t1);
 		// t1 = 2 * t2
 		curve.mont_mult2(t1, t2);
-		// t2 = t2 + 2 * t2 = 3(X - Z^2)
+		// t2 = t2 + 2 * t2 = 3(X^2 - Z^4)
 		curve.mod_add_to(t2, t1);
 	}
 
