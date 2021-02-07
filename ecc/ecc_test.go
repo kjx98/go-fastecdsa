@@ -27,6 +27,40 @@ func init() {
 	k0N = 0x327f9e8872350975
 }
 
+func dumpBits(v *big.Int, t *testing.T) {
+	bLen := v.BitLen()
+	if bLen == 0 {
+		t.Log("big.Int v is zero")
+		return
+	}
+	cOne := true
+	bitsC := 0
+	for  i := bLen-1; i>=0; i-- {
+		if cOne {
+			if v.Bit(i) == 0 {
+				t.Logf("%d one ", bitsC)
+				bitsC = 1
+				cOne = false
+			} else {
+				bitsC++
+			}
+		} else {
+			if v.Bit(i) != 0 {
+				t.Logf("%d zero ", bitsC)
+				bitsC = 1
+				cOne = true
+			} else {
+				bitsC++
+			}
+		}
+	}
+	if bitsC > 0 {
+		ss := "one"
+		if !cOne { ss = "zero" }
+		t.Logf("%d %s\n", bitsC, ss)
+	}
+}
+
 func TestEccMMod(t *testing.T) {
 	bFMA := vliTestFMA()
 	t.Log("CPU support FMA: ", bFMA)
@@ -221,6 +255,7 @@ func TestSqrtMod(t *testing.T) {
 	} else {
 		ww := t0.Bits()
 		t.Logf("quadP : %x %x %x %x", ww[0], ww[1], ww[2], ww[3])
+		dumpBits(t0, t)
 	}
 	if a0.Cmp(y1) == 0 {
 		t.Log("sqrt = a * a ^ (p/4) ")
