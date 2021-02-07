@@ -385,6 +385,21 @@ func BenchmarkInverse(b *testing.B) {
 	})
 }
 
+func BenchmarkModSqrt(b *testing.B) {
+	b.StopTimer()
+	p := sm2.P256().Params().P
+	yy := new(big.Int).Mul(y1, y1)
+	yy.Mod(yy, p)
+	ySqrt := new(big.Int)
+
+	b.StartTimer()
+	b.RunParallel(func(pb *testing.PB) {
+		for pb.Next() {
+			ySqrt.ModSqrt(yy, p)
+		}
+	})
+}
+
 func BenchmarkModMul(b *testing.B) {
 	b.ResetTimer()
 	p := sm2.P256().Params().P
