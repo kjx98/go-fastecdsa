@@ -930,7 +930,8 @@ public:
 		felem_t	xp;
 		to_montgomery(xp, x);
 		felem_t	a1;
-		this->mont_mod_exp(a1, xp, this->quadP());
+		//this->mont_mod_exp(a1, xp, this->quadP());
+		this->mont_mod_exp_quadP(a1, xp);
 		felem_t	a0;
 		mont_mmult(res, a1, xp);
 		mont_mmult(a0, res, a1);
