@@ -748,6 +748,90 @@ void point_addz_jacob(const curveT& curve, bnT& x3, bnT& y3, bnT& z3,
 }
 
 
+// x^quadP modulo prime, xp is x in motgomery form
+template<const uint N=4, typename bnT, typename curveT>
+forceinline static bool
+mont_mod_exp(const curveT& curve, bnT& res, const bnT& xp, const bnT& y) noexcept
+{
+	bnT	bn_tbl[5];	// _1, _11, _101, _111, _1111
+	struct	bitsTable {
+		uint	leading;
+		uint	tailing;
+		uint	idx;
+	}	mapTable[]= {
+		{ 1, 0, 0},		// _1
+		{ 1, 1, 0},		// _10
+		{ 2, 0, 1},		// _11
+		{ 1, 2, 0},		// _100
+		{ 3, 0, 2},		// _101
+		{ 2, 1, 1},		// _110
+		{ 3, 0, 3},		// _111
+		{ 1, 3, 0},		// _1000
+		{ 1, 2, 0},		// _1001, proc _100
+		{ 3, 0, 2},		// _1010, proc _101
+		{ 3, 0, 2},		// _1011, proc _101
+		{ 2, 2, 1},		// _1100
+		{ 2, 1, 1},		// _1101, proc _110
+		{ 3, 1, 3},		// _1110
+		{ 4, 0, 4}		// _1111
+	};
+	bnT	tmp;
+	// precompute
+	bn_tbl[0] = xp;
+	curve.mont_msqr(tmp, xp);			// tmp = _10
+	curve.mont_mmult(bn_tbl[1], tmp, xp);		// _11
+	curve.mont_mmult(bn_tbl[2], tmp, bn_tbl[1]);	// _101
+	curve.mont_mmult(bn_tbl[3], tmp, bn_tbl[2]);	// _111
+	curve.mont_msqr(tmp, bn_tbl[2]);	// _1010
+	curve.mont_mmult(bn_tbl[4], bn_tbl[2], tmp);	// _1111
+	uint	idx = y.num_bits();
+	if ( unlikely(idx < 4) ) return false;
+	uint	bits;
+	bits = vli_get_bits<N, 4>(y.data(), idx-4);
+	{
+		bitsTable& tb = mapTable[bits-1];
+		res = bn_tbl[tb.idx];
+		if (tb.tailing != 0) {
+			curve.mont_msqr(res, res, tb.tailing);
+		}
+		idx -= (tb.leading + tb.tailing);
+	}
+	for (; idx >= 4; ) {
+		// skip leading 0
+		if (y.test_bit(idx-1) == 0) {
+			curve.mont_msqr(res, res);
+			--idx;
+			continue;
+		}
+		bits = vli_get_bits<N, 4>(y.data(), idx-4);
+		bitsTable& tb = mapTable[bits-1];
+		curve.mont_msqr(res, res, tb.leading);
+		curve.mont_mmult(res, res, bn_tbl[tb.idx]);
+		if (tb.tailing != 0) {
+			curve.mont_msqr(res, res, tb.tailing);
+		}
+		idx -= (tb.leading + tb.tailing);
+	}
+	while (idx > 0 && y.test_bit(idx-1) == 0) {
+		curve.mont_msqr(res, res);
+		--idx;
+	}
+	// proc remains
+	if (idx > 0)
+	{
+		bits = vli_get_bits<N, 4>(y.data(), 0);
+		if (bits == 0) {
+			curve.mont_msqr(res, res, idx);
+		}
+		bitsTable& tb = mapTable[bits-1];
+		curve.mont_msqr(res, res, tb.leading);
+		curve.mont_mmult(res, res, bn_tbl[tb.idx]);
+		if (tb.tailing != 0) {
+			curve.mont_msqr(res, res, tb.tailing);
+		}
+	}
+}
+
 template<typename bnT, typename curveT>
 forceinline static bool
 pointY_recover(const curveT& curve, bnT& y1, const bnT& x1, const bool bOdd)
