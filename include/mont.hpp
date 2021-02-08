@@ -172,7 +172,7 @@ sm2p_reduction(u64 *result, const u64 *y, const bool isProd=false) noexcept
 		carry += cc;
 	}
 
-#ifdef	__x86_64__1
+#ifdef	__x86_64__
 	// mod prime
 	asm volatile(
 		"MOVQ %%r12, %%r10\n"
@@ -195,9 +195,10 @@ sm2p_reduction(u64 *result, const u64 *y, const bool isProd=false) noexcept
 		"MOVQ %%r13, (8*1)(%%rdi)\n"
 		"MOVQ %%r8, (8*2)(%%rdi)\n"
 		"MOVQ %%r9, (8*3)(%%rdi)\n"
-				: 			// acc4/5/0/1
-				: "S" (y), "D" (result), "a" (carry), [pr1] "m" (sm2_p[1]), [pr3] "m" (sm2_p[3])
-				: "r10", "r11", "r14", "r15", "cc", "memory");
+			: 			// acc4/5/0/1
+			: "D" (result), "a" (carry), [pr1] "m" (sm2_p[1]),
+			[pr3] "m" (sm2_p[3]), "r" (res0), "r" (res1), "r" (res2), "r" (res3)
+			: "r10", "r11", "r14", "r15", "cc", "memory");
 #else
 	result[0] = res0;
 	result[1] = res1;
