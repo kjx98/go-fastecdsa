@@ -127,34 +127,33 @@ void point_double_jacob(const curveT& curve, bnT& x3, bnT& y3, bnT& z3,
 	{
 		/* Use the faster case.  */
 		/* L1 = 3(X - Z^2)(X + Z^2) */
+		/* square is faster than multiple	*/
+		// L1 = 3(X^2 - Z^4)
 		/*						T1: used for Z^2. */
 		/*						T2: used for the right term. */
 		if ( unlikely(z_is_one) ) {
-			// l1 = X - Z^2
-			curve.mod_sub(l1, x1, curve.mont_one());
-			// 3(X - Z^2) = 2(X - Z^2) + (X - Z^2)
+			// l1 = X^2
+			curve.mont_msqr(l1, x1);
+			// l1 = x^2 - z^4
+			curve.mod_sub_from(l1, curve.mont_one());
+			// 3(X^2 - Z^4) = 2(X^2 - Z^4) + (X^2 - Z^4)
 			// t1 = 2 * l1
 			curve.mont_mult2(t1, l1);
-			// l1 = 2 * l1 + l1 = 3(X - Z^2)
 			curve.mod_add_to(l1, t1);
-			// t1 = X + Z^2
-			curve.mod_add(t1, x1, curve.mont_one());
-			// l1 = 3(X - Z^2)(X + Z^2)
-			curve.mont_mmult(l1, l1, t1);
 		} else {
 			// t1 = Z^2
 			curve.mont_msqr(t1, z1);
-			// l1 = X - Z^2
-			curve.mod_sub(l1, x1, t1);
-			// 3(X - Z^2) = 2(X - Z^2) + (X - Z^2)
+			// t2 = t1 ^2 = Z^4
+			curve.mont_msqr(t2, t1);
+			// l1 = X^2
+			curve.mont_msqr(l1, x1);
+			// l1 = x^2 - z^4
+			curve.mod_sub_from(l1, t2);
+			// 3(X^2 - Z^4) = 2(X^2 - Z^4) + (X^2 - Z^4)
 			// t2 = 2 * l1
 			curve.mont_mult2(t2, l1);
 			// l1 = l1 + 2 * l1 = 3(X - Z^2)
 			curve.mod_add_to(l1, t2);
-			// t2 = X + Z^2
-			curve.mod_add(t2, x1, t1);
-			// l1 = 3(X - Z^2)(X + Z^2)
-			curve.mont_mmult(l1, l1, t2);
 		}
 	} else {
 		/* Standard case. */
@@ -236,19 +235,18 @@ void point_doublez_jacob(const curveT& curve, bnT& x3, bnT& y3, bnT& z3,
 	{
 		/* Use the faster case.  */
 		/* L1 = 3(X - Z^2)(X + Z^2) */
+		/* square is faster than multiple	*/
+		// L1 = 3(X^2 - Z^4)
 		/*						T1: used for Z^2. */
 		/*						T2: used for the right term. */
-		// l1 = X - Z^2
-		curve.mod_sub(l1, x1, curve.mont_one());
-		// 3(X - Z^2) = 2(X - Z^2) + (X - Z^2)
+		// l1 = X^2
+		curve.mont_msqr(l1, x1);
+		// l1 = x^2 - z^4
+		curve.mod_sub_from(l1, curve.mont_one());
+		// 3(X^2 - Z^4) = 2(X^2 - Z^4) + (X^2 - Z^4)
 		// t1 = 2 * l1
 		curve.mont_mult2(t1, l1);
-		// l1 = 2 * l1 + l1 = 3(X - Z^2)
 		curve.mod_add_to(l1, t1);
-		// t1 = X + Z^2
-		curve.mod_add(t1, x1, curve.mont_one());
-		// l1 = 3(X - Z^2)(X + Z^2)
-		curve.mont_mmult(l1, l1, t1);
 	} else {
 		/* Standard case. */
 		/* L1 = 3X^2 + aZ^4 */
@@ -299,6 +297,7 @@ void point_doublez_jacob(const curveT& curve, bnT& x3, bnT& y3, bnT& z3,
 }
 
 
+#ifdef	WITH_DBL_2004hmv
 // point add & double template
 /* dbl-2004-hmv algorithm
  * http://hyperelliptic.org/EFD/g1p/auto-shortw-jacobian.html
@@ -322,26 +321,22 @@ void point_double3n_jacob(const curveT& curve, bnT& x3, bnT& y3, bnT& z3,
 #endif
 	bool	z_is_one = (curve.mont_one() == z1);
 	bnT	t1, t2, t3;
-	// t2 = 3(x1 + z1^2)(x1 - z1^2)
+	// t2 = 3(x1^2 - z1^4)
 	if ( unlikely(z_is_one) ) {
-		// t2 = X - Z^2
-		curve.mod_sub(t2, x1, curve.mont_one());
-		curve.mod_add(t1, x1, curve.mont_one());
-		curve.mont_mmult(t2, t2, t1);
+		// t2 = X^2 - Z^4
+		curve.mont_msqr(t2, x1);
+		curve.mod_sub_from(t2, curve.mont_one());
 		curve.mont_mult2(t1, t2);
 		curve.mod_add_to(t2, t1);
 	} else {
-		// t1 = Z^2
-		curve.mont_msqr(t1, z1);
-		// t2 = X - Z^2
-		curve.mod_sub(t2, x1, t1);
-		// t1 = X + Z^2
-		curve.mod_add_to(t1, x1);
-		curve.mont_mmult(t2, t2, t1);
-		// t2 = (x1 + z1^2) ( x1 - z1^2)
+		// t1 = Z^4
+		curve.mont_msqr(t1, z1, 2);
+		// t2 = X^2 - Z^4
+		curve.mont_msqr(t2, x1);
+		curve.mod_sub_from(t2, t1);
 		// t1 = 2 * t2
 		curve.mont_mult2(t1, t2);
-		// t2 = t2 + 2 * t2 = 3(X - Z^2)
+		// t2 = t2 + 2 * t2 = 3(X^2 - Z^4)
 		curve.mod_add_to(t2, t1);
 	}
 
@@ -375,6 +370,90 @@ void point_double3n_jacob(const curveT& curve, bnT& x3, bnT& y3, bnT& z3,
 	// y3 = t1 - y3
 	curve.mod_sub(y3, t1, y3);
 }
+#else
+// point add & double template
+/* dbl-2007-bl algorithm
+ * http://hyperelliptic.org/EFD/g1p/auto-shortw-jacobian.html
+ */
+// x,y,z in montgomery form
+template<typename bnT, typename curveT>
+forceinline static
+void point_double3n_jacob(const curveT& curve, bnT& x3, bnT& y3, bnT& z3,
+		const bnT &x1, const bnT &y1, const bnT &z1) noexcept
+{
+#ifdef	ommit
+	if ( unlikely(z1.is_zero()) ) // | y1.is_zero())
+	{
+		/* P_y == 0 || P_z == 0 => [1:1:0] */
+		//x3 = bnT(1);
+		x3.clear();
+		y3 = bnT(1);
+		z3.clear();
+		return;
+	}
+#endif
+	bool	z_is_one = (curve.mont_one() == z1);
+	bnT		t1, t2;
+	bnT		yy2, zz;
+	// xx via x3
+	// yy via y3
+	// t1 = zz, t2 = xx, 
+	// t2 = 3(x1^2 - z1^4)
+	// M = t2
+	if ( unlikely(z_is_one) ) {
+		// t2 = X^2 - Z^4
+		zz = curve.mont_one();
+		curve.mont_msqr(x3, x1);
+		curve.mod_sub(t2, x3, curve.mont_one());
+		curve.mont_mult2(t1, t2);
+		curve.mod_add_to(t2, t1);
+	} else {
+		curve.mont_msqr(zz, z1);
+		// t1 = zz^2 = Z^4
+		curve.mont_msqr(t1, zz);
+		// t2 = X^2 - Z^4
+		curve.mont_msqr(x3, x1);
+		curve.mod_sub(t2, x3, t1);
+		// t1 = 2 * t2
+		curve.mont_mult2(t1, t2);
+		// t2 = t2 + 2 * t2 = 3(X^2 - Z^4)
+		curve.mod_add_to(t2, t1);
+	}
+
+	// z3 = (y1 + z1)^2 - yy - zz
+	curve.mont_msqr(y3, y1);
+	curve.mont_msqr(yy2, y3);
+	// z3 = (y1 + z1)^2
+	curve.mod_add(z3, y1, z1);
+	curve.mont_msqr(z3, z3);
+	// z3 = (y1 + z1)^2 - yy - zz
+	curve.mod_sub_from(z3, y3);
+	curve.mod_sub_from(z3, zz);
+
+	// S = t1 = 2 * ((x1 + yy)^2 - xx - yyyy)
+	curve.mod_add(t1, x1, y3);
+	curve.mont_msqr(t1, t1);
+	curve.mod_sub_from(t1, x3);
+	curve.mod_sub_from(t1, yy2);
+	curve.mont_mult2(t1, t1);
+
+	// X3 = T = M^2 - 2 * S = t2^2 - 2 * t1
+	// y3 = 2 * t1 = 2 * S
+	curve.mont_mult2(y3, t1);
+	curve.mont_msqr(x3, t2);
+	curve.mod_sub_from(x3, y3);
+
+	// y3 = M * (S - T) - 8YYYY
+	// y3 = t2 * (t1 - x3) - 8* yy2
+	// y3 = t1 - x3 = S - T
+	curve.mod_sub(y3, t1, x3);
+	// y3 = M * (S - T) = t2 * (S - T)
+	curve.mont_mmult(y3, t2 , y3);
+	curve.mont_mult8(yy2);
+	// y3 = M * (S - T) - 8 * yy2
+	curve.mod_sub_from(y3, yy2);
+}
+#endif	// WITH_DBL_2004hmv
 
 /* add-1998-cmo-2 algorithm
  * http://hyperelliptic.org/EFD/g1p/auto-shortw-jacobian-3.html
