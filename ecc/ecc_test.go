@@ -10,6 +10,7 @@ var (
 	x1, y1  *big.Int
 	x2, y2  *big.Int
 	d1, d2  *big.Int
+	bTwo    *big.Int
 	rr, rrN []uint64
 	k0N     uint64
 )
@@ -25,6 +26,7 @@ func init() {
 	rrN = []uint64{0x901192af7c114f20, 0x3464504ade6fa2fa,
 		0x620fc84c3affe0d4, 0x1eb5e412a22b3d3b}
 	k0N = 0x327f9e8872350975
+	bTwo = big.NewInt(2)
 }
 
 func dumpBits(v *big.Int, t *testing.T) {
@@ -35,7 +37,7 @@ func dumpBits(v *big.Int, t *testing.T) {
 	}
 	cOne := true
 	bitsC := 0
-	for  i := bLen-1; i>=0; i-- {
+	for i := bLen - 1; i >= 0; i-- {
 		if cOne {
 			if v.Bit(i) == 0 {
 				t.Logf("%d one ", bitsC)
@@ -56,7 +58,9 @@ func dumpBits(v *big.Int, t *testing.T) {
 	}
 	if bitsC > 0 {
 		ss := "one"
-		if !cOne { ss = "zero" }
+		if !cOne {
+			ss = "zero"
+		}
 		t.Logf("%d %s\n", bitsC, ss)
 	}
 }
@@ -110,11 +114,12 @@ func TestSM2MultP(t *testing.T) {
 		t.Fail()
 	} else {
 		t.Log("polynomial Prime OK")
-		/*
-			ww := polyP.Bits()
-			t.Logf("sm2 polyP diff P: %X %X %X %X %X", ww[0], ww[1], ww[2],
-				ww[3], ww[4])
-		*/
+		polyP.Sub(p, bTwo)
+		t.Log("Dump P - 2:")
+		dumpBits(polyP, t)
+		polyP.Sub(sm2.P256().Params().N, bTwo)
+		t.Log("Dump N - 2:")
+		dumpBits(polyP, t)
 	}
 }
 
