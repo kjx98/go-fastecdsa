@@ -91,7 +91,6 @@ sm2p_reduction(u64 *result, const u64 *y, const bool isProd=false) noexcept
 	register u64 res1 asm("r13");
 	register u64 res2 asm("r8");
 	register u64 res3 asm("r9");
-	u64	carry;
 	asm volatile("MOVQ (8*0)(%%rsi), %%r8\n"
 		"MOVQ (8*1)(%%rsi), %%r9\n"
 		"MOVQ (8*2)(%%rsi), %%r10\n"
@@ -120,9 +119,9 @@ sm2p_reduction(u64 *result, const u64 *y, const bool isProd=false) noexcept
 "SHRQ $32, %%r15\n"
 "ADDQ %%rax, %%r10\n"
 "adcq $0, %%r11\n"
-"adcq $0, %%r12%\n"
-"adcq %%rax, %%r13%\n"
-"subq %$r9, %%r10\n"
+"adcq $0, %%r12\n"
+"adcq %%rax, %%r13\n"
+"subq %%r9, %%r10\n"
 "sbbq %%r15, %%r11\n"
 "sbbq %%r9, %%r12\n"
 "sbbq %%r15, %%r13\n"
@@ -150,17 +149,18 @@ sm2p_reduction(u64 *result, const u64 *y, const bool isProd=false) noexcept
 "adcq $0, %%r13\n"
 "adcq $0, %%r8\n"
 "adcq %%rax, %%r9\n"
-"movq $0, %%rax\n"
-"adcq $0, %%rax\n"
 "subq %%r11, %%r12\n"
 "sbbq %%r15, %%r13\n"
 "sbbq %%r11, %%r8\n"
 "sbbq %%r15, %%r9\n"
-"sbbq $0, %%rax\n"
-				: "=a" (carry), "=r" (res0), "=r" (res1), "=r" (res2), "=r" (res3)
+//"movq $0, %%rax\n"
+//"sbbq $0, %%rax\n"
+				: "=r" (res0), "=r" (res1), "=r" (res2), "=r" (res3)
 				: "S" (y)
-				: "r10", "r11", "r14", "r15", "cc");
+				: "rax", "r10", "r11", "r14", "r15", "cc", "memory");
 
+	u64	carry = 0;
+	//if (carry != 0) carry = 1;
 	// add high 256 bits
 	if ( unlikely(isProd) )
 	{
