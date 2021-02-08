@@ -402,9 +402,9 @@ void point_double3n_jacob(const curveT& curve, bnT& x3, bnT& y3, bnT& z3,
 	// M = t2
 	if ( unlikely(z_is_one) ) {
 		// t2 = X^2 - Z^4
-		zz = curve.mont_one();
+		zz = z1;
 		curve.mont_msqr(x3, x1);
-		curve.mod_sub(t2, x3, curve.mont_one());
+		curve.mod_sub(t2, x3, z1);
 		curve.mont_mult2(t1, t2);
 		curve.mod_add_to(t2, t1);
 	} else {
@@ -420,9 +420,13 @@ void point_double3n_jacob(const curveT& curve, bnT& x3, bnT& y3, bnT& z3,
 		curve.mod_add_to(t2, t1);
 	}
 
-	// z3 = (y1 + z1)^2 - yy - zz
+	// y3 = y1 ^2
+	// yy2 = y3^2 = y1 ^4
+	// x3 = x1 ^2
 	curve.mont_msqr(y3, y1);
 	curve.mont_msqr(yy2, y3);
+	curve.mont_msqr(x3, x1);
+	// z3 = (y1 + z1)^2 - yy - zz
 	// z3 = (y1 + z1)^2
 	curve.mod_add(z3, y1, z1);
 	curve.mont_msqr(z3, z3);

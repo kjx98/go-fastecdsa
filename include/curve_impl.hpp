@@ -1096,7 +1096,12 @@ public:
 		if ( p.z == this->mont_one() )
 			point_doublez_jacob<true>(*this, q.x, q.y, q.z, p.x, p.y);
 		else
+#if	defined(WITH_DBL_2004hmv) && __cplusplus >= 201703L
+//#if	__cplusplus >= 201703L
+			point_double3n_jacob(*this, q.x, q.y, q.z, p.x, p.y, p.z);
+#else
 			point_double_jacob<true>(*this, q.x, q.y, q.z, p.x, p.y, p.z);
+#endif
 	}
 	void point_double(point_t<4>& q, const felem_t& x1, const felem_t& y1)
 	const noexcept
