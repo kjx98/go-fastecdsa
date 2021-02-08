@@ -1179,6 +1179,67 @@ private:
 			if (y.test_bit(i)) mont_mmult(res, res, xp);
 		}
 	}
+	// x^quadP modulo prime, xp is x in motgomery form
+	void mont_mod_exp_quadP(felem_t& res, const felem_t& xp)
+	const noexcept
+	{
+		res = xp;
+
+		felem_t	bn_tbl[6];	// _1, _11, _101, _111, _1111, _10101
+		felem_t	tmp, x8, x16, x32;
+		felem_t	*_1 = bn_tbl;
+		felem_t	*_11 = bn_tbl + 1;
+		// precompute
+		*_1 = xp;
+		mont_msqr(tmp, *_1);
+		mont_mmult(*_11, tmp, *_1);
+		mont_mmult(bn_tbl[2], tmp, *_11);	// _101
+		mont_mmult(bn_tbl[3], tmp, bn_tbl[2]);	// _111
+		mont_msqr(tmp, bn_tbl[2]);	// _1010
+		mont_mmult(bn_tbl[4], bn_tbl[2], tmp);	// _1111
+		//mont_msqr(tmp, tmp);	// _10100
+		//mont_mmult(bn_tbl[5], tmp, xp);	// _10101
+		mont_msqr(tmp, bn_tbl[4], 4);
+		mont_mmult(x8, tmp, bn_tbl[4]);
+		mont_msqr(tmp, x8, 8);
+		mont_mmult(x16, tmp, x8);
+		mont_msqr(tmp, x16, 16);
+		mont_mmult(x32, tmp, x16);
+
+		mont_msqr(res, x16, 8);
+		mont_mmult(res, res, x8);
+		mont_msqr(res, res, 4);
+		mont_mmult(res, res, bn_tbl[4]);	// _1111
+		mont_msqr(res, res, 3);
+		mont_mmult(res, res, bn_tbl[3]);	// _111
+		mont_msqr(res, res);
+		mont_msqr(res, res, 32);
+		mont_mmult(res, res, x32);
+		mont_msqr(res, res, 32);
+		mont_mmult(res, res, x32);
+		mont_msqr(res, res, 32);
+		mont_mmult(res, res, x32);
+		mont_msqr(res, res, 32);
+		mont_mmult(res, res, x32);
+		mont_msqr(res, res, 32);
+		mont_msqr(res, res, 32);
+		mont_mmult(res, res, x32);
+		mont_msqr(res, res, 16);
+		mont_mmult(res, res, x16);
+		mont_msqr(res, res, 8);
+		mont_mmult(res, res, x8);
+		mont_msqr(res, res, 4);
+		mont_mmult(res, res, bn_tbl[4]);	// _1111
+		mont_msqr(res, res, 2);
+		mont_mmult(res, res, bn_tbl[1]);	// _11
+#ifdef	ommit
+		for (int i = this->_quadP.num_bits()-2; i >= 0; --i) {
+			//mont_msqr(res, res);
+			mont_msqr(res, res);
+			if (this->_quadP.test_bit(i)) mont_mmult(res, res, xp);
+		}
+#endif
+	}
 	void scalar_mult_base_internal(point_t<4>& q, const felem_t& scalar)
 		const noexcept
 	{
