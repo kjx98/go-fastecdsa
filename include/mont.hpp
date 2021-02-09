@@ -292,11 +292,11 @@ vli_mont_mult(u64 *result, const u64 *x, const u64 *y, const u64 *prime,
 #endif
 	vli_clear<N + 1>(r);
 	for (uint i=0; i < N;i++) {
-		u64	u = (r[0] + y[i]*x[0]) * k0;
+		vli_umult2<N>(s, x, y[i]);
+		vli_add_to<N + 1>(r, s);
+		u64	u = r[0] * k0;
 		vli_umult2<N>(s, prime, u);
 		u = vli_add_to<N + 1>(r, s);
-		vli_umult2<N>(s, x, y[i]);
-		u += vli_add_to<N + 1>(r, s);
 		vli_rshift1w<N + 1>(r, u);	
 	}
 	vli_mod<N>(result, r, prime, r[N] != 0);
@@ -319,11 +319,11 @@ vli_mont_sqr(u64 *result, const u64 *x, const u64 *prime, const u64 k0) noexcept
 #endif
 	vli_clear<N + 1>(r);
 	for (uint i=0; i < N;i++) {
-		u64	u = (r[0] + x[i]*x[0]) * k0;
+		vli_umult2<N>(s, x, x[i]);
+		vli_add_to<N + 1>(r, s);
+		u64	u = r[0] * k0;
 		vli_umult2<N>(s, prime, u);
 		u = vli_add_to<N + 1>(r, s);
-		vli_umult2<N>(s, x, x[i]);
-		u += vli_add_to<N + 1>(r, s);
 		vli_rshift1w<N + 1>(r, u);	
 	}
 	vli_mod<N>(result, r, prime, r[N] != 0);
@@ -355,11 +355,11 @@ mont_mult(u64 *result, const u64 *x, const u64 *y, const u64 *prime) noexcept
 	u64	r[N + 1];
 	vli_clear<N + 1>(r);
 	for (uint i=0; i < N;i++) {
-		u64	u = (r[0] + y[i]*x[0]) * k0;
+		vli_umult2<N>(s, x, y[i]);
+		vli_add_to<N + 1>(r, s);
+		u64	u = r[0] * k0;
 		vli_umult2<N>(s, prime, u);
 		u = vli_add_to<N + 1>(r, s);
-		vli_umult2<N>(s, x, y[i]);
-		u += vli_add_to<N + 1>(r, s);
 		vli_rshift1w<N + 1>(r, u);	
 	}
 	vli_mod<N>(result, r, prime, r[N] != 0);
@@ -402,11 +402,11 @@ mont_sqr(u64 *result, const u64 *x, const u64 *prime) noexcept
 	u64	r[N + 1];
 	vli_clear<N + 1>(r);
 	for (uint i=0; i < N;i++) {
-		u64	u = (r[0] + x[i]*x[0]) * k0;
+		vli_umult2<N>(s, x, x[i]);
+		vli_add_to<N + 1>(r, s);
+		u64	u = r[0] * k0;
 		vli_umult2<N>(s, prime, u);
 		u = vli_add_to<N + 1>(r, s);
-		vli_umult2<N>(s, x, x[i]);
-		u += vli_add_to<N + 1>(r, s);
 		vli_rshift1w<N + 1>(r, u);	
 	}
 	vli_mod<N>(result, r, prime, r[N] != 0);
