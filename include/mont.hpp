@@ -365,6 +365,35 @@ mont_mult(u64 *result, const u64 *x, const u64 *y, const u64 *prime) noexcept
 	vli_mod<N>(result, r, prime, r[N] != 0);
 }
 
+forceinline static void
+sm2p_mult(u64 *result, const u64 *x, const u64 *y) noexcept
+{
+	u64	s[4+1];
+	u64	r[4+1];
+	vli_clear<4 + 1>(r);
+	for (uint i=0; i < 4;i++) {
+		u64	u = r[0] + y[i]*x[0];
+#ifdef	WITH_SM2_PH
+		vli_sm2_multPh(s, u);
+		vli_rshift1w<4>(r, r[4]);
+		r[4] = vli_add_to<4>(r, s);
+		vli_umult2<4>(s, x, y[i]);
+		r[4] += vli_add_to<4>(r, s+1);
+#else
+		vli_umult2<4>(s, sm2_p, u);
+		u = vli_add_to<4 + 1>(r, s);
+		vli_umult2<4>(s, x, y[i]);
+		u += vli_add_to<4 + 1>(r, s);
+		vli_rshift1w<4 + 1>(r, u);	
+#endif
+	}
+#if	__cplusplus >= 201703L && defined(WITH_ASM)
+	sm2p_mod(result, r, sm2_p, r[4] != 0);
+#else
+	vli_mod<4>(result, r, sm2_p, r[4] != 0);
+#endif
+}
+
 template<const uint N, const u64 k0> forceinline
 static void
 mont_sqr(u64 *result, const u64 *x, const u64 *prime) noexcept

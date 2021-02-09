@@ -591,35 +591,6 @@ public:
 	{
 		vli_mont_mult<N>(this->d, x.d, y.d, prime.d, k0);
 	}
-	void friend mont_multK01(bignum& res, const bignum& x, const bignum& y,
-			const bignum& prime) noexcept
-	{
-		u64	s[N+1];
-		u64	r[N+1];
-		vli_clear<N + 1>(r);
-		for (uint i=0; i < N;i++) {
-			u64	u = r[0] + y.d[i]*x.d[0];
-#ifdef	NO_WITH_SM2_PH
-			vli_sm2_multPh(s, u);
-			vli_rshift1w<N>(r, r[N]);
-			r[N] = vli_add_to<N>(r, s);
-			vli_umult2<N>(s, x.d, y.d[i]);
-			r[N] += vli_add_to<N>(r, s+1);
-#else
-			vli_umult2<N>(s, prime.d, u);
-			u = vli_add_to<N + 1>(r, s);
-			vli_umult2<N>(s, x.d, y.d[i]);
-			u += vli_add_to<N + 1>(r, s);
-			vli_rshift1w<N + 1>(r, u);	
-#endif
-		}
-#if	__cplusplus >= 201703L && defined(WITH_ASM)
-		if constexpr(N==4) {
-			sm2p_mod(res.d, r, prime.d, r[N] != 0);
-		} else
-#endif
-		vli_mod<N>(res.d, r, prime.d, r[N] != 0);
-	}
 	template<const u64 k0> forceinline friend
 	void mont_sqr(bignum& res, const bignum& x, const bignum& prime) noexcept
 	{

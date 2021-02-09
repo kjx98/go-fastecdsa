@@ -162,11 +162,11 @@ static void mont_mulp(bignum<4>& res, const bignum<4>& x, const bignum<4>& y)
 
 static void mont_mulK01(bignum<4>& res, const bignum<4>& x, const bignum<4>& y)
 {
-	bignum<4>	xp, yp;
-	mont_multK01(xp, x, rr, prime);
-	mont_multK01(yp, y, rr, prime);
-	mont_multK01(res, xp, yp, prime);
-	mont_reductionK01(res, res, prime);
+	u64			xp[4], yp[4];
+	sm2p_mult(xp, x.data(), rr.data());
+	sm2p_mult(yp, y.data(), rr.data());
+	sm2p_mult(xp, xp, yp);
+	mont_reductionK01(res, bignum<4>(xp), prime);
 }
 
 static void mont_sqrN(u64 *res, const bignum<4>& x)
