@@ -784,12 +784,12 @@ mont_mod_exp(const curveT& curve, bnT& res, const bnT& xp, const bnT& y) noexcep
 	curve.mont_mmult(bn_tbl[3], tmp, bn_tbl[2]);	// _111
 	curve.mont_msqr(tmp, bn_tbl[2]);	// _1010
 	curve.mont_mmult(bn_tbl[4], bn_tbl[2], tmp);	// _1111
-	uint	idx = y.num_bits();
+	int	idx = y.num_bits();
 	if ( unlikely(idx < 4) ) return false;
 	uint	bits;
 	bits = vli_get_bits<N, 4>(y.data(), idx-4);
 	{
-		bitsTable& tb = mapTable[bits-1];
+		bitsTable& tb = mapTable[(bits-1) & 0xf];
 		res = bn_tbl[tb.idx];
 		if (tb.tailing != 0) {
 			curve.mont_msqr(res, res, tb.tailing);
@@ -820,9 +820,8 @@ mont_mod_exp(const curveT& curve, bnT& res, const bnT& xp, const bnT& y) noexcep
 	if (idx > 0)
 	{
 		bits = vli_get_bits<N, 4>(y.data(), 0);
-		if (bits == 0) {
-			curve.mont_msqr(res, res, idx);
-		}
+		bits &= (1 << idx) -1;
+		curve.mont_msqr(res, res, idx);
 		bitsTable& tb = mapTable[bits-1];
 		curve.mont_msqr(res, res, tb.leading);
 		curve.mont_mmult(res, res, bn_tbl[tb.idx]);
@@ -830,6 +829,7 @@ mont_mod_exp(const curveT& curve, bnT& res, const bnT& xp, const bnT& y) noexcep
 			curve.mont_msqr(res, res, tb.tailing);
 		}
 	}
+	return true;
 }
 
 template<typename bnT, typename curveT>

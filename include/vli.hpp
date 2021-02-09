@@ -107,7 +107,7 @@ static forceinline u64 u64_addc(const u64 a, const u64 b, u64& carry)
 				"addq %3, %0\n"
 				"adcq $0, %1\n"
 				: "+r" (ret), "+r" (carry)
-				: "r" (a),"r" (b)
+				: "r" (a),"rm" (b)
 				: "cc");
 	return ret;
 #elif	__clang__ > 3
@@ -158,7 +158,7 @@ static forceinline u64 u64_subc(const u64 a, const u64 b, u64& carry)
 				"subq %2, %0\n"
 				"adcq $0, %1\n"
 				: "+r" (ret), "+r" (carry)
-				: "r" (b) 
+				: "rm" (b) 
 				: "cc");
 	return ret;
 #elif	__clang__ > 3
@@ -658,6 +658,7 @@ static uint vli_get_bits(const u64 *vli, const int bit) noexcept
 	static_assert(cnt <= 8, "w of wNAF MUST no larger than 8");
 	uint	rr;
 	if (unlikely(bit < 0)) {
+		// bit MUST BE -1
 		rr = vli[0] << 1;
 		return rr & ((1<<cnt) - 1);
 	}

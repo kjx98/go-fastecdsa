@@ -240,6 +240,7 @@ public:
 		felem_t		tmp;
 		to_montgomery(tmp, x1);
 		mont_mod_exp(res, tmp, y1);
+		//ecc::mont_mod_exp<N>(*this, res, tmp, y1);
 		from_montgomery(res, res);
 	}
 	bool mod_sqrt(felem_t& res, const felem_t& x) const noexcept
@@ -248,6 +249,7 @@ public:
 		to_montgomery(xp, x);
 		felem_t	a1;
 		this->mont_mod_exp(a1, xp, this->quadP());
+		//ecc::mont_mod_exp<N>(*this, a1, xp, this->quadP());
 		felem_t	a0;
 		mont_mmult(res, a1, xp);
 		mont_mmult(a0, res, a1);
