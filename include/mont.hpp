@@ -368,27 +368,219 @@ mont_mult(u64 *result, const u64 *x, const u64 *y, const u64 *prime) noexcept
 forceinline static void
 sm2p_mult(u64 *result, const u64 *x, const u64 *y) noexcept
 {
+#ifdef	__x86_64__1
+	asm volatile(
+	// x * y[0]
+MOVQ (8*0)(%0), %%r14
+
+MOVQ (8*0)(%%rsi), %%RAX
+MULQ %%r14
+MOVQ %%RAX, %%r8
+MOVQ %%RDX, %%r9
+
+MOVQ (8*1)(%%rsi), %%RAX
+MULQ %%r14
+ADDQ %%RAX, %%r9
+ADCQ $0, %%RDX
+MOVQ %%RDX, %%r10
+
+MOVQ (8*2)(%%rsi), %%RAX
+MULQ %%r14
+ADDQ %%RAX, %%r10
+ADCQ $0, %%RDX
+MOVQ %%RDX, %%r11
+
+MOVQ (8*3)(%%rsi), %%RAX
+MULQ %%r14
+ADDQ %%RAX, %%r11
+ADCQ $0, %%RDX
+MOVQ %%RDX, %%r12
+XORQ %%r13, %%r13
+	// First reduction step
+MOVQ %%r8, %%RAX
+MOVQ %%r8, %%r15
+SHLQ $32, %%r8
+MULQ p256cons%%r15<>(SB)
+SHRQ $32, %%r15
+ADDQ %%r8, %%r9
+ADCQ %%r15, %%r10
+ADCQ %%RAX, %%r11
+ADCQ %%RDX, %%r12
+ADCQ $0, %%r13
+XORQ %%r8, %%r8
+	// x * y[1]
+MOVQ (8*1)(%0), %%r14
+
+MOVQ (8*0)(%%rsi), %%RAX
+MULQ %%r14
+ADDQ %%RAX, %%r9
+ADCQ $0, %%RDX
+MOVQ %%RDX, %%r15
+
+MOVQ (8*1)(%%rsi), %%RAX
+MULQ %%r14
+ADDQ %%r15, %%r10
+ADCQ $0, %%RDX
+ADDQ %%RAX, %%r10
+ADCQ $0, %%RDX
+MOVQ %%RDX, %%r15
+
+MOVQ (8*2)(%%rsi), %%RAX
+MULQ %%r14
+ADDQ %%r15, %%r11
+ADCQ $0, %%RDX
+ADDQ %%RAX, %%r11
+ADCQ $0, %%RDX
+MOVQ %%RDX, %%r15
+
+MOVQ (8*3)(%%rsi), %%RAX
+MULQ %%r14
+ADDQ %%r15, %%r12
+ADCQ $0, %%RDX
+ADDQ %%RAX, %%r12
+ADCQ %%RDX, %%r13
+ADCQ $0, %%r8
+	// Second reduction step
+MOVQ %%r9, %%RAX
+MOVQ %%r9, %%r15
+SHLQ $32, %%r9
+MULQ p256cons%%r15<>(SB)
+SHRQ $32, %%r15
+ADDQ %%r9, %%r10
+ADCQ %%r15, %%r11
+ADCQ %%RAX, %%r12
+ADCQ %%RDX, %%r13
+ADCQ $0, %%r8
+XORQ %%r9, %%r9
+	// x * y[2]
+MOVQ (8*2)(%0), %%r14
+
+MOVQ (8*0)(%%rsi), %%RAX
+MULQ %%r14
+ADDQ %%RAX, %%r10
+ADCQ $0, %%RDX
+MOVQ %%RDX, %%r15
+
+MOVQ (8*1)(%%rsi), %%RAX
+MULQ %%r14
+ADDQ %%r15, %%r11
+ADCQ $0, %%RDX
+ADDQ %%RAX, %%r11
+ADCQ $0, %%RDX
+MOVQ %%RDX, %%r15
+
+MOVQ (8*2)(%%rsi), %%RAX
+MULQ %%r14
+ADDQ %%r15, %%r12
+ADCQ $0, %%RDX
+ADDQ %%RAX, %%r12
+ADCQ $0, %%RDX
+MOVQ %%RDX, %%r15
+
+MOVQ (8*3)(%%rsi), %%RAX
+MULQ %%r14
+ADDQ %%r15, %%r13
+ADCQ $0, %%RDX
+ADDQ %%RAX, %%r13
+ADCQ %%RDX, %%r8
+ADCQ $0, %%r9
+	// Third reduction step
+MOVQ %%r10, %%RAX
+MOVQ %%r10, %%r15
+SHLQ $32, %%r10
+MULQ p256cons%%r15<>(SB)
+SHRQ $32, %%r15
+ADDQ %%r10, %%r11
+ADCQ %%r15, %%r12
+ADCQ %%RAX, %%r13
+ADCQ %%RDX, %%r8
+ADCQ $0, %%r9
+XORQ %%r10, %%r10
+	// x * y[3]
+MOVQ (8*3)(%0), %%r14
+
+MOVQ (8*0)(%%rsi), %%RAX
+MULQ %%r14
+ADDQ %%RAX, %%r11
+ADCQ $0, %%RDX
+MOVQ %%RDX, %%r15
+
+MOVQ (8*1)(%%rsi), %%RAX
+MULQ %%r14
+ADDQ %%r15, %%r12
+ADCQ $0, %%RDX
+ADDQ %%RAX, %%r12
+ADCQ $0, %%RDX
+MOVQ %%RDX, %%r15
+
+MOVQ (8*2)(%%rsi), %%RAX
+MULQ %%r14
+ADDQ %%r15, %%r13
+ADCQ $0, %%RDX
+ADDQ %%RAX, %%r13
+ADCQ $0, %%RDX
+MOVQ %%RDX, %%r15
+
+MOVQ (8*3)(%%rsi), %%RAX
+MULQ %%r14
+ADDQ %%r15, %%r8
+ADCQ $0, %%RDX
+ADDQ %%RAX, %%r8
+ADCQ %%RDX, %%r9
+ADCQ $0, %%r10
+	// Last reduction step
+MOVQ %%r11, %%RAX
+MOVQ %%r11, %%r15
+SHLQ $32, %%r11
+MULQ p256cons%%r15<>(SB)
+SHRQ $32, %%r15
+ADDQ %%r11, %%r12
+ADCQ %%r15, %%r13
+ADCQ %%RAX, %%r8
+ADCQ %%RDX, %%r9
+ADCQ $0, %%r10
+	// Copy result [255:0]
+MOVQ %%r12, %%rax
+MOVQ %%r13, %%r11
+MOVQ %%r8, %%r14
+MOVQ %%r9, %%r15
+	// Subtract p256
+SUBQ $-1, %%r12
+SBBQ %[pr1] ,%%r13
+SBBQ $-1, %%r8
+SBBQ %[pr3], %%r9
+SBBQ $0, %%r10
+
+CMOVCQ %%rax, %%r12
+CMOVCQ %%r11, %%r13
+CMOVCQ %%r14, %%r8
+CMOVCQ %%r15, %%r9
+
+MOVQ %%r12, (8*0)(%%rdi)
+MOVQ %%r13, (8*1)(%%rdi)
+MOVQ %%r8, (8*2)(%%rdi)
+MOVQ %%r9, (8*3)(%%rdi)
+			: 			// acc4/5/0/1
+			: "r" (y), "D" (result), "S" (x), [pr1] "m" (sm2_p[1]),
+			[pr3] "m" (sm2_p[3])
+			: "rax", "rdx", "r8", "r9", "r12", "r13", "r10", "r11", "r14",
+			"r15", "cc", "memory");
+#else
 	u64	s[4+1];
 	u64	r[4+1];
 	vli_clear<4 + 1>(r);
 	for (uint i=0; i < 4;i++) {
 		vli_umult2<4>(s, x, y[i]);
 		vli_add_to<4 + 1>(r, s);
-#ifndef	NO_SM2_PH
 		vli_sm2_multPh(s, r[0]);
 		vli_rshift1w<4>(r, r[4]);
 		r[4] = vli_add_to<4>(r, s);
-#else
-		u64	u;
-		vli_umult2<4>(s, sm2_p, r[0]);
-		u = vli_add_to<4 + 1>(r, s);
-		vli_rshift1w<4 + 1>(r, u);	
-#endif
 	}
 #if	__cplusplus >= 201703L && defined(WITH_ASM)
 	sm2p_mod(result, r, sm2_p, r[4] != 0);
 #else
 	vli_mod<4>(result, r, sm2_p, r[4] != 0);
+#endif
 #endif
 }
 
