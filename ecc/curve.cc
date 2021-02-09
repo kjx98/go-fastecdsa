@@ -41,10 +41,10 @@
 
 using namespace vli;
 using namespace ecc;
-#ifndef	WITH_SM2K256
+#ifdef	NO_SM2K256
 using curve_t = ecc::ecc_curve<4>;
 #else
-using curve_t = ecc::curve256<1>;
+using curve_t = ecc::curve256;
 #endif
 
 static forceinline const curve_t *ecc_get_curve(uint curve_id) noexcept
@@ -52,7 +52,7 @@ static forceinline const curve_t *ecc_get_curve(uint curve_id) noexcept
 	const curve_t	*ret=nullptr;
 	switch (curve_id) {
 	/* In FIPS mode only allow P256 and higher */
-#ifndef	WITH_SM2K256
+#ifdef	NO_SM2K256
 #ifdef	ommit
 	case ECC_CURVE_SECP256K1:
 		ret =  secp256k1;
@@ -66,7 +66,7 @@ static forceinline const curve_t *ecc_get_curve(uint curve_id) noexcept
 		break;
 #else
 	case ECC_CURVE_SM2:
-		sm2_k256.g_precompute();
+		//sm2_k256.g_precompute();
 		ret =  &sm2_k256;
 		break;
 #endif
