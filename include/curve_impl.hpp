@@ -872,7 +872,12 @@ public:
 	}
 	void mont_mmult(felem_t& res, const felem_t& left, const felem_t& right)
 	const noexcept {
+#ifdef	ommit
 		mont_mult<1>(res, left, right, this->p);
+#else
+		u64   *resp = reinterpret_cast<u64 *>(&res);
+		sm2p_mult(resp, left.data(), right.data());
+#endif
 	}
 	void mont_msqr(felem_t& res, const felem_t left, const uint nTimes=1)
 	const noexcept {

@@ -368,198 +368,214 @@ mont_mult(u64 *result, const u64 *x, const u64 *y, const u64 *prime) noexcept
 forceinline static void
 sm2p_mult(u64 *result, const u64 *x, const u64 *y) noexcept
 {
-#ifdef	__x86_64__1
+#ifdef	__x86_64__
 	asm volatile(
 	// x * y[0]
-MOVQ (8*0)(%0), %%r14
+"MOVQ (8*0)(%0), %%r14\n"
 
-MOVQ (8*0)(%%rsi), %%RAX
-MULQ %%r14
-MOVQ %%RAX, %%r8
-MOVQ %%RDX, %%r9
+"MOVQ (8*0)(%%rsi), %%RAX\n"
+"MULQ %%r14\n"
+"MOVQ %%RAX, %%r8\n"
+"MOVQ %%RDX, %%r9\n"
 
-MOVQ (8*1)(%%rsi), %%RAX
-MULQ %%r14
-ADDQ %%RAX, %%r9
-ADCQ $0, %%RDX
-MOVQ %%RDX, %%r10
+"MOVQ (8*1)(%%rsi), %%RAX\n"
+"MULQ %%r14\n"
+"ADDQ %%RAX, %%r9\n"
+"ADCQ $0, %%RDX\n"
+"MOVQ %%RDX, %%r10\n"
 
-MOVQ (8*2)(%%rsi), %%RAX
-MULQ %%r14
-ADDQ %%RAX, %%r10
-ADCQ $0, %%RDX
-MOVQ %%RDX, %%r11
+"MOVQ (8*2)(%%rsi), %%RAX\n"
+"MULQ %%r14\n"
+"ADDQ %%RAX, %%r10\n"
+"ADCQ $0, %%RDX\n"
+"MOVQ %%RDX, %%r11\n"
 
-MOVQ (8*3)(%%rsi), %%RAX
-MULQ %%r14
-ADDQ %%RAX, %%r11
-ADCQ $0, %%RDX
-MOVQ %%RDX, %%r12
-XORQ %%r13, %%r13
+"MOVQ (8*3)(%%rsi), %%RAX\n"
+"MULQ %%r14\n"
+"ADDQ %%RAX, %%r11\n"
+"ADCQ $0, %%RDX\n"
+"MOVQ %%RDX, %%r12\n"
+"XORQ %%r13, %%r13\n"
 	// First reduction step
-MOVQ %%r8, %%RAX
-MOVQ %%r8, %%r15
-SHLQ $32, %%r8
-MULQ p256cons%%r15<>(SB)
-SHRQ $32, %%r15
-ADDQ %%r8, %%r9
-ADCQ %%r15, %%r10
-ADCQ %%RAX, %%r11
-ADCQ %%RDX, %%r12
-ADCQ $0, %%r13
-XORQ %%r8, %%r8
+"MOVQ %%r8, %%RAX\n"
+"MOVQ %%r8, %%r15\n"
+"SHLQ $32, %%r8\n"
+"SHRQ $32, %%r15\n"
+"ADDQ %%rax, %%r9\n"
+"ADCQ $0, %%r10\n"
+"ADCQ $0, %%r11\n"
+"ADCQ %%rax, %%r12\n"
+"ADCQ $0, %%r13\n"
+"SUBQ %%r8, %%r9\n"
+"SBBQ %%r15, %%r10\n"
+"SBBQ %%r8, %%r11\n"
+"SBBQ %%R15, %%r12\n"
+"SBBQ $0, %%r13\n"
+"XORQ %%r8, %%r8\n"
 	// x * y[1]
-MOVQ (8*1)(%0), %%r14
+"MOVQ (8*1)(%0), %%r14\n"
 
-MOVQ (8*0)(%%rsi), %%RAX
-MULQ %%r14
-ADDQ %%RAX, %%r9
-ADCQ $0, %%RDX
-MOVQ %%RDX, %%r15
+"MOVQ (8*0)(%%rsi), %%RAX\n"
+"MULQ %%r14\n"
+"ADDQ %%RAX, %%r9\n"
+"ADCQ $0, %%RDX\n"
+"MOVQ %%RDX, %%r15\n"
 
-MOVQ (8*1)(%%rsi), %%RAX
-MULQ %%r14
-ADDQ %%r15, %%r10
-ADCQ $0, %%RDX
-ADDQ %%RAX, %%r10
-ADCQ $0, %%RDX
-MOVQ %%RDX, %%r15
+"MOVQ (8*1)(%%rsi), %%RAX\n"
+"MULQ %%r14\n"
+"ADDQ %%r15, %%r10\n"
+"ADCQ $0, %%RDX\n"
+"ADDQ %%RAX, %%r10\n"
+"ADCQ $0, %%RDX\n"
+"MOVQ %%RDX, %%r15\n"
 
-MOVQ (8*2)(%%rsi), %%RAX
-MULQ %%r14
-ADDQ %%r15, %%r11
-ADCQ $0, %%RDX
-ADDQ %%RAX, %%r11
-ADCQ $0, %%RDX
-MOVQ %%RDX, %%r15
+"MOVQ (8*2)(%%rsi), %%RAX\n"
+"MULQ %%r14\n"
+"ADDQ %%r15, %%r11\n"
+"ADCQ $0, %%RDX\n"
+"ADDQ %%RAX, %%r11\n"
+"ADCQ $0, %%RDX\n"
+"MOVQ %%RDX, %%r15\n"
 
-MOVQ (8*3)(%%rsi), %%RAX
-MULQ %%r14
-ADDQ %%r15, %%r12
-ADCQ $0, %%RDX
-ADDQ %%RAX, %%r12
-ADCQ %%RDX, %%r13
-ADCQ $0, %%r8
+"MOVQ (8*3)(%%rsi), %%RAX\n"
+"MULQ %%r14\n"
+"ADDQ %%r15, %%r12\n"
+"ADCQ $0, %%RDX\n"
+"ADDQ %%RAX, %%r12\n"
+"ADCQ %%RDX, %%r13\n"
+"ADCQ $0, %%r8\n"
 	// Second reduction step
-MOVQ %%r9, %%RAX
-MOVQ %%r9, %%r15
-SHLQ $32, %%r9
-MULQ p256cons%%r15<>(SB)
-SHRQ $32, %%r15
-ADDQ %%r9, %%r10
-ADCQ %%r15, %%r11
-ADCQ %%RAX, %%r12
-ADCQ %%RDX, %%r13
-ADCQ $0, %%r8
-XORQ %%r9, %%r9
+"MOVQ %%r9, %%RAX\n"
+"MOVQ %%r9, %%r15\n"
+"SHLQ $32, %%r9\n"
+"SHRQ $32, %%r15\n"
+"ADDQ %%rax, %%r10\n"
+"ADCQ $0, %%r11\n"
+"ADCQ $0, %%r12\n"
+"ADCQ %%rax, %%r13\n"
+"ADCQ $0, %%r8\n"
+"SUBQ %%r9, %%r10\n"
+"SBBQ %%r15, %%r11\n"
+"SBBQ %%r9, %%r12\n"
+"SBBQ %%r15, %%r13\n"
+"SBBQ $0, %%r8\n"
+"XORQ %%r9, %%r9\n"
 	// x * y[2]
-MOVQ (8*2)(%0), %%r14
+"MOVQ (8*2)(%0), %%r14\n"
 
-MOVQ (8*0)(%%rsi), %%RAX
-MULQ %%r14
-ADDQ %%RAX, %%r10
-ADCQ $0, %%RDX
-MOVQ %%RDX, %%r15
+"MOVQ (8*0)(%%rsi), %%RAX\n"
+"MULQ %%r14\n"
+"ADDQ %%RAX, %%r10\n"
+"ADCQ $0, %%RDX\n"
+"MOVQ %%RDX, %%r15\n"
 
-MOVQ (8*1)(%%rsi), %%RAX
-MULQ %%r14
-ADDQ %%r15, %%r11
-ADCQ $0, %%RDX
-ADDQ %%RAX, %%r11
-ADCQ $0, %%RDX
-MOVQ %%RDX, %%r15
+"MOVQ (8*1)(%%rsi), %%RAX\n"
+"MULQ %%r14\n"
+"ADDQ %%r15, %%r11\n"
+"ADCQ $0, %%RDX\n"
+"ADDQ %%RAX, %%r11\n"
+"ADCQ $0, %%RDX\n"
+"MOVQ %%RDX, %%r15\n"
 
-MOVQ (8*2)(%%rsi), %%RAX
-MULQ %%r14
-ADDQ %%r15, %%r12
-ADCQ $0, %%RDX
-ADDQ %%RAX, %%r12
-ADCQ $0, %%RDX
-MOVQ %%RDX, %%r15
+"MOVQ (8*2)(%%rsi), %%RAX\n"
+"MULQ %%r14\n"
+"ADDQ %%r15, %%r12\n"
+"ADCQ $0, %%RDX\n"
+"ADDQ %%RAX, %%r12\n"
+"ADCQ $0, %%RDX\n"
+"MOVQ %%RDX, %%r15\n"
 
-MOVQ (8*3)(%%rsi), %%RAX
-MULQ %%r14
-ADDQ %%r15, %%r13
-ADCQ $0, %%RDX
-ADDQ %%RAX, %%r13
-ADCQ %%RDX, %%r8
-ADCQ $0, %%r9
+"MOVQ (8*3)(%%rsi), %%RAX\n"
+"MULQ %%r14\n"
+"ADDQ %%r15, %%r13\n"
+"ADCQ $0, %%RDX\n"
+"ADDQ %%RAX, %%r13\n"
+"ADCQ %%RDX, %%r8\n"
+"ADCQ $0, %%r9\n"
 	// Third reduction step
-MOVQ %%r10, %%RAX
-MOVQ %%r10, %%r15
-SHLQ $32, %%r10
-MULQ p256cons%%r15<>(SB)
-SHRQ $32, %%r15
-ADDQ %%r10, %%r11
-ADCQ %%r15, %%r12
-ADCQ %%RAX, %%r13
-ADCQ %%RDX, %%r8
-ADCQ $0, %%r9
-XORQ %%r10, %%r10
+"MOVQ %%r10, %%RAX\n"
+"MOVQ %%r10, %%r15\n"
+"SHLQ $32, %%r10\n"
+"SHRQ $32, %%r15\n"
+"ADDQ %%rax, %%r11\n"
+"ADCQ $0, %%r12\n"
+"ADCQ $0, %%r13\n"
+"ADCQ %%rax, %%r8\n"
+"ADCQ $0, %%r9\n"
+"SUBQ %%r10, %%r11\n"
+"SBBQ %%r15, %%r12\n"
+"SBBQ %%r10, %%r13\n"
+"SBBQ %%r15, %%r8\n"
+"SBBQ $0, %%r9\n"
+"XORQ %%r10, %%r10\n"
 	// x * y[3]
-MOVQ (8*3)(%0), %%r14
+"MOVQ (8*3)(%0), %%r14\n"
 
-MOVQ (8*0)(%%rsi), %%RAX
-MULQ %%r14
-ADDQ %%RAX, %%r11
-ADCQ $0, %%RDX
-MOVQ %%RDX, %%r15
+"MOVQ (8*0)(%%rsi), %%RAX\n"
+"MULQ %%r14\n"
+"ADDQ %%RAX, %%r11\n"
+"ADCQ $0, %%RDX\n"
+"MOVQ %%RDX, %%r15\n"
 
-MOVQ (8*1)(%%rsi), %%RAX
-MULQ %%r14
-ADDQ %%r15, %%r12
-ADCQ $0, %%RDX
-ADDQ %%RAX, %%r12
-ADCQ $0, %%RDX
-MOVQ %%RDX, %%r15
+"MOVQ (8*1)(%%rsi), %%RAX\n"
+"MULQ %%r14\n"
+"ADDQ %%r15, %%r12\n"
+"ADCQ $0, %%RDX\n"
+"ADDQ %%RAX, %%r12\n"
+"ADCQ $0, %%RDX\n"
+"MOVQ %%RDX, %%r15\n"
 
-MOVQ (8*2)(%%rsi), %%RAX
-MULQ %%r14
-ADDQ %%r15, %%r13
-ADCQ $0, %%RDX
-ADDQ %%RAX, %%r13
-ADCQ $0, %%RDX
-MOVQ %%RDX, %%r15
+"MOVQ (8*2)(%%rsi), %%RAX\n"
+"MULQ %%r14\n"
+"ADDQ %%r15, %%r13\n"
+"ADCQ $0, %%RDX\n"
+"ADDQ %%RAX, %%r13\n"
+"ADCQ $0, %%RDX\n"
+"MOVQ %%RDX, %%r15\n"
 
-MOVQ (8*3)(%%rsi), %%RAX
-MULQ %%r14
-ADDQ %%r15, %%r8
-ADCQ $0, %%RDX
-ADDQ %%RAX, %%r8
-ADCQ %%RDX, %%r9
-ADCQ $0, %%r10
+"MOVQ (8*3)(%%rsi), %%RAX\n"
+"MULQ %%r14\n"
+"ADDQ %%r15, %%r8\n"
+"ADCQ $0, %%RDX\n"
+"ADDQ %%RAX, %%r8\n"
+"ADCQ %%RDX, %%r9\n"
+"ADCQ $0, %%r10\n"
 	// Last reduction step
-MOVQ %%r11, %%RAX
-MOVQ %%r11, %%r15
-SHLQ $32, %%r11
-MULQ p256cons%%r15<>(SB)
-SHRQ $32, %%r15
-ADDQ %%r11, %%r12
-ADCQ %%r15, %%r13
-ADCQ %%RAX, %%r8
-ADCQ %%RDX, %%r9
-ADCQ $0, %%r10
+"MOVQ %%r11, %%RAX\n"
+"MOVQ %%r11, %%r15\n"
+"SHLQ $32, %%r11\n"
+"SHRQ $32, %%r15\n"
+"ADDQ %%rax, %%r12\n"
+"ADCQ $0, %%r13\n"
+"ADCQ $0, %%r8\n"
+"ADCQ %%rax, %%r9\n"
+"ADCQ $0, %%r10\n"
+"SUBQ %%r11, %%r12\n"
+"SBBQ %%r15, %%r13\n"
+"SBBQ %%r11, %%r8\n"
+"SBBQ %%r15, %%r9\n"
+"SBB $0, %%r10\n"
 	// Copy result [255:0]
-MOVQ %%r12, %%rax
-MOVQ %%r13, %%r11
-MOVQ %%r8, %%r14
-MOVQ %%r9, %%r15
-	// Subtract p256
-SUBQ $-1, %%r12
-SBBQ %[pr1] ,%%r13
-SBBQ $-1, %%r8
-SBBQ %[pr3], %%r9
-SBBQ $0, %%r10
+"MOVQ %%r12, %%rax\n"
+"MOVQ %%r13, %%r11\n"
+"MOVQ %%r8, %%r14\n"
+"MOVQ %%r9, %%r15\n"
+	// Subtract sm2_p
+"SUBQ $-1, %%r12\n"
+"SBBQ %[pr1] ,%%r13\n"
+"SBBQ $-1, %%r8\n"
+"SBBQ %[pr3], %%r9\n"
+"SBBQ $0, %%r10\n"
 
-CMOVCQ %%rax, %%r12
-CMOVCQ %%r11, %%r13
-CMOVCQ %%r14, %%r8
-CMOVCQ %%r15, %%r9
+"CMOVCQ %%rax, %%r12\n"
+"CMOVCQ %%r11, %%r13\n"
+"CMOVCQ %%r14, %%r8\n"
+"CMOVCQ %%r15, %%r9\n"
 
-MOVQ %%r12, (8*0)(%%rdi)
-MOVQ %%r13, (8*1)(%%rdi)
-MOVQ %%r8, (8*2)(%%rdi)
-MOVQ %%r9, (8*3)(%%rdi)
+"MOVQ %%r12, (8*0)(%%rdi)\n"
+"MOVQ %%r13, (8*1)(%%rdi)\n"
+"MOVQ %%r8, (8*2)(%%rdi)\n"
+"MOVQ %%r9, (8*3)(%%rdi)\n"
 			: 			// acc4/5/0/1
 			: "r" (y), "D" (result), "S" (x), [pr1] "m" (sm2_p[1]),
 			[pr3] "m" (sm2_p[3])
