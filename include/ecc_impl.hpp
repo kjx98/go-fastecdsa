@@ -141,6 +141,7 @@ void point_double_jacob(const curveT& curve, bnT& x3, bnT& y3, bnT& z3,
 			curve.mont_mult2(t1, l1);
 			curve.mod_add_to(l1, t1);
 		} else {
+#ifdef	ommit
 			// t1 = Z^2
 			curve.mont_msqr(t1, z1);
 			// t2 = t1 ^2 = Z^4
@@ -154,6 +155,21 @@ void point_double_jacob(const curveT& curve, bnT& x3, bnT& y3, bnT& z3,
 			curve.mont_mult2(t2, l1);
 			// l1 = l1 + 2 * l1 = 3(X - Z^2)
 			curve.mod_add_to(l1, t2);
+#else
+			// t1 = Z^2
+			curve.mont_msqr(t1, z1);
+			// l1 = X - Z^2
+			curve.mod_sub(l1, x1, t1);
+			// 3(X - Z^2) = 2(X - Z^2) + (X - Z^2)
+			// t2 = 2 * l1
+			curve.mont_mult2(t2, l1);
+			// l1 = l1 + 2 * l1 = 3(X - Z^2)
+			curve.mod_add_to(l1, t2);
+			// t2 = X + Z^2
+			curve.mod_add(t2, x1, t1);
+			// l1 = 3(X - Z^2)(X + Z^2)
+			curve.mont_mmult(l1, l1, t2);
+#endif
 		}
 	} else {
 		/* Standard case. */
@@ -329,6 +345,7 @@ void point_double3n_jacob(const curveT& curve, bnT& x3, bnT& y3, bnT& z3,
 		curve.mont_mult2(t1, t2);
 		curve.mod_add_to(t2, t1);
 	} else {
+#ifdef	ommit
 		// t1 = Z^4
 		curve.mont_msqr(t1, z1, 2);
 		// t2 = X^2 - Z^4
@@ -338,6 +355,21 @@ void point_double3n_jacob(const curveT& curve, bnT& x3, bnT& y3, bnT& z3,
 		curve.mont_mult2(t1, t2);
 		// t2 = t2 + 2 * t2 = 3(X^2 - Z^4)
 		curve.mod_add_to(t2, t1);
+#else
+		// t1 = Z^2
+		curve.mont_msqr(t1, z1);
+		// t3 = X - Z^2
+		curve.mod_sub(t3, x1, t1);
+		// 3(X - Z^2) = 2(X - Z^2) + (X - Z^2)
+		// t2 = 2 * t3
+		curve.mont_mult2(t2, t3);
+		// t2 = t3 + 2 * t3 = 3(X - Z^2)
+		curve.mod_add_to(t2, t3);
+		// t3 = X + Z^2
+		curve.mod_add(t3, x1, t1);
+		// l1 = 3(X - Z^2)(X + Z^2)
+		curve.mont_mmult(t2, t2, t3);
+#endif
 	}
 
 	// y3 = 2 y1
