@@ -372,18 +372,16 @@ sm2p_mult(u64 *result, const u64 *x, const u64 *y) noexcept
 	u64	r[4+1];
 	vli_clear<4 + 1>(r);
 	for (uint i=0; i < 4;i++) {
-		u64	u = r[0] + y[i]*x[0];
-#ifdef	WITH_SM2_PH
-		vli_sm2_multPh(s, u);
+		vli_umult2<4>(s, x, y[i]);
+		vli_add_to<4 + 1>(r, s);
+#ifndef	NO_SM2_PH
+		vli_sm2_multPh(s, r[0]);
 		vli_rshift1w<4>(r, r[4]);
 		r[4] = vli_add_to<4>(r, s);
-		vli_umult2<4>(s, x, y[i]);
-		r[4] += vli_add_to<4>(r, s+1);
 #else
-		vli_umult2<4>(s, sm2_p, u);
+		u64	u;
+		vli_umult2<4>(s, sm2_p, r[0]);
 		u = vli_add_to<4 + 1>(r, s);
-		vli_umult2<4>(s, x, y[i]);
-		u += vli_add_to<4 + 1>(r, s);
 		vli_rshift1w<4 + 1>(r, u);	
 #endif
 	}
