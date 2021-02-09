@@ -516,21 +516,7 @@ public:
 	void mont_reduction(const bignum& y, const bignum& prime, const u64 k0)
 	noexcept
 	{
-#ifdef	ommit
-		u64	s[N+1];
-		u64	r[N+1];
-		vli_set<N>(r, y.d);
-		r[N] = 0;
-		for (uint i=0; i < N; i++) {
-			u64	u = r[0] * k0;
-			vli_umult2<N>(s, prime.d, u);
-			u = vli_add_to<N + 1>(r, s);
-			vli_rshift1w<N + 1>(r, u);	
-		}
-		vli_mod<N>(this->d, r, prime.d, r[N] != 0);
-#else
 		vli_mont_reduction<N>(this->d, y.d, prime.d, k0);
-#endif
 	}
 	friend void mont_reductionK01(bignum& res,  const bignum& y,
 					const bignum& prime) noexcept
@@ -603,22 +589,7 @@ public:
 	void mont_mult(const bignum& x, const bignum& y, const bignum& prime,
 					const u64 k0) noexcept
 	{
-#ifdef	ommit
-		u64	s[N+1];
-		u64	r[N+1];
-		vli_clear<N + 1>(r);
-		for (uint i=0; i < N;i++) {
-			u64	u = (r[0] + y.d[i]*x.d[0]) * k0;
-			vli_umult2<N>(s, prime.d, u);
-			u = vli_add_to<N + 1>(r, s);
-			vli_umult2<N>(s, x.d, y.d[i]);
-			u += vli_add_to<N + 1>(r, s);
-			vli_rshift1w<N + 1>(r, u);	
-		}
-		vli_mod<N>(this->d, r, prime.d, r[N] != 0);
-#else
 		vli_mont_mult<N>(this->d, x.d, y.d, prime.d, k0);
-#endif
 	}
 	void friend mont_multK01(bignum& res, const bignum& x, const bignum& y,
 			const bignum& prime) noexcept
@@ -672,22 +643,7 @@ public:
 	}
 	void mont_sqr(const bignum& x, const bignum& prime, const u64 k0) noexcept
 	{
-#ifdef	ommit
-		u64	s[N+1];
-		u64	r[N+1];
-		vli_clear<N + 1>(r);
-		for (uint i=0; i < N;i++) {
-			u64	u = (r[0] + x.d[i]*x.d[0]) * k0;
-			vli_umult2<N>(s, prime.d, u);
-			u = vli_add_to<N + 1>(r, s);
-			vli_umult2<N>(s, x.d, x.d[i]);
-			u += vli_add_to<N + 1>(r, s);
-			vli_rshift1w<N + 1>(r, u);	
-		}
-		vli_mod<N>(this->d, r, prime.d, r[N] != 0);
-#else
 		vli_mont_sqr<N>(this->d, x.d, prime.d, k0);
-#endif
 	}
 	friend
 	void mont_sqrK01(bignum& res, const bignum& x, const bignum& prime) noexcept
@@ -855,49 +811,6 @@ public:
 	void squareN(const bignum<N>& left) noexcept
 	{
 		vli_squareN<N>(this->d, left.data());
-	}
-
-	void div_barrett(bignum<N>& result, const bignum<N+1>& mu) noexcept
-	{
-		u64	q[N*2];
-		u64	r[N];
-		vli_mult<N>(q, this->d + N, mu.data());
-		if (mu.data()[N])
-			vli_add_to<N>(q + N, this->d + N);
-		// add remain * mod
-		vli_set<N>(r, q+N);
-		vli_umult<N>(q, mu.data(), this->d[N-1]);
-		if (mu.data()[N])
-			vli_uadd_to<N>(q + N, this->d[N-1]);
-		vli_rshift1w<N>(q+N);
-		vli_add_to<N>(r, q+N);
-		vli_set<N>(const_cast<u64 *>(result.data()), r);
-		//result = bignum<N>(r);
-	}
-	void mmod_barrett(bignum<N>& result, const bignum<N>& prime,
-			const bignum<N+1>& mu) noexcept
-	{
-		u64	q[N*2];
-		u64	r[N];
-		vli_mult<N>(q, this->d + N, mu.data());
-		if (mu.data()[N])
-			vli_add_to<N>(q + N, this->d + N);
-		// add remain * mod
-		vli_set<N>(r, q+N);
-		vli_umult<N>(q, mu.data(), this->d[N-1]);
-		if (mu.data()[N])
-			vli_uadd_to<N>(q + N, this->d[N-1]);
-		vli_rshift1w<N>(q+N);
-		vli_add_to<N>(r, q+N);
-		vli_mult<N>(q, prime.data(), r);
-		vli_sub<N*2>(q, this->d, q);
-		if (!vli_is_zero<N>(q + N) ||
-			vli_cmp<N>(q, prime.data()) >= 0)
-		{
-			vli_sub_from<N>(q, prime.data());
-		}
-		vli_set<N>(const_cast<u64 *>(result.data()), q);
-		//result = bignum<N>(q);
 	}
 };
 
