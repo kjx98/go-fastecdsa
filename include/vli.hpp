@@ -38,10 +38,6 @@
 # error "C++ std MUST at least c++11"
 #endif
 
-#if	__clang__ < 4
-#define	NO_BUILTIN_ADDC
-#endif
-
 #include "u128.hpp"
 
 
@@ -102,7 +98,7 @@ static forceinline int u64IsOne(u64 x) noexcept
 // result = a + b + carry, set new carry
 static forceinline u64 u64_addc(const u64 a, const u64 b, u64& carry)
 {
-#ifdef	__x86_64__
+#if	defined(__x86_64__) && __GNUC__ > 5
 	u64		ret=0;
 	asm volatile("movq %1, %0\n"
 				"xorq %1, %1\n"
@@ -129,7 +125,7 @@ static forceinline u64 u64_addc(const u64 a, const u64 b, u64& carry)
 
 static forceinline u64 u64_addcz(const u64 a, u64& carry)
 {
-#ifdef	__x86_64__
+#if	defined(__x86_64__) && __GNUC__ > 5
 	u64		ret=a;
 	asm volatile("addq %1, %0\n"
 				"movq $0, %1\n"
@@ -154,7 +150,7 @@ static forceinline u64 u64_addcz(const u64 a, u64& carry)
 // result = a - b - carry, set new carry
 static forceinline u64 u64_subc(const u64 a, const u64 b, u64& carry)
 {
-#ifdef	__x86_64__
+#if	defined(__x86_64__) && __GNUC__ > 5
 	u64		ret=a;
 	asm volatile("subq %1, %0\n"
 				"movq $0, %1\n"
@@ -180,7 +176,7 @@ static forceinline u64 u64_subc(const u64 a, const u64 b, u64& carry)
 
 static forceinline u64 u64_subcz(const u64 a, u64& carry)
 {
-#ifdef	__x86_64__
+#if	defined(__x86_64__) && __GNUC__ > 5
 	u64		ret=a;
 	asm volatile("subq %1, %0\n"
 				"movq $0, %1\n"
