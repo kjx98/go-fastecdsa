@@ -139,22 +139,6 @@ void vli_mod_inv(u64 *result, const u64 *input, const u64 *mod);
 #endif
 void vli_mult(u64 *result, const u64 *left, const u64 *right);
 
-/* Computes result = product % mod using Barrett's reduction with precomputed
- * value mu appended to the mod after ndigits, mu = (2^{2w} / mod) and have
- * length ndigits + 1, where mu * (2^w - 1) should not overflow ndigits
- * boundary.
- *
- * Reference:
- * R. Brent, P. Zimmermann. Modern Computer Arithmetic. 2010.
- * 2.4.1 Barrett's algorithm. Algorithm 2.5.
- */
-#ifdef	WITH_C2GO
-void vli_mmod_barrett(u64 *result, const u64 *product, const u64 *mod, u64 *buff);
-#else
-void vli_mmod_barrett(u64 *result, const u64 *product, const u64 *mod);
-#endif
-void vli_div_barrett(u64 *result, const u64 *product, const u64 *mod);
-
 /*
  * using Mongtgomey reduction/multiply with precomputed RR and K0
  * RR		b^2n mod P
@@ -183,10 +167,6 @@ u64 vli_asm_acc();
 bool bn256_add_to(u64 *left, const u64 *right);
 bool bn256_sub_from(u64 *left, const u64 *right);
 
-/* Computes result = (left * right) % curve_prime. */
-// SM2 use barret reduction
-void vli_mod_mult_fast(u64 *result, const u64 *left, const u64 *right,
-			      const u64 *curve_prime, unsigned int ndigits);
 
 /**
  * get_curve()		--	get curve defines

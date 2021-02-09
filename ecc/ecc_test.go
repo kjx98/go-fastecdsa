@@ -458,6 +458,7 @@ func BenchmarkInverseFermat(b *testing.B) {
 	})
 }
 
+/*
 func BenchmarkModMul(b *testing.B) {
 	b.ResetTimer()
 	p := sm2.P256().Params().P
@@ -491,6 +492,7 @@ func BenchmarkBarrettModMul(b *testing.B) {
 		_ = vliModMultBarrett(x1, y1, pb)
 	}
 }
+*/
 
 func BenchmarkMontModMul(b *testing.B) {
 	b.StopTimer()

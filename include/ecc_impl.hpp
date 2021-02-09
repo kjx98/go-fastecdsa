@@ -984,6 +984,8 @@ vli_mmod_special2(u64 *result, const u64 *product, const u64 *mod) noexcept
 	vli_set<N>(result, r);
 }
 
+// todo: cleanup
+#ifdef	ommit
 /* Computes result = product % mod using Barrett's reduction with precomputed
  * value mu appended to the mod after ndigits, mu = (2^{2w} / mod) and have
  * length ndigits + 1, where mu * (2^w - 1) should not overflow ndigits
@@ -1045,6 +1047,7 @@ vli_div_barrett(u64 *result, const u64 *product, const u64 *mu) noexcept
 	vli_rshift1w<N>(q+N);
 	vli_add<N>(result, r, q+N);
 }
+#endif
 
 /* Computes result = (1 / p_input) % mod. All VLIs are the same size.
  * See "From Euclid's GCD to Montgomery Multiplication to the Great Divide"

@@ -61,46 +61,6 @@ bool bn256_sub_from(u64 *left, const u64 *right)
 	return vli_sub_from<4>(left, right);
 }
 
-/* Computes result = product % mod using Barrett's reduction with precomputed
- * value mu appended to the mod after ndigits, mu = (2^{2w} / mod) and have
- * length ndigits + 1, where mu * (2^w - 1) should not overflow ndigits
- * boundary.
- *
- * Reference:
- * R. Brent, P. Zimmermann. Modern Computer Arithmetic. 2010.
- * 2.4.1 Barrett's algorithm. Algorithm 2.5.
- */
-#ifdef	WITH_C2GO
-void vli_mmod_barrett(u64 *result, const u64 *product, const u64 *mod, u64 *buff)
-#else
-void vli_mmod_barrett(u64 *result, const u64 *product, const u64 *mod)
-#endif
-{
-#ifdef	WITH_C2GO
-	vli_mmod_barrett<4>(result, product, mod, buff);
-#else
-	bn_prod<4>	*prod = reinterpret_cast<bn_prod<4> *>(const_cast<u64 *>(product));
-	bignum<4>	*res = reinterpret_cast<bignum<4> *>(result);
-	bignum<4>	*p = reinterpret_cast<bignum<4> *>(const_cast<u64 *>(mod));
-	bignum<5>	*mu = reinterpret_cast<bignum<5> *>(const_cast<u64 *>(mod+4));
-	prod->mmod_barrett(*res, *p, *mu);
-#endif
-}
-
-#ifndef WITH_C2GO
-void vli_div_barrett(u64 *result, const u64 *product, const u64 *mu)
-{
-#ifdef	ommit
-	vli_div_barrett<4>(result, product, mu);
-#else
-	bn_prod<4>	*prod = reinterpret_cast<bn_prod<4> *>(const_cast<u64 *>(product));
-	bignum<4>	*res = reinterpret_cast<bignum<4> *>(result);
-	bignum<5>	*muPtr = reinterpret_cast<bignum<5> *>(const_cast<u64 *>(mu));
-	prod->div_barrett(*res, *muPtr);
-#endif
-}
-#endif
-
 void to_montgomery(u64 *res, const u64 *x, const montParams *pa)
 {
 	const u64	*rr = pa->rr;

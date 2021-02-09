@@ -57,51 +57,6 @@ func vliModInv(in, mod []big.Word) (result []big.Word) {
 	return
 }
 
-// Montgomery multiplication modulo P256
-func vliModMult(left, right, mdU []big.Word) (result *big.Int) {
-	var res [4]big.Word
-	var prod [8]big.Word
-	var lf, rt [4]big.Word
-	var mod [9]big.Word // should be 9, 4 word for mod, 5 word for mu
-	copy(lf[:], left)
-	copy(rt[:], right)
-	copy(mod[:], mdU)
-	C.vli_mult((*C.u64)(unsafe.Pointer(&prod[0])),
-		(*C.u64)(unsafe.Pointer(&lf[0])),
-		(*C.u64)(unsafe.Pointer(&rt[0])))
-	C.vli_mmod_barrett((*C.u64)((unsafe.Pointer)(&res[0])),
-		(*C.u64)(unsafe.Pointer(&prod[0])),
-		(*C.u64)(unsafe.Pointer(&mod[0])))
-	result = new(big.Int).SetBits(res[:4])
-	return
-}
-
-func vliModMultBarrett(left, right *big.Int, mdU []big.Word) *big.Int {
-	var res [4]big.Word
-	prod := new(big.Int).Mul(left, right)
-	var prd [8]big.Word
-	var mod [9]big.Word // should be 9, 4 word for mod, 5 word for mu
-	copy(prd[:], prod.Bits())
-	copy(mod[:], mdU)
-	C.vli_mmod_barrett((*C.u64)((unsafe.Pointer)(&res[0])),
-		(*C.u64)(unsafe.Pointer(&prd[0])),
-		(*C.u64)(unsafe.Pointer(&mod[0])))
-	return new(big.Int).SetBits(res[:4])
-}
-
-func vliBarrettDiv(prod *big.Int, muB []big.Word) (result *big.Int) {
-	var res [8]big.Word
-	var prd [8]big.Word
-	var mu [5]big.Word // should be 9, 4 word for mod, 5 word for mu
-	copy(prd[:], prod.Bits())
-	copy(mu[:], muB)
-	C.vli_div_barrett((*C.u64)(unsafe.Pointer(&res[0])),
-		(*C.u64)(unsafe.Pointer(&prd[0])),
-		(*C.u64)(unsafe.Pointer(&mu[0])))
-	result = new(big.Int).SetBits(res[:4])
-	return
-}
-
 func vliToMont(x, mod []big.Word, rr []uint64, k0 uint64) *big.Int {
 	var r [4]big.Word
 	pa := fillMontParams(mod, rr, k0)

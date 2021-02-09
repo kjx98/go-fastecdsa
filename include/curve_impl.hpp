@@ -818,7 +818,6 @@ protected:
 	const bool _a_is_neg3 = false;
 	uint	nBaseNAF=0;
 	bool _a_is_zero = false;
-	const bool use_barrett = false;
 	bool _inited = false;
 };
 
