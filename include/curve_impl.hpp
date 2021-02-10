@@ -843,6 +843,21 @@ public:
 		sm2p_sqrN(resp, left.data(), nTimes);
 #endif
 	}
+	// left,right less than p, result may large than p
+	void mod_add(felem_t& res, const felem_t& left, const felem_t& right)
+	const noexcept
+	{
+		auto carry = res.add(left, right);
+		u64   *resp = reinterpret_cast<u64 *>(&res);
+		sm2p_mod(resp, res.data(), carry);
+	}
+	// left,right less than p, result may large than p
+	void mod_add_to(felem_t& res, const felem_t& right) const noexcept
+	{
+		auto carry = res.add_to(right);
+		u64   *resp = reinterpret_cast<u64 *>(&res);
+		sm2p_mod(resp, res.data(), carry);
+	}
 	void mont_mult2(felem_t& res, const felem_t& left) const noexcept
 	{
 #ifdef	ommit

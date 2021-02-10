@@ -245,38 +245,6 @@ vli4_mod(u64 *res, const u64 *left, const u64 *mod, const bool carry) noexcept
 				: "%r8", "%r9", "%r10", "%r11" , "%r12", "%r13", "%r14", "%r15", "cc", "memory");
 }
 
-static forceinline void
-sm2p_mod(u64 *res, const u64 *left, const u64 *mod, const bool carry) noexcept
-{
-	/* result > mod (result = mod + remainder), so subtract mod to
-	 * get remainder.
-	 */
-	asm volatile("movq (%%rsi), %%r8\n"	// mov r8/9/10/11, right
-				"movq 8(%%rsi), %%r9\n"
-				"movq 16(%%rsi), %%r10\n"
-				"movq 24(%%rsi), %%r11\n"
-				"movq %%r8, %%r12\n"
-				"movq %%r9, %%r13\n"
-				"movq %%r10, %%r14\n"
-				"movq %%r11, %%r15\n"
-				"subq $-1, %%r12\n"
-				"sbbq %[mod0], %%r13\n"
-				"sbbq $-1, %%r14\n"
-				"sbbq %[mod1], %%r15\n"
-				"sbbq $0, %%rax\n"
-				"cmovcq %%r8, %%r12\n"
-				"cmovcq %%r9, %%r13\n"
-				"cmovcq %%r10, %%r14\n"
-				"cmovcq %%r11, %%r15\n"
-				"movq %%r12, (%%rdi)\n"
-				"movq %%r13, 8(%%rdi)\n"
-				"movq %%r14, 16(%%rdi)\n"
-				"movq %%r15, 24(%%rdi)\n"
-				:
-				: "S"(left), "D"(res), "a" ((u64)carry), [mod0] "m" (mod[1]), [mod1] "m" (mod[3])
-				: "%r8", "%r9", "%r10", "%r11" , "%r12", "%r13", "%r14", "%r15", "cc", "memory");
-}
-
 static forceinline
 void mod4_add_to(u64 *left, const u64 *right, const u64 *mod) noexcept
 {
@@ -449,35 +417,6 @@ bool vli4_sub(u64 *res, const u64 *left, const u64 *right) noexcept
 	return carry;
 }
 #elif	defined(__aarch64__)
-static forceinline void
-sm2p_mod(u64 *res, const u64 *left, const u64 *mod, const bool carry) noexcept
-{
-	/* result > mod (result = mod + remainder), so subtract mod to
-	 * get remainder.
-	 */
-	asm volatile( "mov x9, -1\n"
-				"mov x10, %3\n"
-				"mov x11, -1\n"
-				"mov x12, %4\n"
-				"ldp x4, x5, [%2]\n"
-				"ldp x6, x7, [%2, 16]\n"
-				"subs x9, x4, x9\n"
-				"sbcs x10, x5, x10\n"
-				"sbcs x11, x6, x11\n"
-				"sbcs x12, x7, x12\n"
-				"sbcs %0, %0, xzr\n"
-				"csel x4, x4, x9, cc\n"
-				"csel x5, x5, x10, cc\n"
-				"csel x6, x6 , x11, cc\n"
-				"csel x7, x7, x12, cc\n"
-				"stp x4, x5, [%1]\n"
-				"stp x6, x7, [%1, 16]\n"
-				"adc %0, xzr, xzr\n"
-		:
-		: "r" ((u64)carry), "r" (res), "r" (left), "r" (mod[1]), "r" (mod[3])
-		: "%x4", "%x5", "%x6", "%x7", "%x9", "%x10", "%x11", "%x12", "cc", "memory");
-}
-
 static forceinline void
 vli4_mod(u64 *res, const u64 *left, const u64 *mod, const bool carry) noexcept
 {
@@ -1098,8 +1037,9 @@ vli_mod(u64 *result, const u64 *left, const u64 *mod, const bool carry) noexcept
 	{
 		// maybe copy_conditional faster?
 		// mask 0, or all 1
-		bool s_carry = carry < vli_sub<N>(result, left, mod);
-		vli_copy_conditional<N>(result, left, s_carry);
+		bool s_carry = vli_sub<N>(result, left, mod);
+		//vli_copy_conditional<N>(result, left, s_carry);
+		if (!carry && s_carry) vli_set<N>(result, left);
 	}
 #else
 	//if (carry || vli_cmp<N>(left, mod) >= 0)

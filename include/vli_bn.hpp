@@ -507,7 +507,7 @@ public:
 		}
 #if	__cplusplus >= 201703L  && defined(WITH_ASM)
 		if constexpr(N==4 && k0 == 1) {
-			sm2p_mod(res.d, r, prime.d, r[N] != 0);
+			sm2p_mod(res.d, r, r[N] != 0);
 		} else
 #endif
 		vli_mod<N>(res.d, r, prime.d, r[N] != 0);
@@ -536,7 +536,7 @@ public:
 		}
 #if	__cplusplus >= 201703L && defined(WITH_ASM)
 		if constexpr(N==4) {
-			sm2p_mod(res.d, r, prime.d, carry != 0);
+			sm2p_mod(res.d, r, carry != 0);
 		} else
 #endif
 		vli_mod<N>(res.d, r, prime.d, carry != 0);
@@ -558,7 +558,7 @@ public:
 		}
 #if	__cplusplus >= 201703L && defined(WITH_ASM)
 		if constexpr(N==4 && k0 == 1) {
-			sm2p_mod(res.d, r, prime.d, r[N] != 0);
+			sm2p_mod(res.d, r, r[N] != 0);
 		} else
 #endif
 		vli_mod<N>(res.d, r, prime.d, r[N] != 0);
@@ -580,7 +580,7 @@ public:
 		}
 #if	__cplusplus >= 201703L && defined(WITH_ASM)
 		if constexpr(N==4 && k0 == 1) {
-			sm2p_mod(res.d, r, prime.d, r[N] != 0);
+			sm2p_mod(res.d, r, r[N] != 0);
 		} else
 #endif
 		vli_mod<N>(res.d, r, prime.d, r[N] != 0);
@@ -606,7 +606,7 @@ public:
 		}
 #if	__cplusplus >= 201703L && defined(WITH_ASM)
 		if constexpr(N==4 && k0 == 1) {
-			sm2p_mod(res.d, r, prime.d, r[N] != 0);
+			sm2p_mod(res.d, r, r[N] != 0);
 		} else
 #endif
 		vli_mod<N>(res.d, r, prime.d, r[N] != 0);
@@ -631,7 +631,7 @@ public:
 		}
 #if	__cplusplus >= 201703L && defined(WITH_ASM)
 		if constexpr(N==4) {
-			sm2p_mod(res.d, r, prime.d, r[N] != 0);
+			sm2p_mod(res.d, r, r[N] != 0);
 		} else
 #endif
 		vli_mod<N>(res.d, r, prime.d, r[N] != 0);

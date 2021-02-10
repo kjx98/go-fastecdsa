@@ -82,6 +82,65 @@ static void vli_sm2_multR(u64 *result, const u64 uv) noexcept
 }
 
 
+/* result > mod (result = mod + remainder), so subtract mod to
+ * get remainder.
+ */
+static forceinline void
+sm2p_mod(u64 *res, const u64 *left, const bool carry) noexcept
+{
+#ifdef	__x86_64__
+	asm volatile("movq (%%rsi), %%r8\n"	// mov r8/9/10/11, right
+				"movq 8(%%rsi), %%r9\n"
+				"movq 16(%%rsi), %%r10\n"
+				"movq 24(%%rsi), %%r11\n"
+				"movq %%r8, %%r12\n"
+				"movq %%r9, %%r13\n"
+				"movq %%r10, %%r14\n"
+				"movq %%r11, %%r15\n"
+				"subq $-1, %%r12\n"
+				"sbbq %[mod0], %%r13\n"
+				"sbbq $-1, %%r14\n"
+				"sbbq %[mod1], %%r15\n"
+				"sbbq $0, %%rax\n"
+				"cmovcq %%r8, %%r12\n"
+				"cmovcq %%r9, %%r13\n"
+				"cmovcq %%r10, %%r14\n"
+				"cmovcq %%r11, %%r15\n"
+				"movq %%r12, (%%rdi)\n"
+				"movq %%r13, 8(%%rdi)\n"
+				"movq %%r14, 16(%%rdi)\n"
+				"movq %%r15, 24(%%rdi)\n"
+				:
+				: "S"(left), "D"(res), "a" ((u64)carry), [mod0] "m" (sm2_p[1]),
+				[mod1] "m" (sm2_p[3])
+				: "%r8", "%r9", "%r10", "%r11" , "%r12", "%r13", "%r14", "%r15", "cc", "memory");
+#elif	defined(__aarch64__)
+	asm volatile( "mov x9, -1\n"
+				"mov x10, %3\n"
+				"mov x11, -1\n"
+				"mov x12, %4\n"
+				"ldp x4, x5, [%2]\n"
+				"ldp x6, x7, [%2, 16]\n"
+				"subs x9, x4, x9\n"
+				"sbcs x10, x5, x10\n"
+				"sbcs x11, x6, x11\n"
+				"sbcs x12, x7, x12\n"
+				"sbcs %0, %0, xzr\n"
+				"csel x4, x4, x9, cc\n"
+				"csel x5, x5, x10, cc\n"
+				"csel x6, x6 , x11, cc\n"
+				"csel x7, x7, x12, cc\n"
+				"stp x4, x5, [%1]\n"
+				"stp x6, x7, [%1, 16]\n"
+				"adc %0, xzr, xzr\n"
+		:
+		: "r" ((u64)carry), "r" (res), "r" (left), "rm" (sm_p[1]),
+		"rm" (sm2_p[3])
+		: "%x4", "%x5", "%x6", "%x7", "%x9", "%x10", "%x11", "%x12", "cc", "memory");
+#else
+	vli_mod<4>(res, left, sm2_p, carry);
+#endif
+}
 
 forceinline static void
 sm2p_reduction(u64 *result, const u64 *y, const bool isProd=false) noexcept
@@ -205,7 +264,7 @@ sm2p_reduction(u64 *result, const u64 *y, const bool isProd=false) noexcept
 	result[2] = res2;
 	result[3] = res3;
 	// sm2p_mod
-	sm2p_mod(result, result, sm2_p, carry != 0);
+	sm2p_mod(result, result, carry != 0);
 #endif
 #else
 	u64	r[4];
@@ -240,7 +299,7 @@ sm2p_reduction(u64 *result, const u64 *y, const bool isProd=false) noexcept
 		r[3] = u64_addc(r[3], y[7], cc);
 		carry += cc;
 	}
-	sm2p_mod(result, r, sm2_p, carry != 0);
+	sm2p_mod(result, r, carry != 0);
 #endif
 }
 
@@ -593,7 +652,7 @@ sm2p_mult(u64 *result, const u64 *x, const u64 *y) noexcept
 		r[4] = vli_add_to<4>(r, s);
 	}
 #if	__cplusplus >= 201703L && defined(WITH_ASM)
-	sm2p_mod(result, r, sm2_p, r[4] != 0);
+	sm2p_mod(result, r, r[4] != 0);
 #else
 	vli_mod<4>(result, r, sm2_p, r[4] != 0);
 #endif

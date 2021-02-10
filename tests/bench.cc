@@ -173,14 +173,14 @@ BENCHMARK(test_sm2montSqrN);
 
 static void test_montSqrK01(benchmark::State &state)
 {
-	bignum<4>	xp;
+	u64		res[4];
 	u64		bx1[4];
 	sm2p_mult(bx1, dx1, rr.data());
-	bignum<4>	bp(bx1);
 	for (auto _ : state) {
 		for (int i=0; i<1000; ++i)
-		mont_sqrK01(xp, bp, prime);
+		sm2p_mult(res, bx1, bx1);
 	}
+	bignum<4>	xp(res);
 	mont_reductionK01(tt, xp, prime);
 }
 BENCHMARK(test_montSqrK01);
