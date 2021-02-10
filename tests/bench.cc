@@ -433,17 +433,6 @@ static void test_ECScalarMult(benchmark::State &state)
 }
 BENCHMARK(test_ECScalarMult);
 
-static void test_ECScalarMultNAF2(benchmark::State &state)
-{
-	bignum<4>	d1(d1d);
-	point_t<4>	res;
-	point_t<4>	gg(sm2_gx, sm2_gy);
-	for (auto _ : state) {
-		sm2_p256.scalar_multNAF2(res, gg, d1);
-	}
-}
-BENCHMARK(test_ECScalarMultNAF2);
-
 static void test_ECScalarMult256(benchmark::State &state)
 {
 	bignum<4>	d1(d1d);
@@ -515,7 +504,7 @@ static void test_ECVerify(benchmark::State &state)
 	int		ecInd __attribute__ ((unused));
 	ecInd = ec_sign(sm2_k256, r, s, priv, msg);
 	for (auto _ : state) {
-		ec_verify(sm2_p256, r, s, priv.PubKey(), msg);
+		ec_verify(sm2_k256, r, s, priv.PubKey(), msg);
 	}
 }
 BENCHMARK(test_ECVerify);
@@ -535,8 +524,6 @@ static void test_ECRecover(benchmark::State &state)
 BENCHMARK(test_ECRecover);
 
 int main(int argc, char ** argv) {
-	//sm2_p256.init();
-	//sm2_k256.init();
 	benchmark::Initialize(&argc, argv);
 	benchmark::RunSpecifiedBenchmarks();
 }

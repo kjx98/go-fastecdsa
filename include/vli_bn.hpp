@@ -33,7 +33,6 @@
 #include <cassert>
 #include <type_traits>
 #include <iostream>
-//#include <iomanip>
 #include "cdefs.h"
 #include "vli.hpp"
 #include "mont.hpp"
@@ -550,11 +549,11 @@ public:
 		u64	r[N+1];
 		vli_clear<N + 1>(r);
 		for (uint i=0; i < N;i++) {
-			u64	u = (r[0] + y.d[i]*x.d[0]) * k0;
+			vli_umult2<N>(s, x.d, y.d[i]);
+			vli_add_to<N + 1>(r, s);
+			u64	u = r[0] * k0;
 			vli_umult2<N>(s, prime.d, u);
 			u = vli_add_to<N + 1>(r, s);
-			vli_umult2<N>(s, x.d, y.d[i]);
-			u += vli_add_to<N + 1>(r, s);
 			vli_rshift1w<N + 1>(r, u);	
 		}
 #if	__cplusplus >= 201703L && defined(WITH_ASM)
@@ -572,11 +571,11 @@ public:
 		u64	r[N+1];
 		vli_clear<N + 1>(r);
 		for (uint i=0; i < N;i++) {
-			u64	u = (r[0] + y.d[i]*x[0]) * k0;
+			vli_umult2<N>(s, x, y.d[i]);
+			vli_add_to<N + 1>(r, s);
+			u64	u = r[0] * k0;
 			vli_umult2<N>(s, prime.d, u);
 			u = vli_add_to<N + 1>(r, s);
-			vli_umult2<N>(s, x, y.d[i]);
-			u += vli_add_to<N + 1>(r, s);
 			vli_rshift1w<N + 1>(r, u);	
 		}
 #if	__cplusplus >= 201703L && defined(WITH_ASM)
@@ -598,11 +597,11 @@ public:
 		u64	r[N+1];
 		vli_clear<N + 1>(r);
 		for (uint i=0; i < N;i++) {
-			u64	u = (r[0] + x.d[i]*x.d[0]) * k0;
+			vli_umult2<N>(s, x.d, x.d[i]);
+			vli_add_to<N + 1>(r, s);
+			u64	u = r[0] * k0;
 			vli_umult2<N>(s, prime.d, u);
 			u = vli_add_to<N + 1>(r, s);
-			vli_umult2<N>(s, x.d, x.d[i]);
-			u += vli_add_to<N + 1>(r, s);
 			vli_rshift1w<N + 1>(r, u);	
 		}
 #if	__cplusplus >= 201703L && defined(WITH_ASM)
@@ -623,11 +622,11 @@ public:
 		u64	r[N+1];
 		vli_clear<N + 1>(r);
 		for (uint i=0; i < N;i++) {
-			u64	u = r[0] + x.d[i]*x.d[0];
+			vli_umult2<N>(s, x.d, x.d[i]);
+			vli_add_to<N + 1>(r, s);
+			u64	u = r[0];
 			vli_umult2<N>(s, prime.d, u);
 			u = vli_add_to<N + 1>(r, s);
-			vli_umult2<N>(s, x.d, x.d[i]);
-			u += vli_add_to<N + 1>(r, s);
 			vli_rshift1w<N + 1>(r, u);	
 		}
 #if	__cplusplus >= 201703L && defined(WITH_ASM)

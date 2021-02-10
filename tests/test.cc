@@ -740,61 +740,6 @@ TEST(testEcc, TestScalar256Mult)
 	EXPECT_TRUE(res.is_zero());
 }
 
-TEST(testEcc, TestScalarMultNAF2)
-{
-	bignum<4>	d1(d1d), d2(d2d);
-	point_t<4>	res;
-	point_t<4>	gg(sm2_gx, sm2_gy);
-	point_t<4>	pre_comps[wSize];
-	sm2_p256.to_montgomery(res.x, gg.x);
-	sm2_p256.to_montgomery(res.y, gg.y);
-	sm2_p256.to_montgomery(res.z, gg.z);
-	pre_compute<4>(sm2_p256, pre_comps, res);
-	for (int i=0; i<wSize; ++i) {
-		sm2_p256.from_montgomery(pre_comps[i].x, pre_comps[i].x);
-		sm2_p256.from_montgomery(pre_comps[i].y, pre_comps[i].y);
-		sm2_p256.from_montgomery(pre_comps[i].z, pre_comps[i].z);
-	}
-	{
-		bignum<4>	ss(3);
-		sm2_p256.scalar_multNAF2(res, gg, ss);
-		EXPECT_TRUE(sm2_p256.point_eq(res, pre_comps[2]));
-	}
-	{
-		bignum<4>	ss(4);
-		sm2_p256.scalar_multNAF2(res, gg, ss);
-		EXPECT_TRUE(sm2_p256.point_eq(res, pre_comps[3]));
-	}
-	{
-		bignum<4>	ss(8);
-		sm2_p256.scalar_multNAF2(res, gg, ss);
-		EXPECT_TRUE(sm2_p256.point_eq(res, pre_comps[7]));
-	}
-	for(uint i=0; i<wSize; ++i) {
-		bignum<4>	ss(i+1);
-		sm2_p256.scalar_multNAF2(res, gg, ss);
-		auto bCheck = sm2_p256.point_eq(res, pre_comps[i]);
-		if (!bCheck) std::cerr << "diff multNAF2 index: " << i << std::endl;
-		EXPECT_TRUE(sm2_p256.point_eq(res, pre_comps[i]));
-	}
-	sm2_p256.scalar_multNAF2(res, gg, d1);
-	ASSERT_TRUE(res.z.is_one());
-	EXPECT_EQ(res.x.cmp(d1Gx), 0);
-	EXPECT_EQ(res.y.cmp(d1Gy), 0);
-#ifdef	ommit
-	std::cout << "res x1: " << res.x << std::endl;
-	std::cout << "res y1: " << res.y << std::endl;
-#endif
-	sm2_p256.scalar_multNAF2(res, gg, d2);
-	ASSERT_TRUE(res.z.is_one());
-	EXPECT_EQ(res.x.cmp(d2Gx), 0);
-	EXPECT_EQ(res.y.cmp(d2Gy), 0);
-#ifdef	ommit
-	std::cout << "res x2: " << res.x << std::endl;
-	std::cout << "res y2: " << res.y << std::endl;
-#endif
-}
-
 TEST(testEcc, TestScalarMultBase)
 {
 	bignum<4>	d1(d1d), d2(d2d);

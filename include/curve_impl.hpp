@@ -74,7 +74,7 @@ static constexpr int nwBaseNAF() { return (64*N -1 + BaseW) / BaseW; }
  * @b:		Curve parameter b.
  */
 template<const uint N=4, const bool A_is_n3=true>
-class alignas(64) ecc_curve {
+class ecc_curve {
 public:
 	using felem_t = bignum<N>;
 	typedef spoint_t<N>	gwNAF_t[wBaseSize];
@@ -517,52 +517,6 @@ public:
 		}
 		spoint_t<N>	pp(p.x, p.y);
 		scalar_mult(q, pp, scalar);
-		// montgomery reduction
-#ifdef	ommit
-		if ( unlikely(q.z.is_zero()) ) {
-			q.x.clear();
-			q.y.clear();
-			return;
-		}
-#else
-		if ( unlikely(q.z.is_zero()) ) return;
-#endif
-		this->apply_z_mont(q);
-		this->from_montgomery(q.x, q.x);
-		this->from_montgomery(q.y, q.y);
-		q.z = felem_t(1);
-	}
-	void scalar_multNAF2(point_t<N>& q, const point_t<N>& p,
-				const felem_t& scalar) const noexcept
-	{
-		point_t<N>	tmp;
-		int	nbits = scalar.num_bits();
-		q.clear();
-		if (nbits == 0) return;
-		point_t<N>	pres[3];
-		to_montgomery(tmp.x, p.x);
-		to_montgomery(tmp.y, p.y);
-		to_montgomery(tmp.z, p.z);
-		pres[0].clear();
-		pres[1] = tmp;
-		point_double(pres[2], tmp);
-		bool	skip = true;
-		if (nbits & 1) --nbits;
-		for (int i = nbits; i >= 0; --i) {
-			if (!skip) point_double(q, q);
-			if (i & 1) continue;
-			uint	bits;
-			bits = vli_get_bits<N, 2>(scalar.data(), i);
-			bool	sign = (bits & 2);
-			int digit = (sign)?(bits - 4):bits;
-			if (i > 0 && scalar.get_bit(i-1)) ++digit;
-			if (digit == 0) continue;
-			if (sign) point_neg(tmp, pres[-digit]); else tmp = pres[digit];
-			if (likely(!skip)) point_add(q, q, tmp); else {
-				q = tmp;
-				skip = false;
-			}
-		}
 		// montgomery reduction
 #ifdef	ommit
 		if ( unlikely(q.z.is_zero()) ) {
@@ -1192,20 +1146,16 @@ private:
 	{
 		res = xp;
 
-		felem_t	bn_tbl[6];	// _1, _11, _101, _111, _1111, _10101
+		felem_t	bn_tbl[5];	// _1, _11, _101, _111, _1111
 		felem_t	tmp, x8, x16, x32;
-		felem_t	*_1 = bn_tbl;
-		felem_t	*_11 = bn_tbl + 1;
 		// precompute
-		*_1 = xp;
-		mont_msqr(tmp, *_1);
-		mont_mmult(*_11, tmp, *_1);
-		mont_mmult(bn_tbl[2], tmp, *_11);	// _101
+		bn_tbl[0] = xp;
+		mont_msqr(tmp, xp);
+		mont_mmult(bn_tbl[1], tmp, xp);
+		mont_mmult(bn_tbl[2], tmp, bn_tbl[1]);	// _101
 		mont_mmult(bn_tbl[3], tmp, bn_tbl[2]);	// _111
 		mont_msqr(tmp, bn_tbl[2]);	// _1010
 		mont_mmult(bn_tbl[4], bn_tbl[2], tmp);	// _1111
-		//mont_msqr(tmp, tmp);	// _10100
-		//mont_mmult(bn_tbl[5], tmp, xp);	// _10101
 		mont_msqr(tmp, bn_tbl[4], 4);
 		mont_mmult(x8, tmp, bn_tbl[4]);
 		mont_msqr(tmp, x8, 8);
