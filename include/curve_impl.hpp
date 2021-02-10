@@ -840,7 +840,8 @@ public:
 		for (uint i=1; i < nTimes; i++) mont_sqr<1>(res, res, this->p);
 #else
 		u64   *resp = reinterpret_cast<u64 *>(&res);
-		sm2p_sqrN(resp, left.data(), nTimes);
+		sm2p_sqrN(resp, left.data());
+		for (uint i=1; i < nTimes; i++) sm2p_sqrN(resp, resp);
 #endif
 	}
 	// left,right less than p, result may large than p

@@ -705,14 +705,186 @@ mont_sqrN(u64 *result, const u64 *x, const u64 *prime) noexcept
 }
 
 forceinline static void
-sm2p_sqrN(u64 *result, const u64 *x, const int nTimes=1) noexcept
+sm2p_sqrN(u64 *result, const u64 *x) noexcept
 {
+#ifdef	__x86_64__
+	asm volatile(
+	// y[1:] * y[0]
+"MOVQ (8*0)(%%rsi), %%r14\n"
+
+"MOVQ (8*1)(%%rsi), %%rax\n"
+"MULQ %%r14\n"
+"MOVQ %%rax, %%r9\n"
+"MOVQ %%rdx, %%r10\n"
+
+"MOVQ (8*2)(%%rsi), %%rax\n"
+"MULQ %%r14\n"
+"ADDQ %%rax, %%r10\n"
+"ADCQ $0, %%rdx\n"
+"MOVQ %%rdx, %%r11\n"
+
+"MOVQ (8*3)(%%rsi), %%rax\n"
+"MULQ %%r14\n"
+"ADDQ %%rax, %%r11\n"
+"ADCQ $0, %%rdx\n"
+"MOVQ %%rdx, %%r12\n"
+	// y[2:] * y[1]
+"MOVQ (8*1)(%%rsi), %%r14\n"
+
+"MOVQ (8*2)(%%rsi), %%rax\n"
+"MULQ %%r14\n"
+"ADDQ %%rax, %%r11\n"
+"ADCQ $0, %%rdx\n"
+"MOVQ %%rdx, %%r15\n"
+
+"MOVQ (8*3)(%%rsi), %%rax\n"
+"MULQ %%r14\n"
+"ADDQ %%r15, %%r12\n"
+"ADCQ $0, %%rdx\n"
+"ADDQ %%rax, %%r12\n"
+"ADCQ $0, %%rdx\n"
+"MOVQ %%rdx, %%r13\n"
+	// y[3] * y[2]
+"MOVQ (8*2)(%%rsi), %%r14\n"
+
+"MOVQ (8*3)(%%rsi), %%rax\n"
+"MULQ %%r14\n"
+"ADDQ %%rax, %%r13\n"
+"ADCQ $0, %%rdx\n"
+"MOVQ %%rdx, %%rcx\n"
+"XORQ %%r15, %%r15\n"
+	// *2
+"ADDQ %%r9, %%r9\n"
+"ADCQ %%r10, %%r10\n"
+"ADCQ %%r11, %%r11\n"
+"ADCQ %%r12, %%r12\n"
+"ADCQ %%r13, %%r13\n"
+"ADCQ %%rcx, %%rcx\n"
+"ADCQ $0, %%r15\n"
+	// Missing products
+"MOVQ (8*0)(%%rsi), %%rax\n"
+"MULQ %%rax\n"
+"MOVQ %%rax, %%r8\n"
+"MOVQ %%rdx, %%r14\n"
+
+"MOVQ (8*1)(%%rsi), %%rax\n"
+"MULQ %%rax\n"
+"ADDQ %%r14, %%r9\n"
+"ADCQ %%rax, %%r10\n"
+"ADCQ $0, %%rdx\n"
+"MOVQ %%rdx, %%r14\n"
+
+"MOVQ (8*2)(%%rsi), %%rax\n"
+"MULQ %%rax\n"
+"ADDQ %%r14, %%r11\n"
+"ADCQ %%rax, %%r12\n"
+"ADCQ $0, %%rdx\n"
+"MOVQ %%rdx, %%r14\n"
+
+"MOVQ (8*3)(%%rsi), %%rax\n"
+"MULQ %%rax\n"
+"ADDQ %%r14, %%r13\n"
+"ADCQ %%rax, %%rcx\n"
+"ADCQ %%rdx, %%r15\n"
+"MOVQ %%r15, %%rbx\n"
+	// First reduction step
+"MOVQ %%r8, %%rax\n"
+"MOVQ %%r8, %%rdx\n"
+"MOVQ %%r8, %%r15\n"
+"SHLQ $32, %%r8\n"
+"SHRQ $32, %%r15\n"
+"ADDQ %%rax, %%r9\n"
+"ADCQ $0, %%r10\n"
+"ADCQ $0, %%r11\n"
+"ADCQ $0, %%rdx\n"
+"SUBQ %%r8, %%r9\n"
+"SBBQ %%r15, %%r10\n"
+"SBBQ %%r8, %%r11\n"
+"SBBQ %%R15, %%rdx\n"
+"MOVQ %%rdx, %%r8\n"
+	// Second reduction step
+"MOVQ %%r9, %%rax\n"
+"MOVQ %%r9, %%rdx\n"
+"MOVQ %%r9, %%r15\n"
+"SHLQ $32, %%r9\n"
+"SHRQ $32, %%r15\n"
+"ADDQ %%rax, %%r10\n"
+"ADCQ $0, %%r11\n"
+"ADCQ $0, %%r8\n"
+"ADCQ $0, %%rdx\n"
+"SUBQ %%r9, %%r10\n"
+"SBBQ %%r15, %%r11\n"
+"SBBQ %%r9, %%r8\n"
+"SBBQ %%r15, %%rdx\n"
+"MOVQ %%rdx, %%r9\n"
+	// Third reduction step
+"MOVQ %%r10, %%rax\n"
+"MOVQ %%r10, %%rdx\n"
+"MOVQ %%r10, %%r15\n"
+"SHLQ $32, %%r10\n"
+"SHRQ $32, %%r15\n"
+"ADDQ %%rax, %%r11\n"
+"ADCQ $0, %%r8\n"
+"ADCQ $0, %%r9\n"
+"ADCQ $0, %%rdx\n"
+"SUBQ %%r10, %%r11\n"
+"SBBQ %%r15, %%r8\n"
+"SBBQ %%r10, %%r9\n"
+"SBBQ %%r15, %%rdx\n"
+"MOVQ %%rdx, %%r10\n"
+	// Last reduction step
+"XORQ %%r14, %%r14\n"
+"MOVQ %%r11, %%rax\n"
+"MOVQ %%r11, %%rdx\n"
+"MOVQ %%r11, %%r15\n"
+"SHLQ $32, %%r11\n"
+"SHRQ $32, %%r15\n"
+"ADDQ %%rax, %%r8\n"
+"ADCQ $0, %%r9\n"
+"ADCQ $0, %%r10\n"
+"ADCQ $0, %%rdx\n"
+"SUBQ %%r11, %%r8\n"
+"SBBQ %%r15, %%r9\n"
+"SBBQ %%r11, %%r10\n"
+"SBBQ %%r15, %%rdx\n"
+"MOVQ %%rdx, %%r11\n"
+	// Add bits [511:256] of the sqr result
+"ADCQ %%r12, %%r8\n"
+"ADCQ %%r13, %%r9\n"
+"ADCQ %%rcx, %%r10\n"
+"ADCQ %%rbx, %%r11\n"
+"ADCQ $0, %%r14\n"
+
+"MOVQ %%r8, %%r12\n"
+"MOVQ %%r9, %%r13\n"
+"MOVQ %%r10, %%rcx\n"
+"MOVQ %%r11, %%r15\n"
+	// Subtract sm2_p
+"SUBQ $-1, %%r8\n"
+"SBBQ %[pr1] ,%%r9\n"
+"SBBQ $-1, %%r10\n"
+"SBBQ %[pr3], %%r11\n"
+"SBBQ $0, %%r14\n"
+
+"CMOVCQ %%r12, %%r8\n"
+"CMOVCQ %%r13, %%r9\n"
+"CMOVCQ %%rcx, %%r10\n"
+"CMOVCQ %%r15, %%r11\n"
+
+"MOVQ %%r8, (8*0)(%%rdi)\n"
+"MOVQ %%r9, (8*1)(%%rdi)\n"
+"MOVQ %%r10, (8*2)(%%rdi)\n"
+"MOVQ %%r11, (8*3)(%%rdi)\n"
+		: 			// acc4/5/0/1
+		: "D" (result), "S" (x), [pr1] "m" (sm2_p[1]), [pr3] "m" (sm2_p[3])
+		: "rax", "rbx", "rcx", "rdx", "r8", "r9", "r12", "r13", "r10", "r11",
+		"r14",
+		"r15", "cc", "memory");
+#else
 	u64	r[8];
-	vli_set<4>(result, x);
-	for (int i=0; i < nTimes; ++i) {
-		vli_squareN<4>(r, result);
-		sm2p_reduction(result, r, true);
-	}
+	vli_squareN<4>(r, x);
+	sm2p_reduction(result, r, true);
+#endif
 }
 
 #endif	//	__MONT_HPP__
