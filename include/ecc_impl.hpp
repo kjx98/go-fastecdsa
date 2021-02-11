@@ -791,13 +791,13 @@ mont_mod_exp(const curveT& curve, bnT& res, const bnT& xp, const bnT& y) noexcep
 		uint	tailing;
 		uint	idx;
 	}	mapTable[]= {
-		{ 1, 0, 0},		// _1
-		{ 1, 1, 0},		// _10
-		{ 2, 0, 1},		// _11
-		{ 1, 2, 0},		// _100
-		{ 3, 0, 2},		// _101
-		{ 2, 1, 1},		// _110
-		{ 3, 0, 3},		// _111
+		{ 4, 0, 0},		// _1
+		{ 3, 1, 0},		// _10
+		{ 4, 0, 1},		// _11
+		{ 2, 2, 0},		// _100
+		{ 4, 0, 2},		// _101
+		{ 3, 1, 1},		// _110
+		{ 4, 0, 3},		// _111
 		{ 1, 3, 0},		// _1000
 		{ 1, 2, 0},		// _1001, proc _100
 		{ 3, 0, 2},		// _1010, proc _101
@@ -816,7 +816,7 @@ mont_mod_exp(const curveT& curve, bnT& res, const bnT& xp, const bnT& y) noexcep
 	curve.mont_mmult(bn_tbl[3], tmp, bn_tbl[2]);	// _111
 	curve.mont_msqr(tmp, bn_tbl[2]);	// _1010
 	curve.mont_mmult(bn_tbl[4], bn_tbl[2], tmp);	// _1111
-	int	idx = y.num_bits();
+	uint	idx = y.num_bits();
 	if ( unlikely(idx < 4) ) return false;
 	uint	bits;
 	bits = vli_get_bits<N, 4>(y.data(), idx-4);
@@ -829,13 +829,12 @@ mont_mod_exp(const curveT& curve, bnT& res, const bnT& xp, const bnT& y) noexcep
 		idx -= (tb.leading + tb.tailing);
 	}
 	for (; idx >= 4; ) {
-		// skip leading 0
-		if (y.test_bit(idx-1) == 0) {
-			curve.mont_msqr(res, res);
-			--idx;
+		bits = vli_get_bits<N, 4>(y.data(), idx-4);
+		if (bits == 0) {
+			curve.mont_msqr(res, res, 4);
+			idx -= 4;
 			continue;
 		}
-		bits = vli_get_bits<N, 4>(y.data(), idx-4);
 		bitsTable& tb = mapTable[bits-1];
 		curve.mont_msqr(res, res, tb.leading);
 		curve.mont_mmult(res, res, bn_tbl[tb.idx]);
@@ -844,21 +843,22 @@ mont_mod_exp(const curveT& curve, bnT& res, const bnT& xp, const bnT& y) noexcep
 		}
 		idx -= (tb.leading + tb.tailing);
 	}
-	while (idx > 0 && y.test_bit(idx-1) == 0) {
-		curve.mont_msqr(res, res);
-		--idx;
-	}
 	// proc remains
 	if (idx > 0)
 	{
 		bits = vli_get_bits<N, 4>(y.data(), 0);
 		bits &= (1 << idx) -1;
-		curve.mont_msqr(res, res, idx);
-		bitsTable& tb = mapTable[bits-1];
-		curve.mont_msqr(res, res, tb.leading);
-		curve.mont_mmult(res, res, bn_tbl[tb.idx]);
-		if (tb.tailing != 0) {
-			curve.mont_msqr(res, res, tb.tailing);
+		if (bits == 0) {
+			curve.mont_msqr(res, res, idx);
+		} else {
+			bitsTable& tb = mapTable[bits-1];
+			if (idx > tb.tailing) {
+				curve.mont_msqr(res, res, idx - tb.tailing);
+			}
+			curve.mont_mmult(res, res, bn_tbl[tb.idx]);
+			if (tb.tailing != 0) {
+				curve.mont_msqr(res, res, tb.tailing);
+			}
 		}
 	}
 	return true;

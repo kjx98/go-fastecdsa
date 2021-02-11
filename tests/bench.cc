@@ -445,7 +445,7 @@ static void test_ECScalarMult256(benchmark::State &state)
 }
 BENCHMARK(test_ECScalarMult256);
 
-static void test_ECScalarCMult(benchmark::State &state)
+static void test_ECScalarCMultK(benchmark::State &state)
 {
 	point_t<4>	pt1(dx1, dy1);
 	bignum<4>	d1(d1d), d2(d2d);
@@ -454,9 +454,9 @@ static void test_ECScalarCMult(benchmark::State &state)
 		sm2_k256.combined_mult(res, pt1, d1, d2);
 	}
 }
-BENCHMARK(test_ECScalarCMult);
+BENCHMARK(test_ECScalarCMultK);
 
-static void test_ECScalarCMultNAF(benchmark::State &state)
+static void test_ECScalarCMultP(benchmark::State &state)
 {
 	point_t<4>	pt1(dx1, dy1);
 	bignum<4>	d1(d1d), d2(d2d);
@@ -465,7 +465,7 @@ static void test_ECScalarCMultNAF(benchmark::State &state)
 		sm2_p256.combined_mult(res, pt1, d1, d2);
 	}
 }
-BENCHMARK(test_ECScalarCMultNAF);
+BENCHMARK(test_ECScalarCMultP);
 
 static void test_ECGenKey(benchmark::State &state)
 {
