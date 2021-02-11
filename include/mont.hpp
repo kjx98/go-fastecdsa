@@ -149,7 +149,7 @@ sm2p_mod(u64 *res, const u64 *left, const bool carry) noexcept
 				"stp x6, x7, [%1, 16]\n"
 				"adc %0, xzr, xzr\n"
 		:
-		: "r" ((u64)carry), "r" (res), "r" (left), "rm" (sm_p[1]),
+		: "r" ((u64)carry), "r" (res), "r" (left), "rm" (sm2_p[1]),
 		"rm" (sm2_p[3])
 		: "%x4", "%x5", "%x6", "%x7", "%x9", "%x10", "%x11", "%x12", "cc", "memory");
 #else
@@ -897,7 +897,7 @@ sm2p_sqrN(u64 *result, const u64 *x) noexcept
 		"r15", "cc", "memory");
 #else
 	u64	r[8];
-	vli_squareN<4>(r, x);
+	vli_square<4>(r, x);
 	sm2p_reduction(result, r, true);
 #endif
 }
