@@ -46,7 +46,7 @@ static void vli_sm2_multP(u64 *result, const u64 u) noexcept
 	result[2] = u64_subc(0, t_high, carry);
 	result[3] = u64_subc(0, t_low, carry);
 	result[4] = u64_subc(u, t_high, carry);
-	result[5] = carry;
+	//result[5] = carry;
 }
 
 
@@ -81,6 +81,21 @@ static void vli_sm2_multR(u64 *result, const u64 uv) noexcept
 	return;
 }
 
+
+// secp256k1 prime optimize
+// p is 2^256 - 2^32 - 0x3d1 = 2^256 - 0x1000003d1
+forceinline
+static void vli_btc_multP(u64 *result, const u64 u) noexcept
+{
+	uint128_t	pd;
+	pd.mul_64_64(0x1000003d1, u);
+	u64		carry = 0;
+	result[0] = u64_subc(0, pd.m_low(), carry);
+	result[1] = u64_subc(0, pd.m_high(), carry);
+	result[2] = u64_subc(0, 0, carry);
+	result[3] = u64_subc(0, 0, carry);
+	result[4] = u64_subc(u, 0, carry);
+}
 
 /* result > mod (result = mod + remainder), so subtract mod to
  * get remainder.

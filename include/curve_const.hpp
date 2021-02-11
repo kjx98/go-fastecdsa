@@ -58,7 +58,7 @@ constexpr u64 sm2_gy[]= { 0x2DF32E52139F0A0ull, 0xD0A9877CC62A4740ull,
 				0x59BDCEE36B692153ull, 0xBC3736A2F4F6779Cull };
 
 // ECC const for secp256k1, used by BTC/ETH...
-// secp256k1 p: 2^256 + 2^32 - 0x3d1
+// secp256k1 p: 2^256 - 2^32 - 0x3d1
 constexpr u64 secp256k1_p[] = { 0xFFFFFFFEFFFFFC2Full, 0xFFFFFFFFFFFFFFFFull,
 				0xffffffffffffffffull, 0xFFFFFFFFFFFFFFFFull };
 constexpr u64 secp256k1_n[] = { 0xbfd25e8cd0364141ull, 0xbaaedce6af48a03bull,
