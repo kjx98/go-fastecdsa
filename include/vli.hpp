@@ -210,7 +210,7 @@ static forceinline u64 u64_subcz(const u64 a, u64& carry)
  * 			callee-saved register: X19-X29
  *
  */
-
+#ifdef	WITH_ASM
 #ifdef	__x86_64__
 static forceinline void
 vli4_mod(u64 *res, const u64 *left, const u64 *mod, const bool carry) noexcept
@@ -528,6 +528,7 @@ bool vli4_sub(u64 *res, const u64 *left, const u64 *right) noexcept
 	return carry;
 }
 #endif
+#endif	// WITH_ASM
 
 /**
  * vli_is_zero() - Determine is vli is zero
@@ -539,16 +540,14 @@ bool vli4_sub(u64 *res, const u64 *left, const u64 *right) noexcept
 template<const uint N> forceinline
 static int vli_is_zero(const u64 *vli) noexcept
 {
-#ifdef	NO_U64ZERO
-	for (uint i = 0; i < N; i++) {
-		if (vli[i]) return 0;
-	}
-	return true;
-#else
+	static_assert(N>=4, "N MUST >= 4");
 	u64	v=vli[0];
 	for (uint i = 1; i < N; i++) {
 		v |= vli[i];
 	}
+#ifdef	NO_U64ZERO
+	return v == 0;
+#else
 	return u64IsZero(v);
 #endif
 }
@@ -556,20 +555,15 @@ static int vli_is_zero(const u64 *vli) noexcept
 template<const uint N> forceinline
 static int vli_is_one(const u64 *vli) noexcept
 {
-#ifdef	NO_U64ZERO
-	if (vli[0] != 1) return 0;
+	static_assert(N>=4, "N MUST >= 4");
+	u64	v=vli[0] ^ 1;
 	for (uint i = 1; i < N; i++) {
-		if (vli[i]) return 0;
-	}
-	return true;
-#else
-	int	ret = u64IsOne(vli[0]);
-	u64	v = vli[1];
-	for (uint i = 2; i < N; i++) {
 		v |= vli[i];
 	}
-	ret &= u64IsZero(v);
-	return ret;
+#ifdef	NO_U64ZERO
+	return v == 0;
+#else
+	return u64IsZero(v);
 #endif
 }
 
@@ -804,6 +798,7 @@ bool vli_sub_from(u64 *result, const u64 *right) noexcept
 template<const uint N> forceinline
 static bool vli_usub(u64 *result, const u64 *left, u64 right) noexcept
 {
+	static_assert(N>=4, "N MUST >= 4");
 	u64 borrow = 0;
 	result[0] = u64_subc(left[0], right, borrow);
 	for (uint i = 1; i < N; i++) {
@@ -934,6 +929,7 @@ static void vli_umult(u64 *result, const u64 *left, u64 right) noexcept
 
 /* Compute product = left * right, reserved for mont_red/mont_mult. */
 // result MUST be u64[N+1]
+// no clear N+1 .. 2N -1
 template<const uint N> forceinline
 static void vli_umult2(u64 *result, const u64 *left, u64 right) noexcept
 {
@@ -952,7 +948,7 @@ static void vli_umult2(u64 *result, const u64 *left, u64 right) noexcept
 }
 
 template<const uint N> forceinline
-static void vli_square(u64 *result, const u64 *left) noexcept
+static void vli_squareOld(u64 *result, const u64 *left) noexcept
 {
 	uint128_t r01( 0, 0 );
 	u64 r2 = 0;
@@ -984,7 +980,7 @@ static void vli_square(u64 *result, const u64 *left) noexcept
 }
 
 template<const uint N> forceinline
-static void vli_squareN(u64 *result, const u64 *left) noexcept
+static void vli_square(u64 *result, const u64 *left) noexcept
 {
 	vli_clear<N*2>(result);
 	for (uint k = 0; k < N - 1; ++k) {
@@ -1037,6 +1033,7 @@ vli_mod(u64 *result, const u64 *left, const u64 *mod, const bool carry) noexcept
 	{
 		// maybe copy_conditional faster?
 		// mask 0, or all 1
+		// not work yet
 		bool s_carry = vli_sub<N>(result, left, mod);
 		//vli_copy_conditional<N>(result, left, s_carry);
 		if (!carry && s_carry) vli_set<N>(result, left);

@@ -692,7 +692,7 @@ mont_sqrN(u64 *result, const u64 *x, const u64 *prime) noexcept
 		u = vli_add_to<N + 1>(r, s);
 		vli_rshift1w<N + 1>(r, u);	
 	}
-#if	__cplusplus >= 201703L
+#if	__cplusplus >= 201703L && defined(WITH_ASM)
 	if constexpr(N==4) {
 		r[N] += vli4_add_to(r, result);
 		vli4_mod(result, r, prime, r[N] != 0);

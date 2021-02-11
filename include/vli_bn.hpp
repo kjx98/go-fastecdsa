@@ -773,14 +773,14 @@ public:
 		vli_umult<N>(this->d, left.data(), right);
 	}
 
+	void squareOld(const bignum<N>& left) noexcept
+	{
+		vli_squareOld<N>(this->d, left.data());
+	}
+
 	void square(const bignum<N>& left) noexcept
 	{
 		vli_square<N>(this->d, left.data());
-	}
-
-	void squareN(const bignum<N>& left) noexcept
-	{
-		vli_squareN<N>(this->d, left.data());
 	}
 };
 

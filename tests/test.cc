@@ -89,23 +89,23 @@ TEST(testVli, TestSquare)
 	bignum<4>	bx1(dx1), by1(dy1);
 	bignum<4>	bx2(dx2);
 	bn_prod<4>	res, res1;
-	res.square(bx1);
-	res1.squareN(bx1);
+	res.squareOld(bx1);
+	res1.square(bx1);
 	EXPECT_EQ(vli_cmp<8>(res.data(), res1.data()), 0);
 	ASSERT_EQ(res, res1);
-	res.square(by1);
-	res1.squareN(by1);
+	res.squareOld(by1);
+	res1.square(by1);
 	EXPECT_EQ(vli_cmp<8>(res.data(), res1.data()), 0);
 	ASSERT_EQ(res, res1);
-	res.square(bx2);
-	res1.squareN(bx2);
+	res.squareOld(bx2);
+	res1.square(bx2);
 	EXPECT_EQ(res.cmp(res1), 0);
 	ASSERT_EQ(res, res1);
 	for(int i=0; i<10; ++i) {
 		auto&  rd = bn_random<4>::Instance();
 		bignum<4>	tmp = rd.get_random();
-		res.square(tmp);
-		res1.squareN(tmp);
+		res.squareOld(tmp);
+		res1.square(tmp);
 		ASSERT_EQ(res, res1);
 	}
 }
@@ -116,16 +116,16 @@ TEST(testVli, TestSquareN)
 	bignum<4>	bx2(dx2);
 	bn_prod<4>	res;
 	u64			res1[8];
-	res.square(bx1);
-	vli_squareN<4>(res1, dx1);
+	res.squareOld(bx1);
+	vli_square<4>(res1, dx1);
 	EXPECT_EQ(vli_cmp<8>(res.data(), res1), 0);
 	ASSERT_TRUE(res == res1);
-	res.square(by1);
-	vli_squareN<4>(res1, dy1);
+	res.squareOld(by1);
+	vli_square<4>(res1, dy1);
 	EXPECT_EQ(vli_cmp<8>(res.data(), res1), 0);
 	ASSERT_TRUE(res == res1);
-	res.square(bx2);
-	vli_squareN<4>(res1, dx2);
+	res.squareOld(bx2);
+	vli_square<4>(res1, dx2);
 	EXPECT_EQ(res.cmp(res1), 0);
 	ASSERT_TRUE(res == res1);
 }

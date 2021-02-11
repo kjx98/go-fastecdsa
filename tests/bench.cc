@@ -201,7 +201,7 @@ static void test_vliSqr(benchmark::State &state)
 {
 	u64		res[8];
 	for (auto _ : state) {
-		for (int i=0; i<1000; ++i) vli_square<4>(res, dx1);
+		for (int i=0; i<1000; ++i) vli_squareOld<4>(res, dx1);
 	}
 	tt = bignum<4>(res);
 }
@@ -211,7 +211,7 @@ static void test_vliSqrN(benchmark::State &state)
 {
 	u64		res[8];
 	for (auto _ : state) {
-		for (int i=0; i<1000; ++i) vli_squareN<4>(res, dx1);
+		for (int i=0; i<1000; ++i) vli_square<4>(res, dx1);
 	}
 	tt = bignum<4>(res);
 }
@@ -222,7 +222,7 @@ static void test_bnSqr(benchmark::State &state)
 	bignum<4>	bx1(dx1);
 	bn_prod<4>	xp;
 	for (auto _ : state) {
-		for (int i=0; i<1000; ++i) xp.square(bx1);
+		for (int i=0; i<1000; ++i) xp.squareOld(bx1);
 	}
 	tt = xp.bn256();
 }
@@ -233,7 +233,7 @@ static void test_bnSqrN(benchmark::State &state)
 	bignum<4>	bx1(dx1);
 	bn_prod<4>	xp;
 	for (auto _ : state) {
-		for (int i=0; i<1000; ++i) xp.squareN(bx1);
+		for (int i=0; i<1000; ++i) xp.square(bx1);
 	}
 	tt = xp.bn256();
 }
