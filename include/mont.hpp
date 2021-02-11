@@ -130,16 +130,23 @@ sm2p_mod(u64 *res, const u64 *left, const bool carry) noexcept
 				[mod1] "m" (sm2_p[3])
 				: "%r8", "%r9", "%r10", "%r11" , "%r12", "%r13", "%r14", "%r15", "cc", "memory");
 #elif	defined(__aarch64__)
+<<<<<<< HEAD
+	asm volatile( //"mov x9, -1\n"
+				//"mov x10, %3\n"
+				//"mov x11, -1\n"
+				//"mov x12, %4\n"
+=======
 	asm volatile( "mov x9, -1\n"
-				"mov x10, %3\n"
+				"mov x10, %[p1]\n"
 				"mov x11, -1\n"
-				"mov x12, %4\n"
+				"mov x12, %[p2]\n"
+>>>>>>> f15e6ee... cleanup
 				"ldp x4, x5, [%2]\n"
 				"ldp x6, x7, [%2, 16]\n"
-				"subs x9, x4, x9\n"
-				"sbcs x10, x5, x10\n"
-				"sbcs x11, x6, x11\n"
-				"sbcs x12, x7, x12\n"
+				"subs x9, x4, $-1\n"
+				"sbcs x10, x5, %3\n"
+				"sbcs x11, x6, $-1\n"
+				"sbcs x12, x7, %4\n"
 				"sbcs %0, %0, xzr\n"
 				"csel x4, x4, x9, cc\n"
 				"csel x5, x5, x10, cc\n"
@@ -149,8 +156,8 @@ sm2p_mod(u64 *res, const u64 *left, const bool carry) noexcept
 				"stp x6, x7, [%1, 16]\n"
 				"adc %0, xzr, xzr\n"
 		:
-		: "r" ((u64)carry), "r" (res), "r" (left), "rm" (sm2_p[1]),
-		"rm" (sm2_p[3])
+		: "r" ((u64)carry), "r" (res), "r" (left), [p1]"m" (sm2_p[1]),
+		[p2]"m" (sm2_p[3])
 		: "%x4", "%x5", "%x6", "%x7", "%x9", "%x10", "%x11", "%x12", "cc", "memory");
 #else
 	vli_mod<4>(res, left, sm2_p, carry);
