@@ -1055,13 +1055,13 @@ vli_div_barrett(u64 *result, const u64 *product, const u64 *mu) noexcept
  */
 template<const uint N> forceinline
 static void
-#ifdef	WITH_C2GO
+#ifdef	WITH_C2GO_1
 vli_mod_inv(u64 *result, const u64 *input, const u64 *mod, u64 *buff) noexcept
 #else
 vli_mod_inv(u64 *result, const u64 *input, const u64 *mod) noexcept
 #endif
 {
-#ifdef	WITH_C2GO
+#ifdef	WITH_C2GO_1
 	u64	*a=buff;
 	u64	*b=a+N;
 	u64	*u=b+N;

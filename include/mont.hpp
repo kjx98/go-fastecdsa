@@ -151,7 +151,7 @@ sm2p_mod(u64 *res, const u64 *left, const bool carry) noexcept
 				"csel x7, x7, x12, cc\n"
 				"stp x4, x5, [%1]\n"
 				"stp x6, x7, [%1, 16]\n"
-				"adc %0, xzr, xzr\n"
+				//"adc %0, xzr, xzr\n"
 		:
 		: "r" ((u64)carry), "r" (res), "r" (left), "r" (sm2_p[1]), "r" (sm2_p[3])
 		: "%x4", "%x5", "%x6", "%x7", "%x9", "%x10", "%x11", "%x12", "cc", "memory");
@@ -276,12 +276,7 @@ sm2p_reduction(u64 *result, const u64 *y, const bool isProd=false) noexcept
 			[pr3] "m" (sm2_p[3]), "r" (res0), "r" (res1), "r" (res2), "r" (res3)
 			: "r10", "r11", "r14", "r15", "cc", "memory");
 #elif	defined(__aarch64__11)
-	MOVD	res+0(FP), res_ptr
-	MOVD	in+24(FP), a_ptr
-
-	MOVD	p256const0<>(SB), const0
-	MOVD	p256const1<>(SB), const1
-
+	asm volatile(
 	LDP	0*16(a_ptr), (acc0, acc1)
 	LDP	1*16(a_ptr), (acc2, acc3)
 	// Only reduce, no multiplications are needed
@@ -330,7 +325,9 @@ sm2p_reduction(u64 *result, const u64 *y, const bool isProd=false) noexcept
 
 	STP	(acc0, acc1), 0*16(res_ptr)
 	STP	(acc2, acc3), 1*16(res_ptr)
-
+		:
+		: "r" ((u64)carry), "r" (res), "r" (left), "r" (sm2_p[1]), "r" (sm2_p[3])
+		: "%x4", "%x5", "%x6", "%x7", "%x9", "%x10", "%x11", "%x12", "cc", "memory");
 #else
 	u64	r[4];
 	vli_set<4>(r, y);
