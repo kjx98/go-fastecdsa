@@ -44,13 +44,13 @@ TEST(testEcc, TestBTCumultP)
 	u64		r[6];
 	vli_btc_multP(r, 1);
 	ASSERT_EQ(btc_prime.cmp(r), 0);
-	u64	v3456[]={0xFFFFFFFFCCBBAA9Aull, 0xCCBBAA9A33445565ull,
-		   			0xFFFFFFFFFFFFFFFFull, 0xCCBBAA99FFFFFFFFull, 0x33445565};
+	u64	v3456[]={0xccbba9d6583615baull, 0xffffffffffffffffull,
+		   			0xFFFFFFFFFFFFFFFFull, 0xFFFFFFFFFFFFFFFFull, 0x33445565};
 	bignum<5>	bv(v3456);
 	vli_btc_multP(r, 0x33445566);
 	bignum<5>	rv(r);
-	std::cerr << "secp256k1p * 33445566: " << rv << std::endl;
-	//EXPECT_EQ(bv.cmp(r), 0);
+	//std::cerr << "secp256k1p * 33445566: " << rv << std::endl;
+	EXPECT_EQ(bv.cmp(r), 0);
 }
 
 TEST(testVli, TestU64Addc)
