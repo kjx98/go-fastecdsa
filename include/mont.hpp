@@ -153,7 +153,7 @@ sm2p_mod(u64 *res, const u64 *left, const bool carry) noexcept
 				"stp x6, x7, [%1, 16]\n"
 				"adc %0, xzr, xzr\n"
 		:
-		: "r" ((u64)carry), "r" (res), "r" (left), "m" (sm2_p[1]), "m" (sm2_p[3])
+		: "r" ((u64)carry), "r" (res), "r" (left), "r" (sm2_p[1]), "r" (sm2_p[3])
 		: "%x4", "%x5", "%x6", "%x7", "%x9", "%x10", "%x11", "%x12", "cc", "memory");
 #else
 	vli_mod<4>(res, left, sm2_p, carry);

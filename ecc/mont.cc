@@ -130,14 +130,14 @@ bool mont_mod_sqrt(u64 *result, const u64 *x, const u64 *p) {
 
 void mont_sm2_mod_mult_p(u64 *result, const u64 *x, const u64 *y)
 {
-#ifdef	ommit
+#ifndef	ommit
 	u64	xp[4];
 	u64	yp[4];
 	u64	r[4];
-	mont_multP(xp, x, sm2_p_rr, sm2_p);
-	mont_multP(yp, y, sm2_p_rr, sm2_p);
-	mont_multP(r, xp, yp, sm2_p);
-	mont_reductionP(result, r, sm2_p);
+	sm2p_mult(xp, x, sm2_p_rr);
+	sm2p_mult(yp, y, sm2_p_rr);
+	sm2p_mult(r, xp, yp);
+	sm2p_reduction(result, r);
 #else
 	bignum<4> xp;
 	bignum<4> yp;
@@ -154,14 +154,14 @@ void mont_sm2_mod_mult_p(u64 *result, const u64 *x, const u64 *y)
 
 void mont_sm2_mod_mult_n(u64 *result, const u64 *x, const u64 *y)
 {
-#ifdef	ommit
+#ifndef	ommit
 	u64	xp[4];
 	u64	yp[4];
 	u64	r[4];
-	mont_mult<4>(xp, x, sm2_n_rr, sm2_n, sm2_n_k0);
-	mont_mult<4>(yp, y, sm2_n_rr, sm2_n, sm2_n_k0);
-	mont_mult<4>(r, xp, yp, sm2_n, sm2_n_k0);
-	mont_reduction<4>(result, r, sm2_n, sm2_n_k0);
+	mont_mult<4,sm2_n_k0>(xp, x, sm2_n_rr, sm2_n);
+	mont_mult<4,sm2_n_k0>(yp, y, sm2_n_rr, sm2_n);
+	mont_mult<4,sm2_n_k0>(r, xp, yp, sm2_n);
+	mont_reduction<4,sm2_n_k0>(result, r, sm2_n);
 #else
 	bignum<4> xp;
 	bignum<4> yp;
