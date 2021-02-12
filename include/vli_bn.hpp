@@ -491,6 +491,8 @@ public:
 		for (uint i = 0; i < N; i++)
 			this->d[i] = be64toh(from[N - 1 - i]);
 	}
+	// template friend works weird, can't reuse function from vli.hpp
+#ifdef	ommit
 	template<const u64 k0> forceinline
 	friend void mont_reduction(bignum& res,  const bignum& y,
 					const bignum& prime) noexcept
@@ -512,6 +514,7 @@ public:
 #endif
 		vli_mod<N>(res.d, r, prime.d, r[N] != 0);
 	}
+#endif
 	void mont_reduction(const bignum& y, const bignum& prime, const u64 k0)
 	noexcept
 	{
@@ -541,6 +544,12 @@ public:
 #endif
 		vli_mod<N>(res.d, r, prime.d, carry != 0);
 	}
+	void mont_mult(const bignum& x, const bignum& y, const bignum& prime,
+					const u64 k0) noexcept
+	{
+		vli_mont_mult<N>(this->d, x.d, y.d, prime.d, k0);
+	}
+#ifdef	ommit
 	template<const u64 k0> forceinline
 	friend void mont_mult(bignum& res, const bignum& x, const bignum& y,
 					const bignum& prime) noexcept
@@ -585,11 +594,6 @@ public:
 #endif
 		vli_mod<N>(res.d, r, prime.d, r[N] != 0);
 	}
-	void mont_mult(const bignum& x, const bignum& y, const bignum& prime,
-					const u64 k0) noexcept
-	{
-		vli_mont_mult<N>(this->d, x.d, y.d, prime.d, k0);
-	}
 	template<const u64 k0> forceinline friend
 	void mont_sqr(bignum& res, const bignum& x, const bignum& prime) noexcept
 	{
@@ -611,6 +615,7 @@ public:
 #endif
 		vli_mod<N>(res.d, r, prime.d, r[N] != 0);
 	}
+#endif
 	void mont_sqr(const bignum& x, const bignum& prime, const u64 k0) noexcept
 	{
 		vli_mont_sqr<N>(this->d, x.d, prime.d, k0);

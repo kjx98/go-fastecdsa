@@ -776,6 +776,7 @@ protected:
 };
 
 
+// curve256 for SM2
 class alignas(64) curve256 : public ecc_curve<4,true> {
 public:
 	using felem_t = bignum<4>;
@@ -789,12 +790,16 @@ public:
 	const felem_t& mont_one() const noexcept { return this->_mont_one; }
 	void to_montgomery(felem_t& res, const u64 *x) const noexcept
 	{
-		felem_t   *xx = reinterpret_cast<felem_t *>(const_cast<u64 *>(x));
-		mont_mult<1>(res, *xx, this->rr_p, this->p);
+		//felem_t   *xx = reinterpret_cast<felem_t *>(const_cast<u64 *>(x));
+		//mont_mult<1>(res, *xx, this->rr_p, this->p);
+		u64   *resp = reinterpret_cast<u64 *>(&res);
+		mont_mult<4,1>(resp, x, this->rr_p.data(), this->p.data());
 	}
 	void to_montgomery(felem_t& res, const felem_t& x) const noexcept
 	{
-		mont_mult<1>(res, x, this->rr_p, this->p);
+		//mont_mult<1>(res, x, this->rr_p, this->p);
+		u64   *resp = reinterpret_cast<u64 *>(&res);
+		mont_mult<4,1>(resp, x.data(), this->rr_p.data(), this->p.data());
 	}
 	void from_montgomery(felem_t& res, const felem_t& y) const noexcept
 	{

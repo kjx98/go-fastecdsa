@@ -167,11 +167,12 @@ static void mont_mulPr(bignum<4>& res, const bignum<4>& x, const bignum<4>& y)
 
 static void mont_mulp(bignum<4>& res, const bignum<4>& x, const bignum<4>& y)
 {
-	bignum<4>	xp, yp;
-	mont_mult<sm2_p_k0>(xp, x, rr, prime);
-	mont_mult<sm2_p_k0>(yp, y, rr, prime);
-	mont_mult<sm2_p_k0>(res, xp, yp, prime);
-	mont_reduction<sm2_p_k0>(res, res, prime);
+	u64	xp[4], yp[4];
+	u64   *resp = reinterpret_cast<u64 *>(&res);
+	mont_mult<4,sm2_p_k0>(xp, x.data(), rr.data(), prime.data());
+	mont_mult<4,sm2_p_k0>(yp, y.data(), rr.data(), prime.data());
+	mont_mult<4,sm2_p_k0>(resp, xp, yp, prime.data());
+	mont_reduction<4,sm2_p_k0>(resp, resp, prime.data());
 }
 
 static void mont_mulK01(bignum<4>& res, const bignum<4>& x, const bignum<4>& y)
@@ -205,7 +206,8 @@ TEST(testEcc, TestMontRedK01)
 	bignum<4>	xp, res;
 	for (int i=0; i<10; ++i) {
 		bignum<4>	tmp = rd.get_random();
-		mont_mult<sm2_p_k0>(xp, tmp, rr, prime);
+		u64   *resp = reinterpret_cast<u64 *>(&xp);
+		mont_mult<4,sm2_p_k0>(resp, tmp.data(), rr.data(), prime.data());
 		mont_reductionK01(res, xp, prime);
 		EXPECT_EQ(res, tmp);
 	}
@@ -218,7 +220,8 @@ TEST(testEcc, TestSM2pRed)
 	u64		res[4];
 	for (int i=0; i<10; ++i) {
 		bignum<4>	tmp = rd.get_random();
-		mont_mult<sm2_p_k0>(xp, tmp, rr, prime);
+		u64   *resp = reinterpret_cast<u64 *>(&xp);
+		mont_mult<4, sm2_p_k0>(resp, tmp.data(), rr.data(), prime.data());
 		sm2p_reduction(res, xp.data());
 		EXPECT_TRUE(tmp == res);
 	}
