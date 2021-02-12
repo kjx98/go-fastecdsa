@@ -934,6 +934,16 @@ TEST(TestECDSA, TestRecover)
 	ASSERT_TRUE(ec_recover(sm2_p256, Ps, r, s, ecInd, msg));
 	EXPECT_EQ(Ps.x, priv.PubKey().x);
 	EXPECT_EQ(Ps.y, priv.PubKey().y);
+	steady_clock::time_point t1 = steady_clock::now();
+	for (int i=0; i<1000; ++i)
+		ec_recover(sm2_k256, Ps, r, s, ecInd, msg);
+	steady_clock::time_point t2 = steady_clock::now();
+	std::chrono::duration<double> time_span1;
+	time_span1 = (t2 - t1);
+	std::cerr << "1000 signed recover cost " << time_span1.count() * 1e3
+			<< " ms" << std::endl;
+	std::cerr << "recover " << (int)(1000/time_span1.count()) << " msg/sec"
+			<< std::endl;
 }
 
 int main(int argc, char *argv[])

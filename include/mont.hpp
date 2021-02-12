@@ -249,7 +249,6 @@ sm2p_reduction(u64 *result, const u64 *y, const bool isProd=false) noexcept
 		carry += cc;
 	}
 
-#ifdef	__x86_64__
 	// mod prime
 	asm volatile(
 		"MOVQ %%r12, %%r10\n"
@@ -276,14 +275,62 @@ sm2p_reduction(u64 *result, const u64 *y, const bool isProd=false) noexcept
 			: "D" (result), "a" (carry), [pr1] "m" (sm2_p[1]),
 			[pr3] "m" (sm2_p[3]), "r" (res0), "r" (res1), "r" (res2), "r" (res3)
 			: "r10", "r11", "r14", "r15", "cc", "memory");
-#else
-	result[0] = res0;
-	result[1] = res1;
-	result[2] = res2;
-	result[3] = res3;
-	// sm2p_mod
-	sm2p_mod(result, result, carry != 0);
-#endif
+#elif	defined(__aarch64__11)
+	MOVD	res+0(FP), res_ptr
+	MOVD	in+24(FP), a_ptr
+
+	MOVD	p256const0<>(SB), const0
+	MOVD	p256const1<>(SB), const1
+
+	LDP	0*16(a_ptr), (acc0, acc1)
+	LDP	1*16(a_ptr), (acc2, acc3)
+	// Only reduce, no multiplications are needed
+	// First reduction step
+	ADDS	acc0<<32, acc1, acc1
+	LSR	$32, acc0, t0
+	MUL	acc0, const1, t1
+	UMULH	acc0, const1, acc0
+	ADCS	t0, acc2
+	ADCS	t1, acc3
+	ADC	$0, acc0
+	// Second reduction step
+	ADDS	acc1<<32, acc2, acc2
+	LSR	$32, acc1, t0
+	MUL	acc1, const1, t1
+	UMULH	acc1, const1, acc1
+	ADCS	t0, acc3
+	ADCS	t1, acc0
+	ADC	$0, acc1
+	// Third reduction step
+	ADDS	acc2<<32, acc3, acc3
+	LSR	$32, acc2, t0
+	MUL	acc2, const1, t1
+	UMULH	acc2, const1, acc2
+	ADCS	t0, acc0
+	ADCS	t1, acc1
+	ADC	$0, acc2
+	// Last reduction step
+	ADDS	acc3<<32, acc0, acc0
+	LSR	$32, acc3, t0
+	MUL	acc3, const1, t1
+	UMULH	acc3, const1, acc3
+	ADCS	t0, acc1
+	ADCS	t1, acc2
+	ADC	$0, acc3
+
+	SUBS	$-1, acc0, t0
+	SBCS	const0, acc1, t1
+//	SBCS	$-1, acc2, t2
+	SBCS	const1, acc3, t3
+
+	CSEL	CS, t0, acc0, acc0
+	CSEL	CS, t1, acc1, acc1
+	CSEL	CS, t2, acc2, acc2
+	CSEL	CS, t3, acc3, acc3
+
+	STP	(acc0, acc1), 0*16(res_ptr)
+	STP	(acc2, acc3), 1*16(res_ptr)
+
 #else
 	u64	r[4];
 	vli_set<4>(r, y);
