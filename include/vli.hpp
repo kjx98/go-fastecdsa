@@ -110,7 +110,7 @@ static forceinline u64 u64_addc(const u64 a, const u64 b, u64& carry)
 				: "r" (a),"rm" (b)
 				: "cc");
 	return ret;
-#elif	defined(__aarch64__)
+#elif	defined(__aarch64__1)
 	u64		ret;
 	asm volatile(
 			"adds	%0, %1, %2\n"
@@ -181,12 +181,12 @@ static forceinline u64 u64_subc(const u64 a, const u64 b, u64& carry)
 				: "rm" (b) 
 				: "cc");
 	return ret;
-#elif	defined(__aarch64__)
+#elif	defined(__aarch64__1)
 	u64		ret=a;
 	asm volatile("subs %0, %0, %1\n"
-				"adc %1, xzr, xzr\n"
+				"sbc %1, xzr, xzr\n"
 				"subs %0, %0, %2\n"
-				"adc %1, %1, xzr\n"
+				"sbc %1, %1, xzr\n"
 				: "+r" (ret), "+r" (carry)
 				: "r" (b)
 				: "cc");
@@ -218,7 +218,7 @@ static forceinline u64 u64_subcz(const u64 a, u64& carry)
 #elif	defined(__aarch64__)
 	u64		ret=a;
 	asm volatile("subs %0, %0, %1\n"
-				"adc %1, xzr, xzr\n"
+				"sbc %1, xzr, xzr\n"
 				: "+r" (ret), "+r" (carry)
 				:
 				: "cc");
