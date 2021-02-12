@@ -110,6 +110,17 @@ static forceinline u64 u64_addc(const u64 a, const u64 b, u64& carry)
 				: "r" (a),"rm" (b)
 				: "cc");
 	return ret;
+#elif	defined(__aarch64__)
+	u64		ret;
+	asm volatile(
+			"adds	%0, %1, %2\n"
+			"adc	%1, xzr, xzr\n"
+			"adds	%0, %0, %3\n"
+			"adc %1, %1, xzr\n"
+			: "=r" (ret), "+r"(carry)
+			: "r" (a), "r" (b)
+			: "cc");
+	return ret;
 #elif	__clang__ > 3
 	u64		ret, c_out;
 	ret = __builtin_addcl(a, b, carry, &c_out);
@@ -133,6 +144,15 @@ static forceinline u64 u64_addcz(const u64 a, u64& carry)
 				: "+r" (ret), "+r" (carry)
 				:
 				: "cc");
+	return ret;
+#elif	defined(__aarch64__)
+	u64		ret;
+	asm volatile(
+			"adds	%0, %1, %2\n"
+			"adc	%1, xzr, xzr\n"
+			: "=r" (ret), "+r"(carry)
+			: "r" (a)
+			: "cc");
 	return ret;
 #elif	__clang__ > 3
 	u64		ret, c_out;
@@ -161,6 +181,16 @@ static forceinline u64 u64_subc(const u64 a, const u64 b, u64& carry)
 				: "rm" (b) 
 				: "cc");
 	return ret;
+#elif	defined(__aarch64__)
+	u64		ret=a;
+	asm volatile("subs %0, %0, %1\n"
+				"adc %1, xzr, xzr\n"
+				"subs %0, %0, %2\n"
+				"adc %1, %1, xzr\n"
+				: "+r" (ret), "+r" (carry)
+				: "r" (b)
+				: "cc");
+	return ret;
 #elif	__clang__ > 3
 	u64		ret, c_out;
 	ret = __builtin_subcl(a, b, carry, &c_out);
@@ -181,6 +211,14 @@ static forceinline u64 u64_subcz(const u64 a, u64& carry)
 	asm volatile("subq %1, %0\n"
 				"movq $0, %1\n"
 				"adcq $0, %1\n"
+				: "+r" (ret), "+r" (carry)
+				:
+				: "cc");
+	return ret;
+#elif	defined(__aarch64__)
+	u64		ret=a;
+	asm volatile("subs %0, %0, %1\n"
+				"adc %1, xzr, xzr\n"
 				: "+r" (ret), "+r" (carry)
 				:
 				: "cc");
