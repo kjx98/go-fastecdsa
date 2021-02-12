@@ -568,6 +568,26 @@ bool vli4_sub(u64 *res, const u64 *left, const u64 *right) noexcept
 #endif
 #endif	// WITH_ASM
 
+
+forceinline static void
+vli4_load(const u64 *vli, u64& r0, u64& r1, u64& r2, u64& r3) noexcept
+{
+	r0 = vli[0];
+	r1 = vli[1];
+	r2 = vli[2];
+	r3 = vli[3];
+}
+
+forceinline static void
+vli4_save(u64 *vli, u64 r0, u64 r1, u64 r2, u64 r3) noexcept
+{
+	vli[0] = r0;
+	vli[1] = r1;
+	vli[2] = r2;
+	vli[3] = r3;
+}
+
+
 /**
  * vli_is_zero() - Determine is vli is zero
  *

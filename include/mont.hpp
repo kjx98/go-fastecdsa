@@ -366,41 +366,50 @@ sm2p_reduction(u64 *result, const u64 *y, const bool isProd=false) noexcept
 }
 
 forceinline static void
-sm2p_reductionN(u64 *result, const u64 *y, const bool isProd=false) noexcept
+sm2p_reductionStep(u64& r0, u64& r1, u64& r2, u64& r3, u64& carry)
 {
-	u64	r[4];
-	vli_set<4>(r, y);
-	u64 carry = 0;
-	for (uint i=0; i < 4; i++) {
-		u64	u = r[0];
+		u64	u = r0;
 		u64	t_low, t_high;
 		t_low = u << 32;	// ^192
 		t_high = u >> 32;
-		vli_rshift1w<4>(r, carry);
+		//vli_rshift1w<4>(r, carry);
 		u64 cc = 0;
-		r[0] = u64_addc(r[0], u, cc);
-		r[1] = u64_addcz(r[1], cc);
-		r[2] = u64_addcz(r[2], cc);
-		r[3] = u64_addc(r[3], u, cc);
+		r1 = u64_addc(r1, u, cc);
+		r2 = u64_addcz(r2, cc);
+		r3 = u64_addcz(r3, cc);
+		r0 = u64_addc(carry, u, cc);
 		carry = cc;
 		cc = 0;
-		r[0] = u64_subc(r[0], t_low, cc);
-		r[1] = u64_subc(r[1], t_high, cc);
-		r[2] = u64_subc(r[2], t_low, cc);
-		r[3] = u64_subc(r[3], t_high, cc);
+		r1 = u64_subc(r1, t_low, cc);
+		r2 = u64_subc(r2, t_high, cc);
+		r3 = u64_subc(r3, t_low, cc);
+		r0 = u64_subc(r0, t_high, cc);
 		carry -= cc;
-	}
+}
+
+forceinline static void
+sm2p_reductionN(u64 *result, const u64 *y, const bool isProd=false) noexcept
+{
+	u64	r0, r1, r2, r3;
+	vli4_load(y, r0, r1, r2, r3);
+	u64 carry = 0;
+	sm2p_reductionStep(r0, r1, r2, r3, carry);
+	sm2p_reductionStep(r1, r2, r3, r0, carry);
+	sm2p_reductionStep(r2, r3, r0, r1, carry);
+	sm2p_reductionStep(r3, r0, r1, r2, carry);
+
 	// add high 256 bits
 	if ( unlikely(isProd) )
 	{
 		u64	cc=0;
-		r[0] = u64_addc(r[0], y[4], cc);
-		r[1] = u64_addc(r[1], y[5], cc);
-		r[2] = u64_addc(r[2], y[6], cc);
-		r[3] = u64_addc(r[3], y[7], cc);
+		r0 = u64_addc(r0, y[4], cc);
+		r1 = u64_addc(r1, y[5], cc);
+		r2 = u64_addc(r2, y[6], cc);
+		r3 = u64_addc(r3, y[7], cc);
 		carry += cc;
 	}
-	sm2p_mod(result, r, carry != 0);
+	vli4_save(result, r0, r1, r2, r3);
+	sm2p_mod(result, result, carry != 0);
 }
 
 template<const uint N> forceinline

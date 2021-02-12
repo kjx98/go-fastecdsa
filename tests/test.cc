@@ -227,6 +227,20 @@ TEST(testEcc, TestSM2pRed)
 	}
 }
 
+TEST(testEcc, TestSM2pRedN)
+{
+	auto&  rd = bn_random<4>::Instance();
+	bignum<4>	xp;
+	u64		res[4];
+	for (int i=0; i<10; ++i) {
+		bignum<4>	tmp = rd.get_random();
+		u64   *resp = reinterpret_cast<u64 *>(&xp);
+		mont_mult<4, sm2_p_k0>(resp, tmp.data(), rr.data(), prime.data());
+		sm2p_reductionN(res, xp.data());
+		EXPECT_TRUE(tmp == res);
+	}
+}
+
 TEST(testEcc, TestMontMult)
 {
 	bignum<4>	res, res2;
