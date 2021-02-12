@@ -349,14 +349,10 @@ public:
 	void mod_add(const bignum& left, const bignum &right, const bignum& prime)
 			noexcept
 	{
-#if	defined(WITH_ASM)
+#if	defined(WITH_ASM) && __cplusplus >= 201703L
 #if	defined(__x86_64__)
-#if	__cplusplus >= 201703L
 		if constexpr(N == 4) mod4_add(this->d, left.d, right.d, prime.d); else
 #else
-		if ( likely(N == 4) ) mod4_add(this->d, left.d, right.d, prime.d); else
-#endif
-#elif	__cplusplus >= 201703L
 		if constexpr(N == 4) {
 			bool carry = vli4_add(this->d, left.d, right.d);
 			vli4_mod(this->d, this->d, prime.d, carry);
@@ -371,14 +367,10 @@ public:
 /* Computes this = this + right, modulo prime. Can modify in place. */
 	void mod_add_to(const bignum& right, const bignum& prime) noexcept
 	{
-#if	defined(WITH_ASM)
+#if	defined(WITH_ASM) && __cplusplus >= 201703L
 #if	defined(__x86_64__)
-#if	__cplusplus >= 201703L
 		if constexpr(N == 4) mod4_add_to(this->d, right.d, prime.d); else
 #else
-		if ( likely(N == 4) ) mod4_add_to(this->d, right.d, prime.d); else
-#endif
-#elif	__cplusplus >= 201703L
 		if constexpr(N == 4) {
 			bool carry = vli4_add_to(this->d, right.d);
 			vli4_mod(this->d, this->d, prime.d, carry);
@@ -424,33 +416,20 @@ public:
  */
 	void mod_sub(const bignum& left, const bignum& right, const bignum& prime) noexcept
 	{
-#if	defined(WITH_ASM)
-#if	__cplusplus >= 201703L
+#if	defined(WITH_ASM) && __cplusplus >= 201703L
 		if constexpr(N == 4) {
 			if (vli4_sub(this->d, left.d, right.d))
 				vli4_add_to(this->d, prime.d);
 		} else
-#else
-		if ( likely(N == 4) ) {
-			if (vli4_sub(this->d, left.d, right.d))
-				vli4_add_to(this->d, prime.d);
-		} else
-#endif
 #endif
 		if (vli_sub<N>(this->d, left.d, right.d)) vli_add_to<N>(this->d, prime.d);
 	}
 	void mod_sub_from(const bignum& right, const bignum& prime) noexcept
 	{
-#if	defined(WITH_ASM)
-#if	__cplusplus >= 201703L
+#if	defined(WITH_ASM) && __cplusplus >= 201703L
 		if constexpr(N == 4) {
 			if (vli4_sub_from(this->d, right.d)) vli4_add_to(this->d, prime.d);
 		} else
-#else
-		if ( likely(N == 4) ) {
-			if (vli4_sub_from(this->d, right.d)) vli4_add_to(this->d, prime.d);
-		} else
-#endif
 #endif
 		if (vli_sub_from<N>(this->d, right.d)) vli_add_to<N>(this->d, prime.d);
 	}
@@ -549,73 +528,6 @@ public:
 	{
 		vli_mont_mult<N>(this->d, x.d, y.d, prime.d, k0);
 	}
-#ifdef	ommit
-	template<const u64 k0> forceinline
-	friend void mont_mult(bignum& res, const bignum& x, const bignum& y,
-					const bignum& prime) noexcept
-	{
-		u64	s[N+1];
-		u64	r[N+1];
-		vli_clear<N + 1>(r);
-		for (uint i=0; i < N;i++) {
-			vli_umult2<N>(s, x.d, y.d[i]);
-			vli_add_to<N + 1>(r, s);
-			u64	u = r[0] * k0;
-			vli_umult2<N>(s, prime.d, u);
-			u = vli_add_to<N + 1>(r, s);
-			vli_rshift1w<N + 1>(r, u);	
-		}
-#if	__cplusplus >= 201703L && defined(WITH_ASM)
-		if constexpr(N==4 && k0 == 1) {
-			sm2p_mod(res.d, r, r[N] != 0);
-		} else
-#endif
-		vli_mod<N>(res.d, r, prime.d, r[N] != 0);
-	}
-	template<const u64 k0> forceinline
-	friend void mont_mult(bignum& res, const u64 *x, const bignum& y,
-					const bignum& prime) noexcept
-	{
-		u64	s[N+1];
-		u64	r[N+1];
-		vli_clear<N + 1>(r);
-		for (uint i=0; i < N;i++) {
-			vli_umult2<N>(s, x, y.d[i]);
-			vli_add_to<N + 1>(r, s);
-			u64	u = r[0] * k0;
-			vli_umult2<N>(s, prime.d, u);
-			u = vli_add_to<N + 1>(r, s);
-			vli_rshift1w<N + 1>(r, u);	
-		}
-#if	__cplusplus >= 201703L && defined(WITH_ASM)
-		if constexpr(N==4 && k0 == 1) {
-			sm2p_mod(res.d, r, r[N] != 0);
-		} else
-#endif
-		vli_mod<N>(res.d, r, prime.d, r[N] != 0);
-	}
-	template<const u64 k0> forceinline friend
-	void mont_sqr(bignum& res, const bignum& x, const bignum& prime) noexcept
-	{
-		u64	s[N+1];
-		u64	r[N+1];
-		vli_clear<N + 1>(r);
-		for (uint i=0; i < N;i++) {
-			vli_umult2<N>(s, x.d, x.d[i]);
-			vli_add_to<N + 1>(r, s);
-			u64	u = r[0] * k0;
-			vli_umult2<N>(s, prime.d, u);
-			u = vli_add_to<N + 1>(r, s);
-			vli_rshift1w<N + 1>(r, u);	
-		}
-#if	__cplusplus >= 201703L && defined(WITH_ASM)
-		if constexpr(N==4 && k0 == 1) {
-			sm2p_mod(res.d, r, r[N] != 0);
-		} else
-#endif
-		vli_mod<N>(res.d, r, prime.d, r[N] != 0);
-	}
-#endif
 	void mont_sqr(const bignum& x, const bignum& prime, const u64 k0) noexcept
 	{
 		vli_mont_sqr<N>(this->d, x.d, prime.d, k0);
