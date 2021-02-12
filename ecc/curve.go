@@ -1,6 +1,6 @@
 package ecc
 
-// #cgo CXXFLAGS: -O3 -Wpedantic -I../include -Wno-maybe-uninitialized -std=c++11
+// #cgo CXXFLAGS: -O3 -Wpedantic -I../include -Wno-uninitialized -std=c++11
 // #include "ecc.h"
 import "C"
 

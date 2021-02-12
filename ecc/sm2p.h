@@ -15,8 +15,8 @@ typedef __int128_t int128_t;
 # endif
 
 
-void sm2_mod_inv(bn_words_t *result, const bn_words_t *in);
-void sm2_mod_mul(bn_words_t *result, const bn_words_t *x, const bn_words_t *y);
+void sm2_mod_inv(u64 *result, const u64 *in);
+//void sm2_mod_mul(u64 *result, const u64 *x, const u64 *y);
 void sm2_point_add(Point *result, const Point *p, const Point *q);
 void sm2_point_add_jacobian(Point *result, const Point *p, const Point *q);
 void sm2_point_double(Point *result, const Point *p);

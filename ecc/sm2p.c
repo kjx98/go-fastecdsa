@@ -12,18 +12,14 @@ static forceinline void bn_to_felem(felem out, const bn_words_t in)
 	out[3] = in[3];
 }
 
-void sm2_mod_inv(bn_words_t *result, const bn_words_t *in)
+void sm2_mod_inv(u64 *result, const u64 *in)
 {
 	felem tmp;
 	smallfelem *out=(smallfelem*)result;
 
-	bn_to_felem(tmp, *in);
+	bn_to_felem(tmp, in);
 	felem_inv(tmp, tmp);
 	felem_contract(*out, tmp);
-}
-
-void sm2_mod_mul(bn_words_t *result, const bn_words_t *x, const bn_words_t *y)
-{
 }
 
 void sm2_point_add(Point *result, const Point *p, const Point *q)
