@@ -131,6 +131,18 @@ static void test_montMultK01(benchmark::State &state)
 }
 BENCHMARK(test_montMultK01);
 
+static void test_montMultK01N(benchmark::State &state)
+{
+	u64	xp[4];
+	for (auto _ : state) {
+		for (int i=0; i<1000; ++i)
+		sm2p_multN(xp, dx1, rr.data());
+	}
+	bignum<4>	bx1(xp);
+	mont_reductionK01(tt, bx1, prime);
+}
+BENCHMARK(test_montMultK01N);
+
 static void test_montSqr(benchmark::State &state)
 {
 	bignum<4>	xp, bp;

@@ -373,11 +373,12 @@ sm2p_reductionStep(u64& r0, u64& r1, u64& r2, u64& r3, u64& carry)
 		t_low = u << 32;	// ^192
 		t_high = u >> 32;
 		//vli_rshift1w<4>(r, carry);
+		r0 = carry;		// rshift1w
 		u64 cc = 0;
 		r1 = u64_addc(r1, u, cc);
 		r2 = u64_addcz(r2, cc);
 		r3 = u64_addcz(r3, cc);
-		r0 = u64_addc(carry, u, cc);
+		r0 = u64_addc(r0, u, cc);
 		carry = cc;
 		cc = 0;
 		r1 = u64_subc(r1, t_low, cc);
@@ -777,6 +778,58 @@ sm2p_mult(u64 *result, const u64 *x, const u64 *y) noexcept
 #else
 	vli_mod<4>(result, r, sm2_p, r[4] != 0);
 #endif
+#endif
+}
+
+// r0..3 = r0..3 + s[0..3]
+// return s[4] + carry (of above)
+forceinline static u64
+vli4_addc_to(u64& r0, u64& r1, u64& r2, u64& r3, const u64* s,
+	const u64 carry=0) noexcept
+{
+	u64	cc = 0;
+	r0 = u64_addc(r0, s[0], cc);
+	r1 = u64_addc(r1, s[1], cc);
+	r2 = u64_addc(r2, s[2], cc);
+	r3 = u64_addc(r3, s[3], cc);
+	return u64_addc(carry, s[4], cc);
+}
+
+forceinline static void
+sm2p_multN(u64 *result, const u64 *x, const u64 *y) noexcept
+{
+	u64	r0, r1, r2, r3;
+	u64	carry;
+	{
+		u64	s[4+1];
+		vli_umult2<4>(s, x, y[0]);
+		vli4_load(s, r0, r1, r2, r3);
+		carry = s[4];
+		sm2p_reductionStep(r0, r1, r2, r3, carry);
+		vli_umult2<4>(s, x, y[1]);
+		carry = vli4_addc_to(r1, r2, r3, r0, s, carry);
+		sm2p_reductionStep(r1, r2, r3, r0, carry);
+		vli_umult2<4>(s, x, y[2]);
+		carry = vli4_addc_to(r2, r3, r0, r1, s, carry);
+		sm2p_reductionStep(r2, r3, r0, r1, carry);
+		vli_umult2<4>(s, x, y[3]);
+		carry = vli4_addc_to(r3, r0, r1, r2, s, carry);
+		sm2p_reductionStep(r3, r0, r1, r2, carry);
+	}
+#ifdef	ommit
+	vli4_save(result, r0, r1, r2, r3);
+	sm2p_mod(result, result, carry != 0);
+#else
+	{
+		u64	cc=0;
+		u64 s0 = u64_subc(r0, sm2_p[0], cc);
+		u64 s1 = u64_subc(r1, sm2_p[1], cc);
+		u64 s2 = u64_subc(r2, sm2_p[2], cc);
+		u64 s3 = u64_subc(r3, sm2_p[3], cc);
+		u64_subcz(carry, cc);
+		if (cc != 0) vli4_save(result, r0, r1, r2, r3); else
+			vli4_save(result, s0, s1, s2, s3);
+	}
 #endif
 }
 

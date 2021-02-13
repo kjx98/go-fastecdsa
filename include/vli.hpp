@@ -836,6 +836,9 @@ bool vli_sub(u64 *result, const u64 *left, const u64 *right) noexcept
 }
 
 #ifdef	ommit
+// carry for left[N]
+// result = left[1..N] - right[1..N-1]
+// return borrow
 template<const uint N> forceinline static bool
 vli_subc(u64 *result, const u64 *left, const u64 *right, const u64 carry=0) noexcept
 {

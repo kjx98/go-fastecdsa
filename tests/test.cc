@@ -184,6 +184,15 @@ static void mont_mulK01(bignum<4>& res, const bignum<4>& x, const bignum<4>& y)
 	mont_reductionK01(res, bignum<4>(xp), prime);
 }
 
+static void mont_mulK01N(bignum<4>& res, const bignum<4>& x, const bignum<4>& y)
+{
+	u64			xp[4], yp[4];
+	sm2p_multN(xp, x.data(), rr.data());
+	sm2p_multN(yp, y.data(), rr.data());
+	sm2p_multN(xp, xp, yp);
+	mont_reductionK01(res, bignum<4>(xp), prime);
+}
+
 static void mont_sqrN(u64 *res, const bignum<4>& x)
 {
 	bignum<4>	xp;
@@ -281,6 +290,17 @@ TEST(testEcc, TestMontMultK01)
 	EXPECT_TRUE(res.cmp(xy1mod) == 0);
 	bignum<4>	bx2(dx2), by2(dy2);
 	mont_mulK01(res, bx2, by2);
+	EXPECT_TRUE(res.cmp(xy2mod) == 0);
+}
+
+TEST(testEcc, TestSM2pMultN)
+{
+	bignum<4>	res;
+	bignum<4>	bx1(dx1), by1(dy1);
+	mont_mulK01(res, bx1, by1);
+	EXPECT_TRUE(res.cmp(xy1mod) == 0);
+	bignum<4>	bx2(dx2), by2(dy2);
+	mont_mulK01N(res, bx2, by2);
 	EXPECT_TRUE(res.cmp(xy2mod) == 0);
 }
 
