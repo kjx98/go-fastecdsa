@@ -835,6 +835,19 @@ bool vli_sub(u64 *result, const u64 *left, const u64 *right) noexcept
 	return borrow != 0;
 }
 
+#ifdef	ommit
+template<const uint N> forceinline static bool
+vli_subc(u64 *result, const u64 *left, const u64 *right, const u64 carry=0) noexcept
+{
+	u64 borrow = 0;
+	for (uint i = 0; i < N; i++) {
+		result[i] = u64_subc(left[i], right[i], borrow);
+	}
+	u64_subcz(carry, borrow);
+	return borrow != 0;
+}
+#endif
+
 template<const uint N> forceinline static
 bool vli_sub_from(u64 *result, const u64 *right) noexcept
 {
@@ -1092,9 +1105,9 @@ vli_mod(u64 *result, const u64 *left, const u64 *mod, const bool carry) noexcept
 		// maybe copy_conditional faster?
 		// mask 0, or all 1
 		// not work yet
-		bool s_carry = vli_sub<N>(result, left, mod);
+		bool s_carry = vli_subc<N>(result, left, mod, carry);
 		//vli_copy_conditional<N>(result, left, s_carry);
-		if (!carry && s_carry) vli_set<N>(result, left);
+		if (s_carry) vli_set<N>(result, left);
 	}
 #else
 	//if (carry || vli_cmp<N>(left, mod) >= 0)

@@ -408,8 +408,21 @@ sm2p_reductionN(u64 *result, const u64 *y, const bool isProd=false) noexcept
 		r3 = u64_addc(r3, y[7], cc);
 		carry += cc;
 	}
+#ifdef	ommit
 	vli4_save(result, r0, r1, r2, r3);
 	sm2p_mod(result, result, carry != 0);
+#else
+	{
+		u64	cc=0;
+		u64 s0 = u64_subc(r0, sm2_p[0], cc);
+		u64 s1 = u64_subc(r1, sm2_p[1], cc);
+		u64 s2 = u64_subc(r2, sm2_p[2], cc);
+		u64 s3 = u64_subc(r3, sm2_p[3], cc);
+		u64_subcz(carry, cc);
+		if (cc != 0) vli4_save(result, r0, r1, r2, r3); else
+			vli4_save(result, s0, s1, s2, s3);
+	}
+#endif
 }
 
 template<const uint N> forceinline
