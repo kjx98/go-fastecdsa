@@ -28,12 +28,6 @@ include(FindPkgConfig)
 
 enable_testing()
 
-find_package(Boost 1.53)
-
-if(Boost_FOUND)
-	message(STATUS "Use Boost version ${Boost_VERSION}")
-	include_directories(${Boost_INCLUDE_DIRS})
-endif()
 
 if (WITH_TCMALLOC)
 	pkg_check_modules (LIBTCMALLOC libtcmalloc_minimal)

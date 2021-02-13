@@ -160,7 +160,7 @@ static void mont_mulPr(bignum<4>& res, const bignum<4>& x, const bignum<4>& y)
 	yp.mont_mult(y, rr, prime, sm2_p_k0);
 	bn_prod<4>	pd;
 	pd.mult(xp, yp);
-	mont_reductionK01(res, pd.m_low(), prime);
+	res.mont_reduction(pd.m_low(), prime, 1);
 	res.mod_add_to(pd.m_high(), prime);
 	res.mont_reduction(res, prime, sm2_p_k0);
 }
@@ -181,7 +181,7 @@ static void mont_mulK01(bignum<4>& res, const bignum<4>& x, const bignum<4>& y)
 	sm2p_mult(xp, x.data(), rr.data());
 	sm2p_mult(yp, y.data(), rr.data());
 	sm2p_mult(xp, xp, yp);
-	mont_reductionK01(res, bignum<4>(xp), prime);
+	res.mont_reduction(xp, prime, 1);
 }
 
 static void mont_mulK01N(bignum<4>& res, const bignum<4>& x, const bignum<4>& y)
@@ -190,7 +190,7 @@ static void mont_mulK01N(bignum<4>& res, const bignum<4>& x, const bignum<4>& y)
 	sm2p_multN(xp, x.data(), rr.data());
 	sm2p_multN(yp, y.data(), rr.data());
 	sm2p_multN(xp, xp, yp);
-	mont_reductionK01(res, bignum<4>(xp), prime);
+	res.mont_reduction(xp, prime, 1);
 }
 
 static void mont_sqrN(u64 *res, const bignum<4>& x)
@@ -217,7 +217,7 @@ TEST(testEcc, TestMontRedK01)
 		bignum<4>	tmp = rd.get_random();
 		u64   *resp = reinterpret_cast<u64 *>(&xp);
 		mont_mult<4,sm2_p_k0>(resp, tmp.data(), rr.data(), prime.data());
-		mont_reductionK01(res, xp, prime);
+		res.mont_reduction(xp, prime, 1);
 		EXPECT_EQ(res, tmp);
 	}
 }

@@ -483,29 +483,10 @@ public:
 	{
 		vli_mont_reduction<N>(this->d, y.d, prime.d, k0);
 	}
-	friend void mont_reductionK01(bignum& res,  const bignum& y,
-					const bignum& prime) noexcept
+	void mont_reduction(const u64* y, const bignum& prime, const u64 k0)
+	noexcept
 	{
-		u64	s[N];
-		u64	r[N];
-		vli_set<N>(r, y.d);
-		u64 carry = 0;
-		for (uint i=0; i < N; i++) {
-#ifndef	NO_SM2_PH
-			vli_sm2_multPh(s, r[0]);
-#else
-			vli_umult2<N-1>(s, prime.d+1, r[0]);
-			vli_uadd_to<N>(s, r[0]);
-#endif
-			vli_rshift1w<N>(r, carry);	
-			carry = vli_add_to<N>(r, s);
-		}
-#if	__cplusplus >= 201703L && defined(WITH_ASM)
-		if constexpr(N==4) {
-			sm2p_mod(res.d, r, carry != 0);
-		} else
-#endif
-		vli_mod<N>(res.d, r, prime.d, carry != 0);
+		vli_mont_reduction<N>(this->d, y, prime.d, k0);
 	}
 	void mont_mult(const bignum& x, const bignum& y, const bignum& prime,
 					const u64 k0) noexcept
@@ -515,27 +496,6 @@ public:
 	void mont_sqr(const bignum& x, const bignum& prime, const u64 k0) noexcept
 	{
 		vli_mont_sqr<N>(this->d, x.d, prime.d, k0);
-	}
-	friend
-	void mont_sqrK01(bignum& res, const bignum& x, const bignum& prime) noexcept
-	{
-		u64	s[N+1];
-		u64	r[N+1];
-		vli_clear<N + 1>(r);
-		for (uint i=0; i < N;i++) {
-			vli_umult2<N>(s, x.d, x.d[i]);
-			vli_add_to<N + 1>(r, s);
-			u64	u = r[0];
-			vli_umult2<N>(s, prime.d, u);
-			u = vli_add_to<N + 1>(r, s);
-			vli_rshift1w<N + 1>(r, u);	
-		}
-#if	__cplusplus >= 201703L && defined(WITH_ASM)
-		if constexpr(N==4) {
-			sm2p_mod(res.d, r, r[N] != 0);
-		} else
-#endif
-		vli_mod<N>(res.d, r, prime.d, r[N] != 0);
 	}
 };
 
