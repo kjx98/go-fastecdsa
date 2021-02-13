@@ -1000,7 +1000,11 @@ public:
 		uint	nbits = 4*64;
 		q.clear();
 		if ( unlikely(scalar.is_zero()) ) return;
+#ifdef	PRECOMPUTE_INSTACK
 		point_t<4>	pres[wSize];
+#else
+		auto pres = new(point_t<4>[wSize]);
+#endif
 		to_montgomery(tmp.x, p.x);
 		to_montgomery(tmp.y, p.y);
 		tmp.z = this->mont_one();
@@ -1047,6 +1051,9 @@ public:
 				skip = false;
 			}
 		}
+#ifndef	PRECOMPUTE_INSTACK
+		delete []pres;
+#endif
 	}
 	void scalar_mult(point_t<4>& q, const point_t<4>& p, const felem_t& scalar)
 			const noexcept
