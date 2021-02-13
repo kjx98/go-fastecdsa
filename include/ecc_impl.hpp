@@ -63,11 +63,6 @@ struct point_t {
 	bignum<N>	x;
 	bignum<N>	y;
 	bignum<N>	z;
-#ifdef	ommit
-	u64 *xd() { return const_cast<u64 *>(x.data()); }
-	u64 *yd() { return const_cast<u64 *>(y.data()); }
-	u64 *zd() { return const_cast<u64 *>(z.data()); }
-#endif
 	point_t() = default;
 	point_t(const point_t &) = default;
 	//explicit point_t(const spoint_t<N>& pt) : x(pt.x), y(pt.y), z(1) {}
@@ -345,17 +340,6 @@ void point_double3n_jacob(const curveT& curve, bnT& x3, bnT& y3, bnT& z3,
 		curve.mont_mult2(t1, t2);
 		curve.mod_add_to(t2, t1);
 	} else {
-#ifdef	ommit
-		// t1 = Z^4
-		curve.mont_msqr(t1, z1, 2);
-		// t2 = X^2 - Z^4
-		curve.mont_msqr(t2, x1);
-		curve.mod_sub_from(t2, t1);
-		// t1 = 2 * t2
-		curve.mont_mult2(t1, t2);
-		// t2 = t2 + 2 * t2 = 3(X^2 - Z^4)
-		curve.mod_add_to(t2, t1);
-#else
 		// t1 = Z^2
 		curve.mont_msqr(t1, z1);
 		// t3 = X - Z^2
@@ -369,7 +353,6 @@ void point_double3n_jacob(const curveT& curve, bnT& x3, bnT& y3, bnT& z3,
 		curve.mod_add(t3, x1, t1);
 		// l1 = 3(X - Z^2)(X + Z^2)
 		curve.mont_mmult(t2, t2, t3);
-#endif
 	}
 
 	// y3 = 2 y1
@@ -984,70 +967,6 @@ vli_mmod_special2(u64 *result, const u64 *product, const u64 *mod) noexcept
 	vli_set<N>(result, r);
 }
 
-// todo: cleanup
-#ifdef	ommit
-/* Computes result = product % mod using Barrett's reduction with precomputed
- * value mu appended to the mod after ndigits, mu = (2^{2w} / mod) and have
- * length ndigits + 1, where mu * (2^w - 1) should not overflow ndigits
- * boundary.
- *
- * Reference:
- * R. Brent, P. Zimmermann. Modern Computer Arithmetic. 2010.
- * 2.4.1 Barrett's algorithm. Algorithm 2.5.
- */
-template<const uint ndigits> static void forceinline
-#ifdef	WITH_C2GO
-vli_mmod_barrett(u64 *result, const u64 *product, const u64 *mod, u64 *buff) noexcept
-#else
-vli_mmod_barrett(u64 *result, const u64 *product, const u64 *mod) noexcept
-#endif
-{
-#ifdef	WITH_C2GO
-	u64	*q = buff;
-	u64	*r = buff + ndigits * 2;
-#else
-	u64 q[ndigits * 2];
-	u64 r[ndigits];
-#endif
-	const u64 *mu = mod + ndigits;
-
-	vli_mult<ndigits>(q, product + ndigits, mu);
-	if (mu[ndigits])
-		vli_add_to<ndigits>(q + ndigits, product + ndigits);
-	// add remain * mod
-	vli_set<ndigits>(r, q+ndigits);
-	vli_umult<ndigits>(q, mu, product[ndigits-1]);
-	if (mu[ndigits])
-		vli_uadd_to<ndigits>(q + ndigits, product[ndigits-1]);
-	vli_rshift1w<ndigits>(q+ndigits);
-	vli_add<ndigits>(result, r, q+ndigits);
-	vli_mult<ndigits>(q, mod, result);
-	vli_sub<ndigits*2>(q, product, q);
-	if (!vli_is_zero<ndigits>(q + ndigits) ||
-	       vli_cmp<ndigits>(q, mod) >= 0) {
-		vli_sub_from<ndigits>(q, mod);
-	}
-	vli_set<ndigits>(result, q);
-}
-
-template<const uint N> forceinline
-static void
-vli_div_barrett(u64 *result, const u64 *product, const u64 *mu) noexcept
-{
-	u64 q[N * 2];
-	u64 r[N];
-
-	vli_mult<N>(q, product + N, mu);
-	if (mu[N])
-		vli_add_to<N>(q + N, product + N);
-	vli_set<N>(r, q+N);
-	vli_umult<N>(q, mu, product[N-1]);
-	if (mu[N])
-		vli_uadd_to<N>(q + N, product[N-1]);
-	vli_rshift1w<N>(q+N);
-	vli_add<N>(result, r, q+N);
-}
-#endif
 
 /* Computes result = (1 / p_input) % mod. All VLIs are the same size.
  * See "From Euclid's GCD to Montgomery Multiplication to the Great Divide"
@@ -1198,8 +1117,7 @@ vli_mod_inv_new(u64 *result, const u64 *y, const u64 *x) noexcept
 }
 
 using namespace vli;
-template<const uint N> forceinline
-static void
+template<const uint N> forceinline static void
 mod_inv(bignum<N>& res, const bignum<N>& x, const bignum<N>& mod) noexcept
 {
 	u64	*rp = const_cast<u64 *>(res.data());

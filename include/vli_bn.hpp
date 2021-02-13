@@ -103,19 +103,11 @@ public:
 		return os;
 	}
 	bool operator<(const bignum& bn) const noexcept {
-#ifdef	ommit
-		for (int i = N - 1; i >= 0; --i) {
-			if (this->d[i] > bn.d[i]) return false;
-			else if (this->d[i] < bn.d[i]) return true;
-		}
-		return false;
-#else
 		u64		cc=0;
 		for (uint i=0; i<N; ++i) {
 			u64_subc(this->d[i], bn.d[i], cc);
 		}
 		return cc != 0;
-#endif
 	}
 	bool operator>=(const bignum& bn) const noexcept {
 		return !(*this < bn);
@@ -269,16 +261,8 @@ public:
 	}
 	int cmp(const u64 *right) const noexcept
 	{
-#ifndef	ommit
 		auto	*rt=reinterpret_cast<const bignum<N> *>(right);
 		return this->cmp(*rt);
-#else
-		for (int i = N - 1; i >= 0; --i) {
-			if (this->d[i] > right[i]) return 1;
-			else if (this->d[i] < right[i]) return -1;
-		}
-		return 0;
-#endif
 	}
 	u64 lshift1(const bignum& x) noexcept
 	{
