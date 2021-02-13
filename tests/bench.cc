@@ -76,8 +76,8 @@ static void test_montSM2RedN(benchmark::State &state)
 	for (auto _ : state) {
 		for (int i=0; i<1000; ++i)
 		sm2p_reductionN(res, xp.data());
+		tt = bignum<4>(res);
 	}
-	tt = bignum<4>(res);
 }
 BENCHMARK(test_montSM2RedN);
 
