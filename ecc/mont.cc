@@ -79,13 +79,9 @@ void from_montgomery(u64 *res, const u64 *y, const montParams *pa)
 //static u64 montOne[]={1, 0, 0, 0};
 void mont_mod_mult(u64 *res, const u64 *x, const u64 *y, const montParams *pa)
 {
-#ifdef	ommit
 	const u64	*prime = pa->p;
 	const u64	k0 = pa->k0;
 	vli_mont_mult<4>(res, x, y, prime, k0);
-#else
-	sm2p_mult(res, x, y);
-#endif
 }
 
 void mont_mod_sqr(u64 *res, const u64 *x, const montParams *pa, const u64 n)
