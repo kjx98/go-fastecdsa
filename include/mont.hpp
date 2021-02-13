@@ -421,7 +421,7 @@ sm2p_reduction(u64 *result, const u64 *y, const bool isProd=false) noexcept
 	}
 	sm2p_mod(result, r, carry != 0);
 #else
-	sm2p_reductionN(resylt, y, isProd);
+	sm2p_reductionN(result, y, isProd);
 #endif
 #endif
 }
