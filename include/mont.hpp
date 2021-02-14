@@ -397,13 +397,13 @@ sm2p_reduction(u64 *result, const u64 *y, const bool isProd=false) noexcept
 			[pr3] "m" (sm2_p[3]), "r" (res0), "r" (res1), "r" (res2), "r" (res3)
 			: "r10", "r11", "r14", "r15", "cc", "memory");
 #elif	defined(__aarch64__)
-	register u64 res0 asm("x4");
-	register u64 res1 asm("x5");
-	register u64 res2 asm("x6");
-	register u64 res3 asm("x7");
+	register u64 res0 asm("x4") = y[0];
+	register u64 res1 asm("x5") = y[1];
+	register u64 res2 asm("x6") = y[2];
+	register u64 res3 asm("x7") = y[3];
 	asm volatile(
-"LDP	x4, x5, [%0]\n"
-"LDP	x6, x7, [%0, 16]\n"
+//"LDP	x4, x5, [%0]\n"
+//"LDP	x6, x7, [%0, 16]\n"
 	// Only reduce, no multiplications are needed
 	// First reduction step
 "LSR x9, x4, 32\n"
@@ -449,8 +449,8 @@ sm2p_reduction(u64 *result, const u64 *y, const bool isProd=false) noexcept
 "SBCS x5, x5, x9\n"
 "SBCS x6, x6, x10\n"
 "SBCS x7, x7, x9\n"
-		: "=r" (res0), "=r" (res1), "=r" (res2), "=r" (res3)
-		: "r" (y)
+		: "+r" (res0), "+r" (res1), "+r" (res2), "+r" (res3)
+		:
 		: "%x9", "%x10", "cc", "memory");
 
 	u64	carry = 0;
@@ -467,13 +467,14 @@ sm2p_reduction(u64 *result, const u64 *y, const bool isProd=false) noexcept
 	}
 
 	// mod prime
+#ifdef	WNO_SM2P_MOD2
 	asm volatile(
-"MOV	x9, -1\n"
-"MOV	x11, -1\n"
+"LDP	x9, x10, [%2]\n"
+"LDP	x11, x12, [%2, 16]\n"
 "SUBS	x9, x4, x9\n"
-"SBCS	x10, x5, %2\n"
+"SBCS	x10, x5, x10\n"
 "SBCS	x11, x6, x11\n"
-"SBCS	x12, x7, %3\n"
+"SBCS	x12, x7, x12\n"
 "SBCS	%0, %0, XZR\n"
 
 "CSEL	x4, x4, x9, cc\n"
@@ -484,9 +485,12 @@ sm2p_reduction(u64 *result, const u64 *y, const bool isProd=false) noexcept
 "STP	x4, x5, [%1]\n"
 "STP	x6, x7, [%1, 16]\n"
 		:
-		: "r" ((u64)isProd), "r" (result), "r" (sm2_p[1]), "r" (sm2_p[3]),
+		: "r" (carry), "r" (result), "r" (sm2_p),
 			"r" (res0), "r" (res1), "r" (res2), "r" (res3)
 		: "%x9", "%x10", "%x11", "%x12", "cc", "memory");
+#else
+	sm2p_mod2(result, res0, res1, res2, res3, carry);
+#endif
 #else
 	sm2p_reductionN(result, y, isProd);
 #endif
