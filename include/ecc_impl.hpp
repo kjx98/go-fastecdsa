@@ -891,20 +891,17 @@ static void
 vli_mmod_special(u64 *result, const u64 *product, const u64 *mod) noexcept
 {
 	u64 c = -mod[0];
-	u64 t[N * 2];
+	u64 t[N + 2];
 	u64 r[N * 2];
 
 	vli_set<N * 2>(r, product);
 	while (!vli_is_zero<N>(r + N)) {
-		vli_umult<N>(t, r + N, c);
+		vli_umult2<N>(t, r + N, c);
 		vli_clear<N>(r + N);
-		vli_add_to<N * 2>(r, t);
+		r[N+1] = vli_add_to<N + 1>(r, t);
 	}
-	vli_set<N>(t, mod);
-	vli_clear<N>(t + N);
-	while (vli_cmp<N * 2>(r, t) >= 0)
-		vli_sub_from<N * 2>(r, t);
-	vli_set<N>(result, r);
+	auto carry = vli_sub<N>(result, r, mod);
+	if (carry) vli_set<N>(result, r);
 }
 
 /*

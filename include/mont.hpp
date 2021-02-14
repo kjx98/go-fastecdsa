@@ -491,8 +491,56 @@ vli4_addc_to(u64& r0, u64& r1, u64& r2, u64& r3, const u64* s,
 }
 
 forceinline static void
+sm2p_multStep(u64& r0, u64& r1, u64& r2, u64& r3, u64& r4, const u64& x0,
+		const u64& x1, const u64& x2, const u64& x3, const u64 yi) noexcept
+{
+	uint128_t	pd;
+	u64			cc, t0;
+	pd.mul_64_64(x0, yi);
+	cc = 0;
+	r0 = u64_addc(r0, pd.m_low(), cc);
+	t0 = u64_addcz(pd.m_high(), cc);
+	pd.mul_64_64(x1, yi);
+	cc = 0;
+	r1 = u64_addc(r1, t0, cc);
+	t0 = u64_addcz(pd.m_high(), cc);
+	//cc = 0;
+	r1 = u64_addc(r1, pd.m_low(), cc);
+	t0 = u64_addcz(t0, cc);
+	pd.mul_64_64(x2, yi);
+	cc = 0;
+	r2 = u64_addc(r2, t0, cc);
+	t0 = u64_addcz(pd.m_high(), cc);
+	//cc = 0;
+	r2 = u64_addc(r2, pd.m_low(), cc);
+	t0 = u64_addcz(t0, cc);
+	pd.mul_64_64(x3, yi);
+	cc = 0;
+	r3 = u64_addc(r3, t0, cc);
+	t0 = u64_addcz(pd.m_high(), cc);
+	//cc = 0;
+	r3 = u64_addc(r3, pd.m_low(), cc);
+	r4 = u64_addc(r4, t0, cc);
+}
+
+forceinline static void
 sm2p_multN(u64 *result, const u64 *x, const u64 *y) noexcept
 {
+#ifndef	ommit
+	u64	r0=0, r1=0, r2=0, r3=0;
+	u64	x0=x[0], x1=x[1], x2=x[2], x3=x[3];
+	u64	carry=0;
+	{
+		sm2p_multStep(r0, r1, r2, r3, carry, x0, x1, x2, x3, y[0]);
+		sm2p_reductionStep(r0, r1, r2, r3, carry);
+		sm2p_multStep(r1, r2, r3, r0, carry, x0, x1, x2, x3, y[1]);
+		sm2p_reductionStep(r1, r2, r3, r0, carry);
+		sm2p_multStep(r2, r3, r0, r1, carry, x0, x1, x2, x3, y[2]);
+		sm2p_reductionStep(r2, r3, r0, r1, carry);
+		sm2p_multStep(r3, r0, r1, r2, carry, x0, x1, x2, x3, y[3]);
+		sm2p_reductionStep(r3, r0, r1, r2, carry);
+	}
+#else
 	u64	r0, r1, r2, r3;
 	u64	carry;
 	{
@@ -511,6 +559,7 @@ sm2p_multN(u64 *result, const u64 *x, const u64 *y) noexcept
 		carry = vli4_addc_to(r3, r0, r1, r2, s, carry);
 		sm2p_reductionStep(r3, r0, r1, r2, carry);
 	}
+#endif
 	// sm2p_mod
 	{
 		u64	cc=0;
