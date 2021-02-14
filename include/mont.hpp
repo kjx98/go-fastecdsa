@@ -396,7 +396,7 @@ sm2p_reduction(u64 *result, const u64 *y, const bool isProd=false) noexcept
 			: "D" (result), "a" (carry), [pr1] "m" (sm2_p[1]),
 			[pr3] "m" (sm2_p[3]), "r" (res0), "r" (res1), "r" (res2), "r" (res3)
 			: "r10", "r11", "r14", "r15", "cc", "memory");
-#elif	defined(__aarch64__)
+#elif	defined(__aarch64__11)
 	register u64 res0 asm("x4") = y[0];
 	register u64 res1 asm("x5") = y[1];
 	register u64 res2 asm("x6") = y[2];
