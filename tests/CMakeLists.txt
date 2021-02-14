@@ -20,6 +20,7 @@ add_definitions( "-Wpedantic -Wall -Wuninitialized" )
 #add_definitions( "-DNO_SM2P_MOD2" )
 #add_definitions( "-DNO_U64ZERO" )
 #add_definitions( "-DNO_CONDITIONAL_COPY" )
+#add_definitions( "-DPRECOMPUTE_INSTACK" )
 # WITH_GETENTROPY only for glibc 2.25 or above (CentOS8...)
 
 if(WITH_ENTROPY)

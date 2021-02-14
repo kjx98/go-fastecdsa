@@ -359,7 +359,7 @@ sm2p_reduction(u64 *result, const u64 *y, const bool isProd=false) noexcept
 		"sbbq %%r15, %%r9\n"
 		: "=r" (res0), "=r" (res1), "=r" (res2), "=r" (res3)
 		: "S" (y)
-		: "rax", "r10", "r11", "r14", "r15", "cc", "memory");
+		: "rax", "r10", "r11", "r15", "cc", "memory");
 
 	u64	carry = 0;
 	//if (carry != 0) carry = 1;
@@ -400,7 +400,7 @@ sm2p_reduction(u64 *result, const u64 *y, const bool isProd=false) noexcept
 		: "D" (result), "a" (carry), [pr1] "m" (sm2_p[1]),
 		[pr3] "m" (sm2_p[3]), "r" (res0), "r" (res1), "r" (res2), "r" (res3)
 		: "r10", "r11", "r14", "r15", "cc", "memory");
-#elif	defined(__aarch64__11)
+#elif	defined(__aarch64__)
 	register u64 res0 asm("x4") = y[0];
 	register u64 res1 asm("x5") = y[1];
 	register u64 res2 asm("x6") = y[2];
@@ -414,10 +414,10 @@ sm2p_reduction(u64 *result, const u64 *y, const bool isProd=false) noexcept
 "MOV x12, x4\n"
 "LSR x9, x4, 32\n"
 "LSL x10, x4, 32\n"
-"ADDS x5, x5, x4\n"
+"ADDS x5, x5, x12\n"
 "ADCS x6, x6, XZR\n"
 "ADCS x7, x7, XZR\n"
-"ADCS x4, x4, XZR\n"
+"ADCS x4, x12, XZR\n"
 "ADCS x11, XZR, XZR\n"
 "SUBS x5, x5, x10\n"
 "SBCS x6, x6, x9\n"
@@ -425,12 +425,13 @@ sm2p_reduction(u64 *result, const u64 *y, const bool isProd=false) noexcept
 "SBCS x4, x4, x9\n"
 "SBCS x11, x11, xzr\n"
 	// Second reduction step
+"MOV x12, x5\n"
 "LSR x9, x5, 32\n"
 "LSL x10, x5, 32\n"
-"ADDS x6, x6, x5\n"
+"ADDS x6, x6, x12\n"
 "ADCS x7, x7, XZR\n"
 "ADCS x4, x4, XZR\n"
-"ADCS x5, x5, x11\n"
+"ADCS x5, x12, x11\n"
 "ADCS x11, XZR, XZR\n"
 "SUBS x6, x6, x10\n"
 "SBCS x7, x7, x9\n"
@@ -438,12 +439,13 @@ sm2p_reduction(u64 *result, const u64 *y, const bool isProd=false) noexcept
 "SBCS x5, x5, x9\n"
 "SBCS x11, x11, xzr\n"
 	// Third reduction step
+"MOV x12, x6\n"
 "LSR x9, x6, 32\n"
 "LSL x10, x6, 32\n"
-"ADDS x7, x7, x6\n"
+"ADDS x7, x7, x12\n"
 "ADCS x4, x4, XZR\n"
 "ADCS x5, x5, XZR\n"
-"ADCS x6, x6, x11\n"
+"ADCS x6, x12, x11\n"
 "ADCS x11, XZR, XZR\n"
 "SUBS x7, x7, x10\n"
 "SBCS x4, x4, x9\n"
@@ -451,12 +453,13 @@ sm2p_reduction(u64 *result, const u64 *y, const bool isProd=false) noexcept
 "SBCS x6, x6, x9\n"
 "SBCS x11, x11, xzr\n"
 	// Last reduction step
+"MOV x12, x7\n"
 "LSR x9, x7, 32\n"
 "LSL x10, x7, 32\n"
-"ADDS x4, x4, x7\n"
+"ADDS x4, x4, x12\n"
 "ADCS x5, x5, XZR\n"
 "ADCS x6, x6, XZR\n"
-"ADCS x7, x7, x11\n"
+"ADCS x7, x12, x11\n"
 "ADCS x11, XZR, XZR\n"
 "SUBS x4, x4, x10\n"
 "SBCS x5, x5, x9\n"
@@ -465,7 +468,7 @@ sm2p_reduction(u64 *result, const u64 *y, const bool isProd=false) noexcept
 "SBCS x11, x11, xzr\n"
 		: "+r" (res0), "+r" (res1), "+r" (res2), "+r" (res3)
 		:
-		: "%x9", "%x10", "%x11", "cc", "memory");
+		: "%x9", "%x10", "%x11", "%x12", "cc", "memory");
 
 	u64	carry = 0;
 	//if (carry != 0) carry = 1;
