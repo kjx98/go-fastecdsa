@@ -51,6 +51,17 @@ u64 vli_asm_acc()
 #endif
 }
 
+u64 vli_asm_cmov()
+{
+#ifdef	__x86_64__
+	uint	_eax, _ebx, _ecx, _edx;
+	__cpuid(1, _eax, _ebx, _ecx, _edx);
+	return _edx & bit_CMOV;
+#else
+	return 0;
+#endif
+}
+
 bool bn256_add_to(u64 *left, const u64 *right)
 {
 	return vli_add_to<4>(left, right);

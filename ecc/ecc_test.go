@@ -68,6 +68,7 @@ func dumpBits(v *big.Int, t *testing.T) {
 func TestEccMMod(t *testing.T) {
 	bFMA := vliTestFMA()
 	t.Log("CPU support FMA: ", bFMA)
+	t.Log("CPU support CMOV: ", vliTestCMOV())
 	p := sm2.P256().Params().P
 	//xy := new(big.Int).Mul(x1, y1)
 	//xyMod := new(big.Int).Mod(xy, p)

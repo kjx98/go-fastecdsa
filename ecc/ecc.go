@@ -21,6 +21,10 @@ func vliTestFMA() bool {
 	return C.vli_asm_acc() != 0
 }
 
+func vliTestCMOV() bool {
+	return C.vli_asm_cmov() != 0
+}
+
 func toWordSlice(x C.bn_words_t) []big.Word {
 	pt := *(*[4]big.Word)(unsafe.Pointer(&x))
 	return pt[:]

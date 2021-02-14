@@ -396,59 +396,95 @@ sm2p_reduction(u64 *result, const u64 *y, const bool isProd=false) noexcept
 			: "D" (result), "a" (carry), [pr1] "m" (sm2_p[1]),
 			[pr3] "m" (sm2_p[3]), "r" (res0), "r" (res1), "r" (res2), "r" (res3)
 			: "r10", "r11", "r14", "r15", "cc", "memory");
-#elif	defined(__aarch64__11)
+#elif	defined(__aarch64__)
+	register u64 res0 asm("x4");
+	register u64 res1 asm("x5");
+	register u64 res2 asm("x6");
+	register u64 res3 asm("x7");
 	asm volatile(
-	LDP	0*16(a_ptr), (acc0, acc1)
-	LDP	1*16(a_ptr), (acc2, acc3)
+"LDP	x4, x5, [%0]\n"
+"LDP	x6, x7, [%0, 16]\n"
 	// Only reduce, no multiplications are needed
 	// First reduction step
-	ADDS	acc0<<32, acc1, acc1
-	LSR	$32, acc0, t0
-	MUL	acc0, const1, t1
-	UMULH	acc0, const1, acc0
-	ADCS	t0, acc2
-	ADCS	t1, acc3
-	ADC	$0, acc0
+"LSR x9, x4, 32\n"
+"LSL x10, x4, 32\n"
+"ADDS x5, x5, x4\n"
+"ADCS x6, x6, XZR\n"
+"ADCS x7, x7, XZR\n"
+"ADCS x4, x4, XZR\n"
+"SUBS x5, x5, x10\n"
+"SBCS x6, x6, x9\n"
+"SBCS x7, x7, x10\n"
+"SBCS x4, x4, x9\n"
 	// Second reduction step
-	ADDS	acc1<<32, acc2, acc2
-	LSR	$32, acc1, t0
-	MUL	acc1, const1, t1
-	UMULH	acc1, const1, acc1
-	ADCS	t0, acc3
-	ADCS	t1, acc0
-	ADC	$0, acc1
+"LSR x9, x5, 32\n"
+"LSL x10, x5, 32\n"
+"ADDS x6, x6, x5\n"
+"ADCS x7, x7, XZR\n"
+"ADCS x4, x4, XZR\n"
+"ADCS x5, x5, XZR\n"
+"SUBS x6, x6, x10\n"
+"SBCS x7, x7, x9\n"
+"SBCS x4, x4, x10\n"
+"SBCS x5, x5, x9\n"
 	// Third reduction step
-	ADDS	acc2<<32, acc3, acc3
-	LSR	$32, acc2, t0
-	MUL	acc2, const1, t1
-	UMULH	acc2, const1, acc2
-	ADCS	t0, acc0
-	ADCS	t1, acc1
-	ADC	$0, acc2
+"LSR x9, x6, 32\n"
+"LSL x10, x6, 32\n"
+"ADDS x7, x7, x6\n"
+"ADCS x4, x4, XZR\n"
+"ADCS x5, x5, XZR\n"
+"ADCS x6, x6, XZR\n"
+"SUBS x7, x7, x10\n"
+"SBCS x4, x4, x9\n"
+"SBCS x5, x5, x10\n"
+"SBCS x6, x6, x9\n"
 	// Last reduction step
-	ADDS	acc3<<32, acc0, acc0
-	LSR	$32, acc3, t0
-	MUL	acc3, const1, t1
-	UMULH	acc3, const1, acc3
-	ADCS	t0, acc1
-	ADCS	t1, acc2
-	ADC	$0, acc3
+"LSR x9, x7, 32\n"
+"LSL x10, x7, 32\n"
+"ADDS x4, x4, x7\n"
+"ADCS x5, x5, XZR\n"
+"ADCS x6, x6, XZR\n"
+"ADCS x7, x7, XZR\n"
+"SUBS x4, x4, x10\n"
+"SBCS x5, x5, x9\n"
+"SBCS x6, x6, x10\n"
+"SBCS x7, x7, x9\n"
+		: "=r" (res0), "=r" (res1), "=r" (res2), "=r" (res3)
+		: "r" (y)
+		: "%x9", "%x10", "cc", "memory");
 
-	SUBS	$-1, acc0, t0
-	SBCS	const0, acc1, t1
-//	SBCS	$-1, acc2, t2
-	SBCS	const1, acc3, t3
+	u64	carry = 0;
+	//if (carry != 0) carry = 1;
+	// add high 256 bits
+	if ( unlikely(isProd) )
+	{
+		u64	cc=0;
+		res0 = u64_addc(res0, y[4], cc);
+		res1 = u64_addc(res1, y[5], cc);
+		res2 = u64_addc(res2, y[6], cc);
+		res3 = u64_addc(res3, y[7], cc);
+		carry += cc;
+	}
 
-	CSEL	CS, t0, acc0, acc0
-	CSEL	CS, t1, acc1, acc1
-	CSEL	CS, t2, acc2, acc2
-	CSEL	CS, t3, acc3, acc3
+	// mod prime
+	asm volatile(
+"SUBS	x9, x4, -1\n"
+"SBCS	x10, x5, %2\n"
+"SBCS	x11, x6, -1\n"
+"SBCS	x12, x7, %3\n"
+"SBCS	%0, %0, XZR\n"
 
-	STP	(acc0, acc1), 0*16(res_ptr)
-	STP	(acc2, acc3), 1*16(res_ptr)
+"CSEL	x4, x4, x9, cc\n"
+"CSEL	x5, x5, x10, cc\n"
+"CSEL	x6, x6, x11, cc\n"
+"CSEL	x7, x7, x12, cc\n"
+
+"STP	x4, x5, [%1]\n"
+"STP	x6, x7, [%1, 16]\n"
 		:
-		: "r" ((u64)carry), "r" (res), "r" (left), "r" (sm2_p[1]), "r" (sm2_p[3])
-		: "%x4", "%x5", "%x6", "%x7", "%x9", "%x10", "%x11", "%x12", "cc", "memory");
+		: "r" ((u64)isProd), "r" (result), "r" (sm2_p[1]), "r" (sm2_p[3]),
+			"r" (res0), "r" (res1), "r" (res2), "r" (res3)
+		: "%x9", "%x10", "%x11", "%x12", "cc", "memory");
 #else
 	sm2p_reductionN(result, y, isProd);
 #endif
