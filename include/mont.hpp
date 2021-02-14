@@ -468,9 +468,11 @@ sm2p_reduction(u64 *result, const u64 *y, const bool isProd=false) noexcept
 
 	// mod prime
 	asm volatile(
-"SUBS	x9, x4, -1\n"
+"MOV	x9, -1\n"
+"MOV	x11, -1\n"
+"SUBS	x9, x4, x9\n"
 "SBCS	x10, x5, %2\n"
-"SBCS	x11, x6, -1\n"
+"SBCS	x11, x6, x11\n"
 "SBCS	x12, x7, %3\n"
 "SBCS	%0, %0, XZR\n"
 
