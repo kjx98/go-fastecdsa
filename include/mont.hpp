@@ -490,6 +490,7 @@ vli4_addc_to(u64& r0, u64& r1, u64& r2, u64& r3, const u64* s,
 	return u64_addc(carry, s[4], cc);
 }
 
+#ifdef	WITH_SM2_MULTSTEP
 forceinline static void
 sm2p_multStep(u64& r0, u64& r1, u64& r2, u64& r3, u64& r4, const u64& x0,
 		const u64& x1, const u64& x2, const u64& x3, const u64 yi) noexcept
@@ -522,11 +523,12 @@ sm2p_multStep(u64& r0, u64& r1, u64& r2, u64& r3, u64& r4, const u64& x0,
 	r3 = u64_addc(r3, pd.m_low(), cc);
 	r4 = u64_addc(r4, t0, cc);
 }
+#endif
 
 forceinline static void
 sm2p_multN(u64 *result, const u64 *x, const u64 *y) noexcept
 {
-#ifndef	ommit
+#ifdef	WITH_SM2_MULTSTEP
 	u64	r0=0, r1=0, r2=0, r3=0;
 	u64	x0=x[0], x1=x[1], x2=x[2], x3=x[3];
 	u64	carry=0;
