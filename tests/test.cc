@@ -25,9 +25,6 @@ TEST(testEcc, TestCalcK0RR)
 	bignum<4>	rrN(sm2_n_rr);
 	ASSERT_EQ(calcK0<4>(primeN), sm2_n_k0);
 	EXPECT_TRUE(rrN.cmp(calcRR<4>(trr, primeN)) == 0);
-	std::cerr << "Sizeof wNAF precompute buff: "
-			<< sizeof(point_t<4>) * ecc::wSize
-			<< " bytes" << std::endl;
 }
 
 TEST(testEcc, TestSM2umultP)
@@ -893,6 +890,15 @@ TEST(TestECDSA, TestPrivateKey)
 		std::cerr << "GenPrivKeyPair test round: " << i << "\tPointY odd: "
 				<< (bool)py.is_odd() << std::endl;
 	}
+}
+
+TEST(TestCurve, TestPresBuff)
+{
+	ASSERT_EQ(sizeof(point_t<4>), 4*8*3);
+	EXPECT_EQ(sm2_k256.presBuffSize(), sizeof(point_t<4>) * ecc::wSize);
+	std::cerr << "Sizeof wNAF precompute buff: "
+			<< sizeof(point_t<4>) * ecc::wSize
+			<< " bytes" << std::endl;
 }
 
 TEST(TestECDSA, TestSign)

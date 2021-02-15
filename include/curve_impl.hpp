@@ -144,6 +144,7 @@ public:
 #ifdef	WITH_HALF_N
 	const felem_t& halfN() const noexcept { return _half_n; }
 #endif
+	const size_t presBuffSize() const noexcept { return sizeof(presBuff); }
 	void to_montgomery(felem_t& res, const u64 *x) const noexcept
 	{
 		felem_t   *xx = reinterpret_cast<felem_t *>(const_cast<u64 *>(x));
@@ -458,18 +459,20 @@ public:
 		from_montgomery(y3, *y3p);
 		from_montgomery(z3, *z3p);
 	}
-	void scalar_mult(point_t<N>& q, const spoint_t<N>& p, const felem_t& scalar)
-	const noexcept
+	void
+	scalar_mult(point_t<N>& q, const spoint_t<N>& p, const felem_t& scalar,
+			void *scratchBuff=nullptr) const noexcept
 	{
 		point_t<N>	tmp;
 		uint	nbits = N*64; //scalar.num_bits();
 		q.clear();
 		if ( unlikely(scalar.is_zero()) ) return;
-#ifdef	PRECOMPUTE_INSTACK
-		point_t<N>	pres[wSize];
-#else
-		auto pres = new(point_t<N>[wSize]);
-#endif
+		point_t<N>	*pres;
+		if (scratchBuff == nullptr) {
+			pres = (point_t<N> *)this->presBuff;
+		} else {
+			pres = (point_t<N> *)scratchBuff;
+		}
 		to_montgomery(tmp.x, p.x);
 		to_montgomery(tmp.y, p.y);
 		tmp.z = this->mont_one();
@@ -516,9 +519,6 @@ public:
 				skip = false;
 			}
 		}
-#ifndef	PRECOMPUTE_INSTACK
-		delete []pres;
-#endif
 	}
 	void scalar_mult(point_t<N>& q, const point_t<N>& p, const felem_t& scalar)
 	const noexcept
@@ -785,6 +785,7 @@ protected:
 	uint	nBaseNAF=0;
 	bool _a_is_zero = false;
 	bool _inited = false;
+	point_t<N>  presBuff[wSize];
 };
 
 
@@ -993,18 +994,20 @@ public:
 		from_montgomery(y3, *y3p);
 		from_montgomery(z3, *z3p);
 	}
-	void scalar_mult(point_t<4>& q, const spoint_t<4>& p, const felem_t& scalar)
-			const noexcept
+	void
+	scalar_mult(point_t<4>& q, const spoint_t<4>& p, const felem_t& scalar,
+			void *scratchBuff=nullptr) const noexcept
 	{
 		point_t<4>	tmp;
 		uint	nbits = 4*64;
 		q.clear();
 		if ( unlikely(scalar.is_zero()) ) return;
-#ifdef	PRECOMPUTE_INSTACK
-		point_t<4>	pres[wSize];
-#else
-		auto pres = new(point_t<4>[wSize]);
-#endif
+		point_t<4>	*pres;
+		if (scratchBuff == nullptr) {
+			pres = (point_t<4> *)this->presBuff;
+		} else {
+			pres = (point_t<4> *)scratchBuff;
+		}
 		to_montgomery(tmp.x, p.x);
 		to_montgomery(tmp.y, p.y);
 		tmp.z = this->mont_one();
@@ -1051,9 +1054,6 @@ public:
 				skip = false;
 			}
 		}
-#ifndef	PRECOMPUTE_INSTACK
-		delete []pres;
-#endif
 	}
 	void scalar_mult(point_t<4>& q, const point_t<4>& p, const felem_t& scalar)
 			const noexcept

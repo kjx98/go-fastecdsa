@@ -2,7 +2,7 @@ cmake_minimum_required(VERSION 2.8)
 enable_language(CXX)
 enable_language(C)
 
-option(WITH_TCMALLOC	"Use tcmalloc from gperftools" OFF)
+option(WITH_TCMALLOC	"Use tcmalloc from gperftools" ON)
 option(WITH_JEMALLOC	"Use jemalloc from FaceBook" OFF)
 option(WITH_ENTROPY		"Use getentropy() from glibc 2.25 or above" ON)
 
@@ -52,7 +52,15 @@ add_executable(ecc.test
 		test.cc
 		testData.hpp
         )
-target_link_libraries(ecc.test gtest pthread)
+if (LIBTCMALLOC_FOUND)
+	message (STATUS "Using tcmalloc...")
+	target_link_libraries(ecc.test gtest pthread "${LIBTCMALLOC_LDFLAGS}")
+elseif(JEMALLOC_FOUND)
+	message (STATUS "Using jemalloc...")
+	target_link_libraries(ecc.test gtest pthread "${JEMALLOC_LDFLAGS}")
+else()
+	target_link_libraries(ecc.test gtest pthread)
+endif()
 
 if (BENCH_FOUND)
 		message(STATUS "Build benchmark for vli ECC")
