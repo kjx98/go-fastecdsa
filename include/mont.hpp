@@ -132,15 +132,15 @@ sm2p_mod(u64 *res, const u64 *left, const bool carry) noexcept
 		: "%r8", "%r9", "%r10", "%r11" , "%r12", "%r13", "%r14", "%r15", "cc", "memory");
 #elif	defined(__aarch64__)
 	asm volatile(
-		//"mov x9, -1\n"
+		//"mov x9, #-1\n"
 		//"mov x10, %3\n"
-		//"mov x11, -1\n"
+		"mov x11, #-1\n"
 		//"mov x12, %4\n"
 		"ldp x4, x5, [%2]\n"
 		"ldp x6, x7, [%2, 16]\n"
 		"subs x9, x4, #-1\n"
 		"sbcs x10, x5, %3\n"
-		"sbcs x11, x6, #-1\n"
+		"sbcs x11, x6, x11\n"
 		"sbcs x12, x7, %4\n"
 		"sbcs %0, %0, xzr\n"
 		"csel x4, x4, x9, cc\n"
@@ -199,13 +199,13 @@ sm2p_mod2(u64 *res, const u64 r0, const u64 r1, const u64 r2, const u64 r3,
 	register u64 re2 asm("x6") = r2;
 	register u64 re3 asm("x7") = r3;
 	asm volatile(
-		//"mov x9, -1\n"
+		//"mov x9, #-1\n"
 		//"mov x10, %2\n"
-		//"mov x11, -1\n"
+		"mov x11, #-1\n"
 		//"mov x12, %3\n"
 		"subs x9, x4, #-1\n"
 		"sbcs x10, x5, %2\n"
-		"sbcs x11, x6, #-1\n"
+		"sbcs x11, x6, x11\n"
 		"sbcs x12, x7, %3\n"
 		"sbcs %0, %0, xzr\n"
 		"csel x4, x4, x9, cc\n"
@@ -488,9 +488,10 @@ sm2p_reduction(u64 *result, const u64 *y, const bool isProd=false) noexcept
 	asm volatile(
 //"LDP	x9, x10, [%2]\n"
 //"LDP	x11, x12, [%2, 16]\n"
+"MOV	x11, #-1\n"
 "SUBS	x9, x4, #-1\n"
 "SBCS	x10, x5, %2\n"
-"SBCS	x11, x6, #-1\n"
+"SBCS	x11, x6, x11\n"
 "SBCS	x12, x7, %3\n"
 "SBCS	%0, %0, XZR\n"
 
@@ -1060,9 +1061,9 @@ ADCS	acc2, acc6, acc2
 ADCS	acc3, acc7, acc3
 ADC	acc4, XZR, 0
 
-SUBS	t0, acc0, -1
+SUBS	t0, acc0, #-1
 SBCS	t1, acc1, const0
-SBCS	t2, acc2, -1
+SBCS	t2, acc2, #-1
 SBCS	t3, acc3, const1
 SBCS	acc4, acc4, 0
 
