@@ -609,7 +609,8 @@ public:
 	}
 	// scalar may be zero, g_scalar may be zero
 	void combined_mult(point_t<N>& q, const point_t<N>& p,
-				const felem_t& scalar, const felem_t& g_scalar) const noexcept
+				const felem_t& scalar, const felem_t& g_scalar,
+			void *scratchBuff=nullptr) const noexcept
 	{
 		if ( unlikely(nBaseNAF == 0) ) return;
 		if ( unlikely(g_scalar.is_zero()) ) return;
@@ -617,7 +618,7 @@ public:
 		if ( likely(!scalar.is_zero()) ) {
 			point_t<N>	tmp;
 			spoint_t<N> pp(p.x, p.y);
-			scalar_mult(tmp, pp, scalar);
+			scalar_mult(tmp, pp, scalar, scratchBuff);
 			point_add(q, q, tmp);
 		}
 		// montgomery reduction
@@ -1113,7 +1114,8 @@ public:
 	}
 	// scalar may be zero, g_scalar may be zero
 	void combined_mult(point_t<4>& q, const point_t<4>& p,
-				const felem_t& scalar, const felem_t& g_scalar) const noexcept
+				const felem_t& scalar, const felem_t& g_scalar,
+			void *scratchBuff=nullptr) const noexcept
 	{
 		if ( unlikely(this->nBaseNAF == 0) ) return;
 		if ( unlikely(g_scalar.is_zero()) ) 
@@ -1125,7 +1127,7 @@ public:
 		if ( likely(!scalar.is_zero()) ) {
 			point_t<4>	tmp;
 			spoint_t<4> pp(p.x, p.y);
-			scalar_mult(tmp, pp, scalar);
+			scalar_mult(tmp, pp, scalar, scratchBuff);
 			point_add(q, q, tmp);
 		}
 		// montgomery reduction
