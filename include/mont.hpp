@@ -132,15 +132,15 @@ sm2p_mod(u64 *res, const u64 *left, const bool carry) noexcept
 		: "%r8", "%r9", "%r10", "%r11" , "%r12", "%r13", "%r14", "%r15", "cc", "memory");
 #elif	defined(__aarch64__)
 	asm volatile(
-		"mov x9, -1\n"
+		//"mov x9, -1\n"
 		//"mov x10, %3\n"
-		"mov x11, -1\n"
+		//"mov x11, -1\n"
 		//"mov x12, %4\n"
 		"ldp x4, x5, [%2]\n"
 		"ldp x6, x7, [%2, 16]\n"
-		"subs x9, x4, x9\n"
+		"subs x9, x4, #-1\n"
 		"sbcs x10, x5, %3\n"
-		"sbcs x11, x6, x11\n"
+		"sbcs x11, x6, #-1\n"
 		"sbcs x12, x7, %4\n"
 		"sbcs %0, %0, xzr\n"
 		"csel x4, x4, x9, cc\n"
@@ -199,13 +199,13 @@ sm2p_mod2(u64 *res, const u64 r0, const u64 r1, const u64 r2, const u64 r3,
 	register u64 re2 asm("x6") = r2;
 	register u64 re3 asm("x7") = r3;
 	asm volatile(
-		"mov x9, -1\n"
+		//"mov x9, -1\n"
 		//"mov x10, %2\n"
-		"mov x11, -1\n"
+		//"mov x11, -1\n"
 		//"mov x12, %3\n"
-		"subs x9, x4, x9\n"
+		"subs x9, x4, #-1\n"
 		"sbcs x10, x5, %2\n"
-		"sbcs x11, x6, x11\n"
+		"sbcs x11, x6, #-1\n"
 		"sbcs x12, x7, %3\n"
 		"sbcs %0, %0, xzr\n"
 		"csel x4, x4, x9, cc\n"
@@ -220,7 +220,7 @@ sm2p_mod2(u64 *res, const u64 r0, const u64 r1, const u64 r2, const u64 r3,
 		"r" (re0), "r" (re1), "r" (re2), "r" (re3)
 		: "%x9", "%x10", "%x11", "%x12", "cc", "memory");
 #else
-	vli_mod<4>(res, left, sm2_p, carry);
+	static_assert(false, "only x86_64 and aarch64 supported");
 #endif
 }
 #endif
@@ -418,9 +418,10 @@ sm2p_reduction(u64 *result, const u64 *y, const bool isProd=false) noexcept
 "ADCS x7, x7, XZR\n"
 "ADCS x4, x10, XZR\n"
 "ADCS x11, XZR, XZR\n"
-"SUBS x5, x5, x10<<32\n"
+"LSL x10, x10, 32\n"
+"SUBS x5, x5, x10\n"
 "SBCS x6, x6, x9\n"
-"SBCS x7, x7, x10<<32\n"
+"SBCS x7, x7, x10\n"
 "SBCS x4, x4, x9\n"
 "SBCS x11, x11, xzr\n"
 	// Second reduction step
@@ -431,9 +432,10 @@ sm2p_reduction(u64 *result, const u64 *y, const bool isProd=false) noexcept
 "ADCS x4, x4, XZR\n"
 "ADCS x5, x10, x11\n"
 "ADCS x11, XZR, XZR\n"
-"SUBS x6, x6, x10<<32\n"
+"LSL x10, x10, 32\n"
+"SUBS x6, x6, x10\n"
 "SBCS x7, x7, x9\n"
-"SBCS x4, x4, x10<<32\n"
+"SBCS x4, x4, x10\n"
 "SBCS x5, x5, x9\n"
 "SBCS x11, x11, xzr\n"
 	// Third reduction step
@@ -444,9 +446,10 @@ sm2p_reduction(u64 *result, const u64 *y, const bool isProd=false) noexcept
 "ADCS x5, x5, XZR\n"
 "ADCS x6, x10, x11\n"
 "ADCS x11, XZR, XZR\n"
-"SUBS x7, x7, x10<<32\n"
+"LSL x10, x10, 32\n"
+"SUBS x7, x7, x10\n"
 "SBCS x4, x4, x9\n"
-"SBCS x5, x5, x10<<32\n"
+"SBCS x5, x5, x10\n"
 "SBCS x6, x6, x9\n"
 "SBCS x11, x11, xzr\n"
 	// Last reduction step
@@ -457,9 +460,10 @@ sm2p_reduction(u64 *result, const u64 *y, const bool isProd=false) noexcept
 "ADCS x6, x6, XZR\n"
 "ADCS x7, x10, x11\n"
 "ADCS x11, XZR, XZR\n"
-"SUBS x4, x4, x10<<32\n"
+"LSL x10, x10, 32\n"
+"SUBS x4, x4, x10\n"
 "SBCS x5, x5, x9\n"
-"SBCS x6, x6, x10<<32\n"
+"SBCS x6, x6, x10\n"
 "SBCS x7, x7, x9\n"
 "SBCS x11, x11, xzr\n"
 		: "+r" (res0), "+r" (res1), "+r" (res2), "+r" (res3)
@@ -482,12 +486,12 @@ sm2p_reduction(u64 *result, const u64 *y, const bool isProd=false) noexcept
 	// mod prime
 #ifndef	NO_SM2P_MOD2
 	asm volatile(
-"LDP	x9, x10, [%2]\n"
-"LDP	x11, x12, [%2, 16]\n"
-"SUBS	x9, x4, x9\n"
-"SBCS	x10, x5, x10\n"
-"SBCS	x11, x6, x11\n"
-"SBCS	x12, x7, x12\n"
+//"LDP	x9, x10, [%2]\n"
+//"LDP	x11, x12, [%2, 16]\n"
+"SUBS	x9, x4, #-1\n"
+"SBCS	x10, x5, %2\n"
+"SBCS	x11, x6, #-1\n"
+"SBCS	x12, x7, %3\n"
 "SBCS	%0, %0, XZR\n"
 
 "CSEL	x4, x4, x9, cc\n"
@@ -498,7 +502,7 @@ sm2p_reduction(u64 *result, const u64 *y, const bool isProd=false) noexcept
 "STP	x4, x5, [%1]\n"
 "STP	x6, x7, [%1, 16]\n"
 		:
-		: "r" (carry), "r" (result), "r" (sm2_p),
+		: "r" (carry), "r" (result), "r" (sm2_p[1]), "r" (sm2_p[3]),
 			"r" (res0), "r" (res1), "r" (res2), "r" (res3)
 		: "%x9", "%x10", "%x11", "%x12", "cc", "memory");
 #else

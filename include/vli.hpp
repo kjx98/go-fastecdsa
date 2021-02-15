@@ -114,13 +114,13 @@ static forceinline u64 u64_addc(const u64 a, const u64 b, u64& carry)
 			: "cc");
 	return ret;
 #elif	defined(__aarch64__1)
-	u64		ret;
+	u64		ret=carry;
 	asm volatile(
-		"adds	%0, %1, %2\n"
+		"adds	%0, %0, %2\n"
 		"adc	%1, xzr, xzr\n"
 		"adds	%0, %0, %3\n"
 		"adc %1, %1, xzr\n"
-			: "=r" (ret), "+r"(carry)
+			: "+r" (ret), "+r"(carry)
 			: "r" (a), "r" (b)
 			: "cc");
 	return ret;
