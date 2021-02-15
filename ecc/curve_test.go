@@ -382,6 +382,21 @@ func BenchmarkECMULT(b *testing.B) {
 	})
 }
 
+func BenchmarkECCombinedMULT(b *testing.B) {
+	b.ResetTimer()
+	curve := sm2c
+	aGx := curve.Params().Gx
+	aGy := curve.Params().Gy
+	sBuff := make([]byte, 2048)
+
+	b.ResetTimer()
+	b.RunParallel(func(pb *testing.PB) {
+		for pb.Next() {
+			_, _ = curve.cMult(aGx, aGy, d1.Bytes(), d2.Bytes(), sBuff)
+		}
+	})
+}
+
 func BenchmarkECGMULT(b *testing.B) {
 	b.ResetTimer()
 	curve := sm2c

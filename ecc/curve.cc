@@ -170,7 +170,7 @@ void    affine_from_jacobian(u64 *x, u64 *y, const Point *pt, CURVE_HND curveH)
 }
 
 void	point_mult(Point *pt, const Point *p, const u64 *scalar,
-				CURVE_HND curveH)
+				CURVE_HND curveH, void *scratchBuff)
 {
 	if (curveH == nullptr) return;
 	auto	*curve=(curve_t *)curveH;
@@ -178,11 +178,11 @@ void	point_mult(Point *pt, const Point *p, const u64 *scalar,
 	point_t<4> *q=reinterpret_cast<point_t<4> *>(pt);
 	const point_t<4> *pp = reinterpret_cast<const point_t<4> *>(p);
 	const bignum<4>	*sp = reinterpret_cast<const bignum<4> *>(scalar);
-	curve->scalar_mult(*q, *pp, *sp);
+	curve->scalar_mult(*q, *pp, *sp, (void *)scratchBuff);
 }
 
 void	point_cmult(Point *pt, const Point *p, const u64 *scalar,
-				const u64 *gscalar, CURVE_HND curveH)
+				const u64 *gscalar, CURVE_HND curveH, void *scratchBuff)
 {
 	if (curveH == nullptr) return;
 	auto	*curve=(curve_t *)curveH;
@@ -197,7 +197,7 @@ void	point_cmult(Point *pt, const Point *p, const u64 *scalar,
 		const point_t<4> *pp = reinterpret_cast<const point_t<4> *>(p);
 		const bignum<4>	*sp = reinterpret_cast<const bignum<4> *>(scalar);
 		const bignum<4>	*gsp = reinterpret_cast<const bignum<4> *>(gscalar);
-		curve->combined_mult(*q, *pp, *sp, *gsp);
+		curve->combined_mult(*q, *pp, *sp, *gsp, scratchBuff);
 	}
 }
 

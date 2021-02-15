@@ -520,15 +520,15 @@ public:
 			}
 		}
 	}
-	void scalar_mult(point_t<N>& q, const point_t<N>& p, const felem_t& scalar)
-	const noexcept
+	void scalar_mult(point_t<N>& q, const point_t<N>& p, const felem_t& scalar,
+			void *scratchBuff=nullptr) const noexcept
 	{
 		if ( unlikely(p.is_zero()) ) {
 			q = p;
 			return;
 		}
 		spoint_t<N>	pp(p.x, p.y);
-		scalar_mult(q, pp, scalar);
+		scalar_mult(q, pp, scalar, scratchBuff);
 		// montgomery reduction
 #ifdef	ommit
 		if ( unlikely(q.z.is_zero()) ) {
@@ -1056,15 +1056,15 @@ public:
 			}
 		}
 	}
-	void scalar_mult(point_t<4>& q, const point_t<4>& p, const felem_t& scalar)
-			const noexcept
+	void scalar_mult(point_t<4>& q, const point_t<4>& p, const felem_t& scalar,
+			void *scratchBuff=nullptr) const noexcept
 	{
 		if ( unlikely(p.is_zero()) ) {
 			q = p;
 			return;
 		}
 		spoint_t<4>	pp(p.x, p.y);
-		scalar_mult(q, pp, scalar);
+		scalar_mult(q, pp, scalar, scratchBuff);
 		// montgomery reduction
 		if ( unlikely(q.z.is_zero()) ) return;
 		this->apply_z_mont(q);

@@ -155,7 +155,7 @@ func (c eccCurve) ScalarBaseMult(k []byte) (rx, ry *big.Int) {
 	scal := new(big.Int).SetBytes(k)
 	var ss [4]big.Word
 	copy(ss[:], scal.Bits())
-	C.point_cmult(&pt, nil, nil, (*C.u64)(unsafe.Pointer(&ss[0])), c.hnd)
+	C.point_cmult(&pt, nil, nil, (*C.u64)(unsafe.Pointer(&ss[0])), c.hnd, nil)
 	rx = new(big.Int).SetBits(toWordSlice(pt.x))
 	ry = new(big.Int).SetBits(toWordSlice(pt.y))
 	return
@@ -167,13 +167,13 @@ func (c eccCurve) ScalarMult(x, y *big.Int, k []byte) (rx, ry *big.Int) {
 	scal := new(big.Int).SetBytes(k)
 	var ss [4]big.Word
 	copy(ss[:], scal.Bits())
-	C.point_mult(&pt, pt1, (*C.u64)(unsafe.Pointer(&ss[0])), c.hnd)
+	C.point_mult(&pt, pt1, (*C.u64)(unsafe.Pointer(&ss[0])), c.hnd, nil)
 	rx = new(big.Int).SetBits(toWordSlice(pt.x))
 	ry = new(big.Int).SetBits(toWordSlice(pt.y))
 	return
 }
 
-func (c eccCurve) CombinedMult(x, y *big.Int, k, gk []byte) (rx, ry *big.Int) {
+func (c eccCurve) cMult(x, y *big.Int, k, gk, sBuff []byte) (rx, ry *big.Int) {
 	pt1 := c.newPoint(x, y, nil)
 	var pt C.Point
 	scal := new(big.Int).SetBytes(k)
@@ -182,10 +182,23 @@ func (c eccCurve) CombinedMult(x, y *big.Int, k, gk []byte) (rx, ry *big.Int) {
 	scal.SetBytes(gk)
 	var gs [4]big.Word
 	copy(gs[:], scal.Bits())
-	C.point_cmult(&pt, pt1, (*C.u64)(unsafe.Pointer(&ss[0])), (*C.u64)(unsafe.Pointer(&gs[0])), c.hnd)
+	if sBuff != nil {
+		if len(sBuff) < 2000 {
+			sBuff = make([]byte, 2048)
+		}
+		C.point_cmult(&pt, pt1, (*C.u64)(unsafe.Pointer(&ss[0])),
+			(*C.u64)(unsafe.Pointer(&gs[0])), c.hnd, unsafe.Pointer(&sBuff[0]))
+	} else {
+		C.point_cmult(&pt, pt1, (*C.u64)(unsafe.Pointer(&ss[0])),
+			(*C.u64)(unsafe.Pointer(&gs[0])), c.hnd, nil)
+	}
 	rx = new(big.Int).SetBits(toWordSlice(pt.x))
 	ry = new(big.Int).SetBits(toWordSlice(pt.y))
 	return
+}
+
+func (c eccCurve) CombinedMult(x, y *big.Int, k, gk []byte) (rx, ry *big.Int) {
+	return c.cMult(x, y, k, gk, nil)
 }
 
 func (c eccCurve) AffineFromJacobian(x, y, z *big.Int) (xOut, yOut *big.Int) {

@@ -186,9 +186,9 @@ void	point_add_jacobian(Point *pt, const Point *p, const Point *q,
 void	point_double(Point *pt, const Point *p, CURVE_HND curveH);
 void	point_add(Point *pt, const Point *p, const Point *q, CURVE_HND curvH);
 void	point_mult(Point *pt, const Point *p, const u64 *scalar,
-				CURVE_HND curveH);
+				CURVE_HND curveH, void *scratchBuff);
 void	point_cmult(Point *pt, const Point *p, const u64 *scalar,
-				const u64 *gscalar, CURVE_HND curveH);
+				const u64 *gscalar, CURVE_HND curveH, void *scratchBuff);
 void	affine_from_jacobian(u64 *x, u64 *y, const Point *pt, CURVE_HND curveH);
 int		ecc_verify(const u64 *rP, const u64 *sP, const u64 *msgP,
 				const Point *pubKey, CURVE_HND curveH);
