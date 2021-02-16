@@ -776,9 +776,9 @@ static void vli_rshift1w(u64 *vli, const u64 carry=0) noexcept
 
 /* copy_conditional copies in to out if enabled, set mask to all ones. */
 template<const uint N> forceinline
-void vli_copy_conditional(u64 *res, const u64 *in, const bool enabled)
+void vli_copy_conditional(u64 *res, const u64 *in, const bool _enabled)
 {
-	u64	mask = (u64)!enabled - 1;
+	u64	mask = (u64)!_enabled - 1;
 	for (uint i = 0; i < N; ++i) {
 		const u64 tmp = mask & (in[i] ^ res[i]);
 		res[i] ^= tmp;
@@ -803,12 +803,8 @@ bool vli_add(u64 *result, const u64 *left, const u64 *right) noexcept
 template<const uint N> forceinline static
 bool vli_add_to(u64 *result, const u64 *right) noexcept
 {
-#if	defined(WITH_ASM)
-#if	__cplusplus >= 201703L
+#if	defined(WITH_ASM) && __cplusplus >= 201703L
 	if constexpr(N == 4) return vli4_add_to(result, right);
-#else
-	if  ( likely(N == 4) ) return vli4_add_to(result, right);
-#endif
 #endif
 #ifdef	ommit
 	if ( unlikely(result == right) ) {
@@ -849,12 +845,8 @@ static bool vli_uadd_to(u64 *result, u64 right) noexcept
 template<const uint N> forceinline static
 bool vli_sub(u64 *result, const u64 *left, const u64 *right) noexcept
 {
-#if	defined(WITH_ASM)
-#if	__cplusplus >= 201703L
+#if	defined(WITH_ASM) && __cplusplus >= 201703L && defined(__clang__)
 	if constexpr(N == 4) return vli4_sub(result, left, right);
-#else
-	if ( likely(N == 4) ) return vli4_sub(result, left, right);
-#endif
 #endif
 	u64 borrow = 0;
 	for (uint i = 0; i < N; i++) {
@@ -882,12 +874,8 @@ vli_subc(u64 *result, const u64 *left, const u64 *right, const u64 carry=0) noex
 template<const uint N> forceinline static
 bool vli_sub_from(u64 *result, const u64 *right) noexcept
 {
-#if	defined(WITH_ASM)
-#if	__cplusplus >= 201703L
+#if	defined(WITH_ASM) && __cplusplus >= 201703L && defined(__clang__)
 	if constexpr(N == 4) return vli4_sub_from(result, right);
-#else
-	if ( likely(N == 4) ) return vli4_sub_from(result, right);
-#endif
 #endif
 	u64 borrow = 0;
 	for (uint i = 0; i < N; i++) {
@@ -1120,16 +1108,10 @@ vli_mod(u64 *result, const u64 *left, const u64 *mod, const bool carry) noexcept
 	/* result > mod (result = mod + remainder), so subtract mod to
 	 * get remainder.
 	 */
-#if	defined(WITH_ASM)
-#if	__cplusplus >= 201703L
+#if	defined(WITH_ASM1) && __cplusplus >= 201703L
 	if constexpr(N == 4) {
 		vli4_mod(result, left, mod, carry);
 	} else
-#else
-	if ( likely(N == 4) ) {
-		vli4_mod(result, left, mod, carry);
-	} else
-#endif
 #endif
 #ifdef	W_CONDITIONAL_COPY
 	{
