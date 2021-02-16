@@ -405,72 +405,76 @@ sm2p_reduction(u64 *result, const u64 *y, const bool isProd=false) noexcept
 	register u64 res1 asm("x5") = y[1];
 	register u64 res2 asm("x6") = y[2];
 	register u64 res3 asm("x7") = y[3];
-	//register u64 carry1 asm("x11") = 0;
+	register u64 carry asm("x0") = 0;
 	asm volatile(
 //"LDP	x4, x5, [%0]\n"
 //"LDP	x6, x7, [%0, 16]\n"
 	// Only reduce, no multiplications are needed
 	// First reduction step
 "MOV x10, x4\n"
-"LSR x9, x4, 32\n"
+"mov x4, xzr\n"
 "ADDS x5, x5, x10\n"
 "ADCS x6, x6, XZR\n"
 "ADCS x7, x7, XZR\n"
-"ADCS x4, x10, XZR\n"
-"ADCS x11, XZR, XZR\n"
+"ADCS x4, x4, x10\n"
+"ADCS x0, XZR, XZR\n"
+"LSR x9, x10, 32\n"
 "LSL x10, x10, 32\n"
 "SUBS x5, x5, x10\n"
 "SBCS x6, x6, x9\n"
 "SBCS x7, x7, x10\n"
 "SBCS x4, x4, x9\n"
-"SBCS x11, x11, xzr\n"
+"SBCS x0, x0, xzr\n"
 	// Second reduction step
 "MOV x10, x5\n"
-"LSR x9, x5, 32\n"
+"mov x5, x0\n"
 "ADDS x6, x6, x10\n"
 "ADCS x7, x7, XZR\n"
 "ADCS x4, x4, XZR\n"
-"ADCS x5, x10, x11\n"
-"ADCS x11, XZR, XZR\n"
+"ADCS x5, x5, x10\n"
+"ADCS x0, XZR, XZR\n"
+"LSR x9, x10, 32\n"
 "LSL x10, x10, 32\n"
 "SUBS x6, x6, x10\n"
 "SBCS x7, x7, x9\n"
 "SBCS x4, x4, x10\n"
 "SBCS x5, x5, x9\n"
-"SBCS x11, x11, xzr\n"
+"SBCS x0, x0, xzr\n"
 	// Third reduction step
 "MOV x10, x6\n"
-"LSR x9, x6, 32\n"
+"mov x6, x0\n"
 "ADDS x7, x7, x10\n"
 "ADCS x4, x4, XZR\n"
 "ADCS x5, x5, XZR\n"
-"ADCS x6, x10, x11\n"
-"ADCS x11, XZR, XZR\n"
+"ADCS x6, x6, x10\n"
+"ADCS x0, XZR, XZR\n"
+"LSR x9, x10, 32\n"
 "LSL x10, x10, 32\n"
 "SUBS x7, x7, x10\n"
 "SBCS x4, x4, x9\n"
 "SBCS x5, x5, x10\n"
 "SBCS x6, x6, x9\n"
-"SBCS x11, x11, xzr\n"
+"SBCS x0, x0, xzr\n"
 	// Last reduction step
 "MOV x10, x7\n"
-"LSR x9, x7, 32\n"
+"mov x7, x0\n"
 "ADDS x4, x4, x10\n"
 "ADCS x5, x5, XZR\n"
 "ADCS x6, x6, XZR\n"
-"ADCS x7, x10, x11\n"
-"ADCS x11, XZR, XZR\n"
+"ADCS x7, x7, x10\n"
+"ADCS x0, XZR, XZR\n"
+"LSR x9, x10, 32\n"
 "LSL x10, x10, 32\n"
 "SUBS x4, x4, x10\n"
 "SBCS x5, x5, x9\n"
 "SBCS x6, x6, x10\n"
 "SBCS x7, x7, x9\n"
-"SBCS x11, x11, xzr\n"
-		: "+r" (res0), "+r" (res1), "+r" (res2), "+r" (res3)
+"SBCS x0, x0, xzr\n"
+		: "+r" (res0), "+r" (res1), "+r" (res2), "+r" (res3), "+r" (carry)
 		:
-		: "%x9", "%x10", "%x11", "cc", "memory");
+		: "%x9", "%x10", "%x11", "%x12", "cc", "memory");
 
-	u64	carry = 0;
+	//u64	carry = carray1;
 	//if (carry != 0) carry = 1;
 	// add high 256 bits
 	if ( unlikely(isProd) )
@@ -490,20 +494,20 @@ sm2p_reduction(u64 *result, const u64 *y, const bool isProd=false) noexcept
 //"LDP	x11, x12, [%2, 16]\n"
 "MOV	x11, #-1\n"
 "SUBS	x9, x4, #-1\n"
-"SBCS	x10, x5, %2\n"
+"SBCS	x10, x5, %1\n"
 "SBCS	x11, x6, x11\n"
-"SBCS	x12, x7, %3\n"
-"SBCS	%0, %0, XZR\n"
+"SBCS	x12, x7, %2\n"
+"SBCS	x0, x0, XZR\n"
 
 "CSEL	x4, x4, x9, cc\n"
 "CSEL	x5, x5, x10, cc\n"
 "CSEL	x6, x6, x11, cc\n"
 "CSEL	x7, x7, x12, cc\n"
 
-"STP	x4, x5, [%1]\n"
-"STP	x6, x7, [%1, 16]\n"
+"STP	x4, x5, [%0]\n"
+"STP	x6, x7, [%0, 16]\n"
 		:
-		: "r" (carry), "r" (result), "r" (sm2_p[1]), "r" (sm2_p[3]),
+		: "r" (result), "r" (sm2_p[1]), "r" (sm2_p[3]), "+r" (carry),
 			"r" (res0), "r" (res1), "r" (res2), "r" (res3)
 		: "%x9", "%x10", "%x11", "%x12", "cc", "memory");
 #else
