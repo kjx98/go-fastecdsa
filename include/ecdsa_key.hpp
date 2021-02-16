@@ -88,7 +88,8 @@ protected:
 	template<typename curveT>
 	bool init(const curveT& curve, const felem_t& secret) noexcept {
 		_inited = false;
-		if (secret >= curve.paramN()) _d.sub(secret, curve.paramN()); else _d = secret;
+		if (secret >= curve.paramN()) _d.sub(secret, curve.paramN());
+		else _d = secret;
 		//curve.modN(_d, secret);
 		if (_d.is_zero()) return false;
 #ifdef	WITH_MONT_D
@@ -157,7 +158,7 @@ int ecdsa_sign(const curveT& curve, bignum<N>& r, bignum<N>& s,
 		const private_key<N>& priv, const bignum<N>& msg) noexcept
 {
 	bignum<N>	k, x1;	// y1 reuse tmp
-	bignum<N>	tmp;	// r+s
+	bignum<N>	tmp;
 	int		ret=0;
 	do {
 		do {
@@ -165,7 +166,7 @@ int ecdsa_sign(const curveT& curve, bignum<N>& r, bignum<N>& s,
 			if (x1 >= curve.paramN()) r.sub(x1, curve.paramN()); else r = x1;
 		} while (r.is_zero());
 		ret = tmp.is_odd();
-		bignum<N>	rp;	// r+s
+		bignum<N>	rp;	// r*dA
 		curve.to_montgomeryN(rp, r);
 		// tmp = r * dA
 #ifdef	WITH_MONT_D
@@ -176,8 +177,8 @@ int ecdsa_sign(const curveT& curve, bignum<N>& r, bignum<N>& s,
 #endif
 		curve.from_montgomeryN(tmp, tmp);
 		// tmp = e + r * dA
-		curve.mod_add_to(tmp, msg);
-		// x1 = k^-1
+		if (tmp.add_to(msg)) tmp.sub_from(curve.paramN());
+		// x1 = k^-1, kInv reuse x1
 		mod_inv<N>(x1, k, curve.paramN());
 		// s = k^-1 * (e + r*dA)
 		curve.to_montgomeryN(rp, x1);
@@ -186,7 +187,7 @@ int ecdsa_sign(const curveT& curve, bignum<N>& r, bignum<N>& s,
 		curve.from_montgomeryN(s, tmp);
 		if (s.is_zero()) continue;
 		// SM2 sign s may above halfN
-#ifdef	WITH_HALF_N_ommit
+#ifdef	WITH_HALF_N
 		if (curve.halfN() < s) {
 			s.sub(curve.paramN(), s);
 		}
@@ -202,16 +203,18 @@ bool ecdsa_verify(const curveT& curve, const bignum<N>& r, const bignum<N>& s,
 		const spoint_t<N>&	pub, const bignum<N>& msg) noexcept
 {
 	bignum<N>	u, v, sInv;
-	if ( unlikely(r.is_zero()) ) return false;
-	if ( unlikely(s.is_zero()) ) return false;
+	if ( unlikely(r.is_zero()) || r >= curve.paramN()) return false;
+	if ( unlikely(s.is_zero()) || s >= curve.paramN()) return false;
 	mod_inv<N>(sInv, s, curve.paramN());
-	curve.to_montgomery(sInv, sInv);
+	curve.to_montgomeryN(sInv, sInv);
 	// u = s^-1 * e
 	// v = s^-1 * r
-	curve.to_montgomery(u, msg);
-	curve.to_montgomery(v, r);
+	curve.to_montgomeryN(u, msg);
+	curve.to_montgomeryN(v, r);
 	curve.mont_nmult(u, u, sInv);
 	curve.mont_nmult(v, v, sInv);
+	curve.from_montgomeryN(u, u);
+	curve.from_montgomeryN(v, v);
 	if ( unlikely(u.is_zero()) ) return false;
 	if ( unlikely(v.is_zero()) ) return false;
 	point_t<N>	q, p(pub.x, pub.y);
@@ -230,9 +233,10 @@ bool ecdsa_recover(const curveT& curve, spoint_t<N>&  pub, const bignum<N>& r,
 				const bignum<N>& s, const int v, const bignum<N>& msg) noexcept
 {
 	point_t<N>	p;
+	//if ( unlikely(r.is_zero()) || r >= curve.paramN()) return false;
+	//if ( unlikely(s.is_zero()) || s >= curve.paramN()) return false;
 	if ( unlikely(r.is_zero()) ) return false;
 	if ( unlikely(s.is_zero()) ) return false;
-	// p.x = r
 	p.x = r;
 	if ( unlikely(!pointY_recover(curve, p.y, p.x, v)) ) return false;
 	bignum<N>	u1, u2, rInv;

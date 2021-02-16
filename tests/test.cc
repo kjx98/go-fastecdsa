@@ -980,6 +980,7 @@ TEST(TestECDSA, TestRecover)
 			<< std::endl;
 }
 
+#ifdef	WITH_ECDSA
 TEST(TestECDSA, TestEcdsaSign)
 {
 	private_key<4>	priv(sm2_p256);
@@ -992,11 +993,20 @@ TEST(TestECDSA, TestEcdsaSign)
 		ASSERT_FALSE(s.is_zero());
 		std::cerr << "ECDSA sign test round: " << i << "\tsign ecInd: "
 				<< ecInd << std::endl;
-#ifdef	ommit
+		bignum<4>	u,v, sInv;
 		point_t<4>	q, p(priv.PubKey().x, priv.PubKey().y);
-		sm2_p256.combined_mult(q, p, t, s);
+		mod_inv<4>(sInv, s, sm2_k256.paramN());
+		sm2_k256.to_montgomeryN(sInv, sInv);
+		sm2_k256.to_montgomeryN(u, msg);
+		sm2_k256.to_montgomeryN(v, r);
+		sm2_k256.mont_nmult(u, u, sInv);
+		sm2_k256.mont_nmult(v, v, sInv);
+		sm2_k256.from_montgomeryN(u, u);
+		sm2_k256.from_montgomeryN(v, v);
+		EXPECT_FALSE(u.is_zero());
+		EXPECT_FALSE(v.is_zero());
+		sm2_k256.combined_mult(q, p, v, u);
 		ASSERT_EQ(q.x, r);
-#endif
 	}
 	steady_clock::time_point t1 = steady_clock::now();
 	for (int i=0; i<1000; ++i)
@@ -1035,6 +1045,12 @@ TEST(TestECDSA, TestEcdsaRecover)
 	std::cerr << "ECDSA sign ret: " << ecInd << std::endl;
 	spoint_t<4>	Ps;
 	ASSERT_TRUE(ecdsa_recover(sm2_p256, Ps, r, s, ecInd, msg));
+#ifdef	WITH_HALF_N
+	if (Ps.x != priv.PubKey().x) {
+		s.sub(sm2_p256.paramN(), s);
+		ASSERT_TRUE(ecdsa_recover(sm2_p256, Ps, r, s, ecInd, msg));
+	}
+#endif
 	EXPECT_EQ(Ps.x, priv.PubKey().x);
 	EXPECT_EQ(Ps.y, priv.PubKey().y);
 	steady_clock::time_point t1 = steady_clock::now();
@@ -1048,6 +1064,7 @@ TEST(TestECDSA, TestEcdsaRecover)
 	std::cerr << "ECDSA recover " << (int)(1000/time_span1.count())
 			<< " msg/sec" << std::endl;
 }
+#endif
 
 int main(int argc, char *argv[])
 {
