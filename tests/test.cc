@@ -6,6 +6,7 @@
 #include "curve_const.hpp"
 #include "curve_defs.hpp"
 #include "ecc_key.hpp"
+#include "ecdsa_key.hpp"
 #include "mont.hpp"
 
 
@@ -908,33 +909,23 @@ TEST(TestECDSA, TestSign)
 	bignum<4>	r, s;
 	int		ecInd;
 	for (int i=0; i<10; i++) {
-		ecInd = ec_sign(sm2_p256, r, s, priv, msg);
+		ecInd = ec_sign(sm2_k256, r, s, priv, msg);
 		ASSERT_FALSE(r.is_zero());
 		ASSERT_FALSE(s.is_zero());
 		std::cerr << "sign test round: " << i << "\tsign ecInd: "
 				<< ecInd << std::endl;
 		bignum<4>	t;
-#ifdef	ommit
-		if (t.add(r, s)) t.sub_from(sm2_p256.paramN());
-		sm2_p256.modN(t, t);
-#else
 		t.mod_add(r, s, sm2_p256.paramN());
-#endif
 		ASSERT_FALSE(t.is_zero());
 		point_t<4>	q, p(priv.PubKey().x, priv.PubKey().y);
 		sm2_p256.combined_mult(q, p, t, s);
 		bignum<4>	tmp;
-#ifdef	ommit
-		if (tmp.add(q.x, msg)) tmp.sub_from(sm2_p256.paramN());
-		sm2_p256.modN(tmp, tmp);
-#else
 		tmp.mod_add(q.x, msg, sm2_p256.paramN());
-#endif
 		ASSERT_EQ(tmp, r);
 	}
 	steady_clock::time_point t1 = steady_clock::now();
 	for (int i=0; i<1000; ++i)
-		ecInd = ec_sign(sm2_p256, r, s, priv, msg);
+		ecInd = ec_sign(sm2_k256, r, s, priv, msg);
 	steady_clock::time_point t2 = steady_clock::now();
 	std::chrono::duration<double> time_span1;
 	time_span1 = (t2 - t1);
@@ -955,14 +946,9 @@ TEST(TestECDSA, TestVerify)
 	ASSERT_FALSE(s.is_zero());
 	std::cerr << "signed ret: " << ecInd << std::endl;
 	bignum<4>	t;
-#ifdef	ommit
-	if (t.add(r, s)) t.sub_from(sm2_p256.paramN());
-	sm2_p256.modN(t, t);
-#else
 	t.mod_add(r, s, sm2_p256.paramN());
-#endif
 	ASSERT_FALSE(t.is_zero());
-	ASSERT_TRUE(ec_verify(sm2_p256, r, s, priv.PubKey(), msg));
+	ASSERT_TRUE(ec_verify(sm2_k256, r, s, priv.PubKey(), msg));
 }
 
 TEST(TestECDSA, TestRecover)
@@ -971,20 +957,15 @@ TEST(TestECDSA, TestRecover)
 	bignum<4>	msg = bn_random<4>::Instance().get_random();
 	bignum<4>	r, s;
 	int		ecInd;
-	ecInd = ec_sign(sm2_p256, r, s, priv, msg);
+	ecInd = ec_sign(sm2_k256, r, s, priv, msg);
 	ASSERT_FALSE(r.is_zero());
 	ASSERT_FALSE(s.is_zero());
 	std::cerr << "signed ret: " << ecInd << std::endl;
 	bignum<4>	t;
-#ifdef	ommit
-	if (t.add(r, s)) t.sub_from(sm2_p256.paramN());
-	sm2_p256.modN(t, t);
-#else
 	t.mod_add(r, s, sm2_p256.paramN());
-#endif
 	ASSERT_FALSE(t.is_zero());
 	spoint_t<4>	Ps;
-	ASSERT_TRUE(ec_recover(sm2_p256, Ps, r, s, ecInd, msg));
+	ASSERT_TRUE(ec_recover(sm2_k256, Ps, r, s, ecInd, msg));
 	EXPECT_EQ(Ps.x, priv.PubKey().x);
 	EXPECT_EQ(Ps.y, priv.PubKey().y);
 	steady_clock::time_point t1 = steady_clock::now();
@@ -993,10 +974,79 @@ TEST(TestECDSA, TestRecover)
 	steady_clock::time_point t2 = steady_clock::now();
 	std::chrono::duration<double> time_span1;
 	time_span1 = (t2 - t1);
-	std::cerr << "1000 recover pubkey from signed msg cost " << time_span1.count() * 1e3
-			<< " ms" << std::endl;
+	std::cerr << "1000 recover pubkey from signed msg cost "
+			<< time_span1.count() * 1e3 << " ms" << std::endl;
 	std::cerr << "recover " << (int)(1000/time_span1.count()) << " msg/sec"
 			<< std::endl;
+}
+
+TEST(TestECDSA, TestEcdsaSign)
+{
+	private_key<4>	priv(sm2_p256);
+	bignum<4>	msg = bn_random<4>::Instance().get_random();
+	bignum<4>	r, s;
+	int		ecInd;
+	for (int i=0; i<10; i++) {
+		ecInd = ecdsa_sign(sm2_k256, r, s, priv, msg);
+		ASSERT_FALSE(r.is_zero());
+		ASSERT_FALSE(s.is_zero());
+		std::cerr << "ECDSA sign test round: " << i << "\tsign ecInd: "
+				<< ecInd << std::endl;
+#ifdef	ommit
+		point_t<4>	q, p(priv.PubKey().x, priv.PubKey().y);
+		sm2_p256.combined_mult(q, p, t, s);
+		ASSERT_EQ(q.x, r);
+#endif
+	}
+	steady_clock::time_point t1 = steady_clock::now();
+	for (int i=0; i<1000; ++i)
+		ecInd = ecdsa_sign(sm2_k256, r, s, priv, msg);
+	steady_clock::time_point t2 = steady_clock::now();
+	std::chrono::duration<double> time_span1;
+	time_span1 = (t2 - t1);
+	std::cerr << "1000 ECDSA sign cost " << time_span1.count() * 1e3
+			<< " ms" << std::endl;
+	std::cerr << "ECDSA sign " << (int)(1000/time_span1.count()) << " msg/sec"
+			<< std::endl;
+}
+
+TEST(TestECDSA, TestEcdsaVerify)
+{
+	private_key<4>	priv(sm2_p256);
+	bignum<4>	msg = bn_random<4>::Instance().get_random();
+	bignum<4>	r, s;
+	int		ecInd;
+	ecInd = ecdsa_sign(sm2_p256, r, s, priv, msg);
+	ASSERT_FALSE(r.is_zero());
+	ASSERT_FALSE(s.is_zero());
+	std::cerr << "ECDSA sign ret: " << ecInd << std::endl;
+	ASSERT_TRUE(ecdsa_verify(sm2_p256, r, s, priv.PubKey(), msg));
+}
+
+TEST(TestECDSA, TestEcdsaRecover)
+{
+	private_key<4>	priv(sm2_p256);
+	bignum<4>	msg = bn_random<4>::Instance().get_random();
+	bignum<4>	r, s;
+	int		ecInd;
+	ecInd = ecdsa_sign(sm2_p256, r, s, priv, msg);
+	ASSERT_FALSE(r.is_zero());
+	ASSERT_FALSE(s.is_zero());
+	std::cerr << "ECDSA sign ret: " << ecInd << std::endl;
+	spoint_t<4>	Ps;
+	ASSERT_TRUE(ecdsa_recover(sm2_p256, Ps, r, s, ecInd, msg));
+	EXPECT_EQ(Ps.x, priv.PubKey().x);
+	EXPECT_EQ(Ps.y, priv.PubKey().y);
+	steady_clock::time_point t1 = steady_clock::now();
+	for (int i=0; i<1000; ++i)
+		ecdsa_recover(sm2_k256, Ps, r, s, ecInd, msg);
+	steady_clock::time_point t2 = steady_clock::now();
+	std::chrono::duration<double> time_span1;
+	time_span1 = (t2 - t1);
+	std::cerr << "1000 ECDSA recover pubkey from signed msg cost "
+			<< time_span1.count() * 1e3 << " ms" << std::endl;
+	std::cerr << "ECDSA recover " << (int)(1000/time_span1.count())
+			<< " msg/sec" << std::endl;
 }
 
 int main(int argc, char *argv[])
