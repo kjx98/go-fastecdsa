@@ -49,7 +49,7 @@ static void vli_sm2_multP(u64 *result, const u64 u) noexcept
 	//result[5] = carry;
 }
 
-
+#ifdef	ommit
 // p is 2^256 - 2^224 - 2^96 + 2^64 -1
 // vli_sm2_multPh return u * (p + 1) >> 64
 forceinline
@@ -64,10 +64,11 @@ static void vli_sm2_multPh(u64 *result, const u64 u) noexcept
 	result[2] = u64_subc(0, t_low, carry);
 	result[3] = u64_subc(u, t_high, carry);
 }
+#endif
 
 // u * 2^256 mod sm2 prime
 // p is 2^256 - 2^224 - 2^96 + 2^64 -1
-// R(2^256) - p = 2^224 + 2^96 - 2^64 + 1
+// R(2^256) = 2^224 + 2^96 - 2^64 + 1 Mod p = 2^32 * 2^192 + (2^32-1) * 2^64 + 1
 // u < 2^32
 // used for carry_reduce
 forceinline
@@ -225,21 +226,21 @@ sm2p_mod2(u64 *res, const u64 r0, const u64 r1, const u64 r2, const u64 r3,
 }
 #endif
 
+
 forceinline static void
 sm2p_reductionStep(u64& r0, u64& r1, u64& r2, u64& r3, u64& carry)
 {
 	u64	u = r0;
-	u64	t_low, t_high;
-	t_low = u << 32;	// ^192
-	t_high = u >> 32;
-	u64 cc = 0;
 	//vli_rshift1w<4>(r, carry);
 	r0 = carry;		// rshift1w
+	u64 cc = 0;
 	r1 = u64_addc(r1, u, cc);
 	r2 = u64_addcz(r2, cc);
 	r3 = u64_addcz(r3, cc);
 	r0 = u64_addc(r0, u, cc);
 	carry = cc;
+	u64 t_low = u << 32;	// ^192
+	u64 t_high = u >> 32;
 	cc = 0;
 	r1 = u64_subc(r1, t_low, cc);
 	r2 = u64_subc(r2, t_high, cc);
@@ -270,7 +271,9 @@ sm2p_reductionN(u64 *result, const u64 *y, const bool isProd=false) noexcept
 		carry += cc;
 	}
 	// sm2p_mod
-#ifndef	WITH_SM2P_MOD2
+#ifdef	WITH_SM2P_MOD2
+	sm2p_mod2(result, r0, r1, r2, r3, carry);
+#else
 	{
 		u64	cc=0;
 		u64 s0 = u64_subc(r0, sm2_p[0], cc);
@@ -281,8 +284,6 @@ sm2p_reductionN(u64 *result, const u64 *y, const bool isProd=false) noexcept
 		if (cc != 0) vli4_save(result, r0, r1, r2, r3); else
 			vli4_save(result, s0, s1, s2, s3);
 	}
-#else
-	sm2p_mod2(result, r0, r1, r2, r3, carry);
 #endif
 }
 
@@ -407,74 +408,71 @@ sm2p_reduction(u64 *result, const u64 *y, const bool isProd=false) noexcept
 	register u64 res3 asm("x7") = y[3];
 	register u64 carry asm("x0") = 0;
 	asm volatile(
-//"LDP	x4, x5, [%0]\n"
-//"LDP	x6, x7, [%0, 16]\n"
 	// Only reduce, no multiplications are needed
 	// First reduction step
-"MOV x10, x4\n"
-"mov x4, xzr\n"
-"ADDS x5, x5, x10\n"
-"ADCS x6, x6, XZR\n"
-"ADCS x7, x7, XZR\n"
-"ADCS x4, x4, x10\n"
-"ADCS x0, XZR, XZR\n"
-"LSR x9, x10, 32\n"
-"LSL x10, x10, 32\n"
-"SUBS x5, x5, x10\n"
-"SBCS x6, x6, x9\n"
-"SBCS x7, x7, x10\n"
-"SBCS x4, x4, x9\n"
-"SBCS x0, x0, xzr\n"
+		"MOV x10, x4\n"
+		"MOV x4, xzr\n"
+		"ADDS x5, x5, x10\n"
+		"ADCS x6, x6, XZR\n"
+		"ADCS x7, x7, XZR\n"
+		"ADCS x4, x4, x10\n"
+		"ADCS x0, XZR, XZR\n"
+		"LSR x9, x10, 32\n"
+		"LSL x10, x10, 32\n"
+		"SUBS x5, x5, x10\n"
+		"SBCS x6, x6, x9\n"
+		"SBCS x7, x7, x10\n"
+		"SBCS x4, x4, x9\n"
+		"SBCS x0, x0, xzr\n"
 	// Second reduction step
-"MOV x10, x5\n"
-"mov x5, x0\n"
-"ADDS x6, x6, x10\n"
-"ADCS x7, x7, XZR\n"
-"ADCS x4, x4, XZR\n"
-"ADCS x5, x5, x10\n"
-"ADCS x0, XZR, XZR\n"
-"LSR x9, x10, 32\n"
-"LSL x10, x10, 32\n"
-"SUBS x6, x6, x10\n"
-"SBCS x7, x7, x9\n"
-"SBCS x4, x4, x10\n"
-"SBCS x5, x5, x9\n"
-"SBCS x0, x0, xzr\n"
+		"MOV x10, x5\n"
+		"MOV x5, x0\n"
+		"ADDS x6, x6, x10\n"
+		"ADCS x7, x7, XZR\n"
+		"ADCS x4, x4, XZR\n"
+		"ADCS x5, x5, x10\n"
+		"ADCS x0, XZR, XZR\n"
+		"LSR x9, x10, 32\n"
+		"LSL x10, x10, 32\n"
+		"SUBS x6, x6, x10\n"
+		"SBCS x7, x7, x9\n"
+		"SBCS x4, x4, x10\n"
+		"SBCS x5, x5, x9\n"
+		"SBCS x0, x0, xzr\n"
 	// Third reduction step
-"MOV x10, x6\n"
-"mov x6, x0\n"
-"ADDS x7, x7, x10\n"
-"ADCS x4, x4, XZR\n"
-"ADCS x5, x5, XZR\n"
-"ADCS x6, x6, x10\n"
-"ADCS x0, XZR, XZR\n"
-"LSR x9, x10, 32\n"
-"LSL x10, x10, 32\n"
-"SUBS x7, x7, x10\n"
-"SBCS x4, x4, x9\n"
-"SBCS x5, x5, x10\n"
-"SBCS x6, x6, x9\n"
-"SBCS x0, x0, xzr\n"
+		"MOV x10, x6\n"
+		"MOV x6, x0\n"
+		"ADDS x7, x7, x10\n"
+		"ADCS x4, x4, XZR\n"
+		"ADCS x5, x5, XZR\n"
+		"ADCS x6, x6, x10\n"
+		"ADCS x0, XZR, XZR\n"
+		"LSR x9, x10, 32\n"
+		"LSL x10, x10, 32\n"
+		"SUBS x7, x7, x10\n"
+		"SBCS x4, x4, x9\n"
+		"SBCS x5, x5, x10\n"
+		"SBCS x6, x6, x9\n"
+		"SBCS x0, x0, xzr\n"
 	// Last reduction step
-"MOV x10, x7\n"
-"mov x7, x0\n"
-"ADDS x4, x4, x10\n"
-"ADCS x5, x5, XZR\n"
-"ADCS x6, x6, XZR\n"
-"ADCS x7, x7, x10\n"
-"ADCS x0, XZR, XZR\n"
-"LSR x9, x10, 32\n"
-"LSL x10, x10, 32\n"
-"SUBS x4, x4, x10\n"
-"SBCS x5, x5, x9\n"
-"SBCS x6, x6, x10\n"
-"SBCS x7, x7, x9\n"
-"SBCS x0, x0, xzr\n"
+		"MOV x10, x7\n"
+		"MOV x7, x0\n"
+		"ADDS x4, x4, x10\n"
+		"ADCS x5, x5, XZR\n"
+		"ADCS x6, x6, XZR\n"
+		"ADCS x7, x7, x10\n"
+		"ADCS x0, XZR, XZR\n"
+		"LSR x9, x10, 32\n"
+		"LSL x10, x10, 32\n"
+		"SUBS x4, x4, x10\n"
+		"SBCS x5, x5, x9\n"
+		"SBCS x6, x6, x10\n"
+		"SBCS x7, x7, x9\n"
+		"SBCS x0, x0, xzr\n"
 		: "+r" (res0), "+r" (res1), "+r" (res2), "+r" (res3), "+r" (carry)
 		:
 		: "%x9", "%x10", "%x11", "%x12", "cc", "memory");
 
-	//u64	carry = carray1;
 	//if (carry != 0) carry = 1;
 	// add high 256 bits
 	if ( unlikely(isProd) )
@@ -489,22 +487,22 @@ sm2p_reduction(u64 *result, const u64 *y, const bool isProd=false) noexcept
 
 	// mod prime
 	asm volatile(
-//"LDP	x9, x10, [%2]\n"
-//"LDP	x11, x12, [%2, 16]\n"
-"MOV	x11, #-1\n"
-"SUBS	x9, x4, #-1\n"
-"SBCS	x10, x5, %1\n"
-"SBCS	x11, x6, x11\n"
-"SBCS	x12, x7, %2\n"
-"SBCS	x0, x0, XZR\n"
+		//"MOV	x9, #-1\n"
+		"MOV	x11, #-1\n"
 
-"CSEL	x4, x4, x9, cc\n"
-"CSEL	x5, x5, x10, cc\n"
-"CSEL	x6, x6, x11, cc\n"
-"CSEL	x7, x7, x12, cc\n"
+		"SUBS	x9, x4, #-1\n"
+		"SBCS	x10, x5, %1\n"
+		"SBCS	x11, x6, x11\n"
+		"SBCS	x12, x7, %2\n"
+		"SBCS	x0, x0, XZR\n"
 
-"STP	x4, x5, [%0]\n"
-"STP	x6, x7, [%0, 16]\n"
+		"CSEL	x4, x4, x9, cc\n"
+		"CSEL	x5, x5, x10, cc\n"
+		"CSEL	x6, x6, x11, cc\n"
+		"CSEL	x7, x7, x12, cc\n"
+
+		"STP	x4, x5, [%0]\n"
+		"STP	x6, x7, [%0, 16]\n"
 		:
 		: "r" (result), "r" (sm2_p[1]), "r" (sm2_p[3]), "r" (carry),
 			"r" (res0), "r" (res1), "r" (res2), "r" (res3)
@@ -606,20 +604,6 @@ mont_mult(u64 *result, const u64 *x, const u64 *y, const u64 *prime) noexcept
 }
 
 
-// r0..3 = r0..3 + s[0..3]
-// return s[4] + carry (of above)
-forceinline static u64
-vli4_addc_to(u64& r0, u64& r1, u64& r2, u64& r3, const u64* s,
-	const u64 carry=0) noexcept
-{
-	u64	cc = 0;
-	r0 = u64_addc(r0, s[0], cc);
-	r1 = u64_addc(r1, s[1], cc);
-	r2 = u64_addc(r2, s[2], cc);
-	r3 = u64_addc(r3, s[3], cc);
-	return u64_addc(carry, s[4], cc);
-}
-
 #ifdef	WITH_SM2_MULTSTEP
 forceinline static void
 sm2p_multStep(u64& r0, u64& r1, u64& r2, u64& r3, u64& r4, const u64& x0,
@@ -652,6 +636,20 @@ sm2p_multStep(u64& r0, u64& r1, u64& r2, u64& r3, u64& r4, const u64& x0,
 	//cc = 0;
 	r3 = u64_addc(r3, pd.m_low(), cc);
 	r4 = u64_addc(r4, t0, cc);
+}
+#else
+// r0..3 = r0..3 + s[0..3]
+// return s[4] + carry (of above)
+forceinline static u64
+vli4_addc_to(u64& r0, u64& r1, u64& r2, u64& r3, const u64* s,
+	const u64 carry=0) noexcept
+{
+	u64	cc = 0;
+	r0 = u64_addc(r0, s[0], cc);
+	r1 = u64_addc(r1, s[1], cc);
+	r2 = u64_addc(r2, s[2], cc);
+	r3 = u64_addc(r3, s[3], cc);
+	return u64_addc(carry, s[4], cc);
 }
 #endif
 
@@ -693,7 +691,9 @@ sm2p_multN(u64 *result, const u64 *x, const u64 *y) noexcept
 	}
 #endif
 	// sm2p_mod
-#ifndef	WITH_SM2P_MOD2
+#ifdef	WITH_SM2P_MOD2
+	sm2p_mod2(result, r0, r1, r2, r3, carry);
+#else
 	{
 		u64	cc=0;
 		u64 s0 = u64_subc(r0, sm2_p[0], cc);
@@ -704,8 +704,6 @@ sm2p_multN(u64 *result, const u64 *x, const u64 *y) noexcept
 		if (cc != 0) vli4_save(result, r0, r1, r2, r3); else
 			vli4_save(result, s0, s1, s2, s3);
 	}
-#else
-	sm2p_mod2(result, r0, r1, r2, r3, carry);
 #endif
 }
 
@@ -927,22 +925,25 @@ sm2p_mult(u64 *result, const u64 *x, const u64 *y) noexcept
 		: "rax", "rdx", "r8", "r9", "r12", "r13", "r10", "r11", "r14",
 		"r15", "cc", "memory");
 #elif	defined(__aarch64__11)
+	// x0 -- x3   register %%x4 -- %%x7
 	asm volatile(
 	// y[0] * x
-MUL	acc0, y0, x0
-UMULH	acc1, y0, x0
+	// load y0, y1
+LDP x2, x3, [x1]
+MUL	acc0, x2, x4
+UMULH	acc1, x2, x4
 
-MUL	t0, y0, x1
+MUL	t0, x2, x5
 ADDS	acc1, t0, acc1
-UMULH	acc2, y0, x1
+UMULH	acc2, x2, x5
 
-MUL	t0, y0, x2
+MUL	t0, x2, x6
 ADCS	acc2, t0, acc2
-UMULH	acc3, y0, x2
+UMULH	acc3, x2, x6
 
-MUL	t0, y0, x3
+MUL	t0, x2, x7
 ADCS	acc3, t0, acc3
-UMULH	acc4, y0, x3
+UMULH	acc4, x2, x7
 ADC	acc4, xzr, acc4
 	// First reduction step
 LSR	t0, 32, acc0
@@ -956,21 +957,21 @@ SBCS	acc2, acc2, t0
 SBCS	acc3, acc3, t1
 SBCS	acc0, acc0, t0
 	// y[1] * x
-MUL	t0, y1, x0
+MUL	t0, x3, x4
 ADDS	acc1, t0, acc1
-UMULH	t1, y1, x0
+UMULH	t1, x3, x4
 
-MUL	t0, y1, x1
+MUL	t0, x3, x5
 ADCS	acc2, t0, acc2
-UMULH	t2, y1, x1
+UMULH	t2, x3, x5
 
-MUL	t0, y1, x2
+MUL	t0, x3, x6
 ADCS	acc3, t0, acc3
-UMULH	t3, y1, x2
+UMULH	t3, x3, x6
 
-MUL	t0, y1, x3
+MUL	t0, x3, x7
 ADCS	acc4, t0, acc4
-UMULH	hlp0, y1, x3
+UMULH	hlp0, x3, x7
 ADC	acc5, XZR, 0
 
 ADDS	acc2, t1, acc2
@@ -989,21 +990,23 @@ SBCS	acc3, acc3, t0
 SBCS	acc0, acc0, t1
 SBCS	acc1, acc1, t0
 	// y[2] * x
-MUL	t0, y2, x0
+	// load y2, y3
+LDP x2, x3, [x1, 16]
+MUL	t0, x2, x4
 ADDS	acc2, t0, acc2
-UMULH	t1, y2, x0
+UMULH	t1, x2, x4
 
-MUL	t0, y2, x1
+MUL	t0, x2, x5
 ADCS	acc3, t0, acc3
-UMULH	t2, y2, x1
+UMULH	t2, x2, x5
 
-MUL	t0, y2, x2
+MUL	t0, x2, x6
 ADCS	acc4, t0, acc4
-UMULH	t3, y2, x2
+UMULH	t3, x2, x6
 
-MUL	t0, y2, x3
+MUL	t0, x2, x7
 ADCS	acc5, t0, acc5
-UMULH	hlp0, y2, x3
+UMULH	hlp0, x2, x7
 ADC	acc6, XZR, 0
 
 ADDS	acc3, t1, acc3
@@ -1022,21 +1025,21 @@ SBCS	acc0, acc0, t0
 SBCS	acc1, acc1, t1
 SBCS	acc2, acc2, t0
 	// y[3] * x
-MUL	t0, y3, x0
+MUL	t0, x3, x4
 ADDS	acc3, t0, acc3
-UMULH	t1, y3, x0
+UMULH	t1, x3, x4
 
-MUL	t0, y3, x1
+MUL	t0, x3, x5
 ADCS	acc4, t0, acc4
-UMULH	t2, y3, x1
+UMULH	t2, x3, x5
 
-MUL	t0, y3, x2
+MUL	t0, x3, x6
 ADCS	acc5, t0, acc5
-UMULH	t3, y3, x2
+UMULH	t3, x3, x6
 
-MUL	t0, y3, x3
+MUL	t0, x3, x7
 ADCS	acc6, t0, acc6
-UMULH	hlp0, y3, x3
+UMULH	hlp0, x3, x7
 ADC	acc7, XZR, 0
 
 ADDS	acc4, t1, acc4
