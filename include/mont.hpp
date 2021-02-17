@@ -158,7 +158,7 @@ sm2p_mod(u64 *res, const u64 *left, const bool carry) noexcept
 #endif
 }
 
-#ifndef	NO_SM2P_MOD2
+#ifdef	WITH_SM2P_MOD2
 /* result > mod (result = mod + remainder), so subtract mod to
  * get remainder.
  */
@@ -270,7 +270,7 @@ sm2p_reductionN(u64 *result, const u64 *y, const bool isProd=false) noexcept
 		carry += cc;
 	}
 	// sm2p_mod
-#ifdef	NO_SM2P_MOD2
+#ifndef	WITH_SM2P_MOD2
 	{
 		u64	cc=0;
 		u64 s0 = u64_subc(r0, sm2_p[0], cc);
@@ -620,6 +620,7 @@ vli4_addc_to(u64& r0, u64& r1, u64& r2, u64& r3, const u64* s,
 	return u64_addc(carry, s[4], cc);
 }
 
+#ifdef	WITH_SM2_MULTSTEP
 forceinline static void
 sm2p_multStep(u64& r0, u64& r1, u64& r2, u64& r3, u64& r4, const u64& x0,
 		const u64& x1, const u64& x2, const u64& x3, const u64 yi) noexcept
@@ -652,10 +653,12 @@ sm2p_multStep(u64& r0, u64& r1, u64& r2, u64& r3, u64& r4, const u64& x0,
 	r3 = u64_addc(r3, pd.m_low(), cc);
 	r4 = u64_addc(r4, t0, cc);
 }
+#endif
 
 forceinline static void
 sm2p_multN(u64 *result, const u64 *x, const u64 *y) noexcept
 {
+#ifdef	WITH_SM2_MULTSTEP
 	u64	r0=0, r1=0, r2=0, r3=0;
 	u64	x0=x[0], x1=x[1], x2=x[2], x3=x[3];
 	u64	carry=0;
@@ -669,8 +672,28 @@ sm2p_multN(u64 *result, const u64 *x, const u64 *y) noexcept
 		sm2p_multStep(r3, r0, r1, r2, carry, x0, x1, x2, x3, y[3]);
 		sm2p_reductionStep(r3, r0, r1, r2, carry);
 	}
+#else
+	u64	r0, r1, r2, r3;
+	u64	carry;
+	{
+		u64	s[4+1];
+		vli_umult2<4>(s, x, y[0]);
+		vli4_load(s, r0, r1, r2, r3);
+		carry = s[4];
+		sm2p_reductionStep(r0, r1, r2, r3, carry);
+		vli_umult2<4>(s, x, y[1]);
+		carry = vli4_addc_to(r1, r2, r3, r0, s, carry);
+		sm2p_reductionStep(r1, r2, r3, r0, carry);
+		vli_umult2<4>(s, x, y[2]);
+		carry = vli4_addc_to(r2, r3, r0, r1, s, carry);
+		sm2p_reductionStep(r2, r3, r0, r1, carry);
+		vli_umult2<4>(s, x, y[3]);
+		carry = vli4_addc_to(r3, r0, r1, r2, s, carry);
+		sm2p_reductionStep(r3, r0, r1, r2, carry);
+	}
+#endif
 	// sm2p_mod
-#ifdef	NO_SM2P_MOD2
+#ifndef	WITH_SM2P_MOD2
 	{
 		u64	cc=0;
 		u64 s0 = u64_subc(r0, sm2_p[0], cc);
