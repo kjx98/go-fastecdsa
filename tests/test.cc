@@ -225,6 +225,32 @@ static void sm2p_mont_sqrN(u64 *res, const bignum<4>& x)
 	mont_reduction<4,sm2_p_k0>(res, res, prime.data());
 }
 
+TEST(TestEcc, TestMontMultBase)
+{
+	u64	x[4]={0xffffffff00112233ull, 0xffffffffffffffffull, 0xaabbccdd88776655ull,
+			0x1122334455667788ull};
+	u64		re0[4];
+	bignum<4>	res;
+	sm2p_mult(re0, x, x);
+	bignum<4>	xx(x);
+	res.mont_mult(xx, xx, prime, sm2_p_k0);
+	EXPECT_TRUE(res == re0);
+	sm2p_multN(re0, x, x);
+	EXPECT_TRUE(res == re0);
+	for(int i=0; i<10; ++i) {
+		auto&  rd = bn_random<4>::Instance();
+		bignum<4>	tmp = rd.get_random();
+		bignum<4>	tmp1 = rd.get_random();
+		sm2p_mult(re0, tmp.data(), tmp1.data());
+		res.mont_mult(tmp, tmp1, prime, sm2_p_k0);
+		bignum<4>	res0(re0);
+		ASSERT_EQ(res, res0);
+		sm2p_multN(re0, tmp.data(), tmp1.data());
+		bignum<4>	res1(re0);
+		EXPECT_EQ(res0, res1);
+	}
+}
+
 TEST(testEcc, TestMontRedK01)
 {
 	auto&  rd = bn_random<4>::Instance();
