@@ -59,12 +59,14 @@ TEST(TestVli, TestUmult)
 	u64	x[4]={0xffffffff00112233ull, 0xffffffffffffffffull, 0xaabbccdd88776655ull,
 			0x1122334455667788ull};
 	u64	u = -1;
+	x[0] = -1;
 	x[1] = -1;
+	x[3] = -1;
 	u64	r0[8], r1[6];
 	vli_umult<4>(r0, x, u);
 	vli_umult2<4>(r1, x, u);
 	bignum<5>	re0(r0), re1(r1);
-	EXPECT_EQ(re0, re1);
+	ASSERT_EQ(re0, re1);
 }
 
 TEST(testVli, TestU64Addc)
