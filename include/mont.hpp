@@ -939,21 +939,21 @@ sm2p_mult(u64 *result, const u64 *x, const u64 *y) noexcept
 	asm volatile(
 	// y[0] * x
 	// load y0, y1
-		"LDP x2, x3, [%1]\n"
-		"MUL	x9, x2, x4\n"
-		"UMULH	x10, x2, x4\n"
+		"LDP x22, x23, [%1]\n"
+		"MUL	x9, x22, x4\n"
+		"UMULH	x10, x22, x4\n"
 
-		"MUL	x14, x2, x5\n"
+		"MUL	x14, x22, x5\n"
 		"ADDS	x10, x14, x10\n"
-		"UMULH	x11, x2, x5\n"
+		"UMULH	x11, x22, x5\n"
 
-		"MUL	x14, x2, x6\n"
+		"MUL	x14, x22, x6\n"
 		"ADCS	x11, x14, x11\n"
-		"UMULH	x12, x2, x6\n"
+		"UMULH	x12, x22, x6\n"
 
-		"MUL	x14, x2, x7\n"
+		"MUL	x14, x22, x7\n"
 		"ADCS	x12, x14, x12\n"
-		"UMULH	x13, x2, x7\n"
+		"UMULH	x13, x22, x7\n"
 		"ADC	x13, xzr, x13\n"
 	// First reduction step
 		"LSR	x14, x9, #32\n"
@@ -969,28 +969,28 @@ sm2p_mult(u64 *result, const u64 *x, const u64 *y) noexcept
 		"SBCS	x13, x13, x14\n"
 		"SBC	x9, x9, xzr\n"
 	// y[1] * x
-		"MUL	x14, x3, x4\n"
+		"MUL	x14, x23, x4\n"
 		"ADDS	x10, x14, x10\n"
-		"UMULH	x15, x3, x4\n"
+		"UMULH	x15, x23, x4\n"
 		"ADC	x15, x15, xzr\n"
 
-		"MUL	x14, x3, x5\n"
+		"MUL	x14, x23, x5\n"
 		"ADDS	x11, x15, x11\n"
-		"UMULH	x15, x3, x5\n"
+		"UMULH	x15, x23, x5\n"
 		"ADC	x15, x15, xzr\n"
 		"ADDS	x11, x14, x11\n"
 		"ADC	x15, x15, xzr\n"
 
-		"MUL	x14, x3, x6\n"
+		"MUL	x14, x23, x6\n"
 		"ADDS	x12, x15, x12\n"
-		"UMULH	x15, x3, x6\n"
+		"UMULH	x15, x23, x6\n"
 		"ADC	x15, x15, xzr\n"
 		"ADDS	x12, x14, x12\n"
 		"ADC	x15, x15, xzr\n"
 
-		"MUL	x14, x3, x7\n"
+		"MUL	x14, x23, x7\n"
 		"ADDS	x13, x15, x13\n"
-		"UMULH	x15, x3, x7\n"
+		"UMULH	x15, x23, x7\n"
 		"ADC	x15, x15, xzr\n"
 		"ADDS	x13, x14, x13\n"
 		"ADC	x9, x15, x9\n"
@@ -1010,29 +1010,29 @@ sm2p_mult(u64 *result, const u64 *x, const u64 *y) noexcept
 		"SBC	x10, x10, xzr\n"
 	// y[2] * x
 	// load y2, y3
-		"LDP x2, x3, [%1, 16]\n"
-		"MUL	x14, x2, x4\n"
+		"LDP x22, x23, [%1, 16]\n"
+		"MUL	x14, x22, x4\n"
 		"ADDS	x11, x14, x11\n"
-		"UMULH	x15, x2, x4\n"
+		"UMULH	x15, x22, x4\n"
 		"ADC	x15, x15, xzr\n"
 
-		"MUL	x14, x2, x5\n"
+		"MUL	x14, x22, x5\n"
 		"ADDS	x12, x15, x12\n"
-		"UMULH	x15, x2, x5\n"
+		"UMULH	x15, x22, x5\n"
 		"ADC	x15, x15, xzr\n"
 		"ADDS	x12, x14, x12\n"
 		"ADC	x15, x15, xzr\n"
 
-		"MUL	x14, x2, x6\n"
+		"MUL	x14, x22, x6\n"
 		"ADDS	x13, x15, x13\n"
-		"UMULH	x15, x2, x6\n"
+		"UMULH	x15, x22, x6\n"
 		"ADC	x15, x15, xzr\n"
 		"ADDS	x13, x14, x13\n"
 		"ADC	x15, x15, xzr\n"
 
-		"MUL	x14, x2, x7\n"
+		"MUL	x14, x22, x7\n"
 		"ADDS	x9, x15, x9\n"
-		"UMULH	x15, x2, x7\n"
+		"UMULH	x15, x22, x7\n"
 		"ADC	x15, x15, xzr\n"
 		"ADDS	x9, x14, x9\n"
 		"ADC	x10, x15, x10\n"
@@ -1051,28 +1051,28 @@ sm2p_mult(u64 *result, const u64 *x, const u64 *y) noexcept
 		"SBCS	x10, x10, x14\n"
 		"SBC	x11, x11, xzr\n"
 	// y[3] * x
-		"MUL	x14, x3, x4\n"
+		"MUL	x14, x23, x4\n"
 		"ADDS	x12, x14, x12\n"
-		"UMULH	x15, x3, x4\n"
+		"UMULH	x15, x23, x4\n"
 		"ADC	x15, x15, xzr\n"
 
-		"MUL	x14, x3, x5\n"
+		"MUL	x14, x23, x5\n"
 		"ADDS	x13, x15, x13\n"
-		"UMULH	x15, x3, x5\n"
+		"UMULH	x15, x23, x5\n"
 		"ADC	x15, x15, xzr\n"
 		"ADDS	x13, x14, x13\n"
 		"ADC	x15, x15, xzr\n"
 
-		"MUL	x14, x3, x6\n"
+		"MUL	x14, x23, x6\n"
 		"ADDS	x9, x15, x9\n"
-		"UMULH	x15, x3, x6\n"
+		"UMULH	x15, x23, x6\n"
 		"ADC	x15, x15, xzr\n"
 		"ADDS	x9, x14, x9\n"
 		"ADC	x15, x15, xzr\n"
 
-		"MUL	x14, x3, x7\n"
+		"MUL	x14, x23, x7\n"
 		"ADDS	x10, x15, x10\n"
-		"UMULH	x15, x3, x7\n"
+		"UMULH	x15, x23, x7\n"
 		"ADC	x15, x15, xzr\n"
 		"ADDS	x10, x14, x10\n"
 		"ADC	x11, x15, x11\n"
@@ -1095,7 +1095,7 @@ sm2p_mult(u64 *result, const u64 *x, const u64 *y) noexcept
 		"ldp	x6, x7, [%2, 16]\n"
 		"SUBS	x4, x13, x4\n"
 		"SBCS	x5, x9, x5\n"
-		"SBCS	x6 x10, x6\n"
+		"SBCS	x6, x10, x6\n"
 		"SBCS	x7, x11, x7\n"
 		"SBCS	x12, x12, xzr\n"
 
@@ -1108,7 +1108,7 @@ sm2p_mult(u64 *result, const u64 *x, const u64 *y) noexcept
 		:
 		: "r" (result), "r" (y), "r" (sm2_p), "r" (x0), "r" (x1), "r" (x2),
 		"r" (x3)
-		: "%x2", "%x3", "%x9", "%x10", "%x11", "%x12", "%x13", "%x14", "%x15",
+		: "%x22", "%x23", "%x9", "%x10", "%x11", "%x12", "%x13", "%x14", "%x15",
 		"cc", "memory");
 #else
 	sm2p_multN(result, x, y);
