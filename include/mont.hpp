@@ -956,8 +956,8 @@ sm2p_mult(u64 *result, const u64 *x, const u64 *y) noexcept
 		"UMULH	x13, x2, x7\n"
 		"ADC	x13, xzr, x13\n"
 	// First reduction step
-		"LSR	x14, 32, x9\n"
-		"LSL	x15, 32, x9\n"
+		"LSR	x14, x9, #32\n"
+		"LSL	x15, x9, #32\n"
 		"ADDS	x10, x10, x9\n"
 		"ADCS	x11, x11, xzr\n"
 		"ADCS	x12, x12, xzr\n"
@@ -996,8 +996,8 @@ sm2p_mult(u64 *result, const u64 *x, const u64 *y) noexcept
 		"ADC	x9, x15, x9\n"
 
 	// Second reduction step
-		"LSR	x14, 32, x10\n"
-		"LSL	x15, 32, x10\n"
+		"LSR	x14, x10, 32\n"
+		"LSL	x15, x10, 32\n"
 		"ADDS	x11, x11, x10\n"
 		"ADCS	x12, x12, xzr\n"
 		"ADCS	x13, x13, xzr\n"
@@ -1038,8 +1038,8 @@ sm2p_mult(u64 *result, const u64 *x, const u64 *y) noexcept
 		"ADC	x10, x15, x10\n"
 
 	// Third reduction step
-		"LSR	x14, 32, x11\n"
-		"LSL	x15, 32, x11\n"
+		"LSR	x14, x11, 32\n"
+		"LSL	x15, x11, 32\n"
 		"ADDS	x12, x12, x11\n"
 		"ADCS	x13, x13, xzr\n"
 		"ADCS	x9, x9, xzr\n"
@@ -1078,8 +1078,8 @@ sm2p_mult(u64 *result, const u64 *x, const u64 *y) noexcept
 		"ADC	x11, x15, x11\n"
 
 	// Last reduction step
-		"LSR	x14, 32, x12\n"
-		"LSL	x15, 32, x12\n"
+		"LSR	x14, x12, 32\n"
+		"LSL	x15, x12, 32\n"
 		"ADDS	x13, x13, x12\n"
 		"ADCS	x9, x9, xzr\n"
 		"ADCS	x10, x10, xzr\n"
