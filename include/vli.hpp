@@ -57,6 +57,19 @@ static void vli_clear(u64 *vli) noexcept
 		vli[i] = 0;
 }
 
+
+/*
+ * X86_64 func param:  di/si/dx/cx/r8/r9
+ *			retutn register: ax
+ *			temp register:	r10/r11
+ *			callee-saved register: rbx/rbp,		r12/r13/r14/r15
+ *
+ * ARM64 func param:	X0-X7
+ *			retutn register: X0
+ * 			temp register: X9-X15
+ * 			callee-saved register: X19-X29
+ *
+ */
 // u64IsZero returns 1 if x is zero and zero otherwise.
 static forceinline int u64IsZero(u64 x) noexcept
 {
@@ -113,7 +126,7 @@ static forceinline u64 u64_addc(const u64 a, const u64 b, u64& carry)
 			: "r" (a),"rm" (b)
 			: "cc");
 	return ret;
-#elif	defined(__aarch64__1)
+#elif	defined(__aarch64__notwork)
 	u64		ret=carry;
 	asm volatile(
 		"adds	%0, %0, %2\n"
@@ -186,7 +199,7 @@ static forceinline u64 u64_subc(const u64 a, const u64 b, u64& carry)
 			: "rm" (b) 
 			: "cc");
 	return ret;
-#elif	defined(__aarch64__1)
+#elif	defined(__aarch64__notwork)
 	u64		ret=a;
 	asm volatile(
 		"subs %0, %0, %1\n"
@@ -244,18 +257,6 @@ static forceinline u64 u64_subcz(const u64 a, u64& carry)
 #endif
 }
 
-/*
- * X86_64 func param:  di/si/dx/cx/r8/r9
- *			retutn register: ax
- *			temp register:	r10/r11
- *			callee-saved register: rbx/rbp,		r12/r13/r14/r15
- *
- * ARM64 func param:	X0-X7
- *			retutn register: X0
- * 			temp register: X9-X15
- * 			callee-saved register: X19-X29
- *
- */
 #ifdef	WITH_ASM
 #ifdef	__x86_64__
 static forceinline void
@@ -789,7 +790,7 @@ void vli_copy_conditional(u64 *res, const u64 *in, const bool _enabled)
 template<const uint N> forceinline static
 bool vli_add(u64 *result, const u64 *left, const u64 *right) noexcept
 {
-#if	defined(WITH_ASM) && __cplusplus >= 201703L
+#if	defined(WITH_ASM) && __cplusplus >= 201703L && defined(__clang__)
 	if constexpr(N == 4) return vli4_add(result, left, right);
 #endif
 	u64 carry = 0;
@@ -803,7 +804,7 @@ bool vli_add(u64 *result, const u64 *left, const u64 *right) noexcept
 template<const uint N> forceinline static
 bool vli_add_to(u64 *result, const u64 *right) noexcept
 {
-#if	defined(WITH_ASM) && __cplusplus >= 201703L
+#if	defined(WITH_ASM) && __cplusplus >= 201703L && defined(__clang__)
 	if constexpr(N == 4) return vli4_add_to(result, right);
 #endif
 #ifdef	ommit
@@ -1007,11 +1008,11 @@ static void vli_umult(u64 *result, const u64 *left, u64 right) noexcept
 	for (k = 0; k < N; k++) {
 		uint128_t product;
 		product.mul_64_64(left[k], right);
+		// r01 will never overflow
 		r01 += product;
 		/* no carry */
 		result[k] = r01.m_low();
-		u64 r2 = (r01.m_high() < product.m_high());
-		r01 = uint128_t(r01.m_high(), r2);
+		r01 = uint128_t(r01.m_high(), 0);
 	}
 	result[N] = r01.m_low();
 	for (k = N+1; k < N * 2; k++)
@@ -1030,11 +1031,10 @@ static void vli_umult2(u64 *result, const u64 *left, u64 right) noexcept
 	for (k = 0; k < N; k++) {
 		uint128_t product;
 		product.mul_64_64(left[k], right);
+		// r01 will never overflow
 		r01 += product;
 		/* no carry */
 		result[k] = r01.m_low();
-		//u64 r2 = (r01.m_high() < product.m_high());
-		//r01 = uint128_t(r01.m_high(), r2);
 		r01 = uint128_t(r01.m_high(), 0);
 	}
 	result[N] = r01.m_low();
@@ -1111,27 +1111,16 @@ vli_mod(u64 *result, const u64 *left, const u64 *mod, const bool carry) noexcept
 	/* result > mod (result = mod + remainder), so subtract mod to
 	 * get remainder.
 	 */
-#if	defined(WITH_ASM1) && __cplusplus >= 201703L
+#if	defined(WITH_ASM) && __cplusplus >= 201703L && defined(__clang__)
 	if constexpr(N == 4) {
 		vli4_mod(result, left, mod, carry);
 	} else
 #endif
-#ifdef	W_CONDITIONAL_COPY
-	{
-		// maybe copy_conditional faster?
-		// mask 0, or all 1
-		// not work yet
-		bool s_carry = vli_subc<N>(result, left, mod, carry);
-		//vli_copy_conditional<N>(result, left, s_carry);
-		if (s_carry) vli_set<N>(result, left);
-	}
-#else
 	//if (carry || vli_cmp<N>(left, mod) >= 0)
 	if (carry || !vli_less<N>(left, mod))
 	{
 		vli_sub<N>(result, left, mod);
 	} else vli_set<N>(result, left);
-#endif
 }
 
 

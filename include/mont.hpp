@@ -610,35 +610,29 @@ sm2p_multStep(u64& r0, u64& r1, u64& r2, u64& r3, u64& r4, const u64& x0,
 		const u64& x1, const u64& x2, const u64& x3, const u64 yi) noexcept
 {
 	uint128_t	pd;
-	u64			cc, t0, t1;
+	u64			cc, t0;	// t0 never overflow,  0xf * 0xf = 225 + 30 ... 255(ff)
 	pd.mul_64_64(x0, yi);
 	cc = 0;
 	r0 = u64_addc(r0, pd.m_low(), cc);
 	t0 = u64_addcz(pd.m_high(), cc);
-	t1 = u64_addcz(0, cc);
 	pd.mul_64_64(x1, yi);
 	//cc = 0;
 	r1 = u64_addc(r1, t0, cc);
-	t0 = u64_addc(pd.m_high(), t1, cc);
-	t1 = u64_addcz(0, cc);
+	t0 = u64_addcz(pd.m_high(), cc);
 	//cc = 0;
 	r1 = u64_addc(r1, pd.m_low(), cc);
 	t0 = u64_addcz(t0, cc);
-	t1 = u64_addcz(t1, cc);
 	pd.mul_64_64(x2, yi);
 	//cc = 0;
 	r2 = u64_addc(r2, t0, cc);
-	t0 = u64_addc(pd.m_high(), t1,  cc);
-	t1 = u64_addcz(0, cc);
+	t0 = u64_addcz(pd.m_high(), cc);
 	//cc = 0;
 	r2 = u64_addc(r2, pd.m_low(), cc);
 	t0 = u64_addcz(t0, cc);
-	t1 = u64_addcz(t1, cc);
 	pd.mul_64_64(x3, yi);
 	//cc = 0;
 	r3 = u64_addc(r3, t0, cc);
-	t0 = u64_addc(pd.m_high(), t1, cc);
-	t1 = u64_addcz(0, cc);
+	t0 = u64_addcz(pd.m_high(), cc);
 	//cc = 0;
 	r3 = u64_addc(r3, pd.m_low(), cc);
 	r4 = u64_addc(r4, t0, cc);
@@ -930,7 +924,7 @@ sm2p_mult(u64 *result, const u64 *x, const u64 *y) noexcept
 		[pr3] "m" (sm2_p[3])
 		: "rax", "rdx", "r8", "r9", "r12", "r13", "r10", "r11", "r14",
 		"r15", "cc", "memory");
-#elif	defined(__aarch64__11)
+#elif	defined(__aarch64__notwork)
 	// x0 -- x3   register %%x4 -- %%x7
 	register u64 x0 asm("x4") = x[0];
 	register u64 x1 asm("x5") = x[1];
@@ -1011,7 +1005,7 @@ sm2p_mult(u64 *result, const u64 *x, const u64 *y) noexcept
 		"SBC	x10, x10, xzr\n"
 	// y[2] * x
 	// load y2, y3
-		"LDR x3, [%1, 8]\n"
+		"LDR x3, [%1, 16]\n"
 		"MUL	x14, x3, x4\n"
 		"ADDS	x11, x14, x11\n"
 		"UMULH	x15, x3, x4\n"
@@ -1052,7 +1046,7 @@ sm2p_mult(u64 *result, const u64 *x, const u64 *y) noexcept
 		"SBCS	x10, x10, x14\n"
 		"SBC	x11, x11, xzr\n"
 	// y[3] * x
-		"LDR x3, [%1, 8]\n"
+		"LDR x3, [%1, 24]\n"
 		"MUL	x14, x3, x4\n"
 		"ADDS	x12, x14, x12\n"
 		"UMULH	x15, x3, x4\n"
