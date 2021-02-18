@@ -930,7 +930,7 @@ sm2p_mult(u64 *result, const u64 *x, const u64 *y) noexcept
 		[pr3] "m" (sm2_p[3])
 		: "rax", "rdx", "r8", "r9", "r12", "r13", "r10", "r11", "r14",
 		"r15", "cc", "memory");
-#elif	defined(__aarch64__11)
+#elif	defined(__aarch64__)
 	// x0 -- x3   register %%x4 -- %%x7
 	register u64 x0 asm("x4") = x[0];
 	register u64 x1 asm("x5") = x[1];
@@ -939,172 +939,172 @@ sm2p_mult(u64 *result, const u64 *x, const u64 *y) noexcept
 	asm volatile(
 	// y[0] * x
 	// load y0, y1
-LDP x2, x3, [%1]
-MUL	acc0, x2, x4
-UMULH	acc1, x2, x4
+		"LDP x2, x3, [%1]\n"
+		"MUL	x9, x2, x4\n"
+		"UMULH	x10, x2, x4\n"
 
-MUL	t0, x2, x5
-ADDS	acc1, t0, acc1
-UMULH	acc2, x2, x5
+		"MUL	x14, x2, x5\n"
+		"ADDS	x10, x14, x10\n"
+		"UMULH	x11, x2, x5\n"
 
-MUL	t0, x2, x6
-ADCS	acc2, t0, acc2
-UMULH	acc3, x2, x6
+		"MUL	x14, x2, x6\n"
+		"ADCS	x11, x14, x11\n"
+		"UMULH	x12, x2, x6\n"
 
-MUL	t0, x2, x7
-ADCS	acc3, t0, acc3
-UMULH	acc4, x2, x7
-ADC	acc4, xzr, acc4
+		"MUL	x14, x2, x7\n"
+		"ADCS	x12, x14, x12\n"
+		"UMULH	x13, x2, x7\n"
+		"ADC	x13, xzr, x13\n"
 	// First reduction step
-LSR	t0, 32, acc0
-LSL	t1, 32, acc0
-ADDS	acc1, acc1, acc0
-ADCS	acc2, acc2, xzr
-ADCS	acc3, acc3, xzr
-ADCS	acc4, acc4, acc0
-ADC		acc0, xzr, xzr
-SUBS	acc1, acc1, t1
-SBCS	acc2, acc2, t0
-SBCS	acc3, acc3, t1
-SBCS	acc4, acc4, t0
-SBC		acc0, acc0, xzr
+		"LSR	x14, 32, x9\n"
+		"LSL	x15, 32, x9\n"
+		"ADDS	x10, x10, x9\n"
+		"ADCS	x11, x11, xzr\n"
+		"ADCS	x12, x12, xzr\n"
+		"ADCS	x13, x13, x9\n"
+		"ADC	x9, xzr, xzr\n"
+		"SUBS	x10, x10, x15\n"
+		"SBCS	x11, x11, x14\n"
+		"SBCS	x12, x12, x15\n"
+		"SBCS	x13, x13, x14\n"
+		"SBC	x9, x9, xzr\n"
 	// y[1] * x
-MUL	t0, x3, x4
-ADDS	acc1, t0, acc1
-UMULH	t1, x3, x4
-ADC		t1, t1, xzr
+		"MUL	x14, x3, x4\n"
+		"ADDS	x10, x14, x10\n"
+		"UMULH	x15, x3, x4\n"
+		"ADC	x15, x15, xzr\n"
 
-MUL	t0, x3, x5
-ADDS	acc2, t1, acc2
-UMULH	t1, x3, x5
-ADC		t1, t1, xzr
-ADDS	acc2, t0, acc2
-ADC		t1, t1, xzr
+		"MUL	x14, x3, x5\n"
+		"ADDS	x11, x15, x11\n"
+		"UMULH	x15, x3, x5\n"
+		"ADC	x15, x15, xzr\n"
+		"ADDS	x11, x14, x11\n"
+		"ADC	x15, x15, xzr\n"
 
-MUL	t0, x3, x6
-ADDS	acc3, t1, acc3
-UMULH	t1, x3, x6
-ADC		t1, t1, xzr
-ADDS	acc3, t0, acc3
-ADC		t1, t1, xzr
+		"MUL	x14, x3, x6\n"
+		"ADDS	x12, x15, x12\n"
+		"UMULH	x15, x3, x6\n"
+		"ADC	x15, x15, xzr\n"
+		"ADDS	x12, x14, x12\n"
+		"ADC	x15, x15, xzr\n"
 
-MUL	t0, x3, x7
-ADDS	acc4, t1, acc4
-UMULH	t1, x3, x7
-ADC		t1, t1, xzr
-ADDS	acc4, t0, acc4
-ADC		acc0, t1, acc0
+		"MUL	x14, x3, x7\n"
+		"ADDS	x13, x15, x13\n"
+		"UMULH	x15, x3, x7\n"
+		"ADC	x15, x15, xzr\n"
+		"ADDS	x13, x14, x13\n"
+		"ADC	x9, x15, x9\n"
 
 	// Second reduction step
-LSR	t0, 32, acc1
-LSL	t1, 32, acc1
-ADDS	acc2, acc2, acc1
-ADCS	acc3, acc3, xzr
-ADCS	acc4, acc4, xzr
-ADCS	acc0, acc0, acc1
-ADC		acc1, xzr, xzr
-SUBS	acc2, acc2, t1
-SBCS	acc3, acc3, t0
-SBCS	acc4, acc4, t1
-SBCS	acc0, acc0, t0
-SBC		acc1, acc1, xzr
+		"LSR	x14, 32, x10\n"
+		"LSL	x15, 32, x10\n"
+		"ADDS	x11, x11, x10\n"
+		"ADCS	x12, x12, xzr\n"
+		"ADCS	x13, x13, xzr\n"
+		"ADCS	x9, x9, x10\n"
+		"ADC	x10, xzr, xzr\n"
+		"SUBS	x11, x11, x15\n"
+		"SBCS	x12, x12, x14\n"
+		"SBCS	x13, x13, x15\n"
+		"SBCS	x9, x9, x14\n"
+		"SBC	x10, x10, xzr\n"
 	// y[2] * x
 	// load y2, y3
-LDP x2, x3, [%1, 16]
-MUL	t0, x2, x4
-ADDS	acc2, t0, acc2
-UMULH	t1, x2, x4
-ADC		t1, t1, xzr
+		"LDP x2, x3, [%1, 16]\n"
+		"MUL	x14, x2, x4\n"
+		"ADDS	x11, x14, x11\n"
+		"UMULH	x15, x2, x4\n"
+		"ADC	x15, x15, xzr\n"
 
-MUL	t0, x2, x5
-ADDS	acc3, t1, acc3
-UMULH	t1, x2, x5
-ADC		t1, t1, xzr
-ADDS	acc3, t0, acc3
-ADC		t1, t1, xzr
+		"MUL	x14, x2, x5\n"
+		"ADDS	x12, x15, x12\n"
+		"UMULH	x15, x2, x5\n"
+		"ADC	x15, x15, xzr\n"
+		"ADDS	x12, x14, x12\n"
+		"ADC	x15, x15, xzr\n"
 
-MUL	t0, x2, x6
-ADDS	acc4, t1, acc4
-UMULH	t1, x2, x6
-ADC		t1, t1, xzr
-ADDS	acc4, t0, acc4
-ADC		t1, t1, xzr
+		"MUL	x14, x2, x6\n"
+		"ADDS	x13, x15, x13\n"
+		"UMULH	x15, x2, x6\n"
+		"ADC	x15, x15, xzr\n"
+		"ADDS	x13, x14, x13\n"
+		"ADC	x15, x15, xzr\n"
 
-MUL	t0, x2, x7
-ADDS	acc0, t1, acc0
-UMULH	t1, x2, x7
-ADC		t1, t1, xzr
-ADDS	acc0, t0, acc0
-ADC		acc1, t1, acc1
+		"MUL	x14, x2, x7\n"
+		"ADDS	x9, x15, x9\n"
+		"UMULH	x15, x2, x7\n"
+		"ADC	x15, x15, xzr\n"
+		"ADDS	x9, x14, x9\n"
+		"ADC	x10, x15, x10\n"
 
 	// Third reduction step
-LSR	t0, 32, acc2
-LSL	t1, 32, acc2
-ADDS	acc3, acc3, acc2
-ADCS	acc4, acc4, xzr
-ADCS	acc0, acc0, xzr
-ADCS	acc1, acc1, acc2
-ADC		acc2, xzr, xzr
-SUBS	acc3, acc3, t1
-SBCS	acc4, acc4, t0
-SBCS	acc0, acc0, t1
-SBCS	acc1, acc1, t0
-SBC		acc2, acc2, xzr
+		"LSR	x14, 32, x11\n"
+		"LSL	x15, 32, x11\n"
+		"ADDS	x12, x12, x11\n"
+		"ADCS	x13, x13, xzr\n"
+		"ADCS	x9, x9, xzr\n"
+		"ADCS	x10, x10, x11\n"
+		"ADC	x11, xzr, xzr\n"
+		"SUBS	x12, x12, x15\n"
+		"SBCS	x13, x13, x14\n"
+		"SBCS	x9, x9, x15\n"
+		"SBCS	x10, x10, x14\n"
+		"SBC	x11, x11, xzr\n"
 	// y[3] * x
-MUL	t0, x3, x4
-ADDS	acc3, t0, acc3
-UMULH	t1, x3, x4
-ADC		t1, t1, xzr
+		"MUL	x14, x3, x4\n"
+		"ADDS	x12, x14, x12\n"
+		"UMULH	x15, x3, x4\n"
+		"ADC	x15, x15, xzr\n"
 
-MUL	t0, x3, x5
-ADDS	acc4, t1, acc4
-UMULH	t1, x3, x5
-ADC		t1, t1, xzr
-ADDS	acc4, t0, acc4
-ADC		t1, t1, xzr
+		"MUL	x14, x3, x5\n"
+		"ADDS	x13, x15, x13\n"
+		"UMULH	x15, x3, x5\n"
+		"ADC	x15, x15, xzr\n"
+		"ADDS	x13, x14, x13\n"
+		"ADC	x15, x15, xzr\n"
 
-MUL	t0, x3, x6
-ADDS	acc0, t1, acc0
-UMULH	t1, x3, x6
-ADC		t1, t1, xzr
-ADDS	acc0, t0, acc0
-ADC		t1, t1, xzr
+		"MUL	x14, x3, x6\n"
+		"ADDS	x9, x15, x9\n"
+		"UMULH	x15, x3, x6\n"
+		"ADC	x15, x15, xzr\n"
+		"ADDS	x9, x14, x9\n"
+		"ADC	x15, x15, xzr\n"
 
-MUL	t0, x3, x7
-ADDS	acc1, t1, acc1
-UMULH	t1, x3, x7
-ADC		t1, t1, xzr
-ADDS	acc1, t0, acc1
-ADC		acc2, t1, acc2
+		"MUL	x14, x3, x7\n"
+		"ADDS	x10, x15, x10\n"
+		"UMULH	x15, x3, x7\n"
+		"ADC	x15, x15, xzr\n"
+		"ADDS	x10, x14, x10\n"
+		"ADC	x11, x15, x11\n"
 
 	// Last reduction step
-LSR	t0, 32, acc3
-LSL	t1, 32, acc3
-ADDS	acc4, acc4, acc3
-ADCS	acc0, acc0, xzr
-ADCS	acc1, acc1, xzr
-ADC		acc2, acc2, acc3
-ADC		acc3, xzr, xzr
-SUBS	acc4, acc4, t1
-SBCS	acc0, acc0, t0
-SBCS	acc1, acc1, t1
-SBCS	acc2, acc2, t0
-SBC		acc3, acc3, xzr
+		"LSR	x14, 32, x12\n"
+		"LSL	x15, 32, x12\n"
+		"ADDS	x13, x13, x12\n"
+		"ADCS	x9, x9, xzr\n"
+		"ADCS	x10, x10, xzr\n"
+		"ADCS	x11, x11, x12\n"
+		"ADC	x12, xzr, xzr\n"
+		"SUBS	x13, x13, x15\n"
+		"SBCS	x9, x9, x14\n"
+		"SBCS	x10, x10, x15\n"
+		"SBCS	x11, x11, x14\n"
+		"SBC	x12, x12, xzr\n"
 
-ldp		x4, x5, [%2]
-ldp		x6, x7, [%2, 16]
-SUBS	x4, acc4, x4
-SBCS	x5, acc0, x5
-SBCS	x6 acc1, x6
-SBCS	x7, acc2, x7
-SBCS	acc3, acc3, xzr
+		"ldp	x4, x5, [%2]\n"
+		"ldp	x6, x7, [%2, 16]\n"
+		"SUBS	x4, x13, x4\n"
+		"SBCS	x5, x9, x5\n"
+		"SBCS	x6 x10, x6\n"
+		"SBCS	x7, x11, x7\n"
+		"SBCS	x12, x12, xzr\n"
 
-CSEL	acc4, x4, acc4, cc
-CSEL	acc0, x5, acc0, cc
-CSEL	acc1, x6, acc1, cc
-CSEL	acc2, x7, acc2, cc
-stp		acc4, acc0, [%0]
-stp		acc1, acc2, [%0, 16]
+		"CSEL	x13, x4, x13, cc\n"
+		"CSEL	x9, x5, x9, cc\n"
+		"CSEL	x10, x6, x10, cc\n"
+		"CSEL	x11, x7, x11, cc\n"
+		"stp	x13, x9, [%0]\n"
+		"stp	x10, x11, [%0, 16]\n"
 		:
 		: "r" (result), "r" (y), "r" (sm2_p), "r" (x0), "r" (x1), "r" (x2),
 		"r" (x3)
