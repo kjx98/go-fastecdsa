@@ -926,10 +926,14 @@ sm2p_mult(u64 *result, const u64 *x, const u64 *y) noexcept
 		"r15", "cc", "memory");
 #elif	defined(__aarch64__11)
 	// x0 -- x3   register %%x4 -- %%x7
+	register u64 x0 asm("x4") = x[0];
+	register u64 x1 asm("x5") = x[1];
+	register u64 x2 asm("x6") = x[2];
+	register u64 x3 asm("x7") = x[3];
 	asm volatile(
 	// y[0] * x
 	// load y0, y1
-LDP x2, x3, [x1]
+LDP x2, x3, [%1]
 MUL	acc0, x2, x4
 UMULH	acc1, x2, x4
 
@@ -948,135 +952,158 @@ ADC	acc4, xzr, acc4
 	// First reduction step
 LSR	t0, 32, acc0
 LSL	t1, 32, acc0
-ADDS	acc1, acc0, acc1
+ADDS	acc1, acc1, acc0
 ADCS	acc2, acc2, xzr
 ADCS	acc3, acc3, xzr
-ADC		acc0, acc0, xzr
+ADCS	acc4, acc4, acc0
+ADC		acc0, xzr, xzr
 SUBS	acc1, acc1, t1
 SBCS	acc2, acc2, t0
 SBCS	acc3, acc3, t1
-SBCS	acc0, acc0, t0
+SBCS	acc4, acc4, t0
+SBC		acc0, acc0, xzr
 	// y[1] * x
 MUL	t0, x3, x4
 ADDS	acc1, t0, acc1
 UMULH	t1, x3, x4
+ADC		t1, t1, xzr
 
 MUL	t0, x3, x5
-ADCS	acc2, t0, acc2
-UMULH	t2, x3, x5
+ADDS	acc2, t1, acc2
+UMULH	t1, x3, x5
+ADC		t1, t1, xzr
+ADDS	acc2, t0, acc2
+ADC		t1, t1, xzr
 
 MUL	t0, x3, x6
-ADCS	acc3, t0, acc3
-UMULH	t3, x3, x6
+ADDS	acc3, t1, acc3
+UMULH	t1, x3, x6
+ADC		t1, t1, xzr
+ADDS	acc3, t0, acc3
+ADC		t1, t1, xzr
 
 MUL	t0, x3, x7
-ADCS	acc4, t0, acc4
-UMULH	hlp0, x3, x7
-ADC	acc5, XZR, 0
+ADDS	acc4, t1, acc4
+UMULH	t1, x3, x7
+ADC		t1, t1, xzr
+ADDS	acc4, t0, acc4
+ADC		acc0, t1, acc0
 
-ADDS	acc2, t1, acc2
-ADCS	acc3, t2, acc3
-ADCS	acc4, t3, acc4
-ADC	acc5, hlp0, acc5
 	// Second reduction step
 LSR	t0, 32, acc1
 LSL	t1, 32, acc1
 ADDS	acc2, acc2, acc1
 ADCS	acc3, acc3, xzr
-ADCS	acc0, acc0, xzr
-ADC		acc1, acc1, xzr
+ADCS	acc4, acc4, xzr
+ADCS	acc0, acc0, acc1
+ADC		acc1, xzr, xzr
 SUBS	acc2, acc2, t1
 SBCS	acc3, acc3, t0
-SBCS	acc0, acc0, t1
-SBCS	acc1, acc1, t0
+SBCS	acc4, acc4, t1
+SBCS	acc0, acc0, t0
+SBC		acc1, acc1, xzr
 	// y[2] * x
 	// load y2, y3
-LDP x2, x3, [x1, 16]
+LDP x2, x3, [%1, 16]
 MUL	t0, x2, x4
 ADDS	acc2, t0, acc2
 UMULH	t1, x2, x4
+ADC		t1, t1, xzr
 
 MUL	t0, x2, x5
-ADCS	acc3, t0, acc3
-UMULH	t2, x2, x5
+ADDS	acc3, t1, acc3
+UMULH	t1, x2, x5
+ADC		t1, t1, xzr
+ADDS	acc3, t0, acc3
+ADC		t1, t1, xzr
 
 MUL	t0, x2, x6
-ADCS	acc4, t0, acc4
-UMULH	t3, x2, x6
+ADDS	acc4, t1, acc4
+UMULH	t1, x2, x6
+ADC		t1, t1, xzr
+ADDS	acc4, t0, acc4
+ADC		t1, t1, xzr
 
 MUL	t0, x2, x7
-ADCS	acc5, t0, acc5
-UMULH	hlp0, x2, x7
-ADC	acc6, XZR, 0
+ADDS	acc0, t1, acc0
+UMULH	t1, x2, x7
+ADC		t1, t1, xzr
+ADDS	acc0, t0, acc0
+ADC		acc1, t1, acc1
 
-ADDS	acc3, t1, acc3
-ADCS	acc4, t2, acc4
-ADCS	acc5, t3, acc5
-ADC	acc6, hlp0, acc6
 	// Third reduction step
 LSR	t0, 32, acc2
 LSL	t1, 32, acc2
 ADDS	acc3, acc3, acc2
+ADCS	acc4, acc4, xzr
 ADCS	acc0, acc0, xzr
-ADCS	acc1, acc1, xzr
-ADC		acc2, acc2, xzr
+ADCS	acc1, acc1, acc2
+ADC		acc2, xzr, xzr
 SUBS	acc3, acc3, t1
-SBCS	acc0, acc0, t0
-SBCS	acc1, acc1, t1
-SBCS	acc2, acc2, t0
+SBCS	acc4, acc4, t0
+SBCS	acc0, acc0, t1
+SBCS	acc1, acc1, t0
+SBC		acc2, acc2, xzr
 	// y[3] * x
 MUL	t0, x3, x4
 ADDS	acc3, t0, acc3
 UMULH	t1, x3, x4
+ADC		t1, t1, xzr
 
 MUL	t0, x3, x5
-ADCS	acc4, t0, acc4
-UMULH	t2, x3, x5
+ADDS	acc4, t1, acc4
+UMULH	t1, x3, x5
+ADC		t1, t1, xzr
+ADDS	acc4, t0, acc4
+ADC		t1, t1, xzr
 
 MUL	t0, x3, x6
-ADCS	acc5, t0, acc5
-UMULH	t3, x3, x6
+ADDS	acc0, t1, acc0
+UMULH	t1, x3, x6
+ADC		t1, t1, xzr
+ADDS	acc0, t0, acc0
+ADC		t1, t1, xzr
 
 MUL	t0, x3, x7
-ADCS	acc6, t0, acc6
-UMULH	hlp0, x3, x7
-ADC	acc7, XZR, 0
+ADDS	acc1, t1, acc1
+UMULH	t1, x3, x7
+ADC		t1, t1, xzr
+ADDS	acc1, t0, acc1
+ADC		acc2, t1, acc2
 
-ADDS	acc4, t1, acc4
-ADCS	acc5, t2, acc5
-ADCS	acc6, t3, acc6
-ADC	acc7, hlp0, acc7
 	// Last reduction step
 LSR	t0, 32, acc3
 LSL	t1, 32, acc3
-ADDS	acc0, acc0, acc3
+ADDS	acc4, acc4, acc3
+ADCS	acc0, acc0, xzr
 ADCS	acc1, acc1, xzr
-ADCS	acc2, acc2, xzr
-ADC		acc3, acc3, xzr
-SUBS	acc0, acc0, t1
-SBCS	acc1, acc1, t0
-SBCS	acc2, acc2, t1
-SBCS	acc3, acc3, t0
-	// Add bits [511:256] of the mul result
-ADDS	acc0, acc4, acc0
-ADCS	acc1, acc5, acc1
-ADCS	acc2, acc6, acc2
-ADCS	acc3, acc7, acc3
-ADC	acc4, XZR, 0
+ADC		acc2, acc2, acc3
+ADC		acc3, xzr, xzr
+SUBS	acc4, acc4, t1
+SBCS	acc0, acc0, t0
+SBCS	acc1, acc1, t1
+SBCS	acc2, acc2, t0
+SBC		acc3, acc3, xzr
 
-SUBS	t0, acc0, #-1
-SBCS	t1, acc1, const0
-SBCS	t2, acc2, #-1
-SBCS	t3, acc3, const1
-SBCS	acc4, acc4, 0
+ldp		x4, x5, [%2]
+ldp		x6, x7, [%2, 16]
+SUBS	x4, acc4, x4
+SBCS	x5, acc0, x5
+SBCS	x6 acc1, x6
+SBCS	x7, acc2, x7
+SBCS	acc3, acc3, xzr
 
-CSEL	acc0, t0, acc0, cc
-CSEL	acc1, t1, acc1, cc
-CSEL	acc2, t2, acc2, cc
-CSEL	acc3, t3, acc3, cc
+CSEL	acc4, x4, acc4, cc
+CSEL	acc0, x5, acc0, cc
+CSEL	acc1, x6, acc1, cc
+CSEL	acc2, x7, acc2, cc
+stp		acc4, acc0, [%0]
+stp		acc1, acc2, [%0, 16]
 		:
-		: "r" (result), "r" (x), "r" (y), "r" (sm2_p[1]), "r" (sm2_p[3])
-		: "%x4", "%x5", "%x6", "%x7", "%x9", "%x10", "%x11", "%x12", "cc", "memory");
+		: "r" (result), "r" (y), "r" (sm2_p), "r" (x0), "r" (x1), "r" (x2),
+		"r" (x3)
+		: "%x2", "%x3", "%x9", "%x10", "%x11", "%x12", "%x13", "%x14", "%x15",
+		"cc", "memory");
 #else
 	sm2p_multN(result, x, y);
 #endif
