@@ -1010,7 +1010,8 @@ static void vli_umult(u64 *result, const u64 *left, u64 right) noexcept
 		r01 += product;
 		/* no carry */
 		result[k] = r01.m_low();
-		r01 = uint128_t(r01.m_high(), 0);
+		u64 r2 = (r01.m_high() < product.m_high());
+		r01 = uint128_t(r01.m_high(), r2);
 	}
 	result[N] = r01.m_low();
 	for (k = N+1; k < N * 2; k++)
@@ -1032,6 +1033,8 @@ static void vli_umult2(u64 *result, const u64 *left, u64 right) noexcept
 		r01 += product;
 		/* no carry */
 		result[k] = r01.m_low();
+		//u64 r2 = (r01.m_high() < product.m_high());
+		//r01 = uint128_t(r01.m_high(), r2);
 		r01 = uint128_t(r01.m_high(), 0);
 	}
 	result[N] = r01.m_low();

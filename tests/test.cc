@@ -54,6 +54,19 @@ TEST(testEcc, TestBTCumultP)
 	EXPECT_EQ(bv.cmp(r), 0);
 }
 
+TEST(TestVli, TestUmult)
+{
+	u64	x[4]={0xffffffff00112233ull, 0xffffffffffffffffull, 0xaabbccdd88776655ull,
+			0x1122334455667788ull};
+	u64	u = -1;
+	x[1] = -1;
+	u64	r0[8], r1[6];
+	vli_umult<4>(r0, x, u);
+	vli_umult2<4>(r1, x, u);
+	bignum<5>	re0(r0), re1(r1);
+	EXPECT_EQ(re0, re1);
+}
+
 TEST(testVli, TestU64Addc)
 {
 	u64		x=12, y= 10, carry=1;
@@ -909,7 +922,7 @@ TEST(TestECDSA, TestSign)
 	bignum<4>	r, s;
 	int		ecInd;
 	for (int i=0; i<10; i++) {
-		ecInd = ec_sign(sm2_k256, r, s, priv, msg);
+		ecInd = ec_sign(sm2_p256, r, s, priv, msg);
 		ASSERT_FALSE(r.is_zero());
 		ASSERT_FALSE(s.is_zero());
 		std::cerr << "sign test round: " << i << "\tsign ecInd: "
@@ -948,7 +961,7 @@ TEST(TestECDSA, TestVerify)
 	bignum<4>	t;
 	t.mod_add(r, s, sm2_p256.paramN());
 	ASSERT_FALSE(t.is_zero());
-	ASSERT_TRUE(ec_verify(sm2_k256, r, s, priv.PubKey(), msg));
+	ASSERT_TRUE(ec_verify(sm2_p256, r, s, priv.PubKey(), msg));
 }
 
 TEST(TestECDSA, TestRecover)
@@ -957,7 +970,7 @@ TEST(TestECDSA, TestRecover)
 	bignum<4>	msg = bn_random<4>::Instance().get_random();
 	bignum<4>	r, s;
 	int		ecInd;
-	ecInd = ec_sign(sm2_k256, r, s, priv, msg);
+	ecInd = ec_sign(sm2_p256, r, s, priv, msg);
 	ASSERT_FALSE(r.is_zero());
 	ASSERT_FALSE(s.is_zero());
 	std::cerr << "signed ret: " << ecInd << std::endl;
@@ -965,7 +978,7 @@ TEST(TestECDSA, TestRecover)
 	t.mod_add(r, s, sm2_p256.paramN());
 	ASSERT_FALSE(t.is_zero());
 	spoint_t<4>	Ps;
-	ASSERT_TRUE(ec_recover(sm2_k256, Ps, r, s, ecInd, msg));
+	ASSERT_TRUE(ec_recover(sm2_p256, Ps, r, s, ecInd, msg));
 	EXPECT_EQ(Ps.x, priv.PubKey().x);
 	EXPECT_EQ(Ps.y, priv.PubKey().y);
 	steady_clock::time_point t1 = steady_clock::now();
