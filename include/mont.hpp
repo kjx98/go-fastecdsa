@@ -930,7 +930,7 @@ sm2p_mult(u64 *result, const u64 *x, const u64 *y) noexcept
 		[pr3] "m" (sm2_p[3])
 		: "rax", "rdx", "r8", "r9", "r12", "r13", "r10", "r11", "r14",
 		"r15", "cc", "memory");
-#elif	defined(__aarch64__)
+#elif	defined(__aarch64__11)
 	// x0 -- x3   register %%x4 -- %%x7
 	register u64 x0 asm("x4") = x[0];
 	register u64 x1 asm("x5") = x[1];
