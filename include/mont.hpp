@@ -1333,6 +1333,149 @@ sm2p_sqrN(u64 *result, const u64 *x) noexcept
 		"r14", "r15", "cc", "memory");
 #elif	defined(__aarch64__)
 	sm2p_mult(result, x, x);
+	// x0 -- x3   register %%x4 -- %%x7
+#ifdef	arm_todo
+	register u64 x0 asm("x4") = x[0];
+	register u64 x1 asm("x5") = x[1];
+	register u64 x2 asm("x6") = x[2];
+	register u64 x3 asm("x7") = x[3];
+	asm volatile(
+	// x[1:] * x[0]
+MUL	acc1, x4, x5
+UMULH	acc2, x4, x5
+
+MUL	t0, x4, x6
+ADDS	acc2, t0, acc2
+UMULH	acc3, x4, x6
+
+MUL	t0, x4, x7
+ADCS	acc3, t0, acc3
+UMULH	acc4, x4, x7
+ADC	acc4, xzr, acc4
+	// x[2:] * x[1]
+MUL	t0, x5, x6
+ADDS	acc3, t0, acc3
+UMULH	t1, x5, x6
+ADCS	acc4, t1, acc4
+ADC	acc5, xzr, acc5
+
+MUL	t0, x5, x7
+ADDS	acc4, t0, acc4
+UMULH	t1, x5, x7
+ADC	acc5, t1, acc5
+	// x[3] * x[2]
+MUL	t0, x6, x7
+ADDS	acc5, t0, acc5
+UMULH	acc6, x6, x7
+ADC	acc6, xzr, acc6
+
+MOVD	acc7, xzr, acc7
+	// *2
+ADDS	acc1, acc1
+ADCS	acc2, acc2
+ADCS	acc3, acc3
+ADCS	acc4, acc4
+ADCS	acc5, acc5
+ADCS	acc6, acc6
+ADC	acc7, xzr, acc7
+	// Missing products
+MUL	acc0, x4, x4
+UMULH	t0, x4, x4
+ADDS	acc1, t0, acc1
+
+MUL	t0, x5, x5
+ADCS	acc2, t0, acc2
+UMULH	t1, x5, x5
+ADCS	acc3, t1, acc3
+
+MUL	t0, x6, x6
+ADCS	acc4, t0, acc4
+UMULH	t1, x6, x6
+ADCS	acc5, t1, acc5
+
+MUL	t0, x7, x7
+ADCS	acc6, t0, acc6
+UMULH	t1, x7, x7
+ADCS	acc7, t1, acc7
+	// First reduction step
+LSL	t0, acc0, 32
+LSR t1, acc0, 32
+ADDS	acc1, accc1, acc0
+ADCS	acc2, acc2, xzr
+ADCS	acc3, acc3, xzr
+ADCS	acc0, xzr, acc0
+ADC		t2, xzr, xzr
+SUBS	acc1, acc1, t0
+SBCS	acc2, acc2, t1
+SBCS	acc3, acc3, t0
+SBCS	acc0, acc0, t1
+SBCS	t2, t2, xzr
+	// Second reduction step
+LSL	t0, acc1, 32
+LSR t1, acc1, 32
+ADDS	acc2, accc2, acc1
+ADCS	acc3, acc3, xzr
+ADCS	acc0, acc0, xzr
+ADCS	acc1, t2, acc1
+ADC		t2, xzr, xzr
+SUBS	acc2, acc2, t0
+SBCS	acc3, acc3, t1
+SBCS	acc0, acc0, t0
+SBCS	acc1, acc1, t1
+SBCS	t2, t2, xzr
+	// Third reduction step
+LSL	t0, acc2, 32
+LSR t1, acc2, 32
+ADDS	acc3, accc3, acc2
+ADCS	acc0, acc0, xzr
+ADCS	acc1, acc1, xzr
+ADCS	acc2, t2, acc2
+ADC		t2, xzr, xzr
+SUBS	acc3, acc3, t0
+SBCS	acc0, acc0, t1
+SBCS	acc1, acc3, t0
+SBCS	acc2, acc2, t1
+SBCS	t2, t2, xzr
+	// Last reduction step
+LSL	t0, acc3, 32
+LSR t1, acc3, 32
+ADDS	acc0, accc0, acc3
+ADCS	acc1, acc1, xzr
+ADCS	acc2, acc2, xzr
+ADCS	acc3, t2, acc3
+ADC		t2, xzr, xzr
+SUBS	acc0, acc0, t0
+SBCS	acc1, acc1, t1
+SBCS	acc2, acc2, t0
+SBCS	acc3, acc3, t1
+SBCS	t2, t2, xzr
+	// Add bits [511:256] of the sqr result
+ADDS	acc0, acc4, acc0
+ADCS	acc1, acc5, acc1
+ADCS	acc2, acc6, acc2
+ADCS	acc3, acc7, acc3
+ADC	t2, xzr, xzr
+
+LDP	x4, x5, [%1]
+LDP	x6, x7, [%1, 16]
+SUBS	x4, acc0, x4
+SBCS	x5, acc1, x5
+SBCS	x6, acc2, x6
+SBCS	x7, acc3, x7
+SBCS	t2, t2, xzr
+
+CSEL	x4, x4, acc0, cs
+CSEL	x5, x5, acc1, cs
+CSEL	x6, x6, acc2, cs
+CSEL	x7, x7, acc3, cs
+STP	x4, x5, [%0]
+STP	x6, x7, [%0, 16]
+		:
+		: "r" (result), "r" (sm2_p), "r" (x0), "r" (x1), "r" (x2),
+		"r" (x3)
+		: "%x3", "%x9", "%x10", "%x11", "%x12", "%x13", "%x14", "%x15",
+		"cc", "memory");
+#endif
 #else
 	u64	r[8];
 	vli_square<4>(r, x);
