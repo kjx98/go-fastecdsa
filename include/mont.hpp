@@ -1331,6 +1331,8 @@ sm2p_sqrN(u64 *result, const u64 *x) noexcept
 		: "D" (result), "S" (x), [pr1] "m" (sm2_p[1]), [pr3] "m" (sm2_p[3])
 		: "rax", "rbx", "rcx", "rdx", "r8", "r9", "r12", "r13", "r10", "r11",
 		"r14", "r15", "cc", "memory");
+#elif	defined(__aarch64__)
+	sm2p_mult(result, x, x);
 #else
 	u64	r[8];
 	vli_square<4>(r, x);
