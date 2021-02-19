@@ -47,6 +47,27 @@ func calcRR(p *big.Int) *big.Int {
 	return t
 }
 
+func calcK0a(p *big.Int) uint64 {
+	t := uint64(1)
+	N := uint64(p.Bits()[0])
+	for i := 1; i < 52; i++ {
+		t = t * t * N // mod 2^52
+	}
+	return -t
+}
+
+func calcRRa(p *big.Int) *big.Int {
+	n260 := new(big.Int).Lsh(one, 260)
+	t := new(big.Int).Sub(n260, p)
+	for i := 260; i < 520; i++ {
+		t.Add(t, t)
+		if t.Cmp(p) >= 0 {
+			t.Sub(t, p)
+		}
+	}
+	return t
+}
+
 func TestRRbyP256(t *testing.T) {
 	cParams := elliptic.P256().Params()
 	n := cParams.N
@@ -99,6 +120,8 @@ func TestRRbyP256(t *testing.T) {
 	ww = N0.Bits()
 	ck := calcK0(n)
 	t.Logf("K0: %s (%x), n*K0: %x %x %x %x", K0.Text(16), ck, ww[0], ww[1], ww[2], ww[3])
+	ck = calcK0a(p)
+	t.Logf("K0a P: %x", ck)
 	K0.SetUint64(1)
 	K0.Lsh(K0, 64)
 	N0 = N0.ModInverse(n, K0)
@@ -254,6 +277,8 @@ func TestRRbySM2(t *testing.T) {
 	ww = N0.Bits()
 	ck := calcK0(n)
 	t.Logf("K0: %s (%x), n*K0: %X %X %X %X", K0.Text(16), ck, ww[0], ww[1], ww[2], ww[3])
+	ck = calcK0a(p)
+	t.Logf("K0a P: %x", ck)
 	K0.SetUint64(1)
 	K0.Lsh(K0, 64)
 	N0 = N0.ModInverse(n, K0)
