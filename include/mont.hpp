@@ -924,7 +924,7 @@ sm2p_mult(u64 *result, const u64 *x, const u64 *y) noexcept
 		[pr3] "m" (sm2_p[3])
 		: "rax", "rdx", "r8", "r9", "r12", "r13", "r10", "r11", "r14",
 		"r15", "cc", "memory");
-#elif	defined(__aarch64__notwork)
+#elif	defined(__aarch64__)
 	// x0 -- x3   register %%x4 -- %%x7
 	register u64 x0 asm("x4") = x[0];
 	register u64 x1 asm("x5") = x[1];
@@ -1095,12 +1095,12 @@ sm2p_mult(u64 *result, const u64 *x, const u64 *y) noexcept
 		"SBCS	x7, x11, x7\n"
 		"SBCS	x12, x12, xzr\n"
 
-		"CSEL	x13, x4, x13, cc\n"
-		"CSEL	x9, x5, x9, cc\n"
-		"CSEL	x10, x6, x10, cc\n"
-		"CSEL	x11, x7, x11, cc\n"
-		"stp	x13, x9, [%0]\n"
-		"stp	x10, x11, [%0, 16]\n"
+		"CSEL	x4, x4, x13, cs\n"
+		"CSEL	x5, x5, x9, cs\n"
+		"CSEL	x6, x6, x10, cs\n"
+		"CSEL	x7, x7, x11, cs\n"
+		"stp	x4, x5, [%0]\n"
+		"stp	x6, x7, [%0, 16]\n"
 		:
 		: "r" (result), "r" (y), "r" (sm2_p), "r" (x0), "r" (x1), "r" (x2),
 		"r" (x3)
