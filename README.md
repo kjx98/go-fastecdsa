@@ -1,7 +1,7 @@
 # fast ecdsa
 
 #### 介绍
-golang package for doing fast elliptic curve cryptography, specifically digital signatures. verify using Shamirs trick.
+golang package for doing fast elliptic curve cryptography, specifically digital signatures, verify, public key recover using assembly optimize bignum arithmetic operations.
 
 #### 软件架构
 软件架构说明
