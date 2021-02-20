@@ -1662,7 +1662,7 @@ TEXT sm2SqrInternal(SB),NOSPLIT,$0
 	// Subtract p256
 	SUBQ $-1, acc4
 	SBBQ p256const0<>(SB) ,acc5
-	SBBQ $0, acc6
+	SBBQ $-1, acc6
 	SBBQ p256const1<>(SB), acc7
 	SBBQ $0, hlp
 	// If the result of the subtraction is negative, restore the previous result
@@ -1686,7 +1686,7 @@ TEXT sm2SqrInternal(SB),NOSPLIT,$0
 	MOVQ acc7, t3;\
 	SUBQ $-1, t0;\
 	SBBQ p256const0<>(SB), t1;\
-	SBBQ $0, t2;\
+	SBBQ $-1, t2;\
 	SBBQ p256const1<>(SB), t3;\
 	SBBQ $0, mul0;\
 	CMOVQCS acc4, t0;\
@@ -1707,7 +1707,7 @@ TEXT sm2SqrInternal(SB),NOSPLIT,$0
 	MOVQ acc7, t3;\
 	SUBQ $-1, t0;\
 	SBBQ p256const0<>(SB), t1;\
-	SBBQ $0, t2;\
+	SBBQ $-1, t2;\
 	SBBQ p256const1<>(SB), t3;\
 	SBBQ $0, mul0;\
 	CMOVQCS acc4, t0;\
@@ -1781,7 +1781,7 @@ TEXT ·p256PointAddAffineAsm(SB),0,$512-96
 	MOVQ (16*2 + 8*3)(CX), acc7
 	MOVQ $-1, acc0
 	MOVQ p256const0<>(SB), acc1
-	MOVQ $0, acc2
+	MOVQ $-1, acc2
 	MOVQ p256const1<>(SB), acc3
 	XORQ mul0, mul0
 	// Speculatively subtract
@@ -1797,7 +1797,7 @@ TEXT ·p256PointAddAffineAsm(SB),0,$512-96
 	// Add in case the operand was > p256
 	ADDQ $-1, acc0
 	ADCQ p256const0<>(SB), acc1
-	ADCQ $0, acc2
+	ADCQ $-1, acc2
 	ADCQ p256const1<>(SB), acc3
 	ADCQ $0, mul0
 	CMOVQNE t0, acc0
@@ -2018,6 +2018,7 @@ TEXT sm2IsZero(SB),NOSPLIT,$0
 	// XOR [acc4..acc7] with P and compare with zero again.
 	XORQ $-1, acc4
 	XORQ p256const0<>(SB), acc5
+	XORQ $-1, acc6
 	XORQ p256const1<>(SB), acc7
 	ORQ acc5, acc4
 	ORQ acc6, acc4
@@ -2301,7 +2302,7 @@ TEXT ·p256PointDoubleAsm(SB),NOSPLIT,$256-48
 
 	ADDQ $-1, acc4
 	ADCQ p256const0<>(SB), acc5
-	ADCQ $0, acc6
+	ADCQ $-1, acc6
 	ADCQ p256const1<>(SB), acc7
 	ADCQ $0, mul0
 	TESTQ $1, t0
