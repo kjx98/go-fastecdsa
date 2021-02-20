@@ -114,81 +114,83 @@ func (curve p256Curve) Inverse(k *big.Int) *big.Int {
 		// This should never happen.
 		k = new(big.Int).Mod(k, pSM2.N)
 	}
+	return new(big.Int).ModInverse(k, curve.CurveParams.N)
+	/*
+		// table will store precomputed powers of x.
+		var table [4 * 9]uint64
+		var (
+			_1      = table[4*0 : 4*1]
+			_11     = table[4*1 : 4*2]
+			_101    = table[4*2 : 4*3]
+			_111    = table[4*3 : 4*4]
+			_1111   = table[4*4 : 4*5]
+			_10101  = table[4*5 : 4*6]
+			_101111 = table[4*6 : 4*7]
+			x       = table[4*7 : 4*8]
+			t       = table[4*8 : 4*9]
+		)
 
-	// table will store precomputed powers of x.
-	var table [4 * 9]uint64
-	var (
-		_1      = table[4*0 : 4*1]
-		_11     = table[4*1 : 4*2]
-		_101    = table[4*2 : 4*3]
-		_111    = table[4*3 : 4*4]
-		_1111   = table[4*4 : 4*5]
-		_10101  = table[4*5 : 4*6]
-		_101111 = table[4*6 : 4*7]
-		x       = table[4*7 : 4*8]
-		t       = table[4*8 : 4*9]
-	)
+		fromBig(x[:], k)
+		// This code operates in the Montgomery domain where R = 2^256 mod n
+		// and n is the order of the scalar field. (See initP256 for the
+		// value.) Elements in the Montgomery domain take the form a×R and
+		// multiplication of x and y in the calculates (x × y × R^-1) mod n. RR
+		// is R×R mod n thus the Montgomery multiplication x and RR gives x×R,
+		// i.e. converts x into the Montgomery domain.
+		// Window values borrowed from https://briansmith.org/ecc-inversion-addition-chains-01#p256_scalar_inversion
+		RR := []uint64{0x901192af7c114f20, 0x3464504ade6fa2fa, 0x620fc84c3affe0d4, 0x1eb5e412a22b3d3b}
+		p256OrdMul(_1, x, RR)      // _1
+		p256OrdSqr(x, _1, 1)       // _10
+		p256OrdMul(_11, x, _1)     // _11
+		p256OrdMul(_101, x, _11)   // _101
+		p256OrdMul(_111, x, _101)  // _111
+		p256OrdSqr(x, _101, 1)     // _1010
+		p256OrdMul(_1111, _101, x) // _1111
 
-	fromBig(x[:], k)
-	// This code operates in the Montgomery domain where R = 2^256 mod n
-	// and n is the order of the scalar field. (See initP256 for the
-	// value.) Elements in the Montgomery domain take the form a×R and
-	// multiplication of x and y in the calculates (x × y × R^-1) mod n. RR
-	// is R×R mod n thus the Montgomery multiplication x and RR gives x×R,
-	// i.e. converts x into the Montgomery domain.
-	// Window values borrowed from https://briansmith.org/ecc-inversion-addition-chains-01#p256_scalar_inversion
-	RR := []uint64{0x901192af7c114f20, 0x3464504ade6fa2fa, 0x620fc84c3affe0d4, 0x1eb5e412a22b3d3b}
-	p256OrdMul(_1, x, RR)      // _1
-	p256OrdSqr(x, _1, 1)       // _10
-	p256OrdMul(_11, x, _1)     // _11
-	p256OrdMul(_101, x, _11)   // _101
-	p256OrdMul(_111, x, _101)  // _111
-	p256OrdSqr(x, _101, 1)     // _1010
-	p256OrdMul(_1111, _101, x) // _1111
+		p256OrdSqr(t, x, 1)          // _10100
+		p256OrdMul(_10101, t, _1)    // _10101
+		p256OrdSqr(x, _10101, 1)     // _101010
+		p256OrdMul(_101111, _101, x) // _101111
+		p256OrdMul(x, _10101, x)     // _111111 = x6
+		p256OrdSqr(t, x, 2)          // _11111100
+		p256OrdMul(t, t, _11)        // _11111111 = x8
+		p256OrdSqr(x, t, 8)          // _ff00
+		p256OrdMul(x, x, t)          // _ffff = x16
+		p256OrdSqr(t, x, 16)         // _ffff0000
+		p256OrdMul(t, t, x)          // _ffffffff = x32
 
-	p256OrdSqr(t, x, 1)          // _10100
-	p256OrdMul(_10101, t, _1)    // _10101
-	p256OrdSqr(x, _10101, 1)     // _101010
-	p256OrdMul(_101111, _101, x) // _101111
-	p256OrdMul(x, _10101, x)     // _111111 = x6
-	p256OrdSqr(t, x, 2)          // _11111100
-	p256OrdMul(t, t, _11)        // _11111111 = x8
-	p256OrdSqr(x, t, 8)          // _ff00
-	p256OrdMul(x, x, t)          // _ffff = x16
-	p256OrdSqr(t, x, 16)         // _ffff0000
-	p256OrdMul(t, t, x)          // _ffffffff = x32
+		p256OrdSqr(x, t, 64)
+		p256OrdMul(x, x, t)
+		p256OrdSqr(x, x, 32)
+		p256OrdMul(x, x, t)
 
-	p256OrdSqr(x, t, 64)
-	p256OrdMul(x, x, t)
-	p256OrdSqr(x, x, 32)
-	p256OrdMul(x, x, t)
+		sqrs := []uint8{
+			6, 5, 4, 5, 5,
+			4, 3, 3, 5, 9,
+			6, 2, 5, 6, 5,
+			4, 5, 5, 3, 10,
+			2, 5, 5, 3, 7, 6}
+		muls := [][]uint64{
+			_101111, _111, _11, _1111, _10101,
+			_101, _101, _101, _111, _101111,
+			_1111, _1, _1, _1111, _111,
+			_111, _111, _101, _11, _101111,
+			_11, _11, _11, _1, _10101, _1111}
 
-	sqrs := []uint8{
-		6, 5, 4, 5, 5,
-		4, 3, 3, 5, 9,
-		6, 2, 5, 6, 5,
-		4, 5, 5, 3, 10,
-		2, 5, 5, 3, 7, 6}
-	muls := [][]uint64{
-		_101111, _111, _11, _1111, _10101,
-		_101, _101, _101, _111, _101111,
-		_1111, _1, _1, _1111, _111,
-		_111, _111, _101, _11, _101111,
-		_11, _11, _11, _1, _10101, _1111}
+		for i, s := range sqrs {
+			p256OrdSqr(x, x, int(s))
+			p256OrdMul(x, x, muls[i])
+		}
 
-	for i, s := range sqrs {
-		p256OrdSqr(x, x, int(s))
-		p256OrdMul(x, x, muls[i])
-	}
+		// Multiplying by one in the Montgomery domain converts a Montgomery
+		// value out of the domain.
+		one := []uint64{1, 0, 0, 0}
+		p256OrdMul(x, x, one)
 
-	// Multiplying by one in the Montgomery domain converts a Montgomery
-	// value out of the domain.
-	one := []uint64{1, 0, 0, 0}
-	p256OrdMul(x, x, one)
-
-	xOut := make([]byte, 32)
-	p256LittleToBig(xOut, x)
-	return new(big.Int).SetBytes(xOut)
+		xOut := make([]byte, 32)
+		p256LittleToBig(xOut, x)
+		return new(big.Int).SetBytes(xOut)
+	*/
 }
 
 // fromBig converts a *big.Int into a format used by this code.
@@ -242,9 +244,9 @@ func (curve p256Curve) CombinedMult(bigX, bigY *big.Int, baseScalar, scalar []by
 
 	// This sets r2's Z value to 1, in the Montgomery domain.
 	r2.xyz[8] = 0x0000000000000001
-	r2.xyz[9] = 0xffffffff00000000
-	r2.xyz[10] = 0xffffffffffffffff
-	r2.xyz[11] = 0x00000000fffffffe
+	r2.xyz[9] = 0xffffffff
+	r2.xyz[10] = 0
+	r2.xyz[11] = 0x100000000
 
 	r2.p256ScalarMult(scalarReversed)
 
@@ -278,9 +280,9 @@ func (curve p256Curve) ScalarMult(bigX, bigY *big.Int, scalar []byte) (x, y *big
 	p256Mul(r.xyz[4:8], r.xyz[4:8], rr[:])
 	// This sets r2's Z value to 1, in the Montgomery domain.
 	r.xyz[8] = 0x0000000000000001
-	r.xyz[9] = 0xffffffff00000000
-	r.xyz[10] = 0xffffffffffffffff
-	r.xyz[11] = 0x00000000fffffffe
+	r.xyz[9] = 0xffffffff
+	r.xyz[10] = 0
+	r.xyz[11] = 0x100000000
 
 	r.p256ScalarMult(scalarReversed)
 	return r.p256PointToAffine()
@@ -360,11 +362,23 @@ func p256Inverse(out, in []uint64) {
 	p256Sqr(out, p16, 16)
 	p256Mul(p32, out, p16) // ffffffff*p
 
-	p256Sqr(out, p32, 32)
-	p256Mul(out, out, in)
+	p256Sqr(out, p16, 8)
+	p256Mul(out, out, p8) // ffffff*p
+	p256Sqr(out, out, 4)
+	p256Mul(out, out, p4) // fffffff*p
+	p256Sqr(out, out, 2)
+	p256Mul(out, out, p2)
+	p256Sqr(out, out, 1) // fffffffe*p
+	p256Sqr(out, out, 32)
+	p256Mul(out, out, p32) // fffffffeffffffff
 
-	p256Sqr(out, out, 128)
+	p256Sqr(out, out, 32)
 	p256Mul(out, out, p32)
+	p256Sqr(out, out, 32)
+	p256Mul(out, out, p32) // ... ffffffffffffffff
+	p256Sqr(out, out, 32)
+	p256Mul(out, out, p32)
+	p256Sqr(out, out, 32) // ... ffffffff00000000
 
 	p256Sqr(out, out, 32)
 	p256Mul(out, out, p32)
@@ -408,10 +422,11 @@ func boothW6(in uint) (int, int) {
 func initTable() {
 	p256Precomputed = new([43][32 * 8]uint64)
 
+	// basePoint in montgomery form
 	basePoint := []uint64{
 		0x61328990f418029e, 0x3e7981eddca6c050, 0xd6a1ed99ac24c3c3, 0x91167a5ee1c13b05,
 		0xc1354e593c2d0ddd, 0xc1f5e5788d3295fa, 0x8d4cfb066e2a48f8, 0x63cd65d481d735bd,
-		0x0000000000000001, 0xffffffff00000000, 0xffffffffffffffff, 0x00000000fffffffe,
+		0x0000000000000001, 0xffffffff, 0, 0x100000000,
 	}
 	t1 := make([]uint64, 12)
 	t2 := make([]uint64, 12)
@@ -459,16 +474,16 @@ func (p *p256Point) p256BaseMult(scalar []uint64) {
 
 	// (This is one, in the Montgomery domain.)
 	p.xyz[8] = 0x0000000000000001
-	p.xyz[9] = 0xffffffff00000000
-	p.xyz[10] = 0xffffffffffffffff
-	p.xyz[11] = 0x00000000fffffffe
+	p.xyz[9] = 0xffffffff
+	p.xyz[10] = 0
+	p.xyz[11] = 0x100000000
 
 	var t0 p256Point
 	// (This is one, in the Montgomery domain.)
 	t0.xyz[8] = 0x0000000000000001
-	t0.xyz[9] = 0xffffffff00000000
-	t0.xyz[10] = 0xffffffffffffffff
-	t0.xyz[11] = 0x00000000fffffffe
+	t0.xyz[9] = 0xffffffff
+	t0.xyz[10] = 0
+	t0.xyz[11] = 0x100000000
 
 	index := uint(5)
 	zero := sel
