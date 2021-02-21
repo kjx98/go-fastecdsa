@@ -50,7 +50,7 @@ func TestKeyGeneration(t *testing.T) {
 	testKeyGeneration(t, sm2.P256(), "sm2")
 	testKeyGeneration(t, sm2.SM2go(), "sm2go")
 	testKeyGeneration(t, ecc.SM2C(), "sm2c")
-	//testKeyGeneration(t, sm2.SM2(), "sm2asm")
+	testKeyGeneration(t, sm2.SM2(), "sm2asm")
 }
 
 func BenchmarkSignP256(b *testing.B) {
@@ -70,7 +70,8 @@ func BenchmarkSignP256(b *testing.B) {
 
 func BenchmarkSignSM2(b *testing.B) {
 	b.ResetTimer()
-	p256 := sm2.P256()
+	//p256 := sm2.P256()
+	p256 := sm2.SM2()
 	hashed := []byte("testing")
 	priv, _ := GenerateKey(p256, rand.Reader)
 
@@ -116,7 +117,8 @@ func BenchmarkVerifyP256(b *testing.B) {
 
 func BenchmarkVerifySM2(b *testing.B) {
 	b.ResetTimer()
-	p256 := sm2.P256()
+	//p256 := sm2.P256()
+	p256 := sm2.SM2()
 	hashed := []byte("testing")
 	priv, _ := GenerateKey(p256, rand.Reader)
 	r, s, _ := Sign(rand.Reader, priv, hashed)
