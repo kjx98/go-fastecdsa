@@ -346,9 +346,13 @@ func p256Inverse(out, in []uint64) {
 	p8 := stack[4*2 : 4*2+4]
 	p16 := stack[4*3 : 4*3+4]
 	p32 := stack[4*4 : 4*4+4]
+	p3 := stack[4*5 : 4*5+4]
 
 	p256Sqr(out, in, 1)
 	p256Mul(p2, out, in) // 3*p
+
+	p256Sqr(out, p2, 1)
+	p256Mul(p3, out, in) // 7*p
 
 	p256Sqr(out, p2, 2)
 	p256Mul(p4, out, p2) // f*p
@@ -366,9 +370,10 @@ func p256Inverse(out, in []uint64) {
 	p256Mul(out, out, p8) // ffffff*p
 	p256Sqr(out, out, 4)
 	p256Mul(out, out, p4) // fffffff*p
-	p256Sqr(out, out, 2)
-	p256Mul(out, out, p2)
+	p256Sqr(out, out, 3)
+	p256Mul(out, out, p3)
 	p256Sqr(out, out, 1) // fffffffe*p
+
 	p256Sqr(out, out, 32)
 	p256Mul(out, out, p32) // fffffffeffffffff
 
