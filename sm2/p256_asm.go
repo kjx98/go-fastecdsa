@@ -33,6 +33,7 @@ var (
 	pSM2            p256Curve
 	p256Precomputed *[43][32 * 8]uint64
 	precomputeOnce  sync.Once
+	p256MontOne			=[]uint64{1, 0xffffffff, 0, 0x100000000,}
 )
 
 func initSM2() {
@@ -243,10 +244,11 @@ func (curve p256Curve) CombinedMult(bigX, bigY *big.Int, baseScalar, scalar []by
 	p256Mul(r2.xyz[4:8], r2.xyz[4:8], rr[:])
 
 	// This sets r2's Z value to 1, in the Montgomery domain.
-	r2.xyz[8] = 0x0000000000000001
-	r2.xyz[9] = 0xffffffff
-	r2.xyz[10] = 0
-	r2.xyz[11] = 0x100000000
+	copy(r2.xyz[8:], p256MontOne)
+	//r2.xyz[8] = 0x0000000000000001
+	//r2.xyz[9] = 0xffffffff
+	//r2.xyz[10] = 0
+	//r2.xyz[11] = 0x100000000
 
 	r2.p256ScalarMult(scalarReversed)
 
@@ -279,10 +281,11 @@ func (curve p256Curve) ScalarMult(bigX, bigY *big.Int, scalar []byte) (x, y *big
 	p256Mul(r.xyz[0:4], r.xyz[0:4], rr[:])
 	p256Mul(r.xyz[4:8], r.xyz[4:8], rr[:])
 	// This sets r2's Z value to 1, in the Montgomery domain.
-	r.xyz[8] = 0x0000000000000001
-	r.xyz[9] = 0xffffffff
-	r.xyz[10] = 0
-	r.xyz[11] = 0x100000000
+	copy(r.xyz[8:], p256MontOne)
+	//r.xyz[8] = 0x0000000000000001
+	//r.xyz[9] = 0xffffffff
+	//r.xyz[10] = 0
+	//r.xyz[11] = 0x100000000
 
 	r.p256ScalarMult(scalarReversed)
 	return r.p256PointToAffine()
@@ -433,6 +436,12 @@ func initTable() {
 		0xc1354e593c2d0ddd, 0xc1f5e5788d3295fa, 0x8d4cfb066e2a48f8, 0x63cd65d481d735bd,
 		0x0000000000000001, 0xffffffff, 0, 0x100000000,
 	}
+	// convert Gx, Gy to montgomery form
+	fromBig(basePoint[:4], sm2Params.Gx)
+	fromBig(basePoint[4:8], sm2Params.Gy)
+	p256Mul(basePoint[:4], basePoint[:4], rr)
+	p256Mul(basePoint[4:8], basePoint[4:8], rr)
+	copy(basePoint[8:], p256MontOne)
 	t1 := make([]uint64, 12)
 	t2 := make([]uint64, 12)
 	copy(t2, basePoint)
@@ -478,17 +487,19 @@ func (p *p256Point) p256BaseMult(scalar []uint64) {
 	p256NegCond(p.xyz[4:8], sign)
 
 	// (This is one, in the Montgomery domain.)
-	p.xyz[8] = 0x0000000000000001
-	p.xyz[9] = 0xffffffff
-	p.xyz[10] = 0
-	p.xyz[11] = 0x100000000
+	copy(p.xyz[8:], p256MontOne)
+	//p.xyz[8] = 0x0000000000000001
+	//p.xyz[9] = 0xffffffff
+	//p.xyz[10] = 0
+	//p.xyz[11] = 0x100000000
 
 	var t0 p256Point
 	// (This is one, in the Montgomery domain.)
-	t0.xyz[8] = 0x0000000000000001
-	t0.xyz[9] = 0xffffffff
-	t0.xyz[10] = 0
-	t0.xyz[11] = 0x100000000
+	copy(t0.xyz[8:], p256MontOne)
+	//t0.xyz[8] = 0x0000000000000001
+	//t0.xyz[9] = 0xffffffff
+	//t0.xyz[10] = 0
+	//t0.xyz[11] = 0x100000000
 
 	index := uint(5)
 	zero := sel
