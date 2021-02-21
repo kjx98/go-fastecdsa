@@ -33,8 +33,14 @@ var (
 	pSM2            p256Curve
 	p256Precomputed *[43][32 * 8]uint64
 	precomputeOnce  sync.Once
-	p256MontOne			=[]uint64{1, 0xffffffff, 0, 0x100000000,}
+	p256MontOne     = []uint64{1, 0xffffffff, 0, 0x100000000}
+	nRR             = []uint64{0x901192af7c114f20, 0x3464504ade6fa2fa, 0x620fc84c3affe0d4, 0x1eb5e412a22b3d3b}
 )
+
+// p256Mul operates in a Montgomery domain with R = 2^256 mod p, where p is the
+// underlying field of the curve. (See initP256 for the value.) Thus rr here is
+// R×R mod p. See comment in Inverse about how this is used.
+var rr = []uint64{0x0000000200000003, 0x00000002ffffffff, 0x0000000100000001, 0x0000000400000002}
 
 func initSM2() {
 	// See FIPS 186-3, section D.2.3
@@ -139,7 +145,6 @@ func (curve p256Curve) Inverse(k *big.Int) *big.Int {
 		// is R×R mod n thus the Montgomery multiplication x and RR gives x×R,
 		// i.e. converts x into the Montgomery domain.
 		// Window values borrowed from https://briansmith.org/ecc-inversion-addition-chains-01#p256_scalar_inversion
-		RR := []uint64{0x901192af7c114f20, 0x3464504ade6fa2fa, 0x620fc84c3affe0d4, 0x1eb5e412a22b3d3b}
 		p256OrdMul(_1, x, RR)      // _1
 		p256OrdSqr(x, _1, 1)       // _10
 		p256OrdMul(_11, x, _1)     // _11
@@ -205,6 +210,16 @@ func fromBig(out []uint64, big *big.Int) {
 	}
 }
 
+// toBig convert u64 slice format to *big.Int
+func toBig(x []uint64) *big.Int {
+	var res [4]big.Word
+	res[0] = big.Word(x[0])
+	res[1] = big.Word(x[1])
+	res[2] = big.Word(x[2])
+	res[3] = big.Word(x[3])
+	return new(big.Int).SetBits(res[:])
+}
+
 // p256GetScalar endian-swaps the big-endian scalar value from in and writes it
 // to out. If the scalar is equal or greater than the order of the group, it's
 // reduced modulo that order.
@@ -216,11 +231,6 @@ func p256GetScalar(out []uint64, in []byte) {
 	}
 	fromBig(out, n)
 }
-
-// p256Mul operates in a Montgomery domain with R = 2^256 mod p, where p is the
-// underlying field of the curve. (See initP256 for the value.) Thus rr here is
-// R×R mod p. See comment in Inverse about how this is used.
-var rr = []uint64{0x0000000200000003, 0x00000002ffffffff, 0x0000000100000001, 0x0000000400000002}
 
 func maybeReduceModP(in *big.Int) *big.Int {
 	if in.Cmp(pSM2.P) < 0 {

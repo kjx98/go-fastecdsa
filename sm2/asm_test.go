@@ -16,18 +16,9 @@ func init() {
 	SM2go()
 }
 
-func toBig(x []uint64) *big.Int {
-	var		res	[4]big.Word
-	res[0] = big.Word(x[0])
-	res[1] = big.Word(x[1])
-	res[2] = big.Word(x[2])
-	res[3] = big.Word(x[3])
-	return new(big.Int).SetBits(res[:])
-}
-
 func asmMontMult(x, y *big.Int) *big.Int {
-	var xp, yp		[4]uint64
-	var	res			[4]uint64
+	var xp, yp [4]uint64
+	var res [4]uint64
 	fromBig(xp[:], x)
 	fromBig(yp[:], y)
 	p256Mul(res[:], xp[:], yp[:])
@@ -35,29 +26,52 @@ func asmMontMult(x, y *big.Int) *big.Int {
 }
 
 func asmMontSqr(x *big.Int) *big.Int {
-	var xp,rp	[4]uint64
-	var	res		[4]uint64
+	var xp [4]uint64
+	var res [4]uint64
 	fromBig(xp[:], x)
-	fromBig(rp[:], sm2g.rr)
-	p256Mul(res[:], xp[:], rp[:])
+	p256Mul(res[:], xp[:], rr)
 	p256Sqr(res[:], res[:], 1)
 	p256FromMont(res[:], res[:])
 	return toBig(res[:])
 }
 
+func asmOrdMult(x, y *big.Int) *big.Int {
+	var xp, yp [4]uint64
+	var res [4]uint64
+	fromBig(xp[:], x)
+	fromBig(yp[:], y)
+	p256OrdMul(xp[:], xp[:], nRR)
+	p256OrdMul(yp[:], yp[:], nRR)
+	p256OrdMul(res[:], xp[:], yp[:])
+	one := []uint64{1, 0, 0, 0}
+	p256OrdMul(res[:], res[:], one)
+	return toBig(res[:])
+}
+
+func asmOrdSqr(x *big.Int) *big.Int {
+	var xp [4]uint64
+	var res [4]uint64
+	fromBig(xp[:], x)
+	p256OrdMul(xp[:], xp[:], nRR)
+	p256OrdSqr(res[:], xp[:], 1)
+	one := []uint64{1, 0, 0, 0}
+	p256OrdMul(res[:], res[:], one)
+	return toBig(res[:])
+}
+
 func asmMontRed(y *big.Int) *big.Int {
-	var yp		[4]uint64
-	var	res		[4]uint64
+	var yp [4]uint64
+	var res [4]uint64
 	fromBig(yp[:], y)
 	p256FromMont(res[:], yp[:])
 	return toBig(res[:])
 }
 
-func asmMontMul(x,y *big.Int) *big.Int {
+func asmMontMul(x, y *big.Int) *big.Int {
 	xp := asmMontMult(x, sm2g.rr)
 	yp := asmMontMult(y, sm2g.rr)
 	res := asmMontMult(xp, yp)
-	return  asmMontRed(res)
+	return asmMontRed(res)
 }
 
 func TestAsmMontMul(t *testing.T) {
@@ -68,14 +82,6 @@ func TestAsmMontMul(t *testing.T) {
 		t.Logf("MontMulMod step 1 diff:\n%s vs\n%s", m1.Text(16), m2.Text(16))
 		t.Fail()
 	}
-	/*
-		ww := x1.Bits()
-		t.Logf("x1: %x %x %x %x", ww[0], ww[1], ww[2], ww[3])
-		ww = y1.Bits()
-		t.Logf("y1: %x %x %x %x", ww[0], ww[1], ww[2], ww[3])
-		ww = m1.Bits()
-		t.Logf("xy1mod: %x %x %x %x", ww[0], ww[1], ww[2], ww[3])
-	*/
 	prod = new(big.Int).Mul(x2, y2)
 	m1 = new(big.Int).Mod(prod, sm2g.P)
 	m2 = asmMontMul(x2, y2)
@@ -83,14 +89,6 @@ func TestAsmMontMul(t *testing.T) {
 		t.Logf("MontMulMod step2 diff:\n%s vs\n%s", m1.Text(16), m2.Text(16))
 		t.Fail()
 	}
-	/*
-		ww = x2.Bits()
-		t.Logf("x2: %x %x %x %x", ww[0], ww[1], ww[2], ww[3])
-		ww = y2.Bits()
-		t.Logf("y2: %x %x %x %x", ww[0], ww[1], ww[2], ww[3])
-		ww = m1.Bits()
-		t.Logf("xy2mod: %x %x %x %x", ww[0], ww[1], ww[2], ww[3])
-	*/
 }
 
 func TestAsmMontSqr(t *testing.T) {
@@ -110,13 +108,49 @@ func TestAsmMontSqr(t *testing.T) {
 	}
 }
 
+func TestAsmOrdMul(t *testing.T) {
+	prod := new(big.Int).Mul(x1, y1)
+	m1 := new(big.Int).Mod(prod, sm2g.N)
+	m2 := asmOrdMult(x1, y1)
+	if m1.Cmp(m2) != 0 {
+		t.Logf("OrdMulMod step 1 diff:\n%s vs\n%s", m1.Text(16), m2.Text(16))
+		t.Fail()
+	}
+	prod = new(big.Int).Mul(x2, y2)
+	m1 = new(big.Int).Mod(prod, sm2g.N)
+	m2 = asmOrdMult(x2, y2)
+	if m1.Cmp(m2) != 0 {
+		t.Logf("OrdMulMod step2 diff:\n%s vs\n%s", m1.Text(16), m2.Text(16))
+		t.Fail()
+	}
+}
+
+/*
+func TestAsmOrdSqr(t *testing.T) {
+	prod := new(big.Int).Mul(x1, x1)
+	m1 := new(big.Int).Mod(prod, sm2g.N)
+	m2 := asmOrdSqr(x1)
+	if m1.Cmp(m2) != 0 {
+		t.Logf("OrdSqrMod step 1 diff:\n%s vs\n%s", m1.Text(16), m2.Text(16))
+		t.Fail()
+	}
+	prod = new(big.Int).Mul(x2, x2)
+	m1 = new(big.Int).Mod(prod, sm2g.N)
+	m2 = asmOrdSqr(x2)
+	if m1.Cmp(m2) != 0 {
+		t.Logf("OrdSqrMod step2 diff:\n%s vs\n%s", m1.Text(16), m2.Text(16))
+		t.Fail()
+	}
+}
+*/
+
 func TestAsmInverse(t *testing.T) {
 	p := sm2g.P
 	RR := new(big.Int).SetUint64(1)
 	RR.Lsh(RR, 257)
 	RR.Mod(RR, p)
 	Rinv := new(big.Int).ModInverse(RR, p)
-	var		res, yy	[4]uint64
+	var res, yy [4]uint64
 	xp := asmMontMult(RR, sm2g.rr)
 	fromBig(yy[:], xp)
 	p256Inverse(res[:], yy[:])
@@ -131,7 +165,7 @@ func TestAsmInverse(t *testing.T) {
 func BenchmarkAsmInverse(b *testing.B) {
 	b.ResetTimer()
 	priv, _ := fastecdsa.GenerateKey(P256(), rand.Reader)
-	var		res, yy		[4]uint64
+	var res, yy [4]uint64
 	fromBig(yy[:], priv.PublicKey.X)
 
 	b.ResetTimer()
@@ -149,6 +183,16 @@ func BenchmarkAsmMontModMul(b *testing.B) {
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
 		_ = asmMontMult(x1, c.rr)
+	}
+}
+
+func BenchmarkAsmOrdMul(b *testing.B) {
+	b.ResetTimer()
+	var res, xp [4]uint64
+	fromBig(xp[:], x1)
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		p256OrdMul(res[:], xp[:], nRR)
 	}
 }
 
