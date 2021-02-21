@@ -1493,6 +1493,7 @@ TEXT sm2MulInternal(SB),NOSPLIT,$0
 	ADDQ mul0, acc6
 	ADCQ $0, mul1
 	MOVQ mul1, acc7
+	XORQ mul1, mul1
 	// First reduction step
 	MOVQ acc0, mul0
 	MOVQ acc0, hlp
@@ -1507,6 +1508,7 @@ TEXT sm2MulInternal(SB),NOSPLIT,$0
 	SBBQ acc0, acc3
 	SBBQ hlp, mul1
 	MOVQ mul1, acc0
+	XORQ mul1, mul1
 	// Second reduction step
 	MOVQ acc1, mul0
 	MOVQ acc1, hlp
@@ -1521,6 +1523,7 @@ TEXT sm2MulInternal(SB),NOSPLIT,$0
 	SBBQ acc1, acc0
 	SBBQ hlp, mul1
 	MOVQ mul1, acc1
+	XORQ mul1, mul1
 	// Third reduction step
 	MOVQ acc2, mul0
 	MOVQ acc2, hlp
@@ -1535,6 +1538,7 @@ TEXT sm2MulInternal(SB),NOSPLIT,$0
 	SBBQ acc2, acc1
 	SBBQ hlp, mul1
 	MOVQ mul1, acc2
+	XORQ mul1, mul1
 	// Last reduction step
 	MOVQ acc3, mul0
 	MOVQ acc3, hlp
@@ -1647,6 +1651,7 @@ TEXT sm2SqrInternal(SB),NOSPLIT,$0
 	ADDQ acc4, t1
 	ADCQ mul0, t2
 	ADCQ DX, t3
+	XORQ mul1, mul1
 	// First reduction step
 	MOVQ acc0, mul0
 	MOVQ acc0, hlp
@@ -1661,6 +1666,7 @@ TEXT sm2SqrInternal(SB),NOSPLIT,$0
 	SBBQ acc0, acc3
 	SBBQ hlp, mul1
 	MOVQ mul1, acc0
+	XORQ mul1, mul1
 	// Second reduction step
 	MOVQ acc1, mul0
 	MOVQ acc1, hlp
@@ -1675,11 +1681,11 @@ TEXT sm2SqrInternal(SB),NOSPLIT,$0
 	SBBQ acc1, acc0
 	SBBQ hlp, mul1
 	MOVQ mul1, acc1
+	XORQ mul1, mul1
 	// Third reduction step
 	MOVQ acc2, mul0
 	MOVQ acc2, hlp
 	SHLQ $32, acc2
-	MULQ p256const1<>(SB)
 	SHRQ $32, hlp
 	ADDQ mul0, acc3
 	ADCQ $0, acc0
@@ -1690,6 +1696,7 @@ TEXT sm2SqrInternal(SB),NOSPLIT,$0
 	SBBQ acc2, acc1
 	SBBQ hlp, mul1
 	MOVQ mul1, acc2
+	XORQ mul1, mul1
 	// Last reduction step
 	MOVQ acc3, mul0
 	MOVQ acc3, hlp
