@@ -219,41 +219,53 @@ TEXT ·p256FromMont(SB),NOSPLIT,$0
 	LDP	1*16(a_ptr), (acc2, acc3)
 	// Only reduce, no multiplications are needed
 	// First reduction step
-	ADDS	acc0<<32, acc1, acc1
 	LSR	$32, acc0, t0
-	MUL	acc0, const1, t1
-	UMULH	acc0, const1, acc0
-	ADCS	t0, acc2
-	ADCS	t1, acc3
+	LSL	$32, acc0, t1
+	ADDS	acc0, acc1
+	ADCS	$0, acc2
+	ADCS	$0, acc3
 	ADC	$0, acc0
+	SUBS	t1, acc1
+	SBCS	t0, acc2
+	SBCS	t1, acc3
+	SBCS	t0, acc0
 	// Second reduction step
-	ADDS	acc1<<32, acc2, acc2
 	LSR	$32, acc1, t0
-	MUL	acc1, const1, t1
-	UMULH	acc1, const1, acc1
-	ADCS	t0, acc3
-	ADCS	t1, acc0
+	LSL	$32, acc1, t1
+	ADDS	acc1, acc2
+	ADCS	$0, acc3
+	ADCS	$0, acc0
 	ADC	$0, acc1
+	SUBS	t1, acc2
+	SBCS	t0, acc3
+	SBCS	t1, acc0
+	SBCS	t0, acc1
 	// Third reduction step
-	ADDS	acc2<<32, acc3, acc3
 	LSR	$32, acc2, t0
-	MUL	acc2, const1, t1
-	UMULH	acc2, const1, acc2
-	ADCS	t0, acc0
-	ADCS	t1, acc1
+	LSL	$32, acc2, t1
+	ADDS	acc2, acc3
+	ADCS	$0, acc0
+	ADCS	$0, acc1
 	ADC	$0, acc2
+	SUBS	t1, acc3
+	SBCS	t0, acc0
+	SBCS	t1, acc1
+	SBCS	t0, acc2
 	// Last reduction step
-	ADDS	acc3<<32, acc0, acc0
 	LSR	$32, acc3, t0
-	MUL	acc3, const1, t1
-	UMULH	acc3, const1, acc3
-	ADCS	t0, acc1
-	ADCS	t1, acc2
+	LSL	$32, acc3, t1
+	ADDS	acc3, acc0
+	ADCS	$0, acc1
+	ADCS	$0, acc2
 	ADC	$0, acc3
+	SUBS	t1, acc0
+	SBCS	t0, acc1
+	SBCS	t1, acc2
+	SBCS	t0, acc3
 
 	SUBS	$-1, acc0, t0
 	SBCS	const0, acc1, t1
-//	SBCS	$-1, acc2, t2
+	SBCS	$-1, acc2, t2
 	SBCS	const1, acc3, t3
 
 	CSEL	CS, t0, acc0, acc0
@@ -864,37 +876,49 @@ TEXT sm2SqrInternal<>(SB),NOSPLIT,$0
 	UMULH	x3, x3, t1
 	ADCS	t1, acc7, acc7
 	// First reduction step
-	ADDS	acc0<<32, acc1, acc1
 	LSR	$32, acc0, t0
-	MUL	acc0, const1, t1
-	UMULH	acc0, const1, acc0
-	ADCS	t0, acc2, acc2
-	ADCS	t1, acc3, acc3
-	ADC	$0, acc0, acc0
+	LSL	$32, acc0, t1
+	ADDS	acc0, acc1
+	ADCS	$0, acc2
+	ADCS	$0, acc3
+	ADC	$0, acc0
+	SUBS	t1, acc1
+	SBCS	t0, acc2
+	SBCS	t1, acc3
+	SBCS	t0, acc0
 	// Second reduction step
-	ADDS	acc1<<32, acc2, acc2
 	LSR	$32, acc1, t0
-	MUL	acc1, const1, t1
-	UMULH	acc1, const1, acc1
-	ADCS	t0, acc3, acc3
-	ADCS	t1, acc0, acc0
-	ADC	$0, acc1, acc1
+	LSL	$32, acc1, t1
+	ADDS	acc1, acc2
+	ADCS	$0, acc3
+	ADCS	$0, acc0
+	ADC	$0, acc1
+	SUBS	t1, acc2
+	SBCS	t0, acc3
+	SBCS	t1, acc0
+	SBCS	t0, acc1
 	// Third reduction step
-	ADDS	acc2<<32, acc3, acc3
 	LSR	$32, acc2, t0
-	MUL	acc2, const1, t1
-	UMULH	acc2, const1, acc2
-	ADCS	t0, acc0, acc0
-	ADCS	t1, acc1, acc1
-	ADC	$0, acc2, acc2
+	LSL	$32, acc2, t1
+	ADDS	acc2, acc3
+	ADCS	$0, acc0
+	ADCS	$0, acc1
+	ADC	$0, acc2
+	SUBS	t1, acc3
+	SBCS	t0, acc0
+	SBCS	t1, acc1
+	SBCS	t0, acc2
 	// Last reduction step
-	ADDS	acc3<<32, acc0, acc0
 	LSR	$32, acc3, t0
-	MUL	acc3, const1, t1
-	UMULH	acc3, const1, acc3
-	ADCS	t0, acc1, acc1
-	ADCS	t1, acc2, acc2
-	ADC	$0, acc3, acc3
+	LSL	$32, acc3, t1
+	ADDS	acc3, acc0
+	ADCS	$0, acc1
+	ADCS	$0, acc2
+	ADC	$0, acc3
+	SUBS	t1, acc0
+	SBCS	t0, acc1
+	SBCS	t1, acc2
+	SBCS	t0, acc3
 	// Add bits [511:256] of the sqr result
 	ADDS	acc4, acc0, acc0
 	ADCS	acc5, acc1, acc1
@@ -932,13 +956,16 @@ TEXT sm2MulInternal<>(SB),NOSPLIT,$0
 	UMULH	y0, x3, acc4
 	ADC	$0, acc4
 	// First reduction step
-	ADDS	acc0<<32, acc1, acc1
 	LSR	$32, acc0, t0
-	MUL	acc0, const1, t1
-	UMULH	acc0, const1, acc0
-	ADCS	t0, acc2
-	ADCS	t1, acc3
+	LSL	$32, acc0, t1
+	ADDS	acc0, acc1
+	ADCS	$0, acc2
+	ADCS	$0, acc3
 	ADC	$0, acc0
+	SUBS	t1, acc1
+	SBCS	t0, acc2
+	SBCS	t1, acc3
+	SBCS	t0, acc0
 	// y[1] * x
 	MUL	y1, x0, t0
 	ADDS	t0, acc1
@@ -962,13 +989,16 @@ TEXT sm2MulInternal<>(SB),NOSPLIT,$0
 	ADCS	t3, acc4
 	ADC	hlp0, acc5
 	// Second reduction step
-	ADDS	acc1<<32, acc2, acc2
 	LSR	$32, acc1, t0
-	MUL	acc1, const1, t1
-	UMULH	acc1, const1, acc1
-	ADCS	t0, acc3
-	ADCS	t1, acc0
+	LSL	$32, acc1, t1
+	ADDS	acc1, acc2
+	ADCS	$0, acc3
+	ADCS	$0, acc0
 	ADC	$0, acc1
+	SUBS	t1, acc2
+	SBCS	t0, acc3
+	SBCS	t1, acc0
+	SBCS	t0, acc1
 	// y[2] * x
 	MUL	y2, x0, t0
 	ADDS	t0, acc2
@@ -992,13 +1022,16 @@ TEXT sm2MulInternal<>(SB),NOSPLIT,$0
 	ADCS	t3, acc5
 	ADC	hlp0, acc6
 	// Third reduction step
-	ADDS	acc2<<32, acc3, acc3
 	LSR	$32, acc2, t0
-	MUL	acc2, const1, t1
-	UMULH	acc2, const1, acc2
-	ADCS	t0, acc0
-	ADCS	t1, acc1
+	LSL	$32, acc2, t1
+	ADDS	acc2, acc3
+	ADCS	$0, acc0
+	ADCS	$0, acc1
 	ADC	$0, acc2
+	SUBS	t1, acc3
+	SBCS	t0, acc0
+	SBCS	t1, acc1
+	SBCS	t0, acc2
 	// y[3] * x
 	MUL	y3, x0, t0
 	ADDS	t0, acc3
@@ -1022,13 +1055,16 @@ TEXT sm2MulInternal<>(SB),NOSPLIT,$0
 	ADCS	t3, acc6
 	ADC	hlp0, acc7
 	// Last reduction step
-	ADDS	acc3<<32, acc0, acc0
 	LSR	$32, acc3, t0
-	MUL	acc3, const1, t1
-	UMULH	acc3, const1, acc3
-	ADCS	t0, acc1
-	ADCS	t1, acc2
+	LSL	$32, acc3, t1
+	ADDS	acc3, acc0
+	ADCS	$0, acc1
+	ADCS	$0, acc2
 	ADC	$0, acc3
+	SUBS	t1, acc0
+	SBCS	t0, acc1
+	SBCS	t1, acc2
+	SBCS	t0, acc3
 	// Add bits [511:256] of the mul result
 	ADDS	acc4, acc0, acc0
 	ADCS	acc5, acc1, acc1
