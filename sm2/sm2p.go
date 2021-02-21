@@ -97,61 +97,51 @@ func getWordAt(x *big.Int, i int) big.Word {
 // use poly, shift/add/sub
 func (curve sm2Curve) multP(u uint64) *big.Int {
 	var uBN big.Int
-	/*
-		switch u {
-		case 0:
-			return &uBN
-		case 1:
-			return curve.P
-		case 0xffffffffffffffff:
-			uBN.Lsh(curve.P, 64)
-			return uBN.Sub(&uBN, curve.P)
-		}
-	*/
 	if u == 0 {
 		return &uBN
 	}
-	ub := new(big.Int).SetUint64(u)
 	var uBits [5]big.Word
 	uBits[4] = big.Word(u)
+	uBits[1] = big.Word(u)
 	res := new(big.Int).SetBits(uBits[:])
-	var uB64 [2]big.Word
-	uB64[1] = big.Word(u)
-	n64 := new(big.Int).SetBits(uB64[:])
-	n96 := new(big.Int).Lsh(n64, 32)
-	ww := n96.Bits()
-	var uB224 [5]big.Word
-	uB224[3] = ww[1]
-	if len(ww) > 2 {
-		uB224[4] = ww[2]
+	var uBits2 [5]big.Word
+	uBits2[0] = big.Word(u)
+	uBits2[1] = big.Word(u << 32)
+	uBits2[2] = big.Word(u >> 32)
+	uBits2[3] = big.Word(u << 32)
+	uBits2[4] = big.Word(u >> 32)
+	n19296 := new(big.Int).SetBits(uBits2[:])
+	res.Sub(res, n19296)
+	return res
+}
+
+func (curve sm2Curve) multPh(u uint64) *big.Int {
+	var uBN big.Int
+	if u == 0 {
+		return &uBN
 	}
-	n224 := new(big.Int).SetBits(uB224[:])
-	/*
-		res := new(big.Int).Lsh(ub, 256)
-		n64 := new(big.Int).Lsh(ub, 64)
-		n96 := new(big.Int).Lsh(ub, 96)
-		n224 := new(big.Int).Lsh(ub, 224)
-	*/
-	res.Sub(res, n224)
-	res.Sub(res, n96)
-	res.Add(res, n64)
-	res.Sub(res, ub)
+	var uBits [4]big.Word
+	uBits[3] = big.Word(u)
+	uBits[0] = big.Word(u)
+	res := new(big.Int).SetBits(uBits[:])
+	var uBits2 [4]big.Word
+	uBits2[0] = big.Word(u << 32)
+	uBits2[1] = big.Word(u >> 32)
+	uBits2[2] = big.Word(u << 32)
+	uBits2[3] = big.Word(u >> 32)
+	n19296 := new(big.Int).SetBits(uBits2[:])
+	res.Sub(res, n19296)
 	return res
 }
 
 func (curve sm2Curve) montRed(y *big.Int) *big.Int {
 	r := new(big.Int)
-	yy := y.Bits()
+	r.SetBytes(y.Bytes())
 	for i := 0; i < 4; i++ {
 		r0 := getWordAt(r, 0)
-		u := uint64(r0+yy[i]) * curve.k0 // uint64 same as modula 2^64
-		//s := new(big.Int).SetUint64(u)
-		//s.Mul(s, curve.P)
-		s := curve.multP(u)
+		u := uint64(r0) * curve.k0 // uint64 same as modula 2^64
+		s := curve.multPh(u)
 		r.Add(r, s)
-		t := new(big.Int).SetUint64(uint64(yy[i]))
-		r.Add(r, t)
-		//r.Rsh(r, 64)
 		ww := r.Bits()
 		r.SetBits(ww[1:])
 	}
@@ -163,20 +153,18 @@ func (curve sm2Curve) montRed(y *big.Int) *big.Int {
 
 func (curve sm2Curve) montMul(x, y *big.Int) *big.Int {
 	r := new(big.Int)
-	xx := x.Bits()
 	yy := y.Bits()
 	var t big.Int
 	for i := 0; i < 4; i++ {
-		r0 := getWordAt(r, 0)
-		u := uint64(r0+yy[i]*xx[0]) * curve.k0 // uint64 same as modula 2^64
-		s := curve.multP(u)
-		r.Add(r, s)
 		t.SetUint64(uint64(yy[i]))
 		t.Mul(&t, x)
 		r.Add(r, &t)
-		//r.Rsh(r, 64)
+		r0 := getWordAt(r, 0)
 		ww := r.Bits()
 		r.SetBits(ww[1:])
+		u := uint64(r0) * curve.k0 // uint64 same as modula 2^64
+		s := curve.multPh(u)
+		r.Add(r, s)
 	}
 	if r.Cmp(curve.P) >= 0 {
 		r.Sub(r, curve.P)

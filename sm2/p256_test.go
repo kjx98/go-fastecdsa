@@ -335,8 +335,8 @@ func TestRRbySM2(t *testing.T) {
 func TestSM2AsmGo(t *testing.T) {
 	goCurve := SM2go()
 	//asm version SM2 not work yet
-	asmCurve := SM2()
-	//asmCurve := P256()
+	//asmCurve := SM2()
+	asmCurve := P256()
 	goGx := goCurve.Params().Gx
 	goGy := goCurve.Params().Gy
 	gx, gy := goCurve.ScalarMult(goGx, goGy, d1.Bytes())
