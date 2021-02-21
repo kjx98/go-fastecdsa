@@ -263,9 +263,10 @@ TEXT ·p256FromMont(SB),NOSPLIT,$0
 	SBCS	t1, acc2
 	SBCS	t0, acc3
 
+	MOVD	$-1, t2
 	SUBS	$-1, acc0, t0
 	SBCS	const0, acc1, t1
-	SBCS	$-1, acc2, t2
+	SBCS	t2, acc2, t2
 	SBCS	const1, acc3, t3
 
 	CSEL	CS, t0, acc0, acc0
@@ -804,9 +805,10 @@ TEXT sm2SubInternal<>(SB),NOSPLIT,$0
 	SBCS	x3, y3, acc3
 	SBC	$0, ZR, t0
 
+	MOVD	$-1, acc6
 	ADDS	$-1, acc0, acc4
 	ADCS	const0, acc1, acc5
-	ADCS	$-1, acc2, acc6
+	ADCS	acc6, acc2, acc6
 	ADC	const1, acc3, acc7
 
 	ANDS	$1, t0
@@ -926,9 +928,10 @@ TEXT sm2SqrInternal<>(SB),NOSPLIT,$0
 	ADCS	acc7, acc3, acc3
 	ADC	$0, ZR, acc4
 
+	MOVD	$-1, t2
 	SUBS	$-1, acc0, t0
 	SBCS	const0, acc1, t1
-	SBCS	$-1, acc2, t2
+	SBCS	t2, acc2, t2
 	SBCS	const1, acc3, t3
 	SBCS	$0, acc4, acc4
 
@@ -1072,9 +1075,10 @@ TEXT sm2MulInternal<>(SB),NOSPLIT,$0
 	ADCS	acc7, acc3, acc3
 	ADC	$0, ZR, acc4
 
+	MOVD	$-1, t2
 	SUBS	$-1, acc0, t0
 	SBCS	const0, acc1, t1
-	SBCS	$-1, acc2, t2
+	SBCS	t2, acc2, t2
 	SBCS	const1, acc3, t3
 	SBCS	$0, acc4, acc4
 
@@ -1090,9 +1094,10 @@ TEXT sm2MulInternal<>(SB),NOSPLIT,$0
 	ADCS	y2, y2, x2;    \
 	ADCS	y3, y3, x3;    \
 	ADC	$0, ZR, hlp0;  \
+	MOVD	$-1, t2;	\
 	SUBS	$-1, x0, t0;   \
 	SBCS	const0, x1, t1;\
-	SBCS	$-1, x2, t2;    \
+	SBCS	t2, x2, t2;    \
 	SBCS	const1, x3, t3;\
 	SBCS	$0, hlp0, hlp0;\
 	CSEL	CC, x0, t0, x0;\
@@ -1157,9 +1162,10 @@ TEXT ·p256PointAddAffineAsm(SB),0,$264-96
 	SBCS	y3, const1, acc3
 	SBC	$0, ZR, t0
 
+	MOVD	$-1, acc6
 	ADDS	$-1, acc0, acc4
 	ADCS	const0, acc1, acc5
-	ADCS	$-1, acc2, acc6
+	ADCS	acc6, acc2, acc6
 	ADCS	const1, acc3, acc7
 	ADC	$0, t0, t0
 
@@ -1310,9 +1316,10 @@ TEXT ·p256PointAddAffineAsm(SB),0,$264-96
 	ADCS	y2, x2, x2;    \
 	ADCS	y3, x3, x3;    \
 	ADC	$0, ZR, hlp0;  \
+	MOVD	$-1, t2;	\
 	SUBS	$-1, x0, t0;   \
 	SBCS	const0, x1, t1;\
-	SBCS	$-1, x2, t2;    \
+	SBCS	t2, x2, t2;    \
 	SBCS	const1, x3, t3;\
 	SBCS	$0, hlp0, hlp0;\
 	CSEL	CC, x0, t0, x0;\
@@ -1373,9 +1380,10 @@ TEXT ·p256PointDoubleAsm(SB),NOSPLIT,$136-48
 	CALL	sm2SqrInternal<>(SB)
 
 	// Divide by 2
+	MOVD	$-1, t2
 	ADDS	$-1, y0, t0
 	ADCS	const0, y1, t1
-	ADCS	$-1, y2, t2
+	ADCS	t2, y2, t2
 	ADCS	const1, y3, t3
 	ADC	$0, ZR, hlp0
 
