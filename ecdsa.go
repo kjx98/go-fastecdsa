@@ -50,7 +50,7 @@ type combinedMult interface {
 }
 
 type signIntf interface {
-	Sign(msg, secret, px, py *big.Int) (r, s *big.Int, err error)
+	Sign(msg, secret *big.Int) (r, s *big.Int, err error)
 	Verify(r, s, msg, px, py *big.Int) bool
 }
 
@@ -173,8 +173,7 @@ func Sign(rand io.Reader, priv *PrivateKey, hash []byte) (r, s *big.Int, err err
 	if in, ok := priv.PublicKey.Curve.(signIntf); ok {
 		c := priv.PublicKey.Curve
 		e := hashToInt(hash, c)
-		pub := priv.PublicKey
-		return in.Sign(e, priv.D, pub.X, pub.Y)
+		return in.Sign(e, priv.D)
 	}
 	//randutil.MaybeReadByte(rand)
 

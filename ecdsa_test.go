@@ -115,8 +115,10 @@ func BenchmarkVerifyP256(b *testing.B) {
 	})
 }
 
+// VerifySM2 golang asm may hangup
+/*
 func BenchmarkVerifySM2(b *testing.B) {
-	b.ResetTimer()
+	b.StopTimer()
 	//p256 := sm2.P256()
 	p256 := sm2.SM2()
 	hashed := []byte("testing")
@@ -124,13 +126,12 @@ func BenchmarkVerifySM2(b *testing.B) {
 	r, s, _ := Sign(rand.Reader, priv, hashed)
 
 	b.ReportAllocs()
-	b.ResetTimer()
-	b.RunParallel(func(pb *testing.PB) {
-		for pb.Next() {
-			Verify(&priv.PublicKey, hashed, r, s)
-		}
-	})
+	b.StartTimer()
+	for i := 0; i < b.N; i++ {
+		Verify(&priv.PublicKey, hashed, r, s)
+	}
 }
+*/
 
 func BenchmarkVerifySM2C(b *testing.B) {
 	b.ResetTimer()

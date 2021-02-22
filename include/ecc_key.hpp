@@ -125,6 +125,11 @@ public:
 	{
 		init(curve, secret);
 	}
+	template<typename curveT>
+	private_key(const curveT& curve, const felem_t& secret)
+	{
+		init(curve, secret);
+	}
 	explicit operator bool() const noexcept { return _inited; }
 	const felem_t&		D() const noexcept { return *(&_d); }
 #ifdef	WITH_MONT_D

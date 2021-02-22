@@ -329,12 +329,12 @@ func (c p256Curve) Verify(r, s, msg, px, py *big.Int) bool {
 	return x1.Cmp(r) == 0
 }
 
-func (c p256Curve) Sign(msg, secret, px, py *big.Int) (r, s *big.Int, err error) {
-	r, s, _, err = c.SignV(msg, secret, px, py)
+func (c p256Curve) Sign(msg, secret *big.Int) (r, s *big.Int, err error) {
+	r, s, _, err = c.SignV(msg, secret)
 	return
 }
 
-func (c p256Curve) SignV(msg, secret, px, py *big.Int) (r, s *big.Int,
+func (c p256Curve) SignV(msg, secret *big.Int) (r, s *big.Int,
 	v uint, err error) {
 	var kB [32]byte
 	N := c.Params().N
