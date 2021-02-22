@@ -96,6 +96,7 @@ func (priv *PrivateKey) Sign(rand io.Reader, digest []byte, opts crypto.SignerOp
 }
 
 var one = new(big.Int).SetInt64(1)
+var two = new(big.Int).SetInt64(2)
 
 // randFieldElement returns a random element of the field underlying the given
 // curve using the procedure given in [NSA] A.2.1.
@@ -108,7 +109,10 @@ func randFieldElement(c elliptic.Curve, rand io.Reader) (k *big.Int, err error) 
 	}
 
 	k = new(big.Int).SetBytes(b)
-	n := new(big.Int).Sub(params.N, one)
+	// since SM2 using  (1 + dA)^-1, dA MUST between 1 .. N-2
+	//n := new(big.Int).Sub(params.N, one)
+	n := new(big.Int).Sub(params.N, two)
+
 	k.Mod(k, n)
 	k.Add(k, one)
 	return
@@ -154,7 +158,6 @@ func hashToInt(hash []byte, c elliptic.Curve) *big.Int {
 // in math/big.Int.ModInverse) although math/big itself isn't strictly
 // constant-time so it's not perfect.
 func fermatInverse(k, N *big.Int) *big.Int {
-	two := big.NewInt(2)
 	nMinus2 := new(big.Int).Sub(N, two)
 	return new(big.Int).Exp(k, nMinus2, N)
 }
