@@ -32,7 +32,7 @@ type (
 )
 
 var (
-	pSM2            =p256Curve{CurveParams: sm2Params}
+	pSM2            = p256Curve{CurveParams: sm2Params}
 	p256Precomputed *[43][32 * 8]uint64
 	precomputeOnce  sync.Once
 	n2minus         *big.Int
@@ -40,14 +40,18 @@ var (
 	two             = new(big.Int).SetInt64(2)
 	one             = []uint64{1, 0, 0, 0}
 	p256MontOne     = []uint64{1, 0xffffffff, 0, 0x100000000}
-	nRR             = []uint64{0x901192af7c114f20, 0x3464504ade6fa2fa, 0x620fc84c3affe0d4, 0x1eb5e412a22b3d3b}
 )
 var errZeroParam = errors.New("zero parameter")
+
+// nRR 2^512 mod N
+var nRR = []uint64{0x901192af7c114f20, 0x3464504ade6fa2fa, 0x620fc84c3affe0d4,
+	0x1eb5e412a22b3d3b}
 
 // p256Mul operates in a Montgomery domain with R = 2^256 mod p, where p is the
 // underlying field of the curve. (See initP256 for the value.) Thus rr here is
 // R×R mod p. See comment in Inverse about how this is used.
-var rr = []uint64{0x0000000200000003, 0x00000002ffffffff, 0x0000000100000001, 0x0000000400000002}
+var rr = []uint64{0x0000000200000003, 0x00000002ffffffff, 0x0000000100000001,
+	0x0000000400000002}
 
 func initSM2() {
 	// See FIPS 186-3, section D.2.3
@@ -313,11 +317,11 @@ func (c p256Curve) Verify(r, s, msg, px, py *big.Int) bool {
 	if N.Sign() == 0 {
 		return false
 	}
-/*
-	r.Mod(r, N)
-	s.Mod(s, N)
-*/
-	if r.Sign() == 0 || s.Sign() == 0 {
+	/*
+		r.Mod(r, N)
+		s.Mod(s, N)
+	*/
+	if r.Sign() <= 0 || s.Sign() <= 0 {
 		return false
 	}
 	t := new(big.Int).Add(r, s)
@@ -501,6 +505,83 @@ func p256Inverse(out, in []uint64) {
 
 	p256Sqr(out, out, 2)
 	p256Mul(out, out, in)
+}
+
+// p256ExpQuadP sets out to in^-1 mod p.
+func p256ExpQuadP(out, in []uint64) {
+	var stack [8 * 4]uint64
+	p2 := stack[4*0 : 4*0+4]
+	p4 := stack[4*1 : 4*1+4]
+	p8 := stack[4*2 : 4*2+4]
+	p16 := stack[4*3 : 4*3+4]
+	p32 := stack[4*4 : 4*4+4]
+	p3 := stack[4*5 : 4*5+4]
+	_101 := stack[4*6 : 4*6+4]
+
+	p256Sqr(out, in, 1)
+	p256Mul(p2, out, in)   // 3*p
+	p256Mul(_101, out, p2) // 101 * p
+
+	p256Sqr(out, p2, 1)
+	p256Mul(p3, out, in) // 7*p
+
+	p256Sqr(out, p2, 2)
+	p256Mul(p4, out, p2) // f*p
+
+	p256Sqr(out, p4, 4)
+	p256Mul(p8, out, p4) // ff*p
+
+	p256Sqr(out, p8, 8)
+	p256Mul(p16, out, p8) // ffff*p
+
+	p256Sqr(out, p16, 16)
+	p256Mul(p32, out, p16) // ffffffff*p
+
+	p256Sqr(out, p16, 8)
+	p256Mul(out, out, p8) // ffffff*p
+	p256Sqr(out, out, 4)
+	p256Mul(out, out, p4) // fffffff*p
+	p256Sqr(out, out, 3)
+	p256Mul(out, out, p3)
+	p256Sqr(out, out, 1) // fffffffe*p
+
+	p256Sqr(out, out, 32)
+	p256Mul(out, out, p32) // fffffffeffffffff
+
+	p256Sqr(out, out, 32)
+	p256Mul(out, out, p32)
+	p256Sqr(out, out, 32)
+	p256Mul(out, out, p32) // ... ffffffffffffffff
+	p256Sqr(out, out, 32)
+	p256Mul(out, out, p32)
+	p256Sqr(out, out, 32) // ... ffffffff00000000
+
+	p256Sqr(out, out, 32)
+	p256Mul(out, out, p32)
+
+	p256Sqr(out, out, 16)
+	p256Mul(out, out, p16)
+
+	p256Sqr(out, out, 8)
+	p256Mul(out, out, p8)
+
+	p256Sqr(out, out, 4)
+	p256Mul(out, out, p4)
+
+	p256Sqr(out, out, 2)
+	p256Mul(out, out, p2)
+}
+
+// p256ExpQuadP sets out to in^-1 mod p.
+func p256Sqrt(out, in []uint64) bool {
+	var xp, a0, a1 [4]uint64
+	p256Mul(xp[:], in, rr)
+	p256ExpQuadP(a1[:], xp[:])
+	p256Mul(out, a1[:], xp[:])
+	p256Mul(a0[:], out, a1[:])
+	p256FromMont(out, out)
+	return a0[0] == p256MontOne[0] && a0[1] == p256MontOne[1] &&
+		a0[2] == p256MontOne[2] && a0[3] == p256MontOne[3]
 }
 
 func (p *p256Point) p256StorePoint(r *[16 * 4 * 3]uint64, index int) {

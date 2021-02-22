@@ -29,8 +29,9 @@ func asmMontSqr(x *big.Int) *big.Int {
 	var xp [4]uint64
 	var res [4]uint64
 	fromBig(xp[:], x)
-	p256Mul(res[:], xp[:], rr)
-	p256Sqr(res[:], res[:], 1)
+	// toMontgomery form
+	p256Mul(xp[:], xp[:], rr)
+	p256Sqr(res[:], xp[:], 1)
 	p256FromMont(res[:], res[:])
 	return toBig(res[:])
 }
@@ -43,7 +44,6 @@ func asmOrdMult(x, y *big.Int) *big.Int {
 	p256OrdMul(xp[:], xp[:], nRR)
 	p256OrdMul(yp[:], yp[:], nRR)
 	p256OrdMul(res[:], xp[:], yp[:])
-	one := []uint64{1, 0, 0, 0}
 	p256OrdMul(res[:], res[:], one)
 	return toBig(res[:])
 }
@@ -54,7 +54,6 @@ func asmOrdSqr(x *big.Int) *big.Int {
 	fromBig(xp[:], x)
 	p256OrdMul(xp[:], xp[:], nRR)
 	p256OrdSqr(res[:], xp[:], 1)
-	one := []uint64{1, 0, 0, 0}
 	p256OrdMul(res[:], res[:], one)
 	return toBig(res[:])
 }
@@ -72,6 +71,16 @@ func asmMontMul(x, y *big.Int) *big.Int {
 	yp := asmMontMult(y, sm2g.rr)
 	res := asmMontMult(xp, yp)
 	return asmMontRed(res)
+}
+
+func asmSqrt(y *big.Int) (rt *big.Int) {
+	var yp [4]uint64
+	var res [4]uint64
+	fromBig(yp[:], y)
+	if p256Sqrt(res[:], yp[:]) {
+		rt = toBig(res[:])
+	}
+	return
 }
 
 func TestAsmMontMul(t *testing.T) {
@@ -99,11 +108,25 @@ func TestAsmMontSqr(t *testing.T) {
 		t.Logf("MontSqrMod step 1 diff:\n%s vs\n%s", m1.Text(16), m2.Text(16))
 		t.Fail()
 	}
+	if m3 := asmSqrt(m2); m3 == nil {
+		t.Log("Can't get Sqrt")
+		t.Fail()
+	} else if m3.Cmp(x1) != 0 {
+		t.Logf("ModSqrt step 1 diff:\n%s vs\n%s", x1.Text(16), m3.Text(16))
+		t.Fail()
+	}
 	prod = new(big.Int).Mul(x2, x2)
 	m1 = new(big.Int).Mod(prod, sm2g.P)
 	m2 = asmMontSqr(x2)
 	if m1.Cmp(m2) != 0 {
 		t.Logf("MontSqrMod step2 diff:\n%s vs\n%s", m1.Text(16), m2.Text(16))
+		t.Fail()
+	}
+	if m3 := asmSqrt(m2); m3 == nil {
+		t.Log("Can't get Sqrt")
+		t.Fail()
+	} else if m3.Cmp(x2) != 0 {
+		t.Logf("ModSqrt step 2 diff:\n%s vs\n%s", x1.Text(16), m3.Text(16))
 		t.Fail()
 	}
 }
@@ -125,10 +148,10 @@ func TestAsmOrdMul(t *testing.T) {
 	}
 }
 
-/*
 func TestAsmOrdSqr(t *testing.T) {
 	prod := new(big.Int).Mul(x1, x1)
 	m1 := new(big.Int).Mod(prod, sm2g.N)
+	//m2 := asmOrdMult(x1, x1)
 	m2 := asmOrdSqr(x1)
 	if m1.Cmp(m2) != 0 {
 		t.Logf("OrdSqrMod step 1 diff:\n%s vs\n%s", m1.Text(16), m2.Text(16))
@@ -136,13 +159,13 @@ func TestAsmOrdSqr(t *testing.T) {
 	}
 	prod = new(big.Int).Mul(x2, x2)
 	m1 = new(big.Int).Mod(prod, sm2g.N)
+	//m2 = asmOrdMult(x2, x2)
 	m2 = asmOrdSqr(x2)
 	if m1.Cmp(m2) != 0 {
 		t.Logf("OrdSqrMod step2 diff:\n%s vs\n%s", m1.Text(16), m2.Text(16))
 		t.Fail()
 	}
 }
-*/
 
 func TestAsmInverse(t *testing.T) {
 	p := sm2g.P
@@ -193,6 +216,17 @@ func BenchmarkAsmOrdMul(b *testing.B) {
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
 		p256OrdMul(res[:], xp[:], nRR)
+	}
+}
+
+func BenchmarkAsmOrdSqr(b *testing.B) {
+	b.ResetTimer()
+	var res, xp [4]uint64
+	fromBig(xp[:], x1)
+	p256OrdMul(res[:], xp[:], nRR)
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		p256OrdSqr(res[:], res[:], 1)
 	}
 }
 

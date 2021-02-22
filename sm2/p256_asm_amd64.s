@@ -1174,11 +1174,9 @@ ordSqrLoop:
 	ADCQ $0, DX
 	ADDQ AX, acc1
 
-	MOVQ t0, t1
+	MOVQ $0, t1
 	ADCQ DX, acc2
 	ADCQ $0, t1
-	SUBQ t0, acc2
-	SBBQ $0, t1
 
 	MOVQ t0, AX
 	MOVQ t0, DX
@@ -1188,7 +1186,8 @@ ordSqrLoop:
 
 	ADDQ t1, acc3
 	ADCQ $0, acc0
-	SUBQ AX, acc3
+	SUBQ t0, acc2
+	SBBQ AX, acc3
 	SBBQ DX, acc0
 	// Second reduction step
 	MOVQ acc1, AX
@@ -1207,11 +1206,9 @@ ordSqrLoop:
 	ADCQ $0, DX
 	ADDQ AX, acc2
 
-	MOVQ t0, t1
+	MOVQ $0, t1
 	ADCQ DX, acc3
 	ADCQ $0, t1
-	SUBQ t0, acc3
-	SBBQ $0, t1
 
 	MOVQ t0, AX
 	MOVQ t0, DX
@@ -1221,7 +1218,8 @@ ordSqrLoop:
 
 	ADDQ t1, acc0
 	ADCQ $0, acc1
-	SUBQ AX, acc0
+	SUBQ t0, acc3
+	SBBQ AX, acc0
 	SBBQ DX, acc1
 	// Third reduction step
 	MOVQ acc2, AX
@@ -1240,11 +1238,9 @@ ordSqrLoop:
 	ADCQ $0, DX
 	ADDQ AX, acc3
 
-	MOVQ t0, t1
+	MOVQ $0, t1
 	ADCQ DX, acc0
 	ADCQ $0, t1
-	SUBQ t0, acc0
-	SBBQ $0, t1
 
 	MOVQ t0, AX
 	MOVQ t0, DX
@@ -1254,7 +1250,8 @@ ordSqrLoop:
 
 	ADDQ t1, acc1
 	ADCQ $0, acc2
-	SUBQ AX, acc1
+	SUBQ t0, acc0
+	SBBQ AX, acc1
 	SBBQ DX, acc2
 	// Last reduction step
 	MOVQ acc3, AX
@@ -1275,11 +1272,9 @@ ordSqrLoop:
 	ADCQ $0, DX
 	MOVQ DX, t1
 
-	MOVQ t0, t1
+	MOVQ $0, t1
 	ADCQ DX, acc1
 	ADCQ $0, t1
-	SUBQ t0, acc1
-	SBBQ $0, t1
 
 	MOVQ t0, AX
 	MOVQ t0, DX
@@ -1289,7 +1284,8 @@ ordSqrLoop:
 
 	ADDQ t1, acc2
 	ADCQ $0, acc3
-	SUBQ AX, acc2
+	SUBQ t0, acc1
+	SBBQ AX, acc2
 	SBBQ DX, acc3
 	XORQ t0, t0
 	// Add bits [511:256] of the sqr result
