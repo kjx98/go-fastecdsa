@@ -66,6 +66,15 @@ func (curve p256Curve) Params() *CurveParams {
 }
 
 // Functions implemented in p256_asm_*64.s
+// Add modulo sm2 Prime256
+//go:noescape
+func p256Add(res, in1, in2 []uint64)
+
+// Sub modulo sm2 Prime256
+//go:noescape
+func p256Sub(res, in1, in2 []uint64)
+
+// Functions implemented in p256_asm_*64.s
 // Montgomery multiplication modulo P256
 //go:noescape
 func p256Mul(res, in1, in2 []uint64)
@@ -405,13 +414,25 @@ func RecoverPoint(x1 *big.Int, v uint) (y1 *big.Int, err error) {
 	p256Mul(t1[:], t1[:], xp[:])
 	// t1 = x1^3
 	p256FromMont(t1[:], t1[:])
+	//fromBig(xp[:], x1)
+	//p256Sub(t1[:], t1[:], xp[:])
+	//p256Sub(t1[:], t1[:], xp[:])
+	//p256Sub(t1[:], t1[:], xp[:])
 	tt := toBig(t1[:])
+	//fromBig(xp[:], c.B)
+	//p256Add(t1[:], t1[:], xp[:])
 	tt.Sub(tt, x1)
-	if tt.Sign() < 0 { tt.Add(tt, c.P) }
+	if tt.Sign() < 0 {
+		tt.Add(tt, c.P)
+	}
 	tt.Sub(tt, x1)
-	if tt.Sign() < 0 { tt.Add(tt, c.P) }
+	if tt.Sign() < 0 {
+		tt.Add(tt, c.P)
+	}
 	tt.Sub(tt, x1)
-	if tt.Sign() < 0 { tt.Add(tt, c.P) }
+	if tt.Sign() < 0 {
+		tt.Add(tt, c.P)
+	}
 	tt.Add(tt, c.B)
 	tt.Mod(tt, c.P)
 	//if tt.Sign() < 0 { tt.Add(tt, c.P) }
@@ -420,18 +441,20 @@ func RecoverPoint(x1 *big.Int, v uint) (y1 *big.Int, err error) {
 		return nil, errSqrt
 	}
 	tt = toBig(t1[:])
-	if (v  ^ tt.Bit(0)) != 0 {  tt.Sub(c.P, tt) }
-/*
-	if v != 0 {
-		if tt.Bit(0) == 0 {
-			tt.Sub(c.P, tt)
-		}
-	} else {
-		if tt.Bit(0) != 0 {
-			tt.Sub(c.P, tt)
-		}
+	if (v ^ tt.Bit(0)) != 0 {
+		tt.Sub(c.P, tt)
 	}
-*/
+	/*
+		if v != 0 {
+			if tt.Bit(0) == 0 {
+				tt.Sub(c.P, tt)
+			}
+		} else {
+			if tt.Bit(0) != 0 {
+				tt.Sub(c.P, tt)
+			}
+		}
+	*/
 	return tt, nil
 }
 
