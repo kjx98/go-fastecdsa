@@ -29,7 +29,8 @@ func TestEccCurveParam(t *testing.T) {
 }
 
 func TestMontMultModP(t *testing.T) {
-	p := sm2.P256().Params().P
+	//p := sm2.P256().Params().P
+	p := sm2.SM2().Params().P
 	xy := new(big.Int).Mul(x1, y1)
 	xyMod := new(big.Int).Mod(xy, p)
 	bMod := vliModMultMontP(x1.Bits(), y1.Bits())
@@ -49,7 +50,8 @@ func TestMontMultModP(t *testing.T) {
 }
 
 func TestCurveAdd(t *testing.T) {
-	c := sm2.SM2go()
+	//c := sm2.SM2go()
+	c := sm2.SM2()
 	x3, y3 := c.Add(x1, y1, x2, y2)
 	x3a, y3a := sm2c.Add(x1, y1, x2, y2)
 	if x3.Cmp(x3a) != 0 {
@@ -132,7 +134,8 @@ func TestCurveAddJacobian(t *testing.T) {
 }
 
 func TestCurveDouble(t *testing.T) {
-	c := sm2.SM2go()
+	//c := sm2.SM2go()
+	c := sm2.SM2()
 	x3, y3 := c.Double(x1, y1)
 	x3a, y3a := sm2c.Double(x1, y1)
 	if x3.Cmp(x3a) != 0 {
@@ -271,7 +274,8 @@ func TestCurveDoubleJacobian(t *testing.T) {
 }
 
 func TestCurveMult(t *testing.T) {
-	goCurve := sm2.SM2go()
+	//goCurve := sm2.SM2go()
+	goCurve := sm2.SM2()
 	cCurve := sm2c
 	goGx := goCurve.Params().Gx
 	goGy := goCurve.Params().Gy
@@ -290,7 +294,8 @@ func TestCurveMult(t *testing.T) {
 }
 
 func TestCurveBaseMult(t *testing.T) {
-	goCurve := sm2.SM2go()
+	//goCurve := sm2.SM2go()
+	goCurve := sm2.SM2()
 	cCurve := sm2c
 	gx, gy := goCurve.ScalarBaseMult(d1.Bytes())
 	ax, ay := cCurve.ScalarBaseMult(d1.Bytes())

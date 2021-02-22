@@ -209,3 +209,15 @@ func BenchmarkAsmECMULT(b *testing.B) {
 		}
 	})
 }
+
+func BenchmarkAsmECGMULT(b *testing.B) {
+	b.ResetTimer()
+	Curve := SM2()
+
+	b.ResetTimer()
+	b.RunParallel(func(pb *testing.PB) {
+		for pb.Next() {
+			_, _ = Curve.ScalarBaseMult(d1.Bytes())
+		}
+	})
+}
