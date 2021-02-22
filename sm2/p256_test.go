@@ -12,7 +12,6 @@ var (
 	x1, y1 *big.Int
 	x2, y2 *big.Int
 	d1, d2 *big.Int
-	one    *big.Int
 	n256   *big.Int
 )
 
@@ -23,8 +22,7 @@ func init() {
 	y2, _ = new(big.Int).SetString("c7337843bdb886bff9965b00c6d87aff04f8d6bfa6a6846c0f28e513642bf309", 16)
 	d1, _ = new(big.Int).SetString("44960d13c3ae7889e7fdfc0c48f4ac1da4e68fd3a5be28ad3f53eddad6d9c892", 16)
 	d2, _ = new(big.Int).SetString("b68c5c25852521c647d7d0eddd09494949602ebaa885202a5573bb6ec8c5d96f", 16)
-	one = new(big.Int).SetUint64(1)
-	n256 = new(big.Int).Lsh(one, 256)
+	n256 = new(big.Int).Lsh(bigOne, 256)
 }
 
 func calcK0(p *big.Int) uint64 {
@@ -57,7 +55,7 @@ func calcK0a(p *big.Int) uint64 {
 }
 
 func calcRRa(p *big.Int) *big.Int {
-	n260 := new(big.Int).Lsh(one, 260)
+	n260 := new(big.Int).Lsh(bigOne, 260)
 	t := new(big.Int).Sub(n260, p)
 	for i := 260; i < 520; i++ {
 		t.Add(t, t)
@@ -87,13 +85,13 @@ func TestRRbyP256(t *testing.T) {
 
 	p := cParams.P
 	// verify Prime poly
-	n96 := new(big.Int).Lsh(one, 96)
-	n224 := new(big.Int).Lsh(one, 224)
-	n192 := new(big.Int).Lsh(one, 192)
+	n96 := new(big.Int).Lsh(bigOne, 96)
+	n224 := new(big.Int).Lsh(bigOne, 224)
+	n192 := new(big.Int).Lsh(bigOne, 192)
 	polyP := new(big.Int).Sub(n256, n224)
 	polyP.Add(polyP, n192)
 	polyP.Add(polyP, n96)
-	polyP.Sub(polyP, one)
+	polyP.Sub(polyP, bigOne)
 	if polyP.Cmp(p) != 0 {
 		ww = polyP.Bits()
 		t.Logf("P256 polyP diff P: %X %X %X %X", ww[0], ww[1], ww[2], ww[3])
@@ -217,15 +215,15 @@ func TestRRbyBTC(t *testing.T) {
 }
 
 func TestRRbySM2(t *testing.T) {
-	n96 := new(big.Int).Lsh(one, 96)
-	n64 := new(big.Int).Lsh(one, 64)
-	//n128 := new(big.Int).Lsh(one, 128)
-	n224 := new(big.Int).Lsh(one, 224)
+	n96 := new(big.Int).Lsh(bigOne, 96)
+	n64 := new(big.Int).Lsh(bigOne, 64)
+	//n128 := new(big.Int).Lsh(bigOne, 128)
+	n224 := new(big.Int).Lsh(bigOne, 224)
 	smPP := new(big.Int).Sub(n256, n224)
 	//smPP.Sub(smPP, n128)
 	smPP.Sub(smPP, n96)
 	smPP.Add(smPP, n64)
-	smPP.Sub(smPP, one)
+	smPP.Sub(smPP, bigOne)
 	n512 := new(big.Int).Mul(n256, n256)
 	cParams := sm2g.Params()
 	n := cParams.N

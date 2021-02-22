@@ -15,7 +15,9 @@
 package sm2
 
 import (
+	"errors"
 	"math/big"
+	"math/rand"
 	"sync"
 )
 
@@ -33,9 +35,14 @@ var (
 	pSM2            p256Curve
 	p256Precomputed *[43][32 * 8]uint64
 	precomputeOnce  sync.Once
+	n2minus         *big.Int
+	bigOne          = new(big.Int).SetInt64(1)
+	two             = new(big.Int).SetInt64(2)
+	one             = []uint64{1, 0, 0, 0}
 	p256MontOne     = []uint64{1, 0xffffffff, 0, 0x100000000}
 	nRR             = []uint64{0x901192af7c114f20, 0x3464504ade6fa2fa, 0x620fc84c3affe0d4, 0x1eb5e412a22b3d3b}
 )
+var errZeroParam = errors.New("zero parameter")
 
 // p256Mul operates in a Montgomery domain with R = 2^256 mod p, where p is the
 // underlying field of the curve. (See initP256 for the value.) Thus rr here is
@@ -45,6 +52,7 @@ var rr = []uint64{0x0000000200000003, 0x00000002ffffffff, 0x0000000100000001, 0x
 func initSM2() {
 	// See FIPS 186-3, section D.2.3
 	pSM2.CurveParams = sm2Params
+	n2minus = new(big.Int).Sub(sm2Params.N, two)
 }
 
 func (curve p256Curve) Params() *CurveParams {
@@ -190,7 +198,6 @@ func (curve p256Curve) Inverse(k *big.Int) *big.Int {
 
 		// Multiplying by one in the Montgomery domain converts a Montgomery
 		// value out of the domain.
-		one := []uint64{1, 0, 0, 0}
 		p256OrdMul(x, x, one)
 
 		xOut := make([]byte, 32)
@@ -299,6 +306,79 @@ func (curve p256Curve) ScalarMult(bigX, bigY *big.Int, scalar []byte) (x, y *big
 
 	r.p256ScalarMult(scalarReversed)
 	return r.p256PointToAffine()
+}
+
+func (c p256Curve) Verify(r, s, msg, px, py *big.Int) bool {
+	N := c.Params().N
+	if N.Sign() == 0 {
+		return false
+	}
+	r.Mod(r, N)
+	s.Mod(s, N)
+	if r.Sign() == 0 || s.Sign() == 0 {
+		return false
+	}
+	t := new(big.Int).Add(r, s)
+	t.Mod(t, N)
+	if t.Sign() == 0 {
+		return false
+	}
+	x1, _ := c.CombinedMult(px, py, s.Bytes(), t.Bytes())
+	x1.Add(x1, msg)
+	x1.Mod(x1, N)
+	return x1.Cmp(r) == 0
+}
+
+func (c p256Curve) Sign(msg, secret, px, py *big.Int) (r, s *big.Int, err error) {
+	r, s, _, err = c.SignV(msg, secret, px, py)
+	return
+}
+
+func (c p256Curve) SignV(msg, secret, px, py *big.Int) (r, s *big.Int,
+	v uint, err error) {
+	var kB [32]byte
+	N := c.Params().N
+	if N.Sign() == 0 {
+		return nil, nil, 0, errZeroParam
+	}
+	dInv := new(big.Int).Add(secret, bigOne)
+	if dInv.ModInverse(dInv, N) == nil {
+		return nil, nil, 0, errZeroParam
+	}
+	var res, xp, yp [4]uint64
+	fromBig(xp[:], dInv)
+	p256OrdMul(xp[:], xp[:], nRR)
+	for {
+		rand.Read(kB[:])
+		k := new(big.Int).SetBytes(kB[:])
+		k.Mod(k, n2minus)
+		k.Add(k, bigOne)
+		x1, y1 := c.ScalarBaseMult(k.Bytes())
+		r = new(big.Int).Add(x1, msg)
+		r.Mod(r, c.Params().N)
+		if r.Sign() == 0 {
+			continue
+		}
+		v = y1.Bit(0)
+		k.Add(k, r)
+		k.Mod(k, N)
+		if k.Sign() == 0 {
+			continue
+		}
+		fromBig(yp[:], k)
+		p256OrdMul(yp[:], yp[:], nRR)
+		p256OrdMul(res[:], xp[:], yp[:])
+		p256OrdMul(res[:], res[:], one)
+		s = toBig(res[:])
+		if s.Sign() == 0 {
+			continue
+		}
+		s.Sub(s, r)
+		if s.Sign() != 0 {
+			break
+		}
+	}
+	return
 }
 
 // uint64IsZero returns 1 if x is zero and zero otherwise.

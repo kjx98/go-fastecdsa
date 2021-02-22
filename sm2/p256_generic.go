@@ -7,10 +7,13 @@
 package sm2
 
 var (
-	pSM2 p256Curve
+	//pSM2 p256Curve
+	pSM2 Curve
 )
 
 func initP256Arch() {
 	// Use pure Go implementation.
-	pSM2 = p256Curve{sm2Params}
+	// p256.go not work yet, using default golang impl
+	//pSM2 = p256Curve{sm2Params}
+	pSM2 = SM2go()
 }
