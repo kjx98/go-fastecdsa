@@ -32,7 +32,7 @@ type (
 )
 
 var (
-	pSM2            p256Curve
+	pSM2            =p256Curve{CurveParams: sm2Params}
 	p256Precomputed *[43][32 * 8]uint64
 	precomputeOnce  sync.Once
 	n2minus         *big.Int
@@ -51,7 +51,7 @@ var rr = []uint64{0x0000000200000003, 0x00000002ffffffff, 0x0000000100000001, 0x
 
 func initSM2() {
 	// See FIPS 186-3, section D.2.3
-	pSM2.CurveParams = sm2Params
+	//pSM2.CurveParams = sm2Params
 	n2minus = new(big.Int).Sub(sm2Params.N, two)
 }
 
@@ -313,8 +313,10 @@ func (c p256Curve) Verify(r, s, msg, px, py *big.Int) bool {
 	if N.Sign() == 0 {
 		return false
 	}
+/*
 	r.Mod(r, N)
 	s.Mod(s, N)
+*/
 	if r.Sign() == 0 || s.Sign() == 0 {
 		return false
 	}
@@ -374,6 +376,10 @@ func (c p256Curve) SignV(msg, secret *big.Int) (r, s *big.Int,
 			continue
 		}
 		s.Sub(s, r)
+		if s.Sign() < 0 {
+			s.Add(s, N)
+		}
+		s.Mod(s, N)
 		if s.Sign() != 0 {
 			break
 		}

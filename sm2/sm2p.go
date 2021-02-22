@@ -27,14 +27,16 @@ type sm2Curve struct {
 	rr *big.Int
 }
 
-var sm2g sm2Curve
+var sm2g =sm2Curve{ CurveParams: sm2Params,
+	k0: 1, //0x327f9e8872350975
+}
 var sm2Base *big.Int
 var montOne *big.Int
 
 func initSM2go() {
 	// Use pure Go implementation.
-	sm2g.CurveParams = sm2Params
-	sm2g.k0 = 1 //0x327f9e8872350975
+	//sm2g.CurveParams = sm2Params
+	//sm2g.k0 = 1 //0x327f9e8872350975
 	n512 := new(big.Int).SetUint64(1)
 	sm2Base = new(big.Int).Lsh(n512, 256)
 	n512.Lsh(n512, 512)
