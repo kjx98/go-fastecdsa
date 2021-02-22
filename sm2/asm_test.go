@@ -189,7 +189,7 @@ func TestPointRecover(t *testing.T) {
 	c := pSM2
 	px, py := c.ScalarBaseMult(d1.Bytes())
 	v := py.Bit(0)
-	if py2, err := c.RecoverPoint(px, v); err != nil {
+	if py2, err := RecoverPoint(px, v); err != nil {
 		t.Log("Can't recover pointY, error:", err)
 		t.Fail()
 	} else if py2.Cmp(py) != 0 {
@@ -198,7 +198,7 @@ func TestPointRecover(t *testing.T) {
 	}
 	px, py = c.ScalarBaseMult(d2.Bytes())
 	v = py.Bit(0)
-	if py2, err := c.RecoverPoint(px, v); err != nil {
+	if py2, err := RecoverPoint(px, v); err != nil {
 		t.Log("Can't recover step2 pointY, error:", err)
 		t.Fail()
 	} else if py2.Cmp(py) != 0 {
@@ -226,9 +226,24 @@ func BenchmarkAsmMontModMul(b *testing.B) {
 	c := sm2g
 
 	b.ResetTimer()
-	for i := 0; i < b.N; i++ {
+	b.RunParallel(func(pb *testing.PB) {
+		for pb.Next() {
 		_ = asmMontMult(x1, c.rr)
-	}
+		}
+	})
+}
+
+func BenchmarkAsmMontSqr(b *testing.B) {
+	b.ResetTimer()
+	var res, xp [4]uint64
+	fromBig(xp[:], x1)
+	p256Mul(res[:], xp[:], rr)
+	b.ResetTimer()
+	b.RunParallel(func(pb *testing.PB) {
+		for pb.Next() {
+		p256Sqr(res[:], res[:], 1)
+		}
+	})
 }
 
 func BenchmarkAsmOrdMul(b *testing.B) {
@@ -236,9 +251,11 @@ func BenchmarkAsmOrdMul(b *testing.B) {
 	var res, xp [4]uint64
 	fromBig(xp[:], x1)
 	b.ResetTimer()
-	for i := 0; i < b.N; i++ {
+	b.RunParallel(func(pb *testing.PB) {
+		for pb.Next() {
 		p256OrdMul(res[:], xp[:], nRR)
-	}
+		}
+	})
 }
 
 func BenchmarkAsmOrdSqr(b *testing.B) {
@@ -247,9 +264,24 @@ func BenchmarkAsmOrdSqr(b *testing.B) {
 	fromBig(xp[:], x1)
 	p256OrdMul(res[:], xp[:], nRR)
 	b.ResetTimer()
-	for i := 0; i < b.N; i++ {
+	b.RunParallel(func(pb *testing.PB) {
+		for pb.Next() {
 		p256OrdSqr(res[:], res[:], 1)
-	}
+		}
+	})
+}
+
+func BenchmarkPointRecover(b *testing.B) {
+	b.ResetTimer()
+	c := pSM2
+	px, py := c.ScalarBaseMult(d1.Bytes())
+	v := py.Bit(0)
+	b.ResetTimer()
+	b.RunParallel(func(pb *testing.PB) {
+		for pb.Next() {
+			RecoverPoint(px, v)
+		}
+	})
 }
 
 func BenchmarkAsmECMULT(b *testing.B) {

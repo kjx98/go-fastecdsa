@@ -393,8 +393,9 @@ func (c p256Curve) SignV(msg, secret *big.Int) (r, s *big.Int,
 	return
 }
 
-func (c p256Curve) RecoverPoint(x1 *big.Int, v uint) (y1 *big.Int, err error) {
+func RecoverPoint(x1 *big.Int, v uint) (y1 *big.Int, err error) {
 	var xp, t1 [4]uint64
+	c := pSM2
 	if x1.Sign() <= 0 || x1.Cmp(c.N) >= 0 {
 		return nil, errParam
 	}
@@ -405,19 +406,22 @@ func (c p256Curve) RecoverPoint(x1 *big.Int, v uint) (y1 *big.Int, err error) {
 	// t1 = x1^3
 	p256FromMont(t1[:], t1[:])
 	tt := toBig(t1[:])
-	tt.Add(tt, c.P)
 	tt.Sub(tt, x1)
-	tt.Add(tt, c.P)
+	if tt.Sign() < 0 { tt.Add(tt, c.P) }
 	tt.Sub(tt, x1)
-	tt.Add(tt, c.P)
+	if tt.Sign() < 0 { tt.Add(tt, c.P) }
 	tt.Sub(tt, x1)
+	if tt.Sign() < 0 { tt.Add(tt, c.P) }
 	tt.Add(tt, c.B)
 	tt.Mod(tt, c.P)
+	//if tt.Sign() < 0 { tt.Add(tt, c.P) }
 	fromBig(xp[:], tt)
 	if !p256Sqrt(t1[:], xp[:]) {
 		return nil, errSqrt
 	}
 	tt = toBig(t1[:])
+	if (v  ^ tt.Bit(0)) != 0 {  tt.Sub(c.P, tt) }
+/*
 	if v != 0 {
 		if tt.Bit(0) == 0 {
 			tt.Sub(c.P, tt)
@@ -427,6 +431,7 @@ func (c p256Curve) RecoverPoint(x1 *big.Int, v uint) (y1 *big.Int, err error) {
 			tt.Sub(c.P, tt)
 		}
 	}
+*/
 	return tt, nil
 }
 
