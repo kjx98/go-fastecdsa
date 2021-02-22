@@ -42,6 +42,8 @@ var (
 	p256MontOne     = []uint64{1, 0xffffffff, 0, 0x100000000}
 )
 var errZeroParam = errors.New("zero parameter")
+var errParam = errors.New("error parameter")
+var errSqrt = errors.New("error sqrt")
 
 // nRR 2^512 mod N
 var nRR = []uint64{0x901192af7c114f20, 0x3464504ade6fa2fa, 0x620fc84c3affe0d4,
@@ -389,6 +391,43 @@ func (c p256Curve) SignV(msg, secret *big.Int) (r, s *big.Int,
 		}
 	}
 	return
+}
+
+func (c p256Curve) RecoverPoint(x1 *big.Int, v uint) (y1 *big.Int, err error) {
+	var xp, t1 [4]uint64
+	if x1.Sign() <= 0 || x1.Cmp(c.N) >= 0 {
+		return nil, errParam
+	}
+	fromBig(xp[:], x1)
+	p256Mul(xp[:], xp[:], rr)
+	p256Sqr(t1[:], xp[:], 1)
+	p256Mul(t1[:], t1[:], xp[:])
+	// t1 = x1^3
+	p256FromMont(t1[:], t1[:])
+	tt := toBig(t1[:])
+	tt.Add(tt, c.P)
+	tt.Sub(tt, x1)
+	tt.Add(tt, c.P)
+	tt.Sub(tt, x1)
+	tt.Add(tt, c.P)
+	tt.Sub(tt, x1)
+	tt.Add(tt, c.B)
+	tt.Mod(tt, c.P)
+	fromBig(xp[:], tt)
+	if !p256Sqrt(t1[:], xp[:]) {
+		return nil, errSqrt
+	}
+	tt = toBig(t1[:])
+	if v != 0 {
+		if tt.Bit(0) == 0 {
+			tt.Sub(c.P, tt)
+		}
+	} else {
+		if tt.Bit(0) != 0 {
+			tt.Sub(c.P, tt)
+		}
+	}
+	return tt, nil
 }
 
 // uint64IsZero returns 1 if x is zero and zero otherwise.

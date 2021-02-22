@@ -185,6 +185,28 @@ func TestAsmInverse(t *testing.T) {
 	}
 }
 
+func TestPointRecover(t *testing.T) {
+	c := pSM2
+	px, py := c.ScalarBaseMult(d1.Bytes())
+	v := py.Bit(0)
+	if py2, err := c.RecoverPoint(px, v); err != nil {
+		t.Log("Can't recover pointY, error:", err)
+		t.Fail()
+	} else if py2.Cmp(py) != 0 {
+		t.Logf("RecoverPoint diff:\n%s vs\n%s", py.Text(16), py2.Text(16))
+		t.Fail()
+	}
+	px, py = c.ScalarBaseMult(d2.Bytes())
+	v = py.Bit(0)
+	if py2, err := c.RecoverPoint(px, v); err != nil {
+		t.Log("Can't recover step2 pointY, error:", err)
+		t.Fail()
+	} else if py2.Cmp(py) != 0 {
+		t.Logf("RecoverPoint step2 diff:\n%s vs\n%s", py.Text(16), py2.Text(16))
+		t.Fail()
+	}
+}
+
 func BenchmarkAsmInverse(b *testing.B) {
 	b.ResetTimer()
 	priv, _ := fastecdsa.GenerateKey(P256(), rand.Reader)
