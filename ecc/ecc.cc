@@ -50,14 +50,3 @@ void vli_from_be64(u64 *dest, const void *src, uint ndigits)
 	vli_from_be64<4>(dest, src);
 }
 #endif
-
-/* ------ Point operations ------ */
-
-forceinline static
-void ecc_swap_digits(const u64 *in, u64 *out, uint ndigits)
-{
-	const be64 *src = (be64 *)in;
-	uint i;
-	for (i = 0; i < ndigits; i++)
-		out[i] = be64toh(src[ndigits - 1 - i]);
-}
