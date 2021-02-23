@@ -252,22 +252,62 @@ func testSignAndVerify2(t *testing.T, c, c1 elliptic.Curve, tag string) {
 		t.Errorf("%s: Verify failed", tag)
 		t.Logf("Pubkey X: %s\nY: %s\nr: %s", priv.PublicKey.X.Text(16),
 			priv.PublicKey.Y.Text(16), r.Text(16))
+		return
 	}
 
 	hashed[0] ^= 0xff
 	if Verify(&priv.PublicKey, hashed, r, s) {
 		t.Errorf("%s: Verify always works!", tag)
 	}
-	t.Log(tag, " SignAndVerify test PASS")
+	t.Log(tag, " SignAndVerify2 test PASS")
 }
 
 func testSignAndRecover(t *testing.T, c elliptic.Curve, tag string) {
 	var opt signIntf
 	if in, ok := c.(signIntf); !ok {
 		t.Errorf("%s: not support sign/recover interface", tag)
+	} else {
+		opt = in
+	}
+	priv, _ := GenerateKey(c, rand.Reader)
+
+	// Sign via Curve c
+	hashed := []byte("testing")
+	e := hashToInt(hashed, c)
+	for i :=0; i < 10; i++ {
+		r, s, v, err := opt.Sign(e, priv.D)
+		if err != nil {
+			t.Errorf("%s: error signing: %s", tag, err)
+			return
+		}
+
+		// recover
+		if px, py, err := opt.Recover(r, s, e, v); err != nil {
+			t.Errorf("%s: Recover failed", tag)
+			t.Logf("Pubkey X: %s\nY: %s\nr: %s", priv.PublicKey.X.Text(16),
+				priv.PublicKey.Y.Text(16), r.Text(16))
+		} else if px.Cmp(priv.PublicKey.X) != 0 || py.Cmp(priv.PublicKey.Y) != 0 {
+			t.Logf("%s: Recover point diff:\nX1: %s\nX2: %s\nY1: %s\nY2: %s", tag,
+				priv.PublicKey.X.Text(16), px.Text(16),
+				priv.PublicKey.Y.Text(16), py.Text(16))
+		}
+	}
+	t.Log(tag, " SignAndRecover test PASS")
+}
+
+func testSignAndRecover2(t *testing.T, c,c1 elliptic.Curve, tag string) {
+	var opt,opt1 signIntf
+	if in, ok := c.(signIntf); !ok {
+		t.Errorf("%s: curve c not support sign/recover interface", tag)
 		t.Fail()
 	} else {
 		opt = in
+	}
+	if in, ok := c.(signIntf); !ok {
+		t.Errorf("%s: curve c not support sign/recover interface", tag)
+		t.Fail()
+	} else {
+		opt1 = in
 	}
 	priv, _ := GenerateKey(c, rand.Reader)
 
@@ -281,7 +321,7 @@ func testSignAndRecover(t *testing.T, c elliptic.Curve, tag string) {
 	}
 
 	// recover
-	if px, py, err := opt.Recover(r, s, e, v); err != nil {
+	if px, py, err := opt1.Recover(r, s, e, v); err != nil {
 		t.Errorf("%s: Recover failed", tag)
 		t.Logf("Pubkey X: %s\nY: %s\nr: %s", priv.PublicKey.X.Text(16),
 			priv.PublicKey.Y.Text(16), r.Text(16))
@@ -290,6 +330,7 @@ func testSignAndRecover(t *testing.T, c elliptic.Curve, tag string) {
 			priv.PublicKey.X.Text(16), px.Text(16),
 			priv.PublicKey.Y.Text(16), py.Text(16))
 	}
+	t.Log(tag, " SignAndRecover2 test PASS")
 }
 
 func TestSignAndVerify(t *testing.T) {
@@ -315,6 +356,8 @@ func TestSignAndVerify(t *testing.T) {
 func TestSignAndRecover(t *testing.T) {
 	testSignAndRecover(t, sm2.SM2(), "SM2asm")
 	testSignAndRecover(t, ecc.SM2C(), "SM2C")
+	testSignAndRecover2(t, sm2.SM2(), ecc.SM2C(), "SM2asm vs SM2C")
+	testSignAndRecover2(t, ecc.SM2C(), sm2.SM2(), "SM2C vs SM2asm")
 }
 
 func testNonceSafety(t *testing.T, c elliptic.Curve, tag string) {
