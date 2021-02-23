@@ -201,6 +201,32 @@ func testSignAndVerify(t *testing.T, c elliptic.Curve, tag string) {
 	t.Log(tag, " SignAndVerify test PASS")
 }
 
+func testSignAndVerify2(t *testing.T, c, c1 elliptic.Curve, tag string) {
+	priv, _ := GenerateKey(c, rand.Reader)
+
+	// Sign via Curve c
+	hashed := []byte("testing")
+	r, s, err := Sign(rand.Reader, priv, hashed)
+	if err != nil {
+		t.Errorf("%s: error signing: %s", tag, err)
+		return
+	}
+
+	// Verify via Curve c1
+	priv.PublicKey.Curve = c1
+	if !Verify(&priv.PublicKey, hashed, r, s) {
+		t.Errorf("%s: Verify failed", tag)
+		t.Logf("Pubkey X: %s\nY: %s\nr: %s", priv.PublicKey.X.Text(16),
+			priv.PublicKey.Y.Text(16), r.Text(16))
+	}
+
+	hashed[0] ^= 0xff
+	if Verify(&priv.PublicKey, hashed, r, s) {
+		t.Errorf("%s: Verify always works!", tag)
+	}
+	t.Log(tag, " SignAndVerify test PASS")
+}
+
 func TestSignAndVerify(t *testing.T) {
 	testSignAndVerify(t, elliptic.P224(), "p224")
 	if testing.Short() {
@@ -209,8 +235,16 @@ func TestSignAndVerify(t *testing.T) {
 	testSignAndVerify(t, elliptic.P256(), "p256")
 	testSignAndVerify(t, elliptic.P384(), "p384")
 	testSignAndVerify(t, elliptic.P521(), "p521")
+	testSignAndVerify(t, sm2.SM2(), "SM2asm")
 	testSignAndVerify(t, sm2.P256(), "SM2go")
 	testSignAndVerify(t, ecc.SM2C(), "SM2C")
+	testSignAndVerify2(t, sm2.SM2(), ecc.SM2C(), "SM2asm vs SM2C")
+	testSignAndVerify2(t, ecc.SM2C(), sm2.SM2(), "SM2C vs SM2asm")
+	// sm2.P256() using ecdsa while sm2.SM2(), ecc.SM2C() using sm2 sign/verify
+	//testSignAndVerify2(t, sm2.SM2(), sm2.P256(), "SM2asm vs SM2go")
+	//testSignAndVerify2(t, sm2.P256(), sm2.SM2(), "SM2go vs SM2asm")
+	testSignAndVerify2(t, sm2.SM2go(), sm2.P256(), "SM2p vs SM2go")
+	testSignAndVerify2(t, sm2.P256(), sm2.SM2go(), "SM2go vs SM2p")
 }
 
 func testNonceSafety(t *testing.T, c elliptic.Curve, tag string) {
