@@ -1600,8 +1600,8 @@ TEXT ·p256Add(SB),NOSPLIT,$0
 // func p256Sub(res, in1, in2 []uint64)
 TEXT ·p256Sub(SB),NOSPLIT,$0
 	MOVD	res+0(FP), res_ptr
-	MOVD	in1+24(FP), a_ptr
-	MOVD	in2+48(FP), b_ptr
+	MOVD	in1+24(FP), b_ptr
+	MOVD	in2+48(FP), a_ptr
 
 	MOVD	p256const0<>(SB), const0
 	MOVD	p256const1<>(SB), const1
@@ -1610,7 +1610,23 @@ TEXT ·p256Sub(SB),NOSPLIT,$0
 	LDP	0*16(b_ptr), (y0, y1)
 	LDP	1*16(b_ptr), (y2, y3)
 
-	CALL	sm2SubInternal<>(SB)    // h = u2 - u1
+	SUBS	x0, y0, acc0
+	SBCS	x1, y1, acc1
+	SBCS	x2, y2, acc2
+	SBCS	x3, y3, acc3
+	SBC	$0, ZR, t0
+
+	MOVD	$-1, acc6
+	ADDS	$-1, acc0, acc4
+	ADCS	const0, acc1, acc5
+	ADCS	acc6, acc2, acc6
+	ADC	const1, acc3, acc7
+
+	ANDS	$1, t0
+	CSEL	EQ, acc0, acc4, x0
+	CSEL	EQ, acc1, acc5, x1
+	CSEL	EQ, acc2, acc6, x2
+	CSEL	EQ, acc3, acc7, x3
 
 	STP (x0, x1), 0*16(res_ptr)
 	STP (x2, x3), 1*16(res_ptr)
