@@ -1574,3 +1574,45 @@ TEXT ·p256PointAddAsm(SB),0,$392-80
 	MOVD	R0, ret+72(FP)
 
 	RET
+/* ---------------------------------------*/
+// func p256Add(res, in1, in2 []uint64)
+TEXT ·p256Add(SB),NOSPLIT,$0
+	MOVD	res+0(FP), res_ptr
+	MOVD	in1+24(FP), a_ptr
+	MOVD	in2+48(FP), b_ptr
+
+	MOVD	p256const0<>(SB), const0
+	MOVD	p256const1<>(SB), const1
+	LDP	0*16(a_ptr), (x0, x1)
+	LDP	1*16(a_ptr), (x2, x3)
+	LDP	0*16(b_ptr), (y0, y1)
+	LDP	1*16(b_ptr), (y2, y3)
+
+	p256AddInline
+
+	STP (x0, x1), 0*16(res_ptr)
+	STP (x2, x3), 1*16(res_ptr)
+
+	RET
+/* ---------------------------------------*/
+
+/* ---------------------------------------*/
+// func p256Sub(res, in1, in2 []uint64)
+TEXT ·p256Sub(SB),NOSPLIT,$0
+	MOVD	res+0(FP), res_ptr
+	MOVD	in1+24(FP), a_ptr
+	MOVD	in2+48(FP), b_ptr
+
+	MOVD	p256const0<>(SB), const0
+	MOVD	p256const1<>(SB), const1
+	LDP	0*16(a_ptr), (x0, x1)
+	LDP	1*16(a_ptr), (x2, x3)
+	LDP	0*16(b_ptr), (y0, y1)
+	LDP	1*16(b_ptr), (y2, y3)
+
+	CALL	sm2SubInternal<>(SB)    // h = u2 - u1
+
+	STP (x0, x1), 0*16(res_ptr)
+	STP (x2, x3), 1*16(res_ptr)
+	RET
+/* ---------------------------------------*/

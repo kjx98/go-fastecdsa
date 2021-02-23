@@ -2419,10 +2419,29 @@ TEXT ·p256PointDoubleAsm(SB),NOSPLIT,$256-48
 	RET
 /* ---------------------------------------*/
 
+#undef mul0
+#undef mul1
+#undef acc0
+#undef acc1
+#undef acc2
+#undef acc3
+#undef acc4
+#undef acc5
+#undef acc6
+#undef acc7
+#undef t0
+#undef t1
 #undef t2
 #undef t3
-#define	t2	R8
-#define	t3	R9
+/* ---------------------------------------*/
+#define acc4 R10
+#define acc5 R11
+#define acc6 R12
+#define acc7 R13
+#define t0 R8
+#define t1 R9
+#define t2 R14
+#define t3 R15
 /* ---------------------------------------*/
 // func p256Add(res, in1, in2 []uint64)
 TEXT ·p256Add(SB),NOSPLIT,$0
@@ -2437,12 +2456,12 @@ TEXT ·p256Add(SB),NOSPLIT,$0
 	MOVQ (8*1)(CX), t1
 	MOVQ (8*2)(CX), t2
 	MOVQ (8*3)(CX), t3
-	XORQ mul0, mul0
+	XORQ AX, AX
 	ADDQ t0, acc4
 	ADCQ t1, acc5
 	ADCQ t2, acc6
 	ADCQ t3, acc7
-	ADCQ $0, mul0
+	ADCQ $0, AX
 	MOVQ acc4, t0
 	MOVQ acc5, t1
 	MOVQ acc6, t2
@@ -2451,7 +2470,7 @@ TEXT ·p256Add(SB),NOSPLIT,$0
 	SBBQ p256const0<>(SB), t1
 	SBBQ $-1, t2
 	SBBQ p256const1<>(SB), t3
-	SBBQ $0, mul0
+	SBBQ $0, AX
 	CMOVQCS acc4, t0
 	CMOVQCS acc5, t1
 	CMOVQCS acc6, t2
@@ -2477,31 +2496,31 @@ TEXT ·p256Sub(SB),NOSPLIT,$0
 	MOVQ (8*1)(CX), t1
 	MOVQ (8*2)(CX), t2
 	MOVQ (8*3)(CX), t3
-	XORQ mul0, mul0
+	XORQ AX, AX
 	SUBQ t0, acc4
 	SBBQ t1, acc5
 	SBBQ t2, acc6
 	SBBQ t3, acc7
-	SBBQ $0, mul0
+	SBBQ $0, AX
 
-	MOVQ acc4, acc0
-	MOVQ acc5, acc1
-	MOVQ acc6, acc2
-	MOVQ acc7, acc3
+	MOVQ acc4, t0
+	MOVQ acc5, t1
+	MOVQ acc6, t2
+	MOVQ acc7, t3
 
 	ADDQ $-1, acc4
 	ADCQ p256const0<>(SB), acc5
 	ADCQ $-1, acc6
 	ADCQ p256const1<>(SB), acc7
-	ANDQ $1, mul0
+	ANDQ $1, AX
 
-	CMOVQEQ acc0, acc4
-	CMOVQEQ acc1, acc5
-	CMOVQEQ acc2, acc6
-	CMOVQEQ acc3, acc7
-	MOVQ t0, (8*0)(DI)
-	MOVQ t1, (8*1)(DI)
-	MOVQ t2, (8*2)(DI)
-	MOVQ t3, (8*3)(DI)
+	CMOVQEQ t0, acc4
+	CMOVQEQ t1, acc5
+	CMOVQEQ t2, acc6
+	CMOVQEQ t3, acc7
+	MOVQ acc4, (8*0)(DI)
+	MOVQ acc5, (8*1)(DI)
+	MOVQ acc6, (8*2)(DI)
+	MOVQ acc7, (8*3)(DI)
 	RET
 /* ---------------------------------------*/

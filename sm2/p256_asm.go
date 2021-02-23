@@ -414,29 +414,32 @@ func RecoverPoint(x1 *big.Int, v uint) (y1 *big.Int, err error) {
 	p256Mul(t1[:], t1[:], xp[:])
 	// t1 = x1^3
 	p256FromMont(t1[:], t1[:])
-	//fromBig(xp[:], x1)
-	//p256Sub(t1[:], t1[:], xp[:])
-	//p256Sub(t1[:], t1[:], xp[:])
-	//p256Sub(t1[:], t1[:], xp[:])
+	fromBig(xp[:], x1)
+	p256Sub(t1[:], t1[:], xp[:])
+	p256Sub(t1[:], t1[:], xp[:])
+	p256Sub(t1[:], t1[:], xp[:])
+	fromBig(xp[:], c.B)
+	p256Add(t1[:], t1[:], xp[:])
 	tt := toBig(t1[:])
-	//fromBig(xp[:], c.B)
-	//p256Add(t1[:], t1[:], xp[:])
-	tt.Sub(tt, x1)
-	if tt.Sign() < 0 {
-		tt.Add(tt, c.P)
-	}
-	tt.Sub(tt, x1)
-	if tt.Sign() < 0 {
-		tt.Add(tt, c.P)
-	}
-	tt.Sub(tt, x1)
-	if tt.Sign() < 0 {
-		tt.Add(tt, c.P)
-	}
-	tt.Add(tt, c.B)
-	tt.Mod(tt, c.P)
-	//if tt.Sign() < 0 { tt.Add(tt, c.P) }
-	fromBig(xp[:], tt)
+	copy(xp[:], t1[:])
+	/*
+		tt.Sub(tt, x1)
+		if tt.Sign() < 0 {
+			tt.Add(tt, c.P)
+		}
+		tt.Sub(tt, x1)
+		if tt.Sign() < 0 {
+			tt.Add(tt, c.P)
+		}
+		tt.Sub(tt, x1)
+		if tt.Sign() < 0 {
+			tt.Add(tt, c.P)
+		}
+		tt.Add(tt, c.B)
+		tt.Mod(tt, c.P)
+		//if tt.Sign() < 0 { tt.Add(tt, c.P) }
+		fromBig(xp[:], tt)
+	*/
 	if !p256Sqrt(t1[:], xp[:]) {
 		return nil, errSqrt
 	}
