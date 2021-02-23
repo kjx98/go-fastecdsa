@@ -215,19 +215,38 @@ int	ecc_verify(const u64 *rP, const u64 *sP, const u64 *msgP,
 	return ec_verify(*curve, r, s, pk, msg);
 }
 
-void	ecc_sign(u64 *rP, u64 *sP, const u64 *msgP,
+int		ecc_recover(const u64 *rP, const u64 *sP, const u64 *msgP, const uint v,
+				Point *pubKey, CURVE_HND curveH)
+{
+	if (curveH == nullptr) return false;
+	auto	*curve=(curve_t *)curveH;
+	if (!(*curve) || curve->ndigits() != 4) return false;
+	if (rP == nullptr || sP == nullptr || msgP == nullptr || pubKey == nullptr)
+		return false;
+	bignum<4>	r(rP), s(sP), msg(msgP);
+	spoint_t<4>	pk;
+	auto ret = ec_recover(*curve, pk, r, s, v, msg);
+	if (ret) {
+		pk.x.set((u64*)pubKey->x);
+		pk.y.set((u64*)pubKey->y);
+	}
+	return ret;
+}
+
+int	ecc_sign(u64 *rP, u64 *sP, const u64 *msgP,
 				const Point *privKey, CURVE_HND curveH)
 {
-	if (curveH == nullptr) return;
+	if (curveH == nullptr) return 0;
 	auto	*curve=(curve_t *)curveH;
-	if (!(*curve) || curve->ndigits() != 4) return;
+	if (!(*curve) || curve->ndigits() != 4) return 0;
 	if (rP == nullptr || sP == nullptr || msgP == nullptr || privKey == nullptr)
-		return;
+		return 0;
 	bignum<4>	r, s, msg(msgP);
 	//spoint_t<4>	pk(privKey->x, privKey->y);
 	bignum<4>	secr(privKey->z);
 	private_key<4>	priv(*curve, secr);
-	ec_sign(*curve, r, s, priv, msg);
+	auto ret = ec_sign(*curve, r, s, priv, msg);
 	r.set(rP);
 	s.set(sP);
+	return ret;
 }

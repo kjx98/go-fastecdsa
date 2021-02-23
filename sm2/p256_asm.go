@@ -61,6 +61,10 @@ func initSM2() {
 	n2minus = new(big.Int).Sub(sm2Params.N, two)
 }
 
+func SM2asm() p256Curve {
+	return pSM2
+}
+
 func (curve p256Curve) Params() *CurveParams {
 	return curve.CurveParams
 }
@@ -346,12 +350,7 @@ func (c p256Curve) Verify(r, s, msg, px, py *big.Int) bool {
 	return x1.Cmp(r) == 0
 }
 
-func (c p256Curve) Sign(msg, secret *big.Int) (r, s *big.Int, err error) {
-	r, s, _, err = c.SignV(msg, secret)
-	return
-}
-
-func (c p256Curve) SignV(msg, secret *big.Int) (r, s *big.Int,
+func (c p256Curve) Sign(msg, secret *big.Int) (r, s *big.Int,
 	v uint, err error) {
 	var kB [32]byte
 	N := c.Params().N
@@ -461,27 +460,34 @@ func RecoverPoint(x1 *big.Int, v uint) (y1 *big.Int, err error) {
 	return tt, nil
 }
 
-func Recover(r, s, msg *big.Int, v uint) (pubX, pubY *big.Int, err error) {
-	c := pSM2
+func (c p256Curve) Recover(r, s, msg *big.Int, v uint) (pubX, pubY *big.Int, err error) {
 	u1 := new(big.Int).Add(r, s)
 	u1.Mod(u1, c.N)
 	x1 := new(big.Int).Sub(r, msg)
 	if x1.Sign() == 0 {
 		return
-	} else if x1.Sign() < 0 { x1.Add(x1, c.N) }
-	var	y1	*big.Int
-	if y1, err = RecoverPoint(x1, v); err != nil { return }
-	if u1.Sign() == 0 || s.Sign() == 0 { return }
-	if u1.ModInverse(u1, c.N) == nil { return }
-	var xp, yp,res	[4]uint64
+	} else if x1.Sign() < 0 {
+		x1.Add(x1, c.N)
+	}
+	var y1 *big.Int
+	if y1, err = RecoverPoint(x1, v); err != nil {
+		return
+	}
+	if u1.Sign() == 0 || s.Sign() == 0 {
+		return
+	}
+	if u1.ModInverse(u1, c.N) == nil {
+		return
+	}
+	var xp, yp, res [4]uint64
 	fromBig(xp[:], u1)
 	fromBig(yp[:], s)
-	p256OrdMul(xp[:], xp[:], nRR)	// to montgomery form
+	p256OrdMul(xp[:], xp[:], nRR) // to montgomery form
 	p256OrdMul(yp[:], yp[:], nRR)
 	p256OrdMul(res[:], xp[:], yp[:])
-	p256OrdMul(res[:], res[:], one)	// convert from montgomery
+	p256OrdMul(res[:], res[:], one) // convert from montgomery
 	u2 := toBig(res[:])
-	u2.Sub(c.N, u2)		// u2 = -u2 = - u1*s
+	u2.Sub(c.N, u2) // u2 = -u2 = - u1*s
 	pubX, pubY = c.CombinedMult(x1, y1, u2.Bytes(), u1.Bytes())
 	return
 }

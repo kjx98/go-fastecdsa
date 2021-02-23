@@ -222,14 +222,30 @@ func (c eccCurve) Verify(rB, sB, msgB, px, py *big.Int) bool {
 		(*C.u64)(unsafe.Pointer(&msg[0])), pt, c.hnd) != 0
 }
 
-func (c eccCurve) Sign(msgB, secret *big.Int) (r, s *big.Int, err error) {
+func (c eccCurve) Sign(msgB, secret *big.Int) (r, s *big.Int, v uint, err error) {
 	var rw, sw, msg [4]big.Word
 	copy(msg[:], msgB.Bits())
 	pt := c.newPoint(bigOne, bigOne, secret)
-	C.ecc_sign((*C.u64)(unsafe.Pointer(&rw[0])),
+	v = uint(C.ecc_sign((*C.u64)(unsafe.Pointer(&rw[0])),
 		(*C.u64)(unsafe.Pointer(&sw[0])),
-		(*C.u64)(unsafe.Pointer(&msg[0])), pt, c.hnd)
+		(*C.u64)(unsafe.Pointer(&msg[0])), pt, c.hnd))
 	r = new(big.Int).SetBits(rw[:])
 	s = new(big.Int).SetBits(sw[:])
+	return
+}
+
+func (c eccCurve) Recover(rB, sB, msgB *big.Int, v uint) (pubX, pubY *big.Int, err error) {
+	var r, s, msg [4]big.Word
+	copy(r[:], rB.Bits())
+	copy(s[:], sB.Bits())
+	copy(msg[:], msgB.Bits())
+	var pt C.Point
+	ret := C.ecc_recover((*C.u64)(unsafe.Pointer(&r[0])),
+		(*C.u64)(unsafe.Pointer(&s[0])),
+		(*C.u64)(unsafe.Pointer(&msg[0])), C.uint(v), &pt, c.hnd)
+	if ret != 0 {
+		pubX = new(big.Int).SetBits(toWordSlice(pt.x))
+		pubY = new(big.Int).SetBits(toWordSlice(pt.y))
+	}
 	return
 }

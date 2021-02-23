@@ -192,8 +192,10 @@ void	point_cmult(Point *pt, const Point *p, const u64 *scalar,
 void	affine_from_jacobian(u64 *x, u64 *y, const Point *pt, CURVE_HND curveH);
 int		ecc_verify(const u64 *rP, const u64 *sP, const u64 *msgP,
 				const Point *pubKey, CURVE_HND curveH);
-void	ecc_sign(u64 *rP, u64 *sP, const u64 *msgP,
-				const Point *privKey, CURVE_HND curveH);
+int		ecc_sign(u64 *rP, u64 *sP, const u64 *msgP, const Point *privKey,
+				CURVE_HND curveH);
+int		ecc_recover(const u64 *rP, const u64 *sP, const u64 *msgP, const uint v,
+				Point *pubKey, CURVE_HND curveH);
 
 #ifdef	__cplusplus
 }

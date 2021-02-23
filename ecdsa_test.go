@@ -115,7 +115,6 @@ func BenchmarkVerifyP256(b *testing.B) {
 	})
 }
 
-// VerifySM2 golang asm may hangup
 func BenchmarkVerifySM2(b *testing.B) {
 	b.ResetTimer()
 	//p256 := sm2.P256()
@@ -128,8 +127,8 @@ func BenchmarkVerifySM2(b *testing.B) {
 	b.ResetTimer()
 	b.RunParallel(func(pb *testing.PB) {
 		for pb.Next() {
-		Verify(&priv.PublicKey, hashed, r, s)
-	}
+			Verify(&priv.PublicKey, hashed, r, s)
+		}
 	})
 }
 
@@ -145,6 +144,41 @@ func BenchmarkVerifySM2C(b *testing.B) {
 	b.RunParallel(func(pb *testing.PB) {
 		for pb.Next() {
 			Verify(&priv.PublicKey, hashed, r, s)
+		}
+	})
+}
+
+func BenchmarkRecoverSM2(b *testing.B) {
+	b.ResetTimer()
+	//p256 := sm2.P256()
+	p256 := sm2.SM2asm()
+	hashed := []byte("testing")
+	e := hashToInt(hashed, p256)
+	priv, _ := GenerateKey(p256, rand.Reader)
+	r, s, v, _ := p256.Sign(e, priv.D)
+
+	b.ReportAllocs()
+	b.ResetTimer()
+	b.RunParallel(func(pb *testing.PB) {
+		for pb.Next() {
+			p256.Recover(r, s, e, v)
+		}
+	})
+}
+
+func BenchmarkRecoverSM2C(b *testing.B) {
+	b.ResetTimer()
+	p256 := ecc.SM2C()
+	hashed := []byte("testing")
+	e := hashToInt(hashed, p256)
+	priv, _ := GenerateKey(p256, rand.Reader)
+	r, s, v, _ := p256.Sign(e, priv.D)
+
+	b.ReportAllocs()
+	b.ResetTimer()
+	b.RunParallel(func(pb *testing.PB) {
+		for pb.Next() {
+			p256.Recover(r, s, e, v)
 		}
 	})
 }
@@ -227,6 +261,37 @@ func testSignAndVerify2(t *testing.T, c, c1 elliptic.Curve, tag string) {
 	t.Log(tag, " SignAndVerify test PASS")
 }
 
+func testSignAndRecover(t *testing.T, c elliptic.Curve, tag string) {
+	var opt signIntf
+	if in, ok := c.(signIntf); !ok {
+		t.Errorf("%s: not support sign/recover interface", tag)
+		t.Fail()
+	} else {
+		opt = in
+	}
+	priv, _ := GenerateKey(c, rand.Reader)
+
+	// Sign via Curve c
+	hashed := []byte("testing")
+	e := hashToInt(hashed, c)
+	r, s, v, err := opt.Sign(e, priv.D)
+	if err != nil {
+		t.Errorf("%s: error signing: %s", tag, err)
+		return
+	}
+
+	// recover
+	if px, py, err := opt.Recover(r, s, e, v); err != nil {
+		t.Errorf("%s: Recover failed", tag)
+		t.Logf("Pubkey X: %s\nY: %s\nr: %s", priv.PublicKey.X.Text(16),
+			priv.PublicKey.Y.Text(16), r.Text(16))
+	} else if px.Cmp(priv.PublicKey.X) != 0 || py.Cmp(priv.PublicKey.Y) != 0 {
+		t.Logf("%s: Recover point diff:\nX1: %s\nX2: %s\nY1: %s\nY2: %s", tag,
+			priv.PublicKey.X.Text(16), px.Text(16),
+			priv.PublicKey.Y.Text(16), py.Text(16))
+	}
+}
+
 func TestSignAndVerify(t *testing.T) {
 	testSignAndVerify(t, elliptic.P224(), "p224")
 	if testing.Short() {
@@ -245,6 +310,11 @@ func TestSignAndVerify(t *testing.T) {
 	//testSignAndVerify2(t, sm2.P256(), sm2.SM2(), "SM2go vs SM2asm")
 	testSignAndVerify2(t, sm2.SM2go(), sm2.P256(), "SM2p vs SM2go")
 	testSignAndVerify2(t, sm2.P256(), sm2.SM2go(), "SM2go vs SM2p")
+}
+
+func TestSignAndRecover(t *testing.T) {
+	testSignAndRecover(t, sm2.SM2(), "SM2asm")
+	testSignAndRecover(t, ecc.SM2C(), "SM2C")
 }
 
 func testNonceSafety(t *testing.T, c elliptic.Curve, tag string) {
