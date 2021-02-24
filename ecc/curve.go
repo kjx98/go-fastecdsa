@@ -120,7 +120,7 @@ func (c eccCurve) Add(x1, y1, x2, y2 *big.Int) (rx, ry *big.Int) {
 	return
 }
 
-func (c eccCurve) AddJacobian(x1, y1, z1, x2, y2, z2 *big.Int) (rx, ry, rz *big.Int) {
+func (c eccCurve) addJacobian(x1, y1, z1, x2, y2, z2 *big.Int) (rx, ry, rz *big.Int) {
 	pt1 := c.newPoint(x1, y1, z1)
 	pt2 := c.newPoint(x2, y2, z2)
 	var pt C.Point
@@ -131,7 +131,7 @@ func (c eccCurve) AddJacobian(x1, y1, z1, x2, y2, z2 *big.Int) (rx, ry, rz *big.
 	return
 }
 
-func (c eccCurve) DoubleJacobian(x, y, z *big.Int) (rx, ry, rz *big.Int) {
+func (c eccCurve) doubleJacobian(x, y, z *big.Int) (rx, ry, rz *big.Int) {
 	pt1 := c.newPoint(x, y, z)
 	var pt C.Point
 	C.point_double_jacobian(&pt, pt1, c.hnd)
@@ -201,7 +201,7 @@ func (c eccCurve) CombinedMult(x, y *big.Int, k, gk []byte) (rx, ry *big.Int) {
 	return c.cMult(x, y, k, gk, nil)
 }
 
-func (c eccCurve) AffineFromJacobian(x, y, z *big.Int) (xOut, yOut *big.Int) {
+func (c eccCurve) affineFromJacobian(x, y, z *big.Int) (xOut, yOut *big.Int) {
 	var xb, yb [4]big.Word
 	pt := c.newPoint(x, y, z)
 	C.affine_from_jacobian((*C.u64)(unsafe.Pointer(&xb[0])),
