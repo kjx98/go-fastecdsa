@@ -265,7 +265,7 @@ func maybeReduceModP(in *big.Int) *big.Int {
 	return new(big.Int).Mod(in, pSM2.P)
 }
 
-func (curve p256Curve) CombinedMult(bigX, bigY *big.Int, baseScalar, scalar []byte) (x, y *big.Int) {
+func (curve p256Curve) combinedMult(bigX, bigY *big.Int, baseScalar, scalar []byte) (*p256Point) {
 	scalarReversed := make([]uint64, 4)
 	var r1, r2 p256Point
 	p256GetScalar(scalarReversed, baseScalar)
@@ -295,6 +295,11 @@ func (curve p256Curve) CombinedMult(bigX, bigY *big.Int, baseScalar, scalar []by
 	sum.CopyConditional(&r1, r2IsInfinity)
 	sum.CopyConditional(&r2, r1IsInfinity)
 
+	return &sum
+}
+
+func (curve p256Curve) CombinedMult(bigX, bigY *big.Int, baseScalar, scalar []byte) (x, y *big.Int) {
+	sum := curve.combinedMult(bigX, bigY, baseScalar, scalar)
 	return sum.p256PointToAffine()
 }
 
@@ -419,44 +424,14 @@ func RecoverPoint(x1 *big.Int, v uint) (y1 *big.Int, err error) {
 	p256Sub(t1[:], t1[:], xp[:])
 	fromBig(xp[:], c.B)
 	p256Add(t1[:], t1[:], xp[:])
-	tt := toBig(t1[:])
 	copy(xp[:], t1[:])
-	/*
-		tt.Sub(tt, x1)
-		if tt.Sign() < 0 {
-			tt.Add(tt, c.P)
-		}
-		tt.Sub(tt, x1)
-		if tt.Sign() < 0 {
-			tt.Add(tt, c.P)
-		}
-		tt.Sub(tt, x1)
-		if tt.Sign() < 0 {
-			tt.Add(tt, c.P)
-		}
-		tt.Add(tt, c.B)
-		tt.Mod(tt, c.P)
-		//if tt.Sign() < 0 { tt.Add(tt, c.P) }
-		fromBig(xp[:], tt)
-	*/
 	if !p256Sqrt(t1[:], xp[:]) {
 		return nil, errSqrt
 	}
-	tt = toBig(t1[:])
+	tt := toBig(t1[:])
 	if (v ^ tt.Bit(0)) != 0 {
 		tt.Sub(c.P, tt)
 	}
-	/*
-		if v != 0 {
-			if tt.Bit(0) == 0 {
-				tt.Sub(c.P, tt)
-			}
-		} else {
-			if tt.Bit(0) != 0 {
-				tt.Sub(c.P, tt)
-			}
-		}
-	*/
 	return tt, nil
 }
 

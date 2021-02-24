@@ -643,15 +643,11 @@ public:
 		this->cmult(q, p, scalar, g_scalar, scratchBuff);
 #endif
 		// montgomery reduction
-#ifdef	ommit
 		if ( unlikely(q.z.is_zero()) ) {
 			q.x.clear();
 			q.y.clear();
 			return;
 		}
-#else
-		if ( unlikely(q.z.is_zero()) ) return;
-#endif
 		this->apply_z_mont(q);
 		this->from_montgomery(q.x, q.x);
 		this->from_montgomery(q.y, q.y);
@@ -1176,7 +1172,11 @@ public:
 		this->cmult(q, p, scalar, g_scalar, scratchBuff);
 #endif
 		// montgomery reduction
-		if ( unlikely(q.z.is_zero()) ) return;
+		if ( unlikely(q.z.is_zero()) ) {
+			q.x.clear();
+			q.y.clear();
+			return;
+		}
 		this->apply_z_mont(q);
 		this->from_montgomery(q.x, q.x);
 		this->from_montgomery(q.y, q.y);
