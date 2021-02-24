@@ -249,6 +249,14 @@ public:
 			res.rshift1(carry);
 		}
 	}
+	bool prod_equal(const felem_t& prod, const felem_t& x, const felem_t& yp)
+		   	const noexcept
+	{
+		felem_t	xp;
+		this->to_montgomery(xp, x);
+		this->mont_mmult(xp, xp, yp);
+		return prod == xp;
+	}
 	void
 	mod_exp(felem_t& res, const felem_t &x1, const felem_t& y1) const noexcept
 	{
@@ -916,6 +924,14 @@ public:
 			bool carry = res.add_to(this->p);
 			res.rshift1(carry);
 		}
+	}
+	bool prod_equal(const felem_t& prod, const felem_t& x, const felem_t& yp)
+		   	const noexcept
+	{
+		felem_t	xp;
+		this->to_montgomery(xp, x);
+		this->mont_mmult(xp, xp, yp);
+		return prod == xp;
 	}
 	void
 	mod_exp(felem_t& res, const felem_t &x1, const felem_t& y1) const noexcept

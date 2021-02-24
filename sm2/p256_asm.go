@@ -24,6 +24,7 @@ import (
 type (
 	p256Curve struct {
 		*CurveParams
+		pMinusN	*big.Int
 	}
 
 	p256Point struct {
@@ -59,6 +60,7 @@ func initSM2() {
 	// See FIPS 186-3, section D.2.3
 	//pSM2.CurveParams = sm2Params
 	n2minus = new(big.Int).Sub(sm2Params.N, two)
+	pSM2.pMinusN = new(big.Int).Sub(pSM2.P, pSM2.N)
 }
 
 func SM2asm() p256Curve {
@@ -349,10 +351,23 @@ func (c p256Curve) Verify(r, s, msg, px, py *big.Int) bool {
 	if t.Sign() == 0 {
 		return false
 	}
+/*
 	x1, _ := c.CombinedMult(px, py, s.Bytes(), t.Bytes())
 	x1.Add(x1, msg)
 	x1.Mod(x1, N)
 	return x1.Cmp(r) == 0
+*/
+	pt := c.combinedMult(px, py, s.Bytes(), t.Bytes())
+	x1 := new(big.Int).Sub(r, msg)
+	if x1.Sign() < 0 { x1.Add(x1, c.N) }
+	var zz	[4]uint64
+	p256Sqr(zz[:], pt.xyz[8:], 1)
+	if p256ProdEqual(pt.xyz[:4], zz[:], x1) { return true }
+	if x1.Cmp(c.pMinusN) < 0 {
+		x1.Add(x1, c.N)
+		if p256ProdEqual(pt.xyz[:4], zz[:], x1) { return true }
+	}
+	return false
 }
 
 func (c p256Curve) Sign(msg, secret *big.Int) (r, s *big.Int,
@@ -504,6 +519,17 @@ func (p *p256Point) p256PointToAffine() (x, y *big.Int) {
 	p256LittleToBig(yOut, zInv)
 
 	return new(big.Int).SetBytes(xOut), new(big.Int).SetBytes(yOut)
+}
+
+// return prod == xp * yp Mod prime p
+//	yp = y convert to montgomery form
+func p256ProdEqual(prod, xp []uint64, y *big.Int) bool {
+	var		yp	[4]uint64
+	fromBig(yp[:], y)
+	p256Mul(yp[:], yp[:], rr)
+	p256Mul(yp[:], xp, yp[:])
+	return prod[0] == yp[0] && prod[1] == yp[1] && prod[2] == yp[2] &&
+		prod[3] == yp[3]
 }
 
 // CopyConditional copies overwrites p with src if v == 1, and leaves p

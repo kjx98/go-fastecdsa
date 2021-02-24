@@ -293,16 +293,12 @@ bool ec_verify(const curveT& curve, const bignum<N>& r, const bignum<N>& s,
 	if ( unlikely(q.z.is_zero()) ) return false;
 	// t = r - msg
 	t.mod_sub(r, msg, curve.paramN());
-	bignum<N>	t1, zz;
+	bignum<N>	zz;
 	curve.mont_msqr(zz, q.z);
-	curve.to_montgomery(t1, t);
-	curve.mont_mmult(t1, t1, zz);
-	if (t1 == q.x) return true;
+	if (curve.prod_equal(q.x, t, zz)) return true;
 	if (t < curve.P_minus_N()) {
 		t.add_to(curve.paramN());
-		curve.to_montgomery(t1, t);
-		curve.mont_mmult(t1, t1, zz);
-		if (t1 == q.x) return true;
+		if (curve.prod_equal(q.x, t, zz)) return true;
 	}
 	return false;
 #endif

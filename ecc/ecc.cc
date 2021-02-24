@@ -29,9 +29,11 @@
 #include "ecc.h"
 #include "ecc_impl.hpp"
 
+#if	__GNUC__ > 6
 #pragma GCC push_options
 #pragma GCC optimize ("unroll-loops")
 #pragma GCC pop_options
+#endif
 
 #ifndef	ARRAY_SIZE
 #define ARRAY_SIZE(arr) (sizeof(arr) / sizeof((arr)[0]))
