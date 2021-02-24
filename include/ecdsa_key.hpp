@@ -190,6 +190,7 @@ int ecdsa_sign(const curveT& curve, bignum<N>& r, bignum<N>& s,
 #ifdef	WITH_HALF_N
 		if (curve.halfN() < s) {
 			s.sub(curve.paramN(), s);
+			ret ^= 1;
 		}
 #endif
 	} while (s.is_zero());

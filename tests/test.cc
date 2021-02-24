@@ -1086,7 +1086,7 @@ TEST(TestECDSA, TestEcdsaRecover)
 	std::cerr << "ECDSA sign ret: " << ecInd << std::endl;
 	spoint_t<4>	Ps;
 	ASSERT_TRUE(ecdsa_recover(sm2_p256, Ps, r, s, ecInd, msg));
-#ifdef	WITH_HALF_N
+#ifdef	WITH_HALF_N_ommit
 	if (Ps.x != priv.PubKey().x) {
 		s.sub(sm2_p256.paramN(), s);
 		ASSERT_TRUE(ecdsa_recover(sm2_p256, Ps, r, s, ecInd, msg));
