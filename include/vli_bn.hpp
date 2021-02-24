@@ -119,7 +119,7 @@ public:
 		}
 		return true;
 #else
-#if	__cplusplus > 201703L
+#if	__cplusplus >= 201703L
 		if constexpr(N == 4) {
 			return u64IsZero((this->d[0] ^ bn.d[0]) |
 					(this->d[1] ^ bn.d[1]) | (this->d[2] ^ bn.d[2]) |
@@ -143,7 +143,7 @@ public:
 		}
 		return true;
 #else
-#if	__cplusplus > 201703L
+#if	__cplusplus >= 201703L
 		if constexpr(N == 4) {
 			return u64IsZero((this->d[0] ^ bn[0]) |
 					(this->d[1] ^ bn[1]) | (this->d[2] ^ bn[2]) |
@@ -165,7 +165,7 @@ public:
 	int is_zero() const noexcept
 	{
 #ifndef	NO_U64ZERO
-#if	__cplusplus > 201703L
+#if	__cplusplus >= 201703L
 		if constexpr(N == 4) {
 			return u64IsZero(this->d[0] | this->d[1] |
 					this->d[2] | this->d[3]);
@@ -189,7 +189,7 @@ public:
 	int is_one() const noexcept
 	{
 #ifndef	NO_U64ZERO
-#if	__cplusplus > 201703L
+#if	__cplusplus >= 201703L
 		if constexpr(N == 4) {
 			return u64IsOne(this->d[0]) & u64IsZero(this->d[1] |
 					this->d[2] | this->d[3]);

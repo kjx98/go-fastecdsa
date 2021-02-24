@@ -148,7 +148,7 @@ void point_double_jacob(const curveT& curve, bnT& x3, bnT& y3, bnT& z3,
 			// 3(X^2 - Z^4) = 2(X^2 - Z^4) + (X^2 - Z^4)
 			// t2 = 2 * l1
 			curve.mont_mult2(t2, l1);
-			// l1 = l1 + 2 * l1 = 3(X - Z^2)
+			// l1 = l1 + 2 * l1 = 3(X^2 - Z^4)
 			curve.mod_add_to(l1, t2);
 #else
 			// t1 = Z^2
@@ -971,21 +971,10 @@ vli_mmod_special2(u64 *result, const u64 *product, const u64 *mod) noexcept
  */
 template<const uint N> forceinline
 static void
-#ifdef	WITH_C2GO_1
-vli_mod_inv(u64 *result, const u64 *input, const u64 *mod, u64 *buff) noexcept
-#else
 vli_mod_inv(u64 *result, const u64 *input, const u64 *mod) noexcept
-#endif
 {
-#ifdef	WITH_C2GO_1
-	u64	*a=buff;
-	u64	*b=a+N;
-	u64	*u=b+N;
-	u64	*v=u+N;
-#else
 	u64 a[N], b[N];
 	u64 u[N], v[N];
-#endif
 	int cmp_result;
 
 	if (vli_is_zero<N>(input)) {

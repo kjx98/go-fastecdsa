@@ -26,22 +26,6 @@ const auto nist_p256 = ecc::ecc_curve<4>::new_ecc_curve( //.name
 /* GM/T 0003.5-2012 SM2: a = p - 3 */
 /* prime following mu for Barrett's reduction */
 //			ecc::build_curve<4, 1, 0x327f9e8872350975>( //.name
-#ifdef	ommit
-const auto sm2_p256p = ecc::ecc_curve<4>::new_ecc_curve(//.name
-	"sm2p256",
-	// .gx
-	sm2_gx,
-	//.gy
-	sm2_gy,
-	//.p
-	sm2_p,
-	//.n
-	sm2_n,
-	//.a
-	sm2_a,
-	//.b
-	sm2_b);
-#else
 static ecc::ecc_curve<4>	sm2_p256(//.name
 	"sm2p256",
 	// .gx
@@ -60,10 +44,9 @@ static ecc::ecc_curve<4>	sm2_p256(//.name
 	sm2_p_rr,
 	sm2_n_rr,
 	// k0_p, k0_n
-	1, 0x327f9e8872350975 //
+	1, 0x327f9e8872350975ull //
 	);
 const auto sm2_p256p = &sm2_p256;
-#endif
 
 static ecc::curve256 sm2_k256(//.name
 	"sm2k256",

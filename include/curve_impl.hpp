@@ -141,7 +141,8 @@ public:
 	const felem_t& mont_one() const noexcept { return _mont_one; }
 	const felem_t& mont_three() const noexcept { return _mont_three; }
 	const felem_t& quadP() const noexcept { return _quadP; }
-#ifdef	WITH_HALF_N
+	const felem_t& P_minus_N() const noexcept { return _p_minus_n; }
+#if	defined(WITH_ECDSA) && !defined(NO_HALF_N)
 	const felem_t& halfN() const noexcept { return _half_n; }
 #endif
 	const size_t presBuffSize() const noexcept { return sizeof(presBuff); }
@@ -608,9 +609,8 @@ public:
 		q.z = felem_t(1);
 	}
 	// scalar may be zero, g_scalar may be zero
-	void combined_mult(point_t<N>& q, const point_t<N>& p,
-				const felem_t& scalar, const felem_t& g_scalar,
-			void *scratchBuff=nullptr) const noexcept
+	void cmult(point_t<N>& q, const point_t<N>& p, const felem_t& scalar,
+			const felem_t& g_scalar, void *scratchBuff=nullptr) const noexcept
 	{
 		if ( unlikely(nBaseNAF == 0) ) return;
 		if ( unlikely(g_scalar.is_zero()) ) return;
@@ -621,6 +621,25 @@ public:
 			scalar_mult(tmp, pp, scalar, scratchBuff);
 			point_add(q, q, tmp);
 		}
+		// no montgomery reduction
+	}
+	void combined_mult(point_t<N>& q, const point_t<N>& p,
+			const felem_t& scalar, const felem_t& g_scalar,
+			void *scratchBuff=nullptr) const noexcept
+	{
+		if ( unlikely(nBaseNAF == 0) ) return;
+		if ( unlikely(g_scalar.is_zero()) ) return;
+#ifdef	ommit
+		scalar_mult_base_internal(q, g_scalar);
+		if ( likely(!scalar.is_zero()) ) {
+			point_t<N>	tmp;
+			spoint_t<N> pp(p.x, p.y);
+			scalar_mult(tmp, pp, scalar, scratchBuff);
+			point_add(q, q, tmp);
+		}
+#else
+		this->cmult(q, p, scalar, g_scalar, scratchBuff);
+#endif
 		// montgomery reduction
 #ifdef	ommit
 		if ( unlikely(q.z.is_zero()) ) {
@@ -734,12 +753,13 @@ protected:
 		felem_t	t1;
 		t1.clear();
 		_mont_one.sub(t1, p);
+		_p_minus_n.sub(p, n);
 		mont_mult2(_mont_three, _mont_one);
 		mod_add_to(_mont_three, _mont_one);
 		_quadP = p;
 		_quadP.rshift1();
 		_quadP.rshift1();
-#ifdef	WITH_HALF_N
+#if	defined(WITH_ECDSA) && !defined(NO_HALF_N)
 		_half_n = n;
 		_half_n.rshift1();
 #endif
@@ -776,7 +796,8 @@ protected:
 	felem_t _mont_three;
 	felem_t _mont_a;
 	felem_t	_quadP;
-#ifdef	WITH_HALF_N
+	felem_t	_p_minus_n;
+#if	defined(WITH_ECDSA) && !defined(NO_HALF_N)
 	felem_t _half_n;
 #endif
 	const u64	k0_p = 0;
@@ -1113,8 +1134,22 @@ public:
 		q.z = felem_t(1);
 	}
 	// scalar may be zero, g_scalar may be zero
+	void cmult(point_t<4>& q, const point_t<4>& p, const felem_t& scalar,
+			const felem_t& g_scalar, void *scratchBuff=nullptr) const noexcept
+	{
+		if ( unlikely(this->nBaseNAF == 0) ) return;
+		if ( unlikely(g_scalar.is_zero()) ) return;
+		scalar_mult_base_internal(q, g_scalar);
+		if ( likely(!scalar.is_zero()) ) {
+			point_t<4>	tmp;
+			spoint_t<4> pp(p.x, p.y);
+			scalar_mult(tmp, pp, scalar, scratchBuff);
+			point_add(q, q, tmp);
+		}
+		// no montgomery reduction
+	}
 	void combined_mult(point_t<4>& q, const point_t<4>& p,
-				const felem_t& scalar, const felem_t& g_scalar,
+			const felem_t& scalar, const felem_t& g_scalar,
 			void *scratchBuff=nullptr) const noexcept
 	{
 		if ( unlikely(this->nBaseNAF == 0) ) return;
@@ -1123,6 +1158,7 @@ public:
 			scalar_mult(q, p, scalar);
 			return;
 		}
+#ifdef	ommit
 		scalar_mult_base_internal(q, g_scalar);
 		if ( likely(!scalar.is_zero()) ) {
 			point_t<4>	tmp;
@@ -1130,6 +1166,9 @@ public:
 			scalar_mult(tmp, pp, scalar, scratchBuff);
 			point_add(q, q, tmp);
 		}
+#else
+		this->cmult(q, p, scalar, g_scalar, scratchBuff);
+#endif
 		// montgomery reduction
 		if ( unlikely(q.z.is_zero()) ) return;
 		this->apply_z_mont(q);

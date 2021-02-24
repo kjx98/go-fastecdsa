@@ -187,7 +187,7 @@ int ecdsa_sign(const curveT& curve, bignum<N>& r, bignum<N>& s,
 		curve.from_montgomeryN(s, tmp);
 		if (s.is_zero()) continue;
 		// SM2 sign s may above halfN
-#ifdef	WITH_HALF_N
+#ifndef	NO_HALF_N
 		if (curve.halfN() < s) {
 			s.sub(curve.paramN(), s);
 			ret ^= 1;
