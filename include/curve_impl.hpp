@@ -141,7 +141,9 @@ public:
 	const felem_t& mont_one() const noexcept { return _mont_one; }
 	const felem_t& mont_three() const noexcept { return _mont_three; }
 	const felem_t& quadP() const noexcept { return _quadP; }
+#ifndef	EXHAUSTIVE_TEST_ORDER
 	const felem_t& P_minus_N() const noexcept { return _p_minus_n; }
+#endif
 #if	defined(WITH_ECDSA) && !defined(NO_HALF_N)
 	const felem_t& halfN() const noexcept { return _half_n; }
 #endif
@@ -753,7 +755,9 @@ protected:
 		felem_t	t1;
 		t1.clear();
 		_mont_one.sub(t1, p);
+#ifndef	EXHAUSTIVE_TEST_ORDER
 		_p_minus_n.sub(p, n);
+#endif
 		mont_mult2(_mont_three, _mont_one);
 		mod_add_to(_mont_three, _mont_one);
 		_quadP = p;
@@ -796,7 +800,9 @@ protected:
 	felem_t _mont_three;
 	felem_t _mont_a;
 	felem_t	_quadP;
+#ifndef	EXHAUSTIVE_TEST_ORDER
 	felem_t	_p_minus_n;
+#endif
 #if	defined(WITH_ECDSA) && !defined(NO_HALF_N)
 	felem_t _half_n;
 #endif

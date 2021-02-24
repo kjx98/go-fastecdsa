@@ -281,12 +281,31 @@ bool ec_verify(const curveT& curve, const bignum<N>& r, const bignum<N>& s,
 	point_t<N>	q, p(pub.x, pub.y);
 	// q = s*G + t * Pub
 	// x2, y2 = s*G + t * Pub
+#ifdef	EXHAUSTIVE_TEST_ORDER
 	curve.combined_mult(q, p, t, s);
 	if ( unlikely(q.x.is_zero()) ) return false;
 	// t = x2 + msg modN
 	t.mod_add(q.x, msg, curve.paramN());
 	if ( unlikely(t.is_zero()) ) return false;
 	return r == t;
+#else
+	curve.cmult(q, p, t, s);
+	if ( unlikely(q.z.is_zero()) ) return false;
+	// t = r - msg
+	t.mod_sub(r, msg, curve.paramN());
+	bignum<N>	t1, zz;
+	curve.mont_msqr(zz, q.z);
+	curve.to_montgomery(t1, t);
+	curve.mont_mmult(t1, t1, zz);
+	if (t1 == q.x) return true;
+	if (t < curve.P_minus_N()) {
+		t.add_to(curve.paramN());
+		curve.to_montgomery(t1, t);
+		curve.mont_mmult(t1, t1, zz);
+		if (t1 == q.x) return true;
+	}
+	return false;
+#endif
 }
 
 // vecover public key, from r/s/v/msg, v for pubY is odd
