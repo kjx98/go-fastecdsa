@@ -132,6 +132,7 @@ public:
 	const felem_t& getGx() const noexcept { return gx; }
 	const felem_t& getGy() const noexcept { return gy; }
 	const felem_t& montParamA() const noexcept { return _mont_a; }
+	const felem_t& montParamB() const noexcept { return _mont_b; }
 	const felem_t& paramP() const noexcept { return p; }
 	const felem_t& paramN() const noexcept { return n; }
 	const felem_t& paramA() const noexcept { return a; }
@@ -267,18 +268,23 @@ public:
 		from_montgomery(res, res);
 	}
 	// prime specially be 4 * k + 3
-	bool mod_sqrt(felem_t& res, const felem_t& x) const noexcept
+	bool mont_sqrt(felem_t& res, const felem_t& xp) const noexcept
 	{
-		felem_t	xp;
-		to_montgomery(xp, x);
 		felem_t	a1;
 		//this->mont_mod_exp(a1, xp, this->quadP());
 		ecc::mont_mod_exp<N>(*this, a1, xp, this->quadP());
 		felem_t	a0;
 		mont_mmult(res, a1, xp);
 		mont_mmult(a0, res, a1);
-		from_montgomery(res, res);
 		return (a0 == this->mont_one());
+	}
+	bool mod_sqrt(felem_t& res, const felem_t& x) const noexcept
+	{
+		felem_t	xp;
+		to_montgomery(xp, x);
+		auto ret = mont_sqrt(res, xp);
+		from_montgomery(res, res);
+		return ret;
 	}
 	bool is_on_curve(const felem_t& x1, const felem_t& y1) const noexcept
 	{
@@ -301,10 +307,11 @@ public:
 		// tt = x^3 + ax
 		mont_mmult(tt, tt, xp);
 		// tt = x^3 + ax, to normal bignum
-		from_montgomery(tt, tt);
-		tt.mod_add_to(this->b, this->p);
+		//from_montgomery(tt, tt);
+		//tt.mod_add_to(this->b, this->p);
+		tt.mod_add_to(this->_mont_b, this->p);
 		mont_msqr(yy, yp);
-		from_montgomery(yy, yy);
+		//from_montgomery(yy, yy);
 		//if (yy.cmp(this->p) >= 0) yy.sub_from(this->p);
 		return yy == tt;
 		//if (!mod_sqrt(tt, tt)) return false;
@@ -347,15 +354,11 @@ public:
 		felem_t	t1;
 
 		if ( unlikely(z.is_one()) ) return;
-#ifdef	ommit
 		if ( unlikely(z.is_zero()) ) {
 			x1.clear();
 			y1.clear();
 			return;
 		}
-#else
-		if ( unlikely(z.is_zero()) ) return;
-#endif
 		mod_inv<N>(z, z, this->p);
 		to_montgomery(z, z);
 		this->mont_msqr(t1, z);	// t1 = z^2
@@ -531,6 +534,7 @@ public:
 			}
 		}
 	}
+	// scalar MUST less than N, result never be infinite
 	void scalar_mult(point_t<N>& q, const point_t<N>& p, const felem_t& scalar,
 			void *scratchBuff=nullptr) const noexcept
 	{
@@ -775,6 +779,7 @@ protected:
 			if (likely(a.is_zero())) _a_is_zero = true;
 		}
 		to_montgomery(_mont_a, this->a);
+		to_montgomery(_mont_b, this->b);
 		// should verify calc K0 and RR
 		_inited = true;
 		return this->initTable();
@@ -803,6 +808,7 @@ protected:
 	felem_t _mont_one;
 	felem_t _mont_three;
 	felem_t _mont_a;
+	felem_t _mont_b;
 	felem_t	_quadP;
 #ifndef	EXHAUSTIVE_TEST_ORDER
 	felem_t	_p_minus_n;
@@ -941,18 +947,23 @@ public:
 		ecc::mont_mod_exp<4>(*this, res, tmp, y1);
 		from_montgomery(res, res);
 	}
-	bool mod_sqrt(felem_t& res, const felem_t& x) const noexcept
+	bool mont_sqrt(felem_t& res, const felem_t& xp) const noexcept
 	{
-		felem_t	xp;
-		to_montgomery(xp, x);
 		felem_t	a1;
 		//ecc::mont_mod_exp<4>(*this, a1, xp, this->quadP());
 		this->mont_mod_exp_quadP(a1, xp);
 		felem_t	a0;
 		mont_mmult(res, a1, xp);
 		mont_mmult(a0, res, a1);
-		from_montgomery(res, res);
 		return (a0 == this->mont_one());
+	}
+	bool mod_sqrt(felem_t& res, const felem_t& x) const noexcept
+	{
+		felem_t	xp;
+		to_montgomery(xp, x);
+		auto ret = mont_sqrt(res, xp);
+		from_montgomery(res, res);
+		return ret;
 	}
 	void point_double_jacobian(u64 *x3, u64 *y3, u64 *z3, const u64 *x1,
 					const u64 *y1, const u64 *z1 = nullptr) const noexcept

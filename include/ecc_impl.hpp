@@ -860,13 +860,15 @@ pointY_recover(const curveT& curve, bnT& y1, const bnT& x1, const bool bOdd)
 	// t2 = x^3 + ax
 	curve.mont_mmult(t2, t2, t1);
 	// t1 = t2 reduction
-	curve.from_montgomery(t1, t2);
+	//curve.from_montgomery(t1, t2);
 	// t1 = t1 + b = x^3 + ax +b
-	t1.mod_add_to(curve.paramB(), curve.paramP());
+	//t1.mod_add_to(curve.paramB(), curve.paramP());
+	t1.mod_add(t2, curve.montParamB(), curve.paramP());
 	// need mod_sqrt
 	// y^2 = x^3 + ax + b
-	auto ret = curve.mod_sqrt(y1, t1);
+	auto ret = curve.mont_sqrt(y1, t1);
 	if ( likely(ret) ) {
+		curve.from_montgomery(y1, y1);
 		// odd for negative bignum
 		if (bOdd ^ y1.is_odd()) y1.sub(curve.paramP(), y1);
 	}
