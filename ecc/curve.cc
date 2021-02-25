@@ -115,7 +115,14 @@ void    point_double_jacobian(Point *pt, const Point *p, CURVE_HND curveH)
 	if (curveH == nullptr) return;
 	auto	*curve=(curve_t *)curveH;
 	if (!(*curve) || curve->ndigits() != 4) return;
-	curve->point_double_jacobian(pt->x, pt->y, pt->z, p->x, p->y, p->z);
+	point_t<4>	pt1, pt3;
+	curve->to_montgomery(pt1.x, p->x);
+	curve->to_montgomery(pt1.y, p->y);
+	curve->to_montgomery(pt1.z, p->z);
+	curve->point_double(pt3, pt1);
+	curve->from_montgomery(pt->x, pt3.x);
+	curve->from_montgomery(pt->y, pt3.y);
+	curve->from_montgomery(pt->z, pt3.z);
 }
 
 // p->z MUST be one
@@ -124,11 +131,15 @@ void    point_double(Point *pt, const Point *p, CURVE_HND curveH)
 	if (curveH == nullptr) return;
 	auto	*curve=(curve_t *)curveH;
 	if (!(*curve) || curve->ndigits() != 4) return;
-	curve->point_double_jacobian(pt->x, pt->y, pt->z, p->x, p->y, p->z);
-	bignum<4>	*xx = reinterpret_cast<bignum<4> *>(pt->x);
-	bignum<4>	*yy = reinterpret_cast<bignum<4> *>(pt->y);
-	bignum<4>	*zz = reinterpret_cast<bignum<4> *>(pt->z);
-	curve->apply_z(*xx, *yy, *zz);
+	point_t<4>	pt1, pt3;
+	curve->to_affined(pt1, p->x, p->y);
+	curve->point_double(pt3, pt1.x, pt1.y);
+	bignum<4>	xx, yy;
+	curve->apply_z(xx, yy, pt3);
+	xx.set(pt->x);
+	yy.set(pt->y);
+	vli_clear<4>(pt->z);
+	pt->z[0] = 1;
 }
 
 void    point_add_jacobian(Point *pt, const Point *p, const Point *q,
@@ -137,8 +148,17 @@ void    point_add_jacobian(Point *pt, const Point *p, const Point *q,
 	if (curveH == nullptr) return;
 	auto	*curve=(curve_t *)curveH;
 	if (!(*curve) || curve->ndigits() != 4) return;
-	curve->point_add_jacobian(pt->x, pt->y, pt->z, p->x, p->y, p->z,
-				q->x, q->y, q->z);
+	point_t<4>	pt1, pt2, pt3;
+	curve->to_montgomery(pt1.x, p->x);
+	curve->to_montgomery(pt1.y, p->y);
+	curve->to_montgomery(pt1.z, p->z);
+	curve->to_montgomery(pt2.x, q->x);
+	curve->to_montgomery(pt2.y, q->y);
+	curve->to_montgomery(pt2.z, q->z);
+	curve->point_add(pt3, pt1, pt2);
+	curve->from_montgomery(pt->x, pt3.x);
+	curve->from_montgomery(pt->y, pt3.y);
+	curve->from_montgomery(pt->z, pt3.z);
 }
 
 // p->z and q->z MUST be one
@@ -148,27 +168,35 @@ void    point_add(Point *pt, const Point *p, const Point *q,
 	if (curveH == nullptr) return;
 	auto	*curve=(curve_t *)curveH;
 	if (!(*curve) || curve->ndigits() != 4) return;
-	curve->point_add_jacobian(pt->x, pt->y, pt->z, p->x, p->y, p->z,
-				q->x, q->y, q->z);
-	bignum<4>	*xx = reinterpret_cast<bignum<4> *>(pt->x);
-	bignum<4>	*yy = reinterpret_cast<bignum<4> *>(pt->y);
-	bignum<4>	*zz = reinterpret_cast<bignum<4> *>(pt->z);
-	curve->apply_z(*xx, *yy, *zz);
+	point_t<4>	pt1, pt2, pt3;
+	curve->to_affined(pt1, p->x, p->y);
+	//curve->to_montgomery(pt1.x, p->x);
+	//curve->to_montgomery(pt1.y, p->y);
+	//pt1.z = curve->mont_one();
+	curve->to_affined(pt2, q->x, q->y);
+	//curve->to_montgomery(pt2.x, q->x);
+	//curve->to_montgomery(pt2.y, q->y);
+	curve->point_add(pt3, pt1, pt2.x, pt2.y);
+	bignum<4>	xx, yy;
+	curve->apply_z(xx, yy, pt3);
+	xx.set(pt->x);
+	yy.set(pt->y);
+	vli_clear<4>(pt->z);
+	pt->z[0] = 1;
 }
 
 void    affine_from_jacobian(u64 *x, u64 *y, const Point *pt, CURVE_HND curveH)
 {
-	u64 z[4];
 	if (curveH == nullptr) return;
 	auto	*curve=(curve_t *)curveH;
 	if (!(*curve) || curve->ndigits() != 4) return;
-	bignum<4>	*xx = reinterpret_cast<bignum<4> *>(const_cast<u64 *>(pt->x));
-	bignum<4>	*yy = reinterpret_cast<bignum<4> *>(const_cast<u64 *>(pt->y));
-	bignum<4>	*zz = reinterpret_cast<bignum<4> *>(const_cast<u64 *>(pt->z));
-	curve->apply_z(*xx, *yy, *zz);
-	vli_set<4>(x, pt->x);
-	vli_set<4>(y, pt->y);
-	vli_set<4>(z, pt->z);
+	point_t<4>	pt3;
+	bignum<4>	*xx = reinterpret_cast<bignum<4> *>(const_cast<u64 *>(x));
+	bignum<4>	*yy = reinterpret_cast<bignum<4> *>(const_cast<u64 *>(y));
+	curve->to_montgomery(pt3.x, pt->x);
+	curve->to_montgomery(pt3.y, pt->y);
+	curve->to_montgomery(pt3.z, pt->z);
+	curve->apply_z(*xx, *yy, pt3);
 }
 
 void	point_mult(Point *pt, const Point *p, const u64 *scalar,

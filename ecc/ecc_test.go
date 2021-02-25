@@ -117,12 +117,14 @@ func TestSM2MultP(t *testing.T) {
 		t.Fail()
 	} else {
 		t.Log("polynomial Prime OK")
+/*
 		polyP.Sub(p, bTwo)
 		t.Log("Dump P - 2:")
 		dumpBits(polyP, t)
 		polyP.Sub(sm2.P256().Params().N, bTwo)
 		t.Log("Dump N - 2:")
 		dumpBits(polyP, t)
+*/
 	}
 }
 

@@ -259,7 +259,7 @@ public:
 		}
 	}
 	bool prod_equal(const felem_t& prod, const felem_t& x, const felem_t& yp)
-   	const noexcept
+	const noexcept
 	{
 		felem_t	xp;
 		this->to_montgomery(xp, x);
@@ -330,76 +330,11 @@ public:
 		to_montgomery(pt.y, y1);
 		pt.z = mont_one();
 	}
-#ifdef	ommit
-	void point_double_jacobian(u64 *x3, u64 *y3, u64 *z3, const u64 *x1,
-					const u64 *y1, const u64 *z1 = nullptr) const noexcept
-	{
-		if ((z1 != nullptr && vli_is_zero<N>(z1)) || vli_is_zero<N>(y1)) {
-			/* P_y == 0 || P_z == 0 => [0:1:0] */
-			vli_clear<N>(x3);
-			vli_clear<N>(y3);
-			vli_clear<N>(z3);
-			//x3[0] = 1;
-			y3[0] = 1;
-			return;
-		}
-		bool	z_is_one = (z1 == nullptr || vli_is_one<N>(z1));
-		felem_t	xp, yp, zp;
-		felem_t	*x3p = reinterpret_cast<felem_t *>(x3);
-		felem_t	*y3p = reinterpret_cast<felem_t *>(y3);
-		felem_t	*z3p = reinterpret_cast<felem_t *>(z3);
-		to_montgomery(xp, x1);
-		to_montgomery(yp, y1);
-		if ( z_is_one ) {
-			zp = mont_one();
-		} else {
-			to_montgomery(zp, z1);
-		}
-		if (z_is_one)
-			point_doublez_jacob<A_is_n3>(*this, *x3p, *y3p, *z3p, xp, yp);
-		else
-			point_double_jacob<A_is_n3>(*this, *x3p, *y3p, *z3p, xp, yp, zp);
-		// montgomery reduction
-		from_montgomery(x3, *x3p);
-		from_montgomery(y3, *y3p);
-		from_montgomery(z3, *z3p);
-	}
-	void apply_z(bignum<N>& x1, bignum<N>& y1, bignum<N>& z) const noexcept
-	{
-		felem_t	t1;
-
-		if ( unlikely(z.is_one()) ) return;
-		if ( unlikely(z.is_zero()) ) {
-			x1.clear();
-			y1.clear();
-			return;
-		}
-		from_montgomery(pt.z, pt.z);
-		mod_inv<N>(z, z, this->_p);
-		to_montgomery(z, z);
-		this->mont_msqr(t1, z);	// t1 = z^2
-		this->mont_mmult(x1, x1, t1);	// x1 * z^2
-		this->mont_mmult(t1, t1, z);	// t1 = z^3
-		this->mont_mmult(y1, y1, t1);	// y1 * z^3
-
-		// montgomery reduction
-		from_montgomery(x1, x1);
-		from_montgomery(y1, y1);
-		// set z to 1
-		z = felem_t(1);
-	}
-	void apply_z(point_t<N>& p) const noexcept
-	{
-		apply_z(p.x, p.y, p.z);
-	}
-#endif
 	void apply_z(felem_t& x, felem_t& y, const point_t<N>& pt) const noexcept
 	{
-		felem_t	z(pt.z), t;
-		x = pt.x;
-		y = pt.y;
+		felem_t	z, t;
 		from_montgomery(z, pt.z);
-		mod_inv<N>(z, z, this->_p);
+		mod_inv<N>(z, z, this->_p);	// z = p.z^-1
 		to_montgomery(z, z);
 		this->mont_msqr(t, z);	// t = z^2
 		this->mont_mmult(x, pt.x, t);	// x1 * z^2
@@ -456,56 +391,6 @@ public:
 		}
 		q.y.sub(this->_p, p.y);
 	}
-#ifdef	ommit
-	void point_add_jacobian(u64 *x3, u64 *y3, u64 *z3, const u64 *x1,
-			const u64 *y1, const u64 *z1, const u64 *x2,
-			const u64 *y2, const u64 *z2 = nullptr) const noexcept
-	{
-		felem_t	*x3p = reinterpret_cast<felem_t *>(x3);
-		felem_t	*y3p = reinterpret_cast<felem_t *>(y3);
-		felem_t	*z3p = reinterpret_cast<felem_t *>(z3);
-		if (z1 != nullptr && vli_is_zero<4>(z1)) {
-			vli_set<4>(x3, x2);
-			vli_set<4>(y3, y2);
-			vli_set<4>(z3, z2);
-			return;
-		} else if (z2 != nullptr && vli_is_zero<4>(z2)) {
-			vli_set<4>(x3, x1);
-			vli_set<4>(y3, y1);
-			vli_set<4>(z3, z1);
-			return;
-		}
-		bool	z1_is_one = (z1 == nullptr || vli_is_one<4>(z1));
-		bool	z2_is_one = (z2 == nullptr || vli_is_one<4>(z2));
-		felem_t	x1p, y1p, z1p;
-		felem_t	x2p, y2p, z2p;
-		to_montgomery(x1p, x1);
-		to_montgomery(y1p, y1);
-		if (z1_is_one) {
-			z1p = mont_one();
-		} else {
-			to_montgomery(z1p, z1);
-		}
-		to_montgomery(x2p, x2);
-		to_montgomery(y2p, y2);
-		if (z2_is_one) {
-			z2p = mont_one();
-		} else {
-			to_montgomery(z2p, z2);
-		}
-		if (z2_is_one) {
-			point_addz_jacob<A_is_n3>(*this, *x3p, *y3p, *z3p, x1p, y1p, z1p,
-							x2p, y2p);
-		} else {
-			point_add_jacob<A_is_n3>(*this, *x3p, *y3p, *z3p, x1p, y1p, z1p,
-							x2p, y2p, z2p);
-		}
-		// montgomery reduction
-		from_montgomery(x3, *x3p);
-		from_montgomery(y3, *y3p);
-		from_montgomery(z3, *z3p);
-	}
-#endif
 	void scalar_mult(point_t<N>& q, const spoint_t<N>& p, const felem_t& scalar,
 			void *scratchBuff=nullptr) const noexcept
 	{
@@ -890,14 +775,14 @@ public:
 	void apply_z_mont(point_t<4>& pt) const noexcept
 	{
 		if (pt.z.is_zero() || pt.z == mont_one()) return;
-		felem_t	t1, z;
+		felem_t	t, z;
 		from_montgomery(z, pt.z);
 		mod_inv<4>(z, z, this->_p);
 		to_montgomery(z, z);		// z = p.z^-1
-		this->mont_msqr(t1, z);	// t1 = z^2
-		this->mont_mmult(pt.x, pt.x, t1);	// x1 * z^2
-		this->mont_mmult(t1, t1, z);	// t1 = z^3
-		this->mont_mmult(pt.y, pt.y, t1);	// y1 * z^3
+		this->mont_msqr(t, z);	// t = z^2
+		this->mont_mmult(pt.x, pt.x, t);	// x1 * z^2
+		this->mont_mmult(t, t, z);	// t = z^3
+		this->mont_mmult(pt.y, pt.y, t);	// y1 * z^3
 		pt.z = this->mont_one();
 	}
 	void mont_mmult(felem_t& res, const felem_t& left, const felem_t& right)
@@ -963,7 +848,7 @@ public:
 		}
 	}
 	bool prod_equal(const felem_t& prod, const felem_t& x, const felem_t& yp)
-   	const noexcept
+	const noexcept
 	{
 		felem_t	xp;
 		this->to_montgomery(xp, x);
@@ -1005,104 +890,19 @@ public:
 	}
 	void apply_z(felem_t& x, felem_t& y, const point_t<4>& pt) const noexcept
 	{
-		felem_t	z(pt.z);
-		x = pt.x;
-		y = pt.y;
+		felem_t	z, t;
 		from_montgomery(z, pt.z);
 		mod_inv<4>(z, z, this->_p);
-		to_montgomery(z, z);
-		this->mont_msqr(z, z);	// z = z^2
-		this->mont_mmult(x, pt.x, z);	// x1 * z^2
-		this->mont_mmult(z, z, z);	// z = z^3
-		this->mont_mmult(y, pt.y, z);	// y1 * z^3
+		to_montgomery(z, z);	// z = pt.z^-1
+		this->mont_msqr(t, z);	// t = z^2
+		this->mont_mmult(x, pt.x, t);	// x1 * z^2
+		this->mont_mmult(t, t, z);	// t = z^3
+		this->mont_mmult(y, pt.y, t);	// y1 * z^3
 		// montgomery reduction
 		from_montgomery(x, x);
 		from_montgomery(y, y);
 	}
-#ifdef	ommit
-	void point_double_jacobian(u64 *x3, u64 *y3, u64 *z3, const u64 *x1,
-					const u64 *y1, const u64 *z1 = nullptr) const noexcept
-	{
-		if ((z1 != nullptr && vli_is_zero<4>(z1)) || vli_is_zero<4>(y1)) {
-			/* P_y == 0 || P_z == 0 => [0:1:0] */
-			vli_clear<4>(x3);
-			vli_clear<4>(y3);
-			vli_clear<4>(z3);
-			//x3[0] = 1;
-			y3[0] = 1;
-			return;
-		}
-		bool	z_is_one = (z1 == nullptr || vli_is_one<4>(z1));
-		felem_t	xp, yp, zp;
-		felem_t	*x3p = reinterpret_cast<felem_t *>(x3);
-		felem_t	*y3p = reinterpret_cast<felem_t *>(y3);
-		felem_t	*z3p = reinterpret_cast<felem_t *>(z3);
-		to_montgomery(xp, x1);
-		to_montgomery(yp, y1);
-		zp = this->mont_one();
-		if (!z_is_one) {
-			to_montgomery(zp, z1);
-		}
-		if (z_is_one)
-			point_doublez_jacob<true>(*this, *x3p, *y3p, *z3p, xp, yp);
-		else
-			point_double_jacob<true>(*this, *x3p, *y3p, *z3p, xp, yp, zp);
-		// montgomery reduction
-		from_montgomery(x3, *x3p);
-		from_montgomery(y3, *y3p);
-		from_montgomery(z3, *z3p);
-	}
-	void point_add_jacobian(u64 *x3, u64 *y3, u64 *z3, const u64 *x1,
-			const u64 *y1, const u64 *z1, const u64 *x2,
-			const u64 *y2, const u64 *z2 = nullptr) const noexcept
-	{
-		felem_t	*x3p = reinterpret_cast<felem_t *>(x3);
-		felem_t	*y3p = reinterpret_cast<felem_t *>(y3);
-		felem_t	*z3p = reinterpret_cast<felem_t *>(z3);
-		if (vli_is_zero<4>(z1)) {
-			vli_set<4>(x3, x2);
-			vli_set<4>(y3, y2);
-			vli_set<4>(z3, z2);
-			return;
-		} else if (z2 != nullptr && vli_is_zero<4>(z2)) {
-			vli_set<4>(x3, x1);
-			vli_set<4>(y3, y1);
-			vli_set<4>(z3, z1);
-			return;
-		}
-		bool	z1_is_one = (z1 == nullptr || vli_is_one<4>(z1));
-		bool	z2_is_one = (z2 == nullptr || vli_is_one<4>(z2));
-		felem_t	x1p, y1p, z1p;
-		felem_t	x2p, y2p, z2p;
-		to_montgomery(x1p, x1);
-		to_montgomery(y1p, y1);
-		if (z1_is_one) {
-			z1p = mont_one();
-		} else {
-			to_montgomery(z1p, z1);
-		}
-		to_montgomery(x2p, x2);
-		to_montgomery(y2p, y2);
-		if (z2_is_one) {
-			z2p = mont_one();
-		} else {
-			to_montgomery(z2p, z2);
-		}
-		if (z2_is_one) {
-			point_addz_jacob<true>(*this, *x3p, *y3p, *z3p, x1p, y1p, z1p,
-							x2p, y2p);
-		} else {
-			point_add_jacob<true>(*this, *x3p, *y3p, *z3p, x1p, y1p, z1p,
-							x2p, y2p, z2p);
-		}
-		// montgomery reduction
-		from_montgomery(x3, *x3p);
-		from_montgomery(y3, *y3p);
-		from_montgomery(z3, *z3p);
-	}
-#endif
-	void
-	scalar_mult(point_t<4>& q, const spoint_t<4>& p, const felem_t& scalar,
+	void scalar_mult(point_t<4>& q, const spoint_t<4>& p, const felem_t& scalar,
 			void *scratchBuff=nullptr) const noexcept
 	{
 		point_t<4>	tmp;
@@ -1329,7 +1129,7 @@ private:
 		mont_mmult(res, res, bn_tbl[1]);	// _11
 	}
 	void scalar_mult_base_internal(point_t<4>& q, const felem_t& scalar)
-		const noexcept
+	const noexcept
 	{
 		if ( unlikely(this->nBaseNAF == 0) ) return;
 		q.clear();
