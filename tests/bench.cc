@@ -375,42 +375,42 @@ BENCHMARK(test_ptRecoverK);
 
 static void test_ECADDJac(benchmark::State &state)
 {
-	u64		xx3[4], yy3[4], zz3[4];
+	point_t<4>	pt1, pt2, pt3;
+	sm2_p256.to_affined(pt1, dx1, dy1);
+	sm2_p256.to_affined(pt2, dx2, dy2);
 	for (auto _ : state) {
-		sm2_p256.point_add_jacobian(xx3, yy3, zz3, dx1, dy1,
-						bigOne.data(), dx2, dy2);
+		sm2_p256.point_add(pt3, pt1, pt2.x, pt2.y);
 	}
 }
 BENCHMARK(test_ECADDJac);
 
 static void test_ECDBLJac(benchmark::State &state)
 {
-	bignum<4>	bigOne(1);
-	u64		xx3[4], yy3[4], zz3[4];
+	point_t<4>	pt1, pt3;
+	sm2_p256.to_affined(pt1, dx1, dy1);
 	for (auto _ : state) {
-		//sm2_p256.point_double_jacobian(xx3, yy3, zz3, dx3, dy3, dz3);
-		sm2_p256.point_double_jacobian(xx3, yy3, zz3, dx1, dy1);
+		sm2_p256.point_double(pt3, pt1.x, pt1.y);
 	}
 }
 BENCHMARK(test_ECDBLJac);
 
 static void test_ECADDJacK(benchmark::State &state)
 {
-	u64		xx3[4], yy3[4], zz3[4];
+	point_t<4>	pt1, pt2, pt3;
+	sm2_p256.to_affined(pt1, dx1, dy1);
+	sm2_p256.to_affined(pt2, dx2, dy2);
 	for (auto _ : state) {
-		sm2_k256.point_add_jacobian(xx3, yy3, zz3, dx1, dy1,
-						bigOne.data(), dx2, dy2);
+		sm2_k256.point_add(pt3, pt1, pt2.x, pt2.y);
 	}
 }
 BENCHMARK(test_ECADDJacK);
 
 static void test_ECDBLJacK(benchmark::State &state)
 {
-	bignum<4>	bigOne(1);
-	u64		xx3[4], yy3[4], zz3[4];
+	point_t<4>	pt1, pt3;
+	sm2_p256.to_affined(pt1, dx1, dy1);
 	for (auto _ : state) {
-		//sm2_k256.point_double_jacobian(xx3, yy3, zz3, dx3, dy3, dz3);
-		sm2_k256.point_double_jacobian(xx3, yy3, zz3, dx1, dy1);
+		sm2_k256.point_double(pt3, pt1.x, pt1.y);
 	}
 }
 BENCHMARK(test_ECDBLJacK);

@@ -78,11 +78,11 @@ public:
 	using felem_t = bignum<N>;
 	typedef spoint_t<N>	gwNAF_t[wBaseSize];
 	static constexpr int maxBaseNAF = nwBaseNAF<N>();
-	ecc_curve(const char *_name, const u64 *_gx, const u64 *_gy, const u64 *_p,
-			const u64 *_n, const u64 *_a, const u64 *_b, const u64* rrP,
+	ecc_curve(const char *_name, const u64 *_gx, const u64 *_gy, const u64 *p,
+			const u64 *n, const u64 *a, const u64 *b, const u64* rrP,
 			const u64* rrN, const u64 k0P, const u64 k0N):
 		name(_name), gx(_gx), gy(_gy),
-		p(_p), n(_n), a(_a), b(_b), rr_p(rrP), rr_n(rrN), k0_p(k0P), k0_n(k0N),
+		_p(p), _n(n), _a(a), _b(b), rr_p(rrP), rr_n(rrN), k0_p(k0P), k0_n(k0N),
 		_a_is_neg3(A_is_n3)
 	{
 		init();
@@ -90,19 +90,19 @@ public:
 	}
 	ecc_curve(ecc_curve &&) = default;
 	static const ecc_curve* new_ecc_curve(const char *_name, const u64 *_gx,
-			const u64 *_gy, const u64 *_p, const u64 *_n, const u64 *_a,
-			const u64 *_b) noexcept
+			const u64 *_gy, const u64 *p, const u64 *n, const u64 *a,
+			const u64 *b) noexcept
 	{
 		static_assert(N > 3, "curve only support 256Bits or more");
 		bignum<N>	prr, nrr;
 		u64		k0P, k0N;
-		bignum<N>	prime(_p);
-		bignum<N>	n_prime(_n);
+		bignum<N>	prime(p);
+		bignum<N>	n_prime(n);
 		k0P = calcK0<N>(prime);
 		calcRR<N>(prr, prime);
 		k0N = calcK0<N>(n_prime);
 		calcRR<N>(nrr, n_prime);
-		return new ecc_curve(_name, _gx, _gy, _p, _n, _a, _b, prr.data(),
+		return new ecc_curve(_name, _gx, _gy, p, n, a, b, prr.data(),
 						nrr.data(), k0P, k0N);
 	}
 	static const ecc_curve* new_ecc_curve(const char *_name, const u8 *params)
@@ -123,20 +123,20 @@ public:
 		//return name != nullptr && name[0] != 0;
 		return name != "";
 	}
-	void getP(u64 *v) const noexcept { p.set(v); }
-	void getN(u64 *v) const noexcept { n.set(v); }
-	void getA(u64 *v) const noexcept { a.set(v); }
-	void getB(u64 *v) const noexcept { b.set(v); }
+	void getP(u64 *v) const noexcept { _p.set(v); }
+	void getN(u64 *v) const noexcept { _n.set(v); }
+	void getA(u64 *v) const noexcept { _a.set(v); }
+	void getB(u64 *v) const noexcept { _b.set(v); }
 	void getGx(u64 *v) const noexcept { gx.set(v); }
 	void getGy(u64 *v) const noexcept { gy.set(v); }
 	const felem_t& getGx() const noexcept { return gx; }
 	const felem_t& getGy() const noexcept { return gy; }
 	const felem_t& montParamA() const noexcept { return _mont_a; }
 	const felem_t& montParamB() const noexcept { return _mont_b; }
-	const felem_t& paramP() const noexcept { return p; }
-	const felem_t& paramN() const noexcept { return n; }
-	const felem_t& paramA() const noexcept { return a; }
-	const felem_t& paramB() const noexcept { return b; }
+	const felem_t& paramP() const noexcept { return _p; }
+	const felem_t& paramN() const noexcept { return _n; }
+	const felem_t& paramA() const noexcept { return _a; }
+	const felem_t& paramB() const noexcept { return _b; }
 	const bool a_is_pminus3() const noexcept { return _a_is_neg3; }
 	const bool a_is_zero() const noexcept { return _a_is_zero; }
 	const felem_t& mont_one() const noexcept { return _mont_one; }
@@ -152,72 +152,80 @@ public:
 	void to_montgomery(felem_t& res, const u64 *x) const noexcept
 	{
 		felem_t   *xx = reinterpret_cast<felem_t *>(const_cast<u64 *>(x));
-		res.mont_mult(*xx, rr_p, p, k0_p);
+		res.mont_mult(*xx, rr_p, _p, k0_p);
 	}
 	void to_montgomery(felem_t& res, const felem_t& x) const noexcept
 	{
-		res.mont_mult(x, rr_p, p, k0_p);
+		res.mont_mult(x, rr_p, _p, k0_p);
 	}
 	void to_montgomeryN(felem_t& res, const felem_t& x) const noexcept
 	{
-		res.mont_mult(x, rr_n, n, k0_n);
+		res.mont_mult(x, rr_n, _n, k0_n);
 	}
 	void from_montgomery(felem_t& res, const felem_t& y) const noexcept
 	{
-		res.mont_reduction(y, p, k0_p);
+		res.mont_reduction(y, _p, k0_p);
 	}
 	void from_montgomeryN(felem_t& res, const felem_t& y) const noexcept
 	{
-		res.mont_reduction(y, n, k0_n);
+		res.mont_reduction(y, _n, k0_n);
 	}
 	void from_montgomery(u64* result, const felem_t& y) const noexcept
 	{
 		felem_t   *res = reinterpret_cast<felem_t *>(result);
-		res->mont_reduction(y, p, k0_p);
+		res->mont_reduction(y, _p, k0_p);
 	}
 	void mont_nmult(felem_t& res, const felem_t& left, const felem_t& right)
 	const noexcept
 	{
-		res.mont_mult(left, right, n, k0_n);
+		res.mont_mult(left, right, _n, k0_n);
 	}
 	void mont_mmult(felem_t& res, const felem_t& left, const felem_t& right)
 	const noexcept
 	{
-		res.mont_mult(left, right, p, k0_p);
+		res.mont_mult(left, right, _p, k0_p);
 	}
 	void mont_msqr(felem_t& res, const felem_t left, const uint nTimes=1)
 	const noexcept
 	{
-		res.mont_sqr(left, p, k0_p);
-		for (uint i=1; i < nTimes; i++) res.mont_sqr(res, p, k0_p);
+		res.mont_sqr(left, _p, k0_p);
+		for (uint i=1; i < nTimes; i++) res.mont_sqr(res, _p, k0_p);
 	}
 	// left,right less than p, result may large than p
 	void mod_add(felem_t& res, const felem_t& left, const felem_t& right)
 	const noexcept
 	{
+#ifdef	ommit
 		if (res.add(left, right)) {
-			res.sub_from(p);
+			res.sub_from(_p);
 		}
+#else
+		res.mod_add(left, right, _p);
+#endif
 	}
 	// left,right less than p, result may large than p
 	void mod_add_to(felem_t& res, const felem_t& right) const noexcept
 	{
+#ifdef	ommit
 		if (res.add_to(right)) {
-			res.sub_from(p);
+			res.sub_from(_p);
 		}
+#else
+		res.mod_add_to(right, _p);
+#endif
 	}
 	// left,right less than p
 	void mod_sub(felem_t& res, const felem_t& left, const felem_t& right)
 	const noexcept
 	{
 		if (res.sub(left, right)) {
-			res.add_to(p);
+			res.add_to(_p);
 		}
 	}
 	void mod_sub_from(felem_t& res, const felem_t& right) const noexcept
 	{
 		if (res.sub_from(right)) {
-			res.add_to(p);
+			res.add_to(_p);
 		}
 	}
 	void mont_mult2(felem_t& res, const felem_t& left) const noexcept
@@ -226,7 +234,7 @@ public:
 		this->mod_add(res, left, left);
 #else
 		if (res.lshift1(left) != 0) {
-			res.sub_from(p);
+			res.sub_from(_p);
 		}
 #endif
 	}
@@ -246,12 +254,12 @@ public:
 		if ( likely(res.is_even()) ) {
 			res.rshift1();
 		} else {
-			bool carry = res.add_to(this->p);
+			bool carry = res.add_to(this->_p);
 			res.rshift1(carry);
 		}
 	}
 	bool prod_equal(const felem_t& prod, const felem_t& x, const felem_t& yp)
-		   	const noexcept
+   	const noexcept
 	{
 		felem_t	xp;
 		this->to_montgomery(xp, x);
@@ -299,23 +307,30 @@ public:
 		if (this->_a_is_neg3)
 #endif
 		{
-			if ( tt.sub_from(this->_mont_three) ) tt.add_to(this->p);
+			if ( tt.sub_from(this->_mont_three) ) tt.add_to(this->_p);
 		} else {
 			if (! this->_a_is_zero) return false;
-			//if ( tt.add_to(this->_mont_a) ) tt.sub_from(this->p);
+			//if ( tt.add_to(this->_mont_a) ) tt.sub_from(this->_p);
 		}
 		// tt = x^3 + ax
 		mont_mmult(tt, tt, xp);
 		// tt = x^3 + ax, to normal bignum
 		//from_montgomery(tt, tt);
-		//tt.mod_add_to(this->b, this->p);
-		tt.mod_add_to(this->_mont_b, this->p);
+		//tt.mod_add_to(this->_b, this->_p);
+		tt.mod_add_to(this->_mont_b, this->_p);
 		mont_msqr(yy, yp);
 		//from_montgomery(yy, yy);
-		//if (yy.cmp(this->p) >= 0) yy.sub_from(this->p);
 		return yy == tt;
 		//if (!mod_sqrt(tt, tt)) return false;
 	}
+	// affined point in montgomery form
+	void to_affined(point_t<N>& pt, const u64 *x1, const u64 *y1) const noexcept
+	{
+		to_montgomery(pt.x, x1);
+		to_montgomery(pt.y, y1);
+		pt.z = mont_one();
+	}
+#ifdef	ommit
 	void point_double_jacobian(u64 *x3, u64 *y3, u64 *z3, const u64 *x1,
 					const u64 *y1, const u64 *z1 = nullptr) const noexcept
 	{
@@ -359,11 +374,10 @@ public:
 			y1.clear();
 			return;
 		}
-		mod_inv<N>(z, z, this->p);
+		from_montgomery(pt.z, pt.z);
+		mod_inv<N>(z, z, this->_p);
 		to_montgomery(z, z);
 		this->mont_msqr(t1, z);	// t1 = z^2
-		to_montgomery(x1, x1);
-		to_montgomery(y1, y1);
 		this->mont_mmult(x1, x1, t1);	// x1 * z^2
 		this->mont_mmult(t1, t1, z);	// t1 = z^3
 		this->mont_mmult(y1, y1, t1);	// y1 * z^3
@@ -374,37 +388,54 @@ public:
 		// set z to 1
 		z = felem_t(1);
 	}
-	void apply_z(felem_t& x, felem_t& y, const point_t<N>& pt) const noexcept
-	{
-		felem_t	z(pt.z);
-		x = pt.x;
-		y = pt.y;
-		apply_z(x, y, z);
-	}
 	void apply_z(point_t<N>& p) const noexcept
 	{
 		apply_z(p.x, p.y, p.z);
 	}
+#endif
+	void apply_z(felem_t& x, felem_t& y, const point_t<N>& pt) const noexcept
+	{
+		felem_t	z(pt.z), t;
+		x = pt.x;
+		y = pt.y;
+		from_montgomery(z, pt.z);
+		mod_inv<N>(z, z, this->_p);
+		to_montgomery(z, z);
+		this->mont_msqr(t, z);	// t = z^2
+		this->mont_mmult(x, pt.x, t);	// x1 * z^2
+		this->mont_mmult(t, t, z);	// t = z^3
+		this->mont_mmult(y, pt.y, t);	// y1 * z^3
+		// montgomery reduction
+		from_montgomery(x, x);
+		from_montgomery(y, y);
+	}
 	void apply_z_mont(point_t<N>& pt) const noexcept
 	{
 		if ( unlikely(pt.z.is_zero() || pt.z == mont_one()) ) return;
-		felem_t	t1;
+		felem_t	t;
 		from_montgomery(pt.z, pt.z);
-		mod_inv<N>(pt.z, pt.z, this->p);
+		mod_inv<N>(pt.z, pt.z, this->_p);
 		to_montgomery(pt.z, pt.z);		// z = p.z^-1
-		this->mont_msqr(t1, pt.z);	// t1 = z^2
-		this->mont_mmult(pt.x, pt.x, t1);	// x1 * z^2
-		this->mont_mmult(t1, t1, pt.z);	// t1 = z^3
-		this->mont_mmult(pt.y, pt.y, t1);	// y1 * z^3
+		this->mont_msqr(t, pt.z);	// t1 = z^2
+		this->mont_mmult(pt.x, pt.x, t);	// x1 * z^2
+		this->mont_mmult(t, t, pt.z);	// t1 = z^3
+		this->mont_mmult(pt.y, pt.y, t);	// y1 * z^3
 		pt.z = this->mont_one();
 	}
 	bool point_eq(const point_t<N>& p, const point_t<N>& q) const noexcept
 	{
 		if (p == q) return true;
-		if ( likely(p.z.is_one()) ) {
+		if ( likely(p.z == mont_one()) ) {
+			felem_t	z(q.z);
 			felem_t	x2, y2;
-			this->apply_z(x2, y2, q);
-			return p.x == x2 && p.y == y2;
+			from_montgomery(z, z);
+			mod_inv<N>(z, z, this->_p);
+			to_montgomery(z, z);
+			this->mont_msqr(z, z);	// z = z^2
+			this->mont_mmult(x2, p.x, z);	// x1 * z^2
+			this->mont_mmult(z, z, z);	// z = z^3
+			this->mont_mmult(y2, p.y, z);	// y1 * z^3
+			return q.x == x2 && q.y == y2;
 		} else {
 			felem_t	x1, x2, y1, y2;
 			this->apply_z(x1, y1, p);
@@ -423,8 +454,9 @@ public:
 			q.x = p.x;
 			q.z = p.z;
 		}
-		q.y.sub(this->p, p.y);
+		q.y.sub(this->_p, p.y);
 	}
+#ifdef	ommit
 	void point_add_jacobian(u64 *x3, u64 *y3, u64 *z3, const u64 *x1,
 			const u64 *y1, const u64 *z1, const u64 *x2,
 			const u64 *y2, const u64 *z2 = nullptr) const noexcept
@@ -473,8 +505,8 @@ public:
 		from_montgomery(y3, *y3p);
 		from_montgomery(z3, *z3p);
 	}
-	void
-	scalar_mult(point_t<N>& q, const spoint_t<N>& p, const felem_t& scalar,
+#endif
+	void scalar_mult(point_t<N>& q, const spoint_t<N>& p, const felem_t& scalar,
 			void *scratchBuff=nullptr) const noexcept
 	{
 		point_t<N>	tmp;
@@ -522,7 +554,7 @@ public:
 #ifndef	NO_CONDITIONAL_COPY
 			tmp = pres[digit];
 			felem_t	ny;
-			ny.sub(this->p, tmp.y);
+			ny.sub(this->_p, tmp.y);
 			ny.copy_conditional(tmp.y, sign-1);
 			tmp.y = ny;
 #else
@@ -608,15 +640,11 @@ public:
 		if ( unlikely(scalar.is_zero()) ) return;
 		scalar_mult_base_internal(q, scalar);
 		// montgomery reduction
-#ifdef	ommit
 		if ( unlikely(q.z.is_zero()) ) {
 			q.x.clear();
 			q.y.clear();
 			return;
 		}
-#else
-		if ( unlikely(q.z.is_zero()) ) return;
-#endif
 		this->apply_z_mont(q);
 		this->from_montgomery(q.x, q.x);
 		this->from_montgomery(q.y, q.y);
@@ -714,7 +742,7 @@ protected:
 		return true;
 	}
 	void scalar_mult_base_internal(point_t<N>& q, const felem_t& scalar)
-		const noexcept
+	const noexcept
 	{
 		if ( unlikely(nBaseNAF == 0) ) return;
 		q.clear();
@@ -735,7 +763,7 @@ protected:
 				// assert, should panic
 			}
 			felem_t	ny;
-			ny.sub(this->p, tmp.y);
+			ny.sub(this->_p, tmp.y);
 			ny.copy_conditional(tmp.y, sign-1);
 			tmp.y = ny;
 #else
@@ -762,24 +790,24 @@ protected:
 		}
 		felem_t	t1;
 		t1.clear();
-		_mont_one.sub(t1, p);
+		_mont_one.sub(t1, _p);
 #ifndef	EXHAUSTIVE_TEST_ORDER
-		_p_minus_n.sub(p, n);
+		_p_minus_n.sub(_p, _n);
 #endif
 		mont_mult2(_mont_three, _mont_one);
 		mod_add_to(_mont_three, _mont_one);
-		_quadP = p;
+		_quadP = _p;
 		_quadP.rshift1();
 		_quadP.rshift1();
 #if	defined(WITH_ECDSA) && !defined(NO_HALF_N)
-		_half_n = n;
+		_half_n = _n;
 		_half_n.rshift1();
 #endif
 		if (unlikely( !_a_is_neg3 )) {
-			if (likely(a.is_zero())) _a_is_zero = true;
+			if (likely(_a.is_zero())) _a_is_zero = true;
 		}
-		to_montgomery(_mont_a, this->a);
-		to_montgomery(_mont_b, this->b);
+		to_montgomery(_mont_a, this->_a);
+		to_montgomery(_mont_b, this->_b);
 		// should verify calc K0 and RR
 		_inited = true;
 		return this->initTable();
@@ -798,10 +826,10 @@ protected:
 	const std::string name;
 	const felem_t gx;
 	const felem_t gy;
-	const felem_t p;
-	const felem_t n;
-	const felem_t a;
-	const felem_t b;
+	const felem_t _p;
+	const felem_t _n;
+	const felem_t _a;
+	const felem_t _b;
 	const felem_t rr_p = {};
 	const felem_t rr_n = {};
 	gwNAF_t	g_precomps[maxBaseNAF];
@@ -831,9 +859,9 @@ protected:
 class alignas(64) curve256 : public ecc_curve<4,true> {
 public:
 	using felem_t = bignum<4>;
-	curve256(const char *_name, const u64 *_gx, const u64 *_gy, const u64 *_p,
-			const u64 *_n, const u64 *_a, const u64 *_b) :
-		ecc_curve<4>(_name, _gx, _gy, _p, _n, _a, _b, sm2_p_rr, sm2_n_rr,
+	curve256(const char *_name, const u64 *_gx, const u64 *_gy, const u64 *p,
+			const u64 *n, const u64 *a, const u64 *b) :
+		ecc_curve<4>(_name, _gx, _gy, p, n, a, b, sm2_p_rr, sm2_n_rr,
 					sm2_p_k0, sm2_n_k0)
 	{
 		static_assert(sm2_p_k0 == 1, "MUST be sm2");
@@ -842,12 +870,13 @@ public:
 	void to_montgomery(felem_t& res, const u64 *x) const noexcept
 	{
 		u64   *resp = reinterpret_cast<u64 *>(&res);
-		mont_mult<4,1>(resp, x, this->rr_p.data(), this->p.data());
+		//mont_mult<4,1>(resp, x, this->rr_p.data(), this->_p.data());
+		sm2p_mult(resp, x, this->rr_p.data());
 	}
 	void to_montgomery(felem_t& res, const felem_t& x) const noexcept
 	{
 		u64   *resp = reinterpret_cast<u64 *>(&res);
-		mont_mult<4,1>(resp, x.data(), this->rr_p.data(), this->p.data());
+		sm2p_mult(resp, x.data(), this->rr_p.data());
 	}
 	void from_montgomery(felem_t& res, const felem_t& y) const noexcept
 	{
@@ -863,7 +892,7 @@ public:
 		if (pt.z.is_zero() || pt.z == mont_one()) return;
 		felem_t	t1, z;
 		from_montgomery(z, pt.z);
-		mod_inv<4>(z, z, this->p);
+		mod_inv<4>(z, z, this->_p);
 		to_montgomery(z, z);		// z = p.z^-1
 		this->mont_msqr(t1, z);	// t1 = z^2
 		this->mont_mmult(pt.x, pt.x, t1);	// x1 * z^2
@@ -872,12 +901,14 @@ public:
 		pt.z = this->mont_one();
 	}
 	void mont_mmult(felem_t& res, const felem_t& left, const felem_t& right)
-	const noexcept {
+	const noexcept
+	{
 		u64   *resp = reinterpret_cast<u64 *>(&res);
 		sm2p_mult(resp, left.data(), right.data());
 	}
 	void mont_msqr(felem_t& res, const felem_t left, const uint nTimes=1)
-	const noexcept {
+	const noexcept
+	{
 		u64   *resp = reinterpret_cast<u64 *>(&res);
 		sm2p_sqrN(resp, left.data());
 		for (uint i=1; i < nTimes; i++) sm2p_sqrN(resp, resp);
@@ -904,7 +935,7 @@ public:
 #else
 		if (res.lshift1(left) != 0) {
 			//this->carry_reduce(res, 1);
-			res.sub_from(this->p);
+			res.sub_from(this->_p);
 		}
 #endif
 	}
@@ -927,12 +958,12 @@ public:
 		if ( likely(res.is_even()) ) {
 			res.rshift1();
 		} else {
-			bool carry = res.add_to(this->p);
+			bool carry = res.add_to(this->_p);
 			res.rshift1(carry);
 		}
 	}
 	bool prod_equal(const felem_t& prod, const felem_t& x, const felem_t& yp)
-		   	const noexcept
+   	const noexcept
 	{
 		felem_t	xp;
 		this->to_montgomery(xp, x);
@@ -965,6 +996,30 @@ public:
 		from_montgomery(res, res);
 		return ret;
 	}
+	// affined point in montgomery form
+	void to_affined(point_t<4>& pt, const u64 *x1, const u64 *y1) const noexcept
+	{
+		to_montgomery(pt.x, x1);
+		to_montgomery(pt.y, y1);
+		pt.z = mont_one();
+	}
+	void apply_z(felem_t& x, felem_t& y, const point_t<4>& pt) const noexcept
+	{
+		felem_t	z(pt.z);
+		x = pt.x;
+		y = pt.y;
+		from_montgomery(z, pt.z);
+		mod_inv<4>(z, z, this->_p);
+		to_montgomery(z, z);
+		this->mont_msqr(z, z);	// z = z^2
+		this->mont_mmult(x, pt.x, z);	// x1 * z^2
+		this->mont_mmult(z, z, z);	// z = z^3
+		this->mont_mmult(y, pt.y, z);	// y1 * z^3
+		// montgomery reduction
+		from_montgomery(x, x);
+		from_montgomery(y, y);
+	}
+#ifdef	ommit
 	void point_double_jacobian(u64 *x3, u64 *y3, u64 *z3, const u64 *x1,
 					const u64 *y1, const u64 *z1 = nullptr) const noexcept
 	{
@@ -1045,6 +1100,7 @@ public:
 		from_montgomery(y3, *y3p);
 		from_montgomery(z3, *z3p);
 	}
+#endif
 	void
 	scalar_mult(point_t<4>& q, const spoint_t<4>& p, const felem_t& scalar,
 			void *scratchBuff=nullptr) const noexcept
@@ -1094,7 +1150,7 @@ public:
 #ifndef	NO_CONDITIONAL_COPY
 			tmp = pres[digit];
 			felem_t	ny;
-			ny.sub(this->p, tmp.y);
+			ny.sub(this->_p, tmp.y);
 			ny.copy_conditional(tmp.y, sign-1);
 			tmp.y = ny;
 #else
@@ -1220,7 +1276,7 @@ private:
 		cc[1] = (u << 32) - u;
 		cc[2] = 0;
 		cc[3] = u << 32;
-		if (res.add_to(cc)) res.sub_from(this->p);
+		if (res.add_to(cc)) res.sub_from(this->_p);
 	}
 	// x^quadP modulo prime, xp is x in motgomery form
 	void mont_mod_exp_quadP(felem_t& res, const felem_t& xp)
@@ -1295,7 +1351,7 @@ private:
 			}
 			//tmp = g_precomps[iLvl][digit];
 			felem_t	ny;
-			ny.sub(this->p, tmp.y);
+			ny.sub(this->_p, tmp.y);
 			ny.copy_conditional(tmp.y, sign-1);
 			tmp.y = ny;
 #else

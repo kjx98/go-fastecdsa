@@ -631,52 +631,60 @@ TEST(testEcc, TestPreCompute)
 
 TEST(testEcc, TestECADD)
 {
-	u64		xx3[4], yy3[4], zz3[4];
 	bignum<4>	x3(dx3), y3(dy3), z3(dz3);
-	sm2_p256.point_add_jacobian(xx3, yy3, zz3, dx1, dy1,
-						bigOne.data(), dx2, dy2);
-	//vli_mod_inv<4>(z, z3, sm2_p256.paramP().data());
-	//sm2_p256.apply_z(xx3, yy3, z);
-	EXPECT_EQ(x3.cmp(xx3), 0);
-	EXPECT_EQ(y3.cmp(yy3), 0);
-	EXPECT_EQ(z3.cmp(zz3), 0);
+	point_t<4>	pt1, pt2, pt3;
+	sm2_p256.to_affined(pt1, dx1, dy1);
+	sm2_p256.to_affined(pt2, dx2, dy2);
+	sm2_p256.point_add(pt3, pt1, pt2.x, pt2.y);
+	sm2_p256.from_montgomery(pt3.x, pt3.x);
+	sm2_p256.from_montgomery(pt3.y, pt3.y);
+	sm2_p256.from_montgomery(pt3.z, pt3.z);
+	EXPECT_EQ(x3.cmp(pt3.x), 0);
+	EXPECT_EQ(y3.cmp(pt3.y), 0);
+	EXPECT_EQ(z3.cmp(pt3.z), 0);
 }
 
 TEST(testEcc, TestECDBL)
 {
-	u64		xx3[4], yy3[4], zz3[4];
 	bignum<4>	x3(x1x1), y3(y1y1), z3(z1z1);
-	sm2_p256.point_double_jacobian(xx3, yy3, zz3, dx1, dy1);
-	//vli_mod_inv<4>(z, z3, sm2_p256.paramP().data());
-	//sm2_p256.apply_z(xx3, yy3, z);
-	EXPECT_EQ(x3.cmp(xx3), 0);
-	EXPECT_EQ(y3.cmp(yy3), 0);
-	EXPECT_EQ(z3.cmp(zz3), 0);
+	point_t<4>	pt1, pt3;
+	sm2_p256.to_affined(pt1, dx1, dy1);
+	sm2_p256.point_double(pt3, pt1.x, pt1.y);
+	sm2_p256.from_montgomery(pt3.x, pt3.x);
+	sm2_p256.from_montgomery(pt3.y, pt3.y);
+	sm2_p256.from_montgomery(pt3.z, pt3.z);
+	EXPECT_EQ(x3.cmp(pt3.x), 0);
+	EXPECT_EQ(y3.cmp(pt3.y), 0);
+	EXPECT_EQ(z3.cmp(pt3.z), 0);
 }
 
 TEST(testEcc, TestECADDk256)
 {
-	u64		xx3[4], yy3[4], zz3[4];
 	bignum<4>	x3(dx3), y3(dy3), z3(dz3);
-	sm2_k256.point_add_jacobian(xx3, yy3, zz3, dx1, dy1,
-						bigOne.data(), dx2, dy2);
-	//vli_mod_inv<4>(z, z3, sm2_p256.paramP().data());
-	//sm2_p256.apply_z(xx3, yy3, z);
-	EXPECT_EQ(x3.cmp(xx3), 0);
-	EXPECT_EQ(y3.cmp(yy3), 0);
-	EXPECT_EQ(z3.cmp(zz3), 0);
+	point_t<4>	pt1, pt2, pt3;
+	sm2_k256.to_affined(pt1, dx1, dy1);
+	sm2_k256.to_affined(pt2, dx2, dy2);
+	sm2_k256.point_add(pt3, pt1, pt2.x, pt2.y);
+	sm2_p256.from_montgomery(pt3.x, pt3.x);
+	sm2_p256.from_montgomery(pt3.y, pt3.y);
+	sm2_p256.from_montgomery(pt3.z, pt3.z);
+	EXPECT_EQ(x3.cmp(pt3.x), 0);
+	EXPECT_EQ(y3.cmp(pt3.y), 0);
+	EXPECT_EQ(z3.cmp(pt3.z), 0);
 }
 
 TEST(testEcc, TestECDBLk256)
 {
-	u64		xx3[4], yy3[4], zz3[4];
 	bignum<4>	x3(x1x1), y3(y1y1), z3(z1z1);
-	sm2_k256.point_double_jacobian(xx3, yy3, zz3, dx1, dy1);
-	//vli_mod_inv<4>(z, z3, sm2_p256.paramP().data());
-	//sm2_p256.apply_z(xx3, yy3, z);
-	EXPECT_EQ(x3.cmp(xx3), 0);
-	EXPECT_EQ(y3.cmp(yy3), 0);
-	EXPECT_EQ(z3.cmp(zz3), 0);
+	point_t<4>	pt1, pt3;
+	sm2_k256.to_affined(pt1, dx1, dy1);
+	sm2_k256.point_double(pt3, pt1.x, pt1.y);
+	sm2_p256.from_montgomery(pt3.x, pt3.x);
+	sm2_p256.from_montgomery(pt3.y, pt3.y);
+	sm2_p256.from_montgomery(pt3.z, pt3.z);
+	EXPECT_EQ(x3.cmp(pt3.x), 0);
+	EXPECT_EQ(y3.cmp(pt3.y), 0);
+	EXPECT_EQ(z3.cmp(pt3.z), 0);
 }
 
 TEST(testEcc, TestScalarMult)
@@ -861,24 +869,27 @@ TEST(testEcc, TestScalarCombinedMult)
 {
 	point_t<4>	pt1(dx1, dy1);
 	bignum<4>	d1(d1d), d2(d2d);
-	u64		x3[4], y3[4], z3[4];
 	point_t<4>	res, res1, res2;
 	sm2_k256.combined_mult(res, pt1, d1, d2);
 	ASSERT_TRUE(res.z.is_one());
 
 	sm2_p256.scalar_mult(res1, pt1, d1);
 	ASSERT_TRUE(res1.z.is_one());
-	sm2_k256.scalar_mult_base(res2, d2);
+	sm2_p256.scalar_mult_base(res2, d2);
 	ASSERT_TRUE(res2.z.is_one());
-	sm2_p256.point_add_jacobian(x3, y3, z3, res1.x.data(), res1.y.data(),
-						bigOne.data(), res2.x.data(), res2.y.data());
-	point_t<4>	pt3(x3, y3, z3);
-	sm2_p256.apply_z(pt3);
-	EXPECT_EQ(res, pt3);
+	sm2_p256.to_montgomery(res1.x, res1.x);
+	sm2_p256.to_montgomery(res1.y, res1.y);
+	sm2_p256.to_montgomery(res2.x, res2.x);
+	sm2_p256.to_montgomery(res2.y, res2.y);
+	res1.z = sm2_p256.mont_one();
+	point_t<4>	pt3;
+	bignum<4>	xx3, yy3;
+	sm2_p256.point_add(pt3, res1, res2.x, res2.y);
+	sm2_p256.apply_z(xx3, yy3, pt3);
+	EXPECT_EQ(res.x, xx3);
+	EXPECT_EQ(res.y, yy3);
 	std::cout << "res x3: " << res.x << std::endl;
 	std::cout << "res y3: " << res.y << std::endl;
-	bignum<4>	xx3(x3);
-	bignum<4>	yy3(y3);
 	std::cout << "res xx3: " << xx3 << std::endl;
 	std::cout << "res yy3: " << yy3 << std::endl;
 }
@@ -887,7 +898,6 @@ TEST(testEcc, TestScalarCombinedMultN)
 {
 	point_t<4>	pt1(dx1, dy1);
 	bignum<4>	d1(d1d), d2(d2d);
-	u64		x3[4], y3[4], z3[4];
 	point_t<4>	res, res1, res2;
 	sm2_p256.combined_mult(res, pt1, d1, d2);
 	ASSERT_TRUE(res.z.is_one());
@@ -896,15 +906,19 @@ TEST(testEcc, TestScalarCombinedMultN)
 	ASSERT_TRUE(res1.z.is_one());
 	sm2_p256.scalar_mult_base(res2, d2);
 	ASSERT_TRUE(res2.z.is_one());
-	sm2_p256.point_add_jacobian(x3, y3, z3, res1.x.data(), res1.y.data(),
-						res1.z.data(), res2.x.data(), res2.y.data());
-	point_t<4>	pt3(x3, y3, z3);
-	sm2_p256.apply_z(pt3);
-	EXPECT_EQ(res, pt3);
+	sm2_p256.to_montgomery(res1.x, res1.x);
+	sm2_p256.to_montgomery(res1.y, res1.y);
+	sm2_p256.to_montgomery(res2.x, res2.x);
+	sm2_p256.to_montgomery(res2.y, res2.y);
+	res1.z = sm2_p256.mont_one();
+	point_t<4>	pt3;
+	bignum<4>	xx3, yy3;
+	sm2_p256.point_add(pt3, res1, res2.x, res2.y);
+	sm2_p256.apply_z(xx3, yy3, pt3);
+	EXPECT_EQ(res.x, xx3);
+	EXPECT_EQ(res.y, yy3);
 	std::cout << "res x3: " << res.x << std::endl;
 	std::cout << "res y3: " << res.y << std::endl;
-	bignum<4>	xx3(x3);
-	bignum<4>	yy3(y3);
 	std::cout << "res xx3: " << xx3 << std::endl;
 	std::cout << "res yy3: " << yy3 << std::endl;
 }
