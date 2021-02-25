@@ -142,9 +142,12 @@ protected:
 	template<typename curveT>
 	bool init(const curveT& curve, const felem_t& secret) noexcept {
 		_inited = false;
-		if (secret >= curve.paramN()) _d.sub(secret, curve.paramN()); else _d = secret;
-		//curve.modN(_d, secret);
-		if (_d.is_zero()) return false;
+		bignum<N>	n1;
+		n1.usub(curve.paramN(), 1);
+		// mod N-1
+		if (secret >= n1) _d.sub(secret, n1); else _d = secret;
+		if (_d.is_zero()) _d.uadd_to(1);
+		// _d in [1 .. N-2]
 		_dInv = _d;
 		_dInv.uadd_to(1);
 		if (_dInv == curve.paramN()) return false;
@@ -182,13 +185,11 @@ void gen_keypair(const curveT& curve, bignum<N>& secret, bignum<N>& pubX,
 {
 	auto&	rd = bn_random<N>::Instance();
 	bignum<N>	n1;
-	n1.usub(curve.paramN(), 1);
-	do {
-		secret = rd.get_random();
-		if ( unlikely(secret >= n1) ) 
-			secret.sub_from(n1);
-		//curve.modN(secret, secret);
-	} while (secret.is_zero());
+	n1.usub(curve.paramN(), 2);
+	// mod N-2, add_to 1
+	secret = rd.get_random();
+	if ( unlikely(secret >= n1) ) secret.sub_from(n1);
+	secret.uadd_to(1);
 	point_t<N>	pt;
 	curve.scalar_mult_base(pt, secret);
 	pubX = pt.x;

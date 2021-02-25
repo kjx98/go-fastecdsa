@@ -166,14 +166,14 @@ public:
 	{
 		res.mont_reduction(y, _p, k0_p);
 	}
-	void from_montgomeryN(felem_t& res, const felem_t& y) const noexcept
-	{
-		res.mont_reduction(y, _n, k0_n);
-	}
 	void from_montgomery(u64* result, const felem_t& y) const noexcept
 	{
 		felem_t   *res = reinterpret_cast<felem_t *>(result);
 		res->mont_reduction(y, _p, k0_p);
+	}
+	void from_montgomeryN(felem_t& res, const felem_t& y) const noexcept
+	{
+		res.mont_reduction(y, _n, k0_n);
 	}
 	void mont_nmult(felem_t& res, const felem_t& left, const felem_t& right)
 	const noexcept
@@ -271,7 +271,6 @@ public:
 	{
 		felem_t		tmp;
 		to_montgomery(tmp, x1);
-		//mont_mod_exp(res, tmp, y1);
 		ecc::mont_mod_exp<N>(*this, res, tmp, y1);
 		from_montgomery(res, res);
 	}
@@ -315,13 +314,9 @@ public:
 		// tt = x^3 + ax
 		mont_mmult(tt, tt, xp);
 		// tt = x^3 + ax, to normal bignum
-		//from_montgomery(tt, tt);
-		//tt.mod_add_to(this->_b, this->_p);
 		tt.mod_add_to(this->_mont_b, this->_p);
 		mont_msqr(yy, yp);
-		//from_montgomery(yy, yy);
 		return yy == tt;
-		//if (!mod_sqrt(tt, tt)) return false;
 	}
 	// affined point in montgomery form
 	void to_affined(point_t<N>& pt, const u64 *x1, const u64 *y1) const noexcept
@@ -556,17 +551,7 @@ public:
 	{
 		if ( unlikely(nBaseNAF == 0) ) return;
 		if ( unlikely(g_scalar.is_zero()) ) return;
-#ifdef	ommit
-		scalar_mult_base_internal(q, g_scalar);
-		if ( likely(!scalar.is_zero()) ) {
-			point_t<N>	tmp;
-			spoint_t<N> pp(p.x, p.y);
-			scalar_mult(tmp, pp, scalar, scratchBuff);
-			point_add(q, q, tmp);
-		}
-#else
 		this->cmult(q, p, scalar, g_scalar, scratchBuff);
-#endif
 		// montgomery reduction
 		if ( unlikely(q.z.is_zero()) ) {
 			q.x.clear();
@@ -698,16 +683,6 @@ protected:
 		return this->initTable();
 		//return true;
 	}
-	// x exp y modulo prime, xp is x in motgomery form
-	void mont_mod_exp(felem_t& res, const felem_t& xp, const felem_t& y)
-	const noexcept
-	{
-		res = xp;
-		for (uint i = y.num_bits()-2; i < N*64; --i) {
-			mont_msqr(res, res);
-			if (y.test_bit(i)) mont_mmult(res, res, xp);
-		}
-	}
 	const std::string name;
 	const felem_t gx;
 	const felem_t gy;
@@ -755,7 +730,6 @@ public:
 	void to_montgomery(felem_t& res, const u64 *x) const noexcept
 	{
 		u64   *resp = reinterpret_cast<u64 *>(&res);
-		//mont_mult<4,1>(resp, x, this->rr_p.data(), this->_p.data());
 		sm2p_mult(resp, x, this->rr_p.data());
 	}
 	void to_montgomery(felem_t& res, const felem_t& x) const noexcept
@@ -984,7 +958,6 @@ public:
 			point_doublez_jacob<true>(*this, q.x, q.y, q.z, p.x, p.y);
 		else
 #if	defined(WITH_DBL_2004hmv) && __cplusplus >= 201703L
-//#if	__cplusplus >= 201703L
 			point_double3n_jacob(*this, q.x, q.y, q.z, p.x, p.y, p.z);
 #else
 			point_double_jacob<true>(*this, q.x, q.y, q.z, p.x, p.y, p.z);
@@ -1043,17 +1016,7 @@ public:
 			scalar_mult(q, p, scalar);
 			return;
 		}
-#ifdef	ommit
-		scalar_mult_base_internal(q, g_scalar);
-		if ( likely(!scalar.is_zero()) ) {
-			point_t<4>	tmp;
-			spoint_t<4> pp(p.x, p.y);
-			scalar_mult(tmp, pp, scalar, scratchBuff);
-			point_add(q, q, tmp);
-		}
-#else
 		this->cmult(q, p, scalar, g_scalar, scratchBuff);
-#endif
 		// montgomery reduction
 		if ( unlikely(q.z.is_zero()) ) {
 			q.x.clear();
@@ -1149,7 +1112,6 @@ private:
 			if ( unlikely(this->select_base_point(tmp, digit, iLvl)) ) {
 				// assert, should panic
 			}
-			//tmp = g_precomps[iLvl][digit];
 			felem_t	ny;
 			ny.sub(this->_p, tmp.y);
 			ny.copy_conditional(tmp.y, sign-1);

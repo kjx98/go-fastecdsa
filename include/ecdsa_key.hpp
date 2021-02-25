@@ -88,10 +88,10 @@ protected:
 	template<typename curveT>
 	bool init(const curveT& curve, const felem_t& secret) noexcept {
 		_inited = false;
+		// _d in [1.. N-1]
 		if (secret >= curve.paramN()) _d.sub(secret, curve.paramN());
 		else _d = secret;
-		//curve.modN(_d, secret);
-		if (_d.is_zero()) return false;
+		if (_d.is_zero()) _d.uadd_to(1);
 #ifdef	WITH_MONT_D
 		curve.to_montgomeryN(_mont_d, _d);
 #endif
