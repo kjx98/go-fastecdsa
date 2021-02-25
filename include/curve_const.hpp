@@ -90,6 +90,11 @@ constexpr u64 secp256k1_p[] = { 0xFFFFFFFEFFFFFC2Full, 0xFFFFFFFFFFFFFFFFull,
 				0xffffffffffffffffull, 0xFFFFFFFFFFFFFFFFull };
 constexpr u64 secp256k1_n[] = { 0xbfd25e8cd0364141ull, 0xbaaedce6af48a03bull,
 				0xFFFFFFFFFFFFFFFEull, 0xffffffffffffffffull };
+constexpr u64 secp256k1_p_rr[] = { 0x7a2000e90a1, 1, 0, 0};
+constexpr u64 secp256k1_n_rr[] = {0x896CF21467D7D140ull, 0x741496C20E7CF878ull,
+	   			0xE697F5E45BCD07C6ull, 0x9D671CD581C69BC5ull};
+constexpr u64 secp256k1_p_k0 = 0xd838091dd2253531;
+constexpr u64 secp256k1_n_k0 = 0x4b0dff665588b13f;
 constexpr u64 secp256k1_a[] = { 0, 0, 0, 0 };
 constexpr u64 secp256k1_b[] = { 0x7, 0, 0, 0};
 constexpr u64 secp256k1_gx[]= { 0x59F2815B16F81798ull, 0x29BFCDB2DCE28D9ull,

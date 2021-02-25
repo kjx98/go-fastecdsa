@@ -54,12 +54,12 @@ func TestKeyGeneration(t *testing.T) {
 }
 
 func BenchmarkSignP256(b *testing.B) {
-	b.ResetTimer()
+	//b.ResetTimer()
 	p256 := elliptic.P256()
 	hashed := []byte("testing")
 	priv, _ := GenerateKey(p256, rand.Reader)
 
-	b.ReportAllocs()
+	//b.ReportAllocs()
 	b.ResetTimer()
 	b.RunParallel(func(pb *testing.PB) {
 		for pb.Next() {
@@ -69,13 +69,13 @@ func BenchmarkSignP256(b *testing.B) {
 }
 
 func BenchmarkSignSM2(b *testing.B) {
-	b.ResetTimer()
+	//b.ResetTimer()
 	//p256 := sm2.P256()
 	p256 := sm2.SM2()
 	hashed := []byte("testing")
 	priv, _ := GenerateKey(p256, rand.Reader)
 
-	b.ReportAllocs()
+	//b.ReportAllocs()
 	b.ResetTimer()
 	b.RunParallel(func(pb *testing.PB) {
 		for pb.Next() {
@@ -85,12 +85,12 @@ func BenchmarkSignSM2(b *testing.B) {
 }
 
 func BenchmarkSignSM2C(b *testing.B) {
-	b.ResetTimer()
+	//b.ResetTimer()
 	p256 := ecc.SM2C()
 	hashed := []byte("testing")
 	priv, _ := GenerateKey(p256, rand.Reader)
 
-	b.ReportAllocs()
+	//b.ReportAllocs()
 	b.ResetTimer()
 	b.RunParallel(func(pb *testing.PB) {
 		for pb.Next() {
@@ -100,13 +100,13 @@ func BenchmarkSignSM2C(b *testing.B) {
 }
 
 func BenchmarkVerifyP256(b *testing.B) {
-	b.ResetTimer()
+	//b.ResetTimer()
 	p256 := elliptic.P256()
 	hashed := []byte("testing")
 	priv, _ := GenerateKey(p256, rand.Reader)
 	r, s, _ := Sign(rand.Reader, priv, hashed)
 
-	b.ReportAllocs()
+	//b.ReportAllocs()
 	b.ResetTimer()
 	b.RunParallel(func(pb *testing.PB) {
 		for pb.Next() {
@@ -116,14 +116,14 @@ func BenchmarkVerifyP256(b *testing.B) {
 }
 
 func BenchmarkVerifySM2(b *testing.B) {
-	b.ResetTimer()
+	//b.ResetTimer()
 	//p256 := sm2.P256()
 	p256 := sm2.SM2()
 	hashed := []byte("testing")
 	priv, _ := GenerateKey(p256, rand.Reader)
 	r, s, _ := Sign(rand.Reader, priv, hashed)
 
-	b.ReportAllocs()
+	//b.ReportAllocs()
 	b.ResetTimer()
 	b.RunParallel(func(pb *testing.PB) {
 		for pb.Next() {
@@ -133,13 +133,13 @@ func BenchmarkVerifySM2(b *testing.B) {
 }
 
 func BenchmarkVerifySM2C(b *testing.B) {
-	b.ResetTimer()
+	//b.ResetTimer()
 	p256 := ecc.SM2C()
 	hashed := []byte("testing")
 	priv, _ := GenerateKey(p256, rand.Reader)
 	r, s, _ := Sign(rand.Reader, priv, hashed)
 
-	b.ReportAllocs()
+	//b.ReportAllocs()
 	b.ResetTimer()
 	b.RunParallel(func(pb *testing.PB) {
 		for pb.Next() {
@@ -149,7 +149,7 @@ func BenchmarkVerifySM2C(b *testing.B) {
 }
 
 func BenchmarkRecoverSM2(b *testing.B) {
-	b.ResetTimer()
+	//b.ResetTimer()
 	//p256 := sm2.P256()
 	p256 := sm2.SM2asm()
 	hashed := []byte("testing")
@@ -157,24 +157,29 @@ func BenchmarkRecoverSM2(b *testing.B) {
 	priv, _ := GenerateKey(p256, rand.Reader)
 	r, s, v, _ := p256.Sign(e, priv.D)
 
-	b.ReportAllocs()
+	//b.ReportAllocs()
 	b.ResetTimer()
 	b.RunParallel(func(pb *testing.PB) {
 		for pb.Next() {
 			p256.Recover(r, s, e, v)
 		}
 	})
+	/*
+		for i := 0; i < b.N; i++ {
+			p256.Recover(r, s, e, v)
+		}
+	*/
 }
 
 func BenchmarkRecoverSM2C(b *testing.B) {
-	b.ResetTimer()
+	//b.ResetTimer()
 	p256 := ecc.SM2C()
 	hashed := []byte("testing")
 	e := hashToInt(hashed, p256)
 	priv, _ := GenerateKey(p256, rand.Reader)
 	r, s, v, _ := p256.Sign(e, priv.D)
 
-	b.ReportAllocs()
+	//b.ReportAllocs()
 	b.ResetTimer()
 	b.RunParallel(func(pb *testing.PB) {
 		for pb.Next() {
@@ -184,13 +189,13 @@ func BenchmarkRecoverSM2C(b *testing.B) {
 }
 
 func BenchmarkVerifySM2go(b *testing.B) {
-	b.ResetTimer()
+	//b.ResetTimer()
 	p256 := sm2.SM2go()
 	hashed := []byte("testing")
 	priv, _ := GenerateKey(p256, rand.Reader)
 	r, s, _ := Sign(rand.Reader, priv, hashed)
 
-	b.ReportAllocs()
+	//b.ReportAllocs()
 	b.ResetTimer()
 	b.RunParallel(func(pb *testing.PB) {
 		for pb.Next() {
@@ -200,10 +205,10 @@ func BenchmarkVerifySM2go(b *testing.B) {
 }
 
 func BenchmarkKeyGeneration(b *testing.B) {
-	b.ResetTimer()
+	//b.ResetTimer()
 	p256 := elliptic.P256()
 
-	b.ReportAllocs()
+	//b.ReportAllocs()
 	b.ResetTimer()
 	b.RunParallel(func(pb *testing.PB) {
 		for pb.Next() {
@@ -274,7 +279,7 @@ func testSignAndRecover(t *testing.T, c elliptic.Curve, tag string) {
 	// Sign via Curve c
 	hashed := []byte("testing")
 	e := hashToInt(hashed, c)
-	for i :=0; i < 10; i++ {
+	for i := 0; i < 10; i++ {
 		r, s, v, err := opt.Sign(e, priv.D)
 		if err != nil {
 			t.Errorf("%s: error signing: %s", tag, err)
@@ -295,8 +300,8 @@ func testSignAndRecover(t *testing.T, c elliptic.Curve, tag string) {
 	t.Log(tag, " SignAndRecover test PASS")
 }
 
-func testSignAndRecover2(t *testing.T, c,c1 elliptic.Curve, tag string) {
-	var opt,opt1 signIntf
+func testSignAndRecover2(t *testing.T, c, c1 elliptic.Curve, tag string) {
+	var opt, opt1 signIntf
 	if in, ok := c.(signIntf); !ok {
 		t.Errorf("%s: curve c not support sign/recover interface", tag)
 		t.Fail()

@@ -1,4 +1,4 @@
-package sm2
+package btc
 
 import (
 	"crypto/elliptic"
@@ -230,18 +230,18 @@ func TestRRbySM2(t *testing.T) {
 	smPP.Add(smPP, n64)
 	smPP.Sub(smPP, bigOne)
 	n512 := new(big.Int).Mul(n256, n256)
-	cParams := sm2g.Params()
+	cParams := btcg.Params()
 	n := cParams.N
 	R := new(big.Int).Mod(n256, n)
 	RR := new(big.Int).Mul(R, R)
 	RR.Mod(RR, n)
 	ww := RR.Bits()
-	t.Logf("RR mod N of sm2 is %X %X %X %X", ww[0], ww[1], ww[2], ww[3])
+	t.Logf("RR mod N of btc is %X %X %X %X", ww[0], ww[1], ww[2], ww[3])
 	cRR := calcRR(n)
 	if cRR.Cmp(RR) != 0 {
 		t.Logf("calcRR diff, %s", cRR.Text(16))
 	} else {
-		t.Log("calcRR sm2 n works")
+		t.Log("calcRR btc n works")
 	}
 	ww = n.Bits()
 	t.Logf("N(order) is %X %X %X %X", ww[0], ww[1], ww[2], ww[3])
@@ -262,9 +262,9 @@ func TestRRbySM2(t *testing.T) {
 	if crr.Cmp(rr) != 0 {
 		t.Logf("calcRR diff, %s", crr.Text(16))
 	} else {
-		t.Log("calcRR sm2 p works")
+		t.Log("calcRR btc p works")
 	}
-	m1 := sm2g.montRed(rr)
+	m1 := btcg.montRed(rr)
 	if m1.Cmp(r) == 0 {
 		t.Log("r is same as montRed(rr)")
 	} else {
