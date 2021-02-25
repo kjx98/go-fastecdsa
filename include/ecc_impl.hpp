@@ -769,14 +769,13 @@ pointY_recover(const curveT& curve, bnT& y1, const bnT& x1, const bool bOdd)
 	curve.to_montgomery(t1, x1);
 	// t2 = x^2 + a
 	curve.mont_msqr(t2, t1);
-	curve.mod_add_to(t2, curve.montParamA());
+	//curve.mod_add_to(t2, curve.montParamA());
+	t2.mod_add_to(curve.montParamA(), curve.paramP());
 	// t2 = x^3 + ax
 	curve.mont_mmult(t2, t2, t1);
-	// t1 = t2 reduction
-	//curve.from_montgomery(t1, t2);
-	// t1 = t1 + b = x^3 + ax +b
-	//t1.mod_add_to(curve.paramB(), curve.paramP());
+	// t1 = t2 + b = x^3 + ax +b
 	t1.mod_add(t2, curve.montParamB(), curve.paramP());
+	//curve.mod_add(t1, t2, curve.montParamB());
 	// need mod_sqrt
 	// y^2 = x^3 + ax + b
 	auto ret = curve.mont_sqrt(y1, t1);
