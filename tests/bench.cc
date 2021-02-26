@@ -198,6 +198,36 @@ static void test_montSqrK01(benchmark::State &state)
 }
 BENCHMARK(test_montSqrK01);
 
+static void test_montBtcRed(benchmark::State &state)
+{
+	bignum<4>	xp;
+	bignum<4>	bx1(dx1);
+	u64		res[4];
+	xp.mont_mult(bx1, btc_rr, btc_prime, secp256k1_p_k0);
+	for (auto _ : state) {
+		for (int i=0; i<1000; ++i)
+		btc_reduction(res, xp.data());
+		tt = bignum<4>(res);
+	}
+}
+BENCHMARK(test_montBtcRed);
+
+static void test_BtcMontSqrN(benchmark::State &state)
+{
+	bignum<4>	bp;
+	bignum<4>	bx1(dx1);
+	u64			res[4];
+	bp.mont_mult(bx1, btc_rr, btc_prime, secp256k1_p_k0);
+	for (auto _ : state) {
+		for (int i=0; i<1000; ++i)
+			btc_sqrN(res, bp.data());
+	}
+	bignum<4>	xp(res);
+	tt.mont_reduction(xp, btc_prime, secp256k1_p_k0);
+}
+BENCHMARK(test_BtcMontSqrN);
+
+
 static void test_bnMult(benchmark::State &state)
 {
 	bignum<4>	bx1(dx1);

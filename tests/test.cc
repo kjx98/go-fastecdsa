@@ -169,6 +169,25 @@ static void mont_mul(bignum<4>& res, const bignum<4>& x, const bignum<4>& y)
 	res.mont_reduction(res, prime, sm2_p_k0);
 }
 
+static void btc_mont_mul(bignum<4>& res, const bignum<4>& x, const bignum<4>& y)
+{
+	bignum<4>	xp, yp;
+	xp.mont_mult(x, btc_rr, btc_prime, secp256k1_p_k0);
+	yp.mont_mult(y, btc_rr, btc_prime, secp256k1_p_k0);
+	res.mont_mult(xp, yp, btc_prime, secp256k1_p_k0);
+	res.mont_reduction(res, btc_prime, secp256k1_p_k0);
+}
+
+static void btc_mont_mulPr(bignum<4>& res, const bignum<4>& x, const bignum<4>& y)
+{
+	bignum<4>	xp, yp;
+	u64   *resp = reinterpret_cast<u64 *>(&res);
+	xp.mont_mult(x, btc_rr, btc_prime, secp256k1_p_k0);
+	yp.mont_mult(y, btc_rr, btc_prime, secp256k1_p_k0);
+	btc_mult(resp, xp.data(), yp.data());
+	btc_reduction(resp, resp);
+}
+
 static void mont_mulPr(bignum<4>& res, const bignum<4>& x, const bignum<4>& y)
 {
 	bignum<4>	xp, yp;
@@ -215,6 +234,14 @@ static void mont_sqrN(u64 *res, const bignum<4>& x)
 	xp.mont_mult(x, rr, prime, sm2_p_k0);
 	mont_sqrN<4,sm2_p_k0>(res, xp.data(), prime.data());
 	mont_reduction<4,sm2_p_k0>(res, res, prime.data());
+}
+
+static void btc_mont_sqrN(u64 *res, const bignum<4>& x)
+{
+	bignum<4>	xp;
+	xp.mont_mult(x, btc_rr, btc_prime, secp256k1_p_k0);
+	btc_sqrN(res, xp.data());
+	btc_reduction(res, res);
 }
 
 static void sm2p_mont_sqrN(u64 *res, const bignum<4>& x)
@@ -292,6 +319,21 @@ TEST(testEcc, TestSM2pRedN)
 	}
 }
 
+
+TEST(testEcc, TestBtcRed)
+{
+	auto&  rd = bn_random<4>::Instance();
+	bignum<4>	xp;
+	u64		res[4];
+	for (int i=0; i<10; ++i) {
+		bignum<4>	tmp = rd.get_random();
+		u64   *resp = reinterpret_cast<u64 *>(&xp);
+		mont_mult<4, secp256k1_p_k0>(resp, tmp.data(), btc_rr.data(), btc_prime.data());
+		btc_reduction(res, xp.data());
+		EXPECT_TRUE(tmp == res);
+	}
+}
+
 TEST(testEcc, TestMontMult)
 {
 	bignum<4>	res, res2;
@@ -321,6 +363,32 @@ TEST(testEcc, TestMontSqr)
 	mont_sqrN(res2, by1);
 	EXPECT_TRUE(res.cmp(res2) == 0);
 	sm2p_mont_sqrN(res2, by1);
+	EXPECT_TRUE(res.cmp(res2) == 0);
+}
+
+TEST(testEcc, TestBtcMontMult)
+{
+	bignum<4>	res, res2;
+	bignum<4>	bx1(dx1), by1(dy1);
+	btc_mont_mul(res, bx1, by1);
+	btc_mont_mulPr(res2, bx1, by1);
+	EXPECT_EQ(res2, res);
+	bignum<4>	bx2(dx2), by2(dy2);
+	btc_mont_mul(res, bx2, by2);
+	btc_mont_mulPr(res2, bx2, by2);
+	EXPECT_EQ(res2, res);
+}
+
+TEST(testEcc, TestBtcMontSqr)
+{
+	bignum<4>	res;
+	u64			res2[4];
+	bignum<4>	bx1(dx1), by1(dy1);
+	btc_mont_mul(res, bx1, bx1);
+	btc_mont_sqrN(res2, bx1);
+	EXPECT_TRUE(res.cmp(res2) == 0);
+	btc_mont_mul(res, by1, by1);
+	btc_mont_sqrN(res2, by1);
 	EXPECT_TRUE(res.cmp(res2) == 0);
 }
 

@@ -56,3 +56,4 @@ bignum<4>	rr(sm2_p_rr);
 bignum<4>	bigOne(1);
 bignum<4>	quadPrime(sm2_quadP);
 bignum<4>	btc_prime(secp256k1_p);
+bignum<4>	btc_rr(secp256k1_p_rr);

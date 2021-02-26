@@ -587,6 +587,40 @@ mont_mult(u64 *result, const u64 *x, const u64 *y, const u64 *prime) noexcept
 }
 
 
+forceinline static void
+btc_reduction(u64 *result, const u64 *y) noexcept
+{
+	u64	s[4 + 1];
+	u64	r[4 + 1];
+	vli_set<4>(r, y);
+	r[4] = 0;
+	for (uint i=0; i < 4; i++) {
+		u64	u = r[0] * secp256k1_p_k0;
+		vli_btc_multP(s, u);
+		u = vli_add_to<4 + 1>(r, s);
+		vli_rshift1w<4 + 1>(r, u);	
+	}
+	vli_mod<4>(result, r, secp256k1_p, r[4] != 0);
+}
+
+forceinline static void
+btc_mult(u64 *result, const u64 *x, const u64 *y) noexcept
+{
+	u64	s[4 + 1];
+	u64	r[4 + 1];
+	vli_clear<4 + 1>(r);
+	for (uint i=0; i < 4;i++) {
+		vli_umult2<4>(s, x, y[i]);
+		vli_add_to<4 + 1>(r, s);
+		u64	u = r[0] * secp256k1_p_k0;
+		vli_btc_multP(s, u);
+		u = vli_add_to<4 + 1>(r, s);
+		vli_rshift1w<4 + 1>(r, u);	
+	}
+	vli_mod<4>(result, r, secp256k1_p, r[4] != 0);
+}
+
+
 #ifdef	WITH_SM2_MULTSTEP
 forceinline static void
 sm2p_multStep(u64& r0, u64& r1, u64& r2, u64& r3, u64& r4, const u64& x0,
@@ -1136,6 +1170,26 @@ mont_sqrN(u64 *result, const u64 *x, const u64 *prime) noexcept
 	{
 		r[N] += vli_add_to<N>(r, result);
 		vli_mod<N>(result, r, prime, r[N] != 0);
+	}
+}
+
+forceinline static void
+btc_sqrN(u64 *result, const u64 *x) noexcept
+{
+	u64	r[4 * 2];
+	u64	s[4 + 1];
+	vli_square<4>(r, x);
+	vli_set<4>(result, r + 4);
+	r[4] = 0;
+	for (uint i=0; i < 4; i++) {
+		u64	u = r[0] * secp256k1_p_k0;
+		vli_btc_multP(s, u);
+		u = vli_add_to<4 + 1>(r, s);
+		vli_rshift1w<4 + 1>(r, u);	
+	}
+	{
+		r[4] += vli_add_to<4>(r, result);
+		vli_mod<4>(result, r, secp256k1_p, r[4] != 0);
 	}
 }
 
