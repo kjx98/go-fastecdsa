@@ -222,10 +222,8 @@ func TestRRbyBTC(t *testing.T) {
 func TestRRbySM2(t *testing.T) {
 	n96 := new(big.Int).Lsh(bigOne, 96)
 	n64 := new(big.Int).Lsh(bigOne, 64)
-	//n128 := new(big.Int).Lsh(bigOne, 128)
 	n224 := new(big.Int).Lsh(bigOne, 224)
 	smPP := new(big.Int).Sub(n256, n224)
-	//smPP.Sub(smPP, n128)
 	smPP.Sub(smPP, n96)
 	smPP.Add(smPP, n64)
 	smPP.Sub(smPP, bigOne)

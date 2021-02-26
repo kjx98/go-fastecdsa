@@ -13,7 +13,7 @@ import (
 // p256Inverse sets out to in^-1 mod p.
 //func p256Inverse(out, in []uint64)
 func init() {
-	SM2go()
+	BTCgo()
 }
 
 func asmMontMult(x, y *big.Int) *big.Int {
@@ -186,7 +186,7 @@ func TestAsmInverse(t *testing.T) {
 }
 
 func TestPointRecover(t *testing.T) {
-	c := pSM2
+	c := pBTC
 	px, py := c.ScalarBaseMult(d1.Bytes())
 	v := py.Bit(0)
 	if py2, err := RecoverPoint(px, v); err != nil {
@@ -208,7 +208,6 @@ func TestPointRecover(t *testing.T) {
 }
 
 func BenchmarkAsmInverse(b *testing.B) {
-	b.ResetTimer()
 	priv, _ := fastecdsa.GenerateKey(P256(), rand.Reader)
 	var res, yy [4]uint64
 	fromBig(yy[:], priv.PublicKey.X)
@@ -222,19 +221,18 @@ func BenchmarkAsmInverse(b *testing.B) {
 }
 
 func BenchmarkAsmMontModMul(b *testing.B) {
-	b.ResetTimer()
-	c := btcg
+	//c := btcg
+	xp := x1 //toMont(x1)
 
 	b.ResetTimer()
 	b.RunParallel(func(pb *testing.PB) {
 		for pb.Next() {
-			_ = asmMontMult(x1, c.rr)
+			_ = asmMontMult(xp, xp)
 		}
 	})
 }
 
 func BenchmarkAsmMontSqr(b *testing.B) {
-	b.ResetTimer()
 	var res, xp [4]uint64
 	fromBig(xp[:], x1)
 	p256Mul(res[:], xp[:], rr)
@@ -247,7 +245,6 @@ func BenchmarkAsmMontSqr(b *testing.B) {
 }
 
 func BenchmarkAsmOrdMul(b *testing.B) {
-	b.ResetTimer()
 	var res, xp [4]uint64
 	fromBig(xp[:], x1)
 	b.ResetTimer()
@@ -259,7 +256,6 @@ func BenchmarkAsmOrdMul(b *testing.B) {
 }
 
 func BenchmarkAsmOrdSqr(b *testing.B) {
-	b.ResetTimer()
 	var res, xp [4]uint64
 	fromBig(xp[:], x1)
 	p256OrdMul(res[:], xp[:], nRR)
@@ -272,8 +268,7 @@ func BenchmarkAsmOrdSqr(b *testing.B) {
 }
 
 func BenchmarkPointRecover(b *testing.B) {
-	b.ResetTimer()
-	c := pSM2
+	c := pBTC
 	px, py := c.ScalarBaseMult(d1.Bytes())
 	v := py.Bit(0)
 	b.ResetTimer()
@@ -285,8 +280,7 @@ func BenchmarkPointRecover(b *testing.B) {
 }
 
 func BenchmarkAsmECMULT(b *testing.B) {
-	b.ResetTimer()
-	Curve := SM2()
+	Curve := BTC()
 	goGx := Curve.Params().Gx
 	goGy := Curve.Params().Gy
 
@@ -299,8 +293,7 @@ func BenchmarkAsmECMULT(b *testing.B) {
 }
 
 func BenchmarkAsmECGMULT(b *testing.B) {
-	b.ResetTimer()
-	Curve := SM2()
+	Curve := BTC()
 
 	b.ResetTimer()
 	b.RunParallel(func(pb *testing.PB) {

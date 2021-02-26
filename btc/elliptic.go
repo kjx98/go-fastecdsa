@@ -68,9 +68,6 @@ func Unmarshal(curve Curve, data []byte) (x, y *big.Int) {
 		}
 		x3 := new(big.Int).Mul(x, x)
 		x3.Mul(x3, x)
-		threeX := new(big.Int).Lsh(x, 1)
-		threeX.Add(threeX, x)
-		x3.Sub(x3, threeX)
 		x3.Add(x3, curve.Params().B)
 		x3.Mod(x3, p)
 		if y = new(big.Int).ModSqrt(x3, p); y == nil {

@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
 
-// +build !amd64,!arm64
+// +build !amd64,!arm64,notwork
 
 package btc
 
@@ -22,7 +22,7 @@ var (
 	p256RInverse *big.Int
 )
 
-func initSM2() {
+func initBTC() {
 	p256RInverse, _ = new(big.Int).SetString("7ffffffd80000002fffffffe000000017ffffffe800000037ffffffc80000002", 16)
 
 	// Arch-specific initialization, i.e. let a platform dynamically pick a P256 implementation

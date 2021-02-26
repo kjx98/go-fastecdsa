@@ -32,7 +32,7 @@ func testKeyGeneration(t *testing.T, c elliptic.Curve, tag string) {
 	if !c.IsOnCurve(priv.PublicKey.X, priv.PublicKey.Y) {
 		t.Errorf("%s: public key invalid: %v", tag, err)
 	}
-	t.Log(tag, " KeyGen test PASS")
+	t.Log(tag, " KeyGen test PASS✅")
 	/*
 		t.Logf("%s priv D: %s", tag, priv.D.Text(16))
 		t.Logf("%s curve X: %s, Y: %s", tag, priv.PublicKey.X.Text(16),
@@ -237,7 +237,7 @@ func testSignAndVerify(t *testing.T, c elliptic.Curve, tag string) {
 	if Verify(&priv.PublicKey, hashed, r, s) {
 		t.Errorf("%s: Verify always works!", tag)
 	}
-	t.Log(tag, " SignAndVerify test ✔ \U0001F4AF")
+	t.Log(tag, " SignAndVerify test ✔")
 }
 
 func testSignAndVerify2(t *testing.T, c, c1 elliptic.Curve, tag string) {
@@ -264,7 +264,7 @@ func testSignAndVerify2(t *testing.T, c, c1 elliptic.Curve, tag string) {
 	if Verify(&priv.PublicKey, hashed, r, s) {
 		t.Errorf("%s: Verify always works!", tag)
 	}
-	t.Log(tag, " SignAndVerify2 test \U0001F4AF")
+	t.Log(tag, " SignAndVerify2 test PASS ✅")
 }
 
 func testSignAndRecover(t *testing.T, c elliptic.Curve, tag string) {
@@ -297,7 +297,7 @@ func testSignAndRecover(t *testing.T, c elliptic.Curve, tag string) {
 				priv.PublicKey.Y.Text(16), py.Text(16))
 		}
 	}
-	t.Log(tag, " SignAndRecover test ✅ \U0001F4AF")
+	t.Log(tag, " SignAndRecover test PASS ✅")
 }
 
 func testSignAndRecover2(t *testing.T, c, c1 elliptic.Curve, tag string) {
@@ -335,7 +335,7 @@ func testSignAndRecover2(t *testing.T, c, c1 elliptic.Curve, tag string) {
 			priv.PublicKey.X.Text(16), px.Text(16),
 			priv.PublicKey.Y.Text(16), py.Text(16))
 	}
-	t.Log(tag, " SignAndRecover2 test ✅")
+	t.Log(tag, " SignAndRecover2 test PASS ✅")
 }
 
 func TestSignAndVerify(t *testing.T) {
