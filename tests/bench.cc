@@ -212,20 +212,30 @@ static void test_montBtcRed(benchmark::State &state)
 }
 BENCHMARK(test_montBtcRed);
 
-static void test_BtcMontSqrN(benchmark::State &state)
+static void test_BtcMult(benchmark::State &state)
 {
-	bignum<4>	bp;
-	bignum<4>	bx1(dx1);
 	u64			res[4];
-	bp.mont_mult(bx1, btc_rr, btc_prime, secp256k1_p_k0);
+	u64	r[4 * 2];
 	for (auto _ : state) {
-		for (int i=0; i<1000; ++i)
-			btc_sqrN(res, bp.data());
+		for (int i=0; i<1000; ++i) {
+			vli_mult<4>(r, dx1, dy1);
+			btcp_mod(res, r);
+		}
 	}
 	bignum<4>	xp(res);
-	tt.mont_reduction(xp, btc_prime, secp256k1_p_k0);
 }
-BENCHMARK(test_BtcMontSqrN);
+BENCHMARK(test_BtcMult);
+
+static void test_BtcSqrN(benchmark::State &state)
+{
+	u64			res[4];
+	for (auto _ : state) {
+		for (int i=0; i<1000; ++i)
+			btc_sqrN(res, dx1);
+	}
+	bignum<4>	xp(res);
+}
+BENCHMARK(test_BtcSqrN);
 
 
 static void test_bnMult(benchmark::State &state)

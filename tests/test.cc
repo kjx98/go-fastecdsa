@@ -171,11 +171,10 @@ static void mont_mul(bignum<4>& res, const bignum<4>& x, const bignum<4>& y)
 
 static void btc_mont_mul(bignum<4>& res, const bignum<4>& x, const bignum<4>& y)
 {
-	bignum<4>	xp, yp;
-	xp.mont_mult(x, btc_rr, btc_prime, secp256k1_p_k0);
-	yp.mont_mult(y, btc_rr, btc_prime, secp256k1_p_k0);
-	res.mont_mult(xp, yp, btc_prime, secp256k1_p_k0);
-	res.mont_reduction(res, btc_prime, secp256k1_p_k0);
+	bn_prod<4>	pd;
+	pd.mult(x, y);
+	u64   *resp = reinterpret_cast<u64 *>(&res);
+	btcp_mod(resp, pd.data());
 }
 
 static void btc_mont_mulPr(bignum<4>& res, const bignum<4>& x, const bignum<4>& y)
@@ -184,8 +183,16 @@ static void btc_mont_mulPr(bignum<4>& res, const bignum<4>& x, const bignum<4>& 
 	u64   *resp = reinterpret_cast<u64 *>(&res);
 	xp.mont_mult(x, btc_rr, btc_prime, secp256k1_p_k0);
 	yp.mont_mult(y, btc_rr, btc_prime, secp256k1_p_k0);
-	btc_mult(resp, xp.data(), yp.data());
+	btc_mont_mult(resp, xp.data(), yp.data());
 	btc_reduction(resp, resp);
+}
+
+static void btc_mult(bignum<4>& res, const bignum<4>&x, const bignum<4>& y)
+{
+	u64   *resp = reinterpret_cast<u64 *>(&res);
+	bn_prod<4>	pd;
+	pd.mult(x, y);
+	btcp_mod(resp, pd.data());
 }
 
 static void mont_mulPr(bignum<4>& res, const bignum<4>& x, const bignum<4>& y)
@@ -238,10 +245,7 @@ static void mont_sqrN(u64 *res, const bignum<4>& x)
 
 static void btc_mont_sqrN(u64 *res, const bignum<4>& x)
 {
-	bignum<4>	xp;
-	xp.mont_mult(x, btc_rr, btc_prime, secp256k1_p_k0);
-	btc_sqrN(res, xp.data());
-	btc_reduction(res, res);
+	btc_sqrN(res, x.data());
 }
 
 static void sm2p_mont_sqrN(u64 *res, const bignum<4>& x)
@@ -368,15 +372,19 @@ TEST(testEcc, TestMontSqr)
 
 TEST(testEcc, TestBtcMontMult)
 {
-	bignum<4>	res, res2;
+	bignum<4>	res, res1, res2;
 	bignum<4>	bx1(dx1), by1(dy1);
 	btc_mont_mul(res, bx1, by1);
+	btc_mult(res1, bx1, by1);
 	btc_mont_mulPr(res2, bx1, by1);
 	EXPECT_EQ(res2, res);
+	EXPECT_EQ(res2, res1);
 	bignum<4>	bx2(dx2), by2(dy2);
 	btc_mont_mul(res, bx2, by2);
+	btc_mult(res1, bx2, by2);
 	btc_mont_mulPr(res2, bx2, by2);
 	EXPECT_EQ(res2, res);
+	EXPECT_EQ(res2, res1);
 }
 
 TEST(testEcc, TestBtcMontSqr)

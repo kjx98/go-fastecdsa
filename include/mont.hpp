@@ -587,6 +587,45 @@ mont_mult(u64 *result, const u64 *x, const u64 *y, const u64 *prime) noexcept
 }
 
 
+// secp256k1 prime optimize
+// p is 2^256 - 2^32 - 0x3d1 = 2^256 - 0x1000003d1
+/* result > mod (result = mod + remainder), so subtract mod to
+ * get remainder.
+ */
+static forceinline void
+btcp_mod(u64 *res, const u64 *product) noexcept
+{
+	u64 c = -secp256k1_p[0];
+#ifdef	ommit
+	u64 t[4 + 1];
+	u64 r[4 * 2];
+
+	vli_set<4 * 2>(r, product);
+	while (!vli_is_zero<4>(r + 4)) {
+		vli_umult2<4>(t, r + 4, c);
+		vli_clear<4>(r + 4);
+		r[4+1] = vli_add_to<4 + 1>(r, t);
+	}
+#else
+	u64 t[4 + 1];
+	u64 r[4 + 2];
+	vli_set<4>(r, product);
+	r[4] = 0;
+	vli_umult2<4>(t, product+4, c);
+	r[5] = vli_add_to<5>(r, t);
+	vli_clear<4>(t);
+	vli_umult2<2>(t, r+4, c);
+	r[4] = vli_add_to<4>(r, t);
+	if (r[4]) {
+		vli_sub<4>(res, r, secp256k1_p);
+		return;
+	}
+#endif
+	auto carry = vli_sub<4>(res, r, secp256k1_p);
+	if (carry) vli_set<4>(res, r);
+}
+
+
 forceinline static void
 btc_reduction(u64 *result, const u64 *y) noexcept
 {
@@ -604,7 +643,7 @@ btc_reduction(u64 *result, const u64 *y) noexcept
 }
 
 forceinline static void
-btc_mult(u64 *result, const u64 *x, const u64 *y) noexcept
+btc_mont_mult(u64 *result, const u64 *x, const u64 *y) noexcept
 {
 	u64	s[4 + 1];
 	u64	r[4 + 1];
@@ -1177,20 +1216,8 @@ forceinline static void
 btc_sqrN(u64 *result, const u64 *x) noexcept
 {
 	u64	r[4 * 2];
-	u64	s[4 + 1];
 	vli_square<4>(r, x);
-	vli_set<4>(result, r + 4);
-	r[4] = 0;
-	for (uint i=0; i < 4; i++) {
-		u64	u = r[0] * secp256k1_p_k0;
-		vli_btc_multP(s, u);
-		u = vli_add_to<4 + 1>(r, s);
-		vli_rshift1w<4 + 1>(r, u);	
-	}
-	{
-		r[4] += vli_add_to<4>(r, result);
-		vli_mod<4>(result, r, secp256k1_p, r[4] != 0);
-	}
+	btcp_mod(result, r);
 }
 
 forceinline static void
