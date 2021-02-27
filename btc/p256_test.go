@@ -64,7 +64,6 @@ func calcRRa(p *big.Int) *big.Int {
 	return t
 }
 
-
 func TestRRbyBTC(t *testing.T) {
 	cParams := BTC().Params()
 	n := cParams.N
@@ -145,7 +144,6 @@ func TestRRbyBTC(t *testing.T) {
 	t.Logf("Gy: %X %X %X %X", ww[0], ww[1], ww[2], ww[3])
 }
 
-
 func TestBTCAsmGo(t *testing.T) {
 	goCurve := BTCgo()
 	//asm version BTC works
@@ -166,44 +164,6 @@ func TestBTCAsmGo(t *testing.T) {
 		t.Fail()
 	}
 }
-
-func TestMontMulMod(t *testing.T) {
-	BTCgo()
-	c := btcg
-	prod := new(big.Int).Mul(x1, y1)
-	m1 := new(big.Int).Mod(prod, c.P)
-	m2 := new(big.Int).Mod(prod, c.P)
-	//m2 := c.montModMul(x1, y1)
-	if m1.Cmp(m2) != 0 {
-		t.Logf("MontMulMod step 1 diff:\n%s vs\n%s", m1.Text(16), m2.Text(16))
-		t.Fail()
-	}
-	/*
-		ww := x1.Bits()
-		t.Logf("x1: %x %x %x %x", ww[0], ww[1], ww[2], ww[3])
-		ww = y1.Bits()
-		t.Logf("y1: %x %x %x %x", ww[0], ww[1], ww[2], ww[3])
-		ww = m1.Bits()
-		t.Logf("xy1mod: %x %x %x %x", ww[0], ww[1], ww[2], ww[3])
-	*/
-	prod = new(big.Int).Mul(x2, y2)
-	m1 = new(big.Int).Mod(prod, c.P)
-	m2 = new(big.Int).Mod(prod, c.P)
-	//m2 = c.montModMul(x2, y2)
-	if m1.Cmp(m2) != 0 {
-		t.Logf("MontMulMod step2 diff:\n%s vs\n%s", m1.Text(16), m2.Text(16))
-		t.Fail()
-	}
-	/*
-		ww = x2.Bits()
-		t.Logf("x2: %x %x %x %x", ww[0], ww[1], ww[2], ww[3])
-		ww = y2.Bits()
-		t.Logf("y2: %x %x %x %x", ww[0], ww[1], ww[2], ww[3])
-		ww = m1.Bits()
-		t.Logf("xy2mod: %x %x %x %x", ww[0], ww[1], ww[2], ww[3])
-	*/
-}
-
 
 func BenchmarkModMul(b *testing.B) {
 	p := P256().Params().P

@@ -158,7 +158,9 @@ func fromBig(out []uint64, big *big.Int) {
 	}
 
 	bits := big.Bits()
-	if len(bits) > 4 { bits = bits[:4] }
+	if len(bits) > 4 {
+		bits = bits[:4]
+	}
 	for i, v := range bits {
 		out[i] = uint64(v)
 	}
@@ -261,25 +263,35 @@ func (c p256Curve) Verify(r, s, msg, px, py *big.Int) bool {
 	if r.Sign() <= 0 || s.Sign() <= 0 {
 		return false
 	}
-	if r.Cmp(N) >= 0 || s.Cmp(N) >= 0 { return false }
-	t := new(big.Int).Add(r, s)
-	t.Mod(t, N)
-	if t.Sign() == 0 {
+	if r.Cmp(N) >= 0 || s.Cmp(N) >= 0 {
 		return false
 	}
-	pt := c.combinedMult(px, py, s.Bytes(), t.Bytes())
-	x1 := new(big.Int).Sub(r, msg)
-	if x1.Sign() < 0 {
-		x1.Add(x1, c.N)
+	sInv := new(big.Int).ModInverse(s, N)
+	var res, xp, yp [4]uint64
+	fromBig(xp[:], sInv)
+	p256OrdMul(xp[:], xp[:], nRR)
+	fromBig(yp[:], msg)
+	p256OrdMul(yp[:], yp[:], nRR)
+	p256OrdMul(res[:], xp[:], yp[:])
+	p256OrdMul(res[:], res[:], one)
+	u := toBig(res[:])
+	fromBig(yp[:], r)
+	p256OrdMul(yp[:], yp[:], nRR)
+	p256OrdMul(res[:], xp[:], yp[:])
+	p256OrdMul(res[:], res[:], one)
+	v := toBig(res[:])
+	if u.Sign() == 0 || v.Sign() == 0 {
+		return false
 	}
+	pt := c.combinedMult(px, py, u.Bytes(), v.Bytes())
 	var zz [4]uint64
 	p256Sqr(zz[:], pt.xyz[8:], 1)
-	if p256ProdEqual(pt.xyz[:4], zz[:], x1) {
+	if p256ProdEqual(pt.xyz[:4], zz[:], r) {
 		return true
 	}
-	if x1.Cmp(c.pMinusN) < 0 {
-		x1.Add(x1, c.N)
-		if p256ProdEqual(pt.xyz[:4], zz[:], x1) {
+	if r.Cmp(c.pMinusN) < 0 {
+		r.Add(r, c.N)
+		if p256ProdEqual(pt.xyz[:4], zz[:], r) {
 			return true
 		}
 	}
@@ -293,43 +305,42 @@ func (c p256Curve) Sign(msg, secret *big.Int) (r, s *big.Int,
 	if N.Sign() == 0 {
 		return nil, nil, 0, errZeroParam
 	}
-	dInv := new(big.Int).Add(secret, bigOne)
-	if dInv.ModInverse(dInv, N) == nil {
-		return nil, nil, 0, errZeroParam
-	}
 	var res, xp, yp [4]uint64
-	fromBig(xp[:], dInv)
-	p256OrdMul(xp[:], xp[:], nRR)
 	for {
 		rand.Read(kB[:])
 		k := new(big.Int).SetBytes(kB[:])
 		k.Mod(k, n2minus)
 		k.Add(k, bigOne)
 		x1, y1 := c.ScalarBaseMult(k.Bytes())
-		r = new(big.Int).Add(x1, msg)
-		r.Mod(r, c.Params().N)
+		r = x1
 		if r.Sign() == 0 {
 			continue
 		}
 		v = y1.Bit(0)
-		k.Add(k, r)
-		k.Mod(k, N)
-		if k.Sign() == 0 {
+		if k.ModInverse(k, N) == nil {
 			continue
 		}
+		fromBig(xp[:], secret)
+		p256OrdMul(xp[:], xp[:], nRR)
+		fromBig(yp[:], r)
+		p256OrdMul(yp[:], yp[:], nRR)
+		p256OrdMul(res[:], xp[:], yp[:])
+		p256OrdMul(res[:], res[:], one)
+		rdA := toBig(res[:])
+		rdA.Add(rdA, msg)
+		if rdA.Cmp(N) >= 0 {
+			rdA.Sub(rdA, N)
+		}
+		if rdA.Sign() == 0 {
+			continue
+		}
+		fromBig(xp[:], rdA)
+		p256OrdMul(xp[:], xp[:], nRR)
 		fromBig(yp[:], k)
 		p256OrdMul(yp[:], yp[:], nRR)
 		p256OrdMul(res[:], xp[:], yp[:])
 		p256OrdMul(res[:], res[:], one)
 		s = toBig(res[:])
-		if s.Sign() == 0 {
-			continue
-		}
-		s.Sub(s, r)
-		if s.Sign() < 0 {
-			s.Add(s, N)
-		}
-		s.Mod(s, N)
 		if s.Sign() != 0 {
 			break
 		}
