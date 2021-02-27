@@ -147,7 +147,7 @@ func TestRRbyBTC(t *testing.T) {
 func TestBTCAsmGo(t *testing.T) {
 	goCurve := BTCgo()
 	//asm version BTC works
-	asmCurve := BTC()
+	asmCurve := BTCasm()
 	//asmCurve := P256()
 	goGx := goCurve.Params().Gx
 	goGy := goCurve.Params().Gy

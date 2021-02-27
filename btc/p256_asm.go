@@ -40,7 +40,7 @@ var (
 	bigOne          = new(big.Int).SetInt64(1)
 	two             = new(big.Int).SetInt64(2)
 	one             = []uint64{1, 0, 0, 0}
-	p256MontOne     = []uint64{1, 0xffffffff, 0, 0x100000000}
+	p256MontOne     = []uint64{ 0x00000001000003d1, 0, 0, 0}
 )
 var errZeroParam = errors.New("zero parameter")
 var errParam = errors.New("error parameter")
@@ -469,72 +469,6 @@ func (p *p256Point) CopyConditional(src *p256Point, v int) {
 
 // p256Inverse sets out to in^-1 mod p.
 func p256Inverse(out, in []uint64) {
-	var stack [6 * 4]uint64
-	p2 := stack[4*0 : 4*0+4]
-	p4 := stack[4*1 : 4*1+4]
-	p8 := stack[4*2 : 4*2+4]
-	p16 := stack[4*3 : 4*3+4]
-	p32 := stack[4*4 : 4*4+4]
-	p3 := stack[4*5 : 4*5+4]
-
-	p256Sqr(out, in, 1)
-	p256Mul(p2, out, in) // 3*p
-
-	p256Sqr(out, p2, 1)
-	p256Mul(p3, out, in) // 7*p
-
-	p256Sqr(out, p2, 2)
-	p256Mul(p4, out, p2) // f*p
-
-	p256Sqr(out, p4, 4)
-	p256Mul(p8, out, p4) // ff*p
-
-	p256Sqr(out, p8, 8)
-	p256Mul(p16, out, p8) // ffff*p
-
-	p256Sqr(out, p16, 16)
-	p256Mul(p32, out, p16) // ffffffff*p
-
-	p256Sqr(out, p16, 8)
-	p256Mul(out, out, p8) // ffffff*p
-	p256Sqr(out, out, 4)
-	p256Mul(out, out, p4) // fffffff*p
-	p256Sqr(out, out, 3)
-	p256Mul(out, out, p3)
-	p256Sqr(out, out, 1) // fffffffe*p
-
-	p256Sqr(out, out, 32)
-	p256Mul(out, out, p32) // fffffffeffffffff
-
-	p256Sqr(out, out, 32)
-	p256Mul(out, out, p32)
-	p256Sqr(out, out, 32)
-	p256Mul(out, out, p32) // ... ffffffffffffffff
-	p256Sqr(out, out, 32)
-	p256Mul(out, out, p32)
-	p256Sqr(out, out, 32) // ... ffffffff00000000
-
-	p256Sqr(out, out, 32)
-	p256Mul(out, out, p32)
-
-	p256Sqr(out, out, 16)
-	p256Mul(out, out, p16)
-
-	p256Sqr(out, out, 8)
-	p256Mul(out, out, p8)
-
-	p256Sqr(out, out, 4)
-	p256Mul(out, out, p4)
-
-	p256Sqr(out, out, 2)
-	p256Mul(out, out, p2)
-
-	p256Sqr(out, out, 2)
-	p256Mul(out, out, in)
-}
-
-// p256ExpQuadP sets out to in^-1 mod p.
-func p256ExpQuadP(out, in []uint64) {
 	var stack [8 * 4]uint64
 	p2 := stack[4*0 : 4*0+4]
 	p4 := stack[4*1 : 4*1+4]
@@ -563,16 +497,71 @@ func p256ExpQuadP(out, in []uint64) {
 	p256Sqr(out, p16, 16)
 	p256Mul(p32, out, p16) // ffffffff*p
 
-	p256Sqr(out, p16, 8)
-	p256Mul(out, out, p8) // ffffff*p
-	p256Sqr(out, out, 4)
-	p256Mul(out, out, p4) // fffffff*p
-	p256Sqr(out, out, 3)
-	p256Mul(out, out, p3)
-	p256Sqr(out, out, 1) // fffffffe*p
+	p256Sqr(out, p32, 32)
+	p256Mul(out, out, p32)	// 64 ... 1
 
 	p256Sqr(out, out, 32)
-	p256Mul(out, out, p32) // fffffffeffffffff
+	p256Mul(out, out, p32) // ... ffffffffffffffff
+	p256Sqr(out, out, 32)
+	p256Mul(out, out, p32)
+
+	p256Sqr(out, out, 32)
+	p256Mul(out, out, p32) // ... ffffffffffffffff
+	p256Sqr(out, out, 32)
+	p256Mul(out, out, p32)
+
+	p256Sqr(out, out, 16)
+	p256Mul(out, out, p16)
+	p256Sqr(out, out, 8)
+	p256Mul(out, out, p8)
+	p256Sqr(out, out, 4)
+	p256Mul(out, out, p4)
+	p256Sqr(out, out, 3)
+	p256Mul(out, out, p3)	// 31 ... 1
+
+	p256Sqr(out, out, 17)
+	p256Mul(out, out, p16)	// ffffffff
+	p256Sqr(out, out, 4)
+	p256Mul(out, out, p4)	// f
+
+	p256Sqr(out, out, 2)
+	p256Mul(out, out, p2)	// 3
+	p256Sqr(out, out, 7)
+	p256Mul(out, out, _101)
+	p256Sqr(out, out, 3)
+	p256Mul(out, out, _101)	// C2D
+}
+
+// p256ExpQuadP sets out to in^-1 mod p.
+func p256ExpQuadP(out, in []uint64) {
+	var stack [6 * 4]uint64
+	p2 := stack[4*0 : 4*0+4]
+	p4 := stack[4*1 : 4*1+4]
+	p8 := stack[4*2 : 4*2+4]
+	p16 := stack[4*3 : 4*3+4]
+	p32 := stack[4*4 : 4*4+4]
+	p3 := stack[4*5 : 4*5+4]
+
+	p256Sqr(out, in, 1)
+	p256Mul(p2, out, in)   // 3*p
+
+	p256Sqr(out, p2, 1)
+	p256Mul(p3, out, in) // 7*p
+
+	p256Sqr(out, p2, 2)
+	p256Mul(p4, out, p2) // f*p
+
+	p256Sqr(out, p4, 4)
+	p256Mul(p8, out, p4) // ff*p
+
+	p256Sqr(out, p8, 8)
+	p256Mul(p16, out, p8) // ffff*p
+
+	p256Sqr(out, p16, 16)
+	p256Mul(p32, out, p16) // ffffffff*p
+
+	p256Sqr(out, p32, 32)
+	p256Mul(out, out, p32) // ffffffffffffffff
 
 	p256Sqr(out, out, 32)
 	p256Mul(out, out, p32)
@@ -580,22 +569,29 @@ func p256ExpQuadP(out, in []uint64) {
 	p256Mul(out, out, p32) // ... ffffffffffffffff
 	p256Sqr(out, out, 32)
 	p256Mul(out, out, p32)
-	p256Sqr(out, out, 32) // ... ffffffff00000000
-
 	p256Sqr(out, out, 32)
-	p256Mul(out, out, p32)
+	p256Mul(out, out, p32) // ... ffffffffffffffff
 
 	p256Sqr(out, out, 16)
 	p256Mul(out, out, p16)
-
 	p256Sqr(out, out, 8)
 	p256Mul(out, out, p8)
-
 	p256Sqr(out, out, 4)
 	p256Mul(out, out, p4)
+	p256Sqr(out, out, 3)
+	p256Mul(out, out, p3)	// fffffffe
+	p256Sqr(out, out, 17)
+	p256Mul(out, out, p16)	// ffff
+
+	p256Sqr(out, out, 4)
+	p256Mul(out, out, p4)	// f
 
 	p256Sqr(out, out, 2)
 	p256Mul(out, out, p2)
+	p256Sqr(out, out, 5)
+	p256Mul(out, out, in)
+	p256Sqr(out, out, 3)
+	p256Mul(out, out, p2)	// 30B
 }
 
 // p256ExpQuadP sets out to in^-1 mod p.

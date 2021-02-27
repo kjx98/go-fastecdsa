@@ -121,6 +121,7 @@ func init() {
 }
 
 func initAll() {
+	initBTC()
 	initBTCgo()
 }
 
