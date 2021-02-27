@@ -24,19 +24,19 @@
 #define t0 R14
 #define t1 R15
 
-DATA p256const0<>+0x00(SB)/8, $0xffffffff00000000
-DATA p256const1<>+0x00(SB)/8, $0xfffffffeffffffff
-DATA sm2ordK0<>+0x00(SB)/8, $0x327f9e8872350975
-DATA sm2ord<>+0x00(SB)/8, $0x53bbf40939d54123
-DATA sm2ord<>+0x08(SB)/8, $0x7203df6b21c6052b
-DATA sm2ord<>+0x10(SB)/8, $0xffffffffffffffff
-DATA sm2ord<>+0x18(SB)/8, $0xfffffffeffffffff
-DATA p256one<>+0x00(SB)/8, $0x0000000000000001
-DATA p256one<>+0x08(SB)/8, $0x00000000ffffffff
+DATA p256P0<>+0x00(SB)/8, $0xFFFFFFFEFFFFFC2F
+DATA p256K0<>+0x00(SB)/8, $0xd838091dd2253531
+DATA sm2ordK0<>+0x00(SB)/8, $0x4b0dff665588b13f
+DATA sm2ord<>+0x00(SB)/8, $0xbfd25e8cd0364141
+DATA sm2ord<>+0x08(SB)/8, $0xbaaedce6af48a03b
+DATA sm2ord<>+0x10(SB)/8, $0xFFFFFFFFFFFFFFFE
+DATA sm2ord<>+0x18(SB)/8, $0xffffffffffffffff
+DATA p256one<>+0x00(SB)/8, $0x00000001000003d1
+DATA p256one<>+0x08(SB)/8, $0x0000000000000000
 DATA p256one<>+0x10(SB)/8, $0x0000000000000000
-DATA p256one<>+0x18(SB)/8, $0x0000000100000000
-GLOBL p256const0<>(SB), 8, $8
-GLOBL p256const1<>(SB), 8, $8
+DATA p256one<>+0x18(SB)/8, $0x0000000000000000
+GLOBL p256P0<>(SB), 8, $8
+GLOBL p256K0<>(SB), 8, $8
 GLOBL sm2ordK0<>(SB), 8, $8
 GLOBL sm2ord<>(SB), 8, $32
 GLOBL p256one<>(SB), 8, $32

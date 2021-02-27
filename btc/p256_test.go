@@ -1,7 +1,7 @@
 package btc
 
 import (
-	"crypto/elliptic"
+	//"crypto/elliptic"
 	"math/big"
 	"testing"
 )
@@ -64,83 +64,6 @@ func calcRRa(p *big.Int) *big.Int {
 	return t
 }
 
-func TestRRbyP256(t *testing.T) {
-	cParams := elliptic.P256().Params()
-	n := cParams.N
-	R := new(big.Int).Mod(n256, n)
-	RR := new(big.Int).Mul(R, R)
-	RR.Mod(RR, n)
-	ww := RR.Bits()
-	t.Logf("NIST P256 RR is %X %X %X %X", ww[0], ww[1], ww[2], ww[3])
-	cRR := calcRR(n)
-	if cRR.Cmp(RR) != 0 {
-		t.Logf("calcRR diff, %s", cRR.Text(16))
-	} else {
-		t.Log("calcRR NIST P256 n works")
-	}
-	ww = n.Bits()
-	t.Logf("N(order) is %X %X %X %X", ww[0], ww[1], ww[2], ww[3])
-
-	p := cParams.P
-	// verify Prime poly
-	n96 := new(big.Int).Lsh(bigOne, 96)
-	n224 := new(big.Int).Lsh(bigOne, 224)
-	n192 := new(big.Int).Lsh(bigOne, 192)
-	polyP := new(big.Int).Sub(n256, n224)
-	polyP.Add(polyP, n192)
-	polyP.Add(polyP, n96)
-	polyP.Sub(polyP, bigOne)
-	if polyP.Cmp(p) != 0 {
-		ww = polyP.Bits()
-		t.Logf("P256 polyP diff P: %X %X %X %X", ww[0], ww[1], ww[2], ww[3])
-		t.Fail()
-	}
-	r := new(big.Int).Mod(n256, p)
-	rr := new(big.Int).Mul(r, r)
-	rr.Mod(rr, p)
-	ww = rr.Bits()
-	t.Logf("rr is %x %x %x %x", ww[0], ww[1], ww[2], ww[3])
-	crr := calcRR(p)
-	if crr.Cmp(rr) != 0 {
-		t.Logf("calcRR diff, %s", crr.Text(16))
-	} else {
-		t.Log("calcRR NIST P256 p works")
-	}
-	Rinv := new(big.Int).SetUint64(1)
-	Rinv.Lsh(Rinv, 257)
-	Rinv.Mod(Rinv, p)
-	Rinv.ModInverse(Rinv, p)
-	t.Log("RInverse is ", Rinv.Text(16))
-	K0 := new(big.Int).SetUint64(0xccd1c8aaee00bc4f)
-	N0 := new(big.Int).Mul(K0, n)
-	ww = N0.Bits()
-	ck := calcK0(n)
-	t.Logf("K0: %s (%x), n*K0: %x %x %x %x", K0.Text(16), ck, ww[0], ww[1], ww[2], ww[3])
-	ck = calcK0a(p)
-	t.Logf("K0a P: %x", ck)
-	K0.SetUint64(1)
-	K0.Lsh(K0, 64)
-	N0 = N0.ModInverse(n, K0)
-	if N0 == nil {
-		t.Log("Can't calc N0")
-	} else {
-		if N0.Cmp(K0) >= 0 {
-			t.Log("SHOULD NEVER OCCUR")
-			N0 = N0.Mod(K0, N0)
-		} else {
-			N0 = N0.Sub(K0, N0)
-		}
-		t.Logf("N0: %x", N0.Bits()[0])
-	}
-	ww = p.Bits()
-	t.Logf("P: %X %X %X %X", ww[0], ww[1], ww[2], ww[3])
-	ww = cParams.B.Bits()
-	t.Logf("B: %X %X %X %X", ww[0], ww[1], ww[2], ww[3])
-	ww = cParams.Gx.Bits()
-	t.Logf("Gx: %X %X %X %X", ww[0], ww[1], ww[2], ww[3])
-	ww = cParams.Gy.Bits()
-	t.Logf("Gy: %X %X %X %X", ww[0], ww[1], ww[2], ww[3])
-}
 
 func TestRRbyBTC(t *testing.T) {
 	cParams := BTC().Params()
