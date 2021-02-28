@@ -188,7 +188,7 @@ func BenchmarkRecoverSM2(b *testing.B) {
 	hashed := []byte("testing")
 	e := hashToInt(hashed, p256)
 	priv, _ := GenerateKey(p256, rand.Reader)
-	r, s, v, _ := p256.Sign(e, priv.D)
+	r, s, v, _ := p256.Sign(rand.Reader, e, priv.D)
 
 	//b.ReportAllocs()
 	b.ResetTimer()
@@ -210,7 +210,7 @@ func BenchmarkRecoverSM2C(b *testing.B) {
 	hashed := []byte("testing")
 	e := hashToInt(hashed, p256)
 	priv, _ := GenerateKey(p256, rand.Reader)
-	r, s, v, _ := p256.Sign(e, priv.D)
+	r, s, v, _ := p256.Sign(rand.Reader, e, priv.D)
 
 	//b.ReportAllocs()
 	b.ResetTimer()
@@ -227,7 +227,7 @@ func BenchmarkRecoverBTC(b *testing.B) {
 	hashed := []byte("testing")
 	e := hashToInt(hashed, p256)
 	priv, _ := GenerateKey(p256, rand.Reader)
-	r, s, v, _ := p256.Sign(e, priv.D)
+	r, s, v, _ := p256.Sign(rand.Reader, e, priv.D)
 
 	//b.ReportAllocs()
 	b.ResetTimer()
@@ -330,7 +330,7 @@ func testSignAndRecover(t *testing.T, c elliptic.Curve, tag string) {
 	hashed := []byte("testing")
 	e := hashToInt(hashed, c)
 	for i := 0; i < 10; i++ {
-		r, s, v, err := opt.Sign(e, priv.D)
+		r, s, v, err := opt.Sign(rand.Reader, e, priv.D)
 		if err != nil {
 			t.Errorf("%s: error signing: %s", tag, err)
 			return
@@ -369,7 +369,7 @@ func testSignAndRecover2(t *testing.T, c, c1 elliptic.Curve, tag string) {
 	// Sign via Curve c
 	hashed := []byte("testing")
 	e := hashToInt(hashed, c)
-	r, s, v, err := opt.Sign(e, priv.D)
+	r, s, v, err := opt.Sign(rand.Reader, e, priv.D)
 	if err != nil {
 		t.Errorf("%s: error signing: %s", tag, err)
 		return

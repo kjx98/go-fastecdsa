@@ -11,6 +11,7 @@ import "C"
 
 import (
 	"crypto/elliptic"
+	"io"
 	"math/big"
 	"unsafe"
 )
@@ -222,7 +223,7 @@ func (c eccCurve) Verify(rB, sB, msgB, px, py *big.Int) bool {
 		(*C.u64)(unsafe.Pointer(&msg[0])), pt, c.hnd) != 0
 }
 
-func (c eccCurve) Sign(msgB, secret *big.Int) (r, s *big.Int, v uint, err error) {
+func (c eccCurve) Sign(rand io.Reader, msgB, secret *big.Int) (r, s *big.Int, v uint, err error) {
 	var rw, sw, msg [4]big.Word
 	copy(msg[:], msgB.Bits())
 	pt := c.newPoint(bigOne, bigOne, secret)

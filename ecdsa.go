@@ -50,7 +50,7 @@ type combinedMult interface {
 }
 
 type signIntf interface {
-	Sign(msg, secret *big.Int) (r, s *big.Int, v uint, err error)
+	Sign(rand io.Reader, msg, secret *big.Int) (r, s *big.Int, v uint, err error)
 	Verify(r, s, msg, px, py *big.Int) bool
 	Recover(r, s, msg *big.Int, v uint) (pubX, pubY *big.Int, err error)
 }
@@ -171,12 +171,6 @@ var errZeroParam = errors.New("zero parameter")
 // returns the signature as a pair of integers. The security of the private key
 // depends on the entropy of rand.
 func Sign(rand io.Reader, priv *PrivateKey, hash []byte) (r, s *big.Int, err error) {
-	if in, ok := priv.PublicKey.Curve.(signIntf); ok {
-		c := priv.PublicKey.Curve
-		e := hashToInt(hash, c)
-		r, s, _, err = in.Sign(e, priv.D)
-		return
-	}
 	//randutil.MaybeReadByte(rand)
 
 	// Get min(log2(q) / 2, 256) bits of entropy from rand.
@@ -216,6 +210,12 @@ func Sign(rand io.Reader, priv *PrivateKey, hash []byte) (r, s *big.Int, err err
 	N := c.Params().N
 	if N.Sign() == 0 {
 		return nil, nil, errZeroParam
+	}
+	if in, ok := priv.PublicKey.Curve.(signIntf); ok {
+		c := priv.PublicKey.Curve
+		e := hashToInt(hash, c)
+		r, s, _, err = in.Sign(csprng, e, priv.D)
+		return
 	}
 	var k, kInv *big.Int
 	for {

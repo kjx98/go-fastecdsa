@@ -16,8 +16,9 @@ package btc
 
 import (
 	"errors"
+	"io"
 	"math/big"
-	"math/rand"
+	//"math/rand"
 	"sync"
 )
 
@@ -305,7 +306,7 @@ func (c p256Curve) Verify(r, s, msg, px, py *big.Int) bool {
 	return false
 }
 
-func (c p256Curve) Sign(msg, secret *big.Int) (r, s *big.Int,
+func (c p256Curve) Sign(rand io.Reader, msg, secret *big.Int) (r, s *big.Int,
 	v uint, err error) {
 	var kB [32]byte
 	N := c.N
