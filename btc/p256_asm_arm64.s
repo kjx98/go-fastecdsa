@@ -989,16 +989,19 @@ TEXT btcMulInternal<>(SB),NOSPLIT,$0
 	UMULH	y0, x3, acc4
 	ADC	$0, acc4
 	// First reduction step
-	LSR	$32, acc0, t0
-	LSL	$32, acc0, t1
-	ADDS	acc0, acc1
-	ADCS	$0, acc2
-	ADCS	$0, acc3
-	ADC	$0, acc0
-	SUBS	t1, acc1
-	SBCS	t0, acc2
-	SBCS	t1, acc3
-	SBCS	t0, acc0
+	// t0 = u
+	MUL acc0, const1, t0
+	MUL t0, const0, t1
+	ADDS acc0, t1, acc0
+	UMULH t0, const0, t1
+	ADCS t1, acc1, acc1
+	ADCS $0, acc2, acc2
+	ADCS $0, acc3, acc3
+	ADC $0, t0, acc0
+	SUBS	t0, acc1
+	SBCS	$0, acc2
+	SBCS	$0, acc3
+	SBC	$0, acc0
 	// y[1] * x
 	MUL	y1, x0, t0
 	ADDS	t0, acc1
@@ -1022,16 +1025,19 @@ TEXT btcMulInternal<>(SB),NOSPLIT,$0
 	ADCS	t3, acc4
 	ADC	hlp0, acc5
 	// Second reduction step
-	LSR	$32, acc1, t0
-	LSL	$32, acc1, t1
-	ADDS	acc1, acc2
-	ADCS	$0, acc3
-	ADCS	$0, acc0
-	ADC	$0, acc1
-	SUBS	t1, acc2
-	SBCS	t0, acc3
-	SBCS	t1, acc0
-	SBCS	t0, acc1
+	// t0 = u
+	MUL acc1, const1, t0
+	MUL t0, const0, t1
+	ADDS acc1, t1, acc1
+	UMULH t0, const0, t1
+	ADCS t1, acc2, acc2
+	ADCS $0, acc3, acc3
+	ADCS $0, acc0, acc0
+	ADC $0, t0, acc1
+	SUBS	t0, acc2
+	SBCS	$0, acc3
+	SBCS	$0, acc0
+	SBC	$0, acc1
 	// y[2] * x
 	MUL	y2, x0, t0
 	ADDS	t0, acc2
@@ -1055,16 +1061,19 @@ TEXT btcMulInternal<>(SB),NOSPLIT,$0
 	ADCS	t3, acc5
 	ADC	hlp0, acc6
 	// Third reduction step
-	LSR	$32, acc2, t0
-	LSL	$32, acc2, t1
-	ADDS	acc2, acc3
-	ADCS	$0, acc0
-	ADCS	$0, acc1
-	ADC	$0, acc2
-	SUBS	t1, acc3
-	SBCS	t0, acc0
-	SBCS	t1, acc1
-	SBCS	t0, acc2
+	// t0 = u
+	MUL acc2, const1, t0
+	MUL t0, const0, t1
+	ADDS acc2, t1, acc2
+	UMULH t0, const0, t1
+	ADCS t1, acc3, acc3
+	ADCS $0, acc0, acc0
+	ADCS $0, acc1, acc1
+	ADC $0, t0, acc2
+	SUBS	t0, acc3
+	SBCS	$0, acc0
+	SBCS	$0, acc1
+	SBC	$0, acc2
 	// y[3] * x
 	MUL	y3, x0, t0
 	ADDS	t0, acc3
@@ -1088,16 +1097,19 @@ TEXT btcMulInternal<>(SB),NOSPLIT,$0
 	ADCS	t3, acc6
 	ADC	hlp0, acc7
 	// Last reduction step
-	LSR	$32, acc3, t0
-	LSL	$32, acc3, t1
-	ADDS	acc3, acc0
-	ADCS	$0, acc1
-	ADCS	$0, acc2
-	ADC	$0, acc3
-	SUBS	t1, acc0
-	SBCS	t0, acc1
-	SBCS	t1, acc2
-	SBCS	t0, acc3
+	// t0 = u
+	MUL acc3, const1, t0
+	MUL t0, const0, t1
+	ADDS acc3, t1, acc3
+	UMULH t0, const0, t1
+	ADCS t1, acc0, acc0
+	ADCS $0, acc1, acc1
+	ADCS $0, acc2, acc2
+	ADC $0, t0, acc3
+	SUBS	t0, acc0
+	SBCS	$0, acc1
+	SBCS	$0, acc2
+	SBC	$0, acc3
 	// Add bits [511:256] of the mul result
 	ADDS	acc4, acc0, acc0
 	ADCS	acc5, acc1, acc1
@@ -1180,7 +1192,7 @@ TEXT ·p256PointAddAffineAsm(SB),0,$264-96
 	CMP	$0, hlp1
 	CSEL	EQ, ZR, t0, hlp1
 
-	MOVD	p256const0<>(SB), const0
+	MOVD	p256P0<>(SB), const0
 	//MOVD	p256const1<>(SB), const1
 	EOR	t2<<1, hlp1
 
@@ -1389,8 +1401,7 @@ TEXT ·p256PointDoubleAsm(SB),NOSPLIT,$136-48
 	LDP	0*16(a_ptr), (x0, x1)
 	LDP	1*16(a_ptr), (x2, x3)
 	CALL	btcSqrInternal<>(SB)
-	STP	(y0, y1), m(0*8)
-	STP	(y2, y3), m(2*8)
+	STy(m)
 
 	LDx(z1in)
 	LDy(y1in)
