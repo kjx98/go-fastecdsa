@@ -214,7 +214,6 @@ forceinline static void
 sm2p_reductionStep(u64& r0, u64& r1, u64& r2, u64& r3, u64& carry)
 {
 	u64	u = r0;
-	//vli_rshift1w<4>(r, carry);
 	r0 = carry;		// rshift1w
 	u64 cc = 0;
 	r1 = u64_addc(r1, u, cc);
@@ -501,16 +500,15 @@ static void vli_mont_reduction(u64 *result, const u64 *y, const u64 *prime,
 		const u64 k0) noexcept
 {
 	u64	s[N + 1];
-	u64	r[N + 1];
+	u64	r[N];
 	vli_set<N>(r, y);
-	r[N] = 0;
 	for (uint i=0; i < N; i++) {
 		u64	u = r[0] * k0;
 		vli_umult2<N>(s, prime, u);
-		u = vli_add_to<N + 1>(r, s);
-		vli_rshift1w<N + 1>(r, u);	
+		s[N] += vli_add_to<N>(r, s);
+		vli_rshift1w<N>(r, s[N]);
 	}
-	vli_mod<N>(result, r, prime, r[N] != 0);
+	vli_mod<N>(result, r, prime);
 }
 
 template<const uint N> forceinline
@@ -527,7 +525,7 @@ vli_mont_mult(u64 *result, const u64 *x, const u64 *y, const u64 *prime,
 		u64	u = r[0] * k0;
 		vli_umult2<N>(s, prime, u);
 		u = vli_add_to<N + 1>(r, s);
-		vli_rshift1w<N + 1>(r, u);	
+		vli_rshift1w<N + 1>(r, u);
 	}
 	vli_mod<N>(result, r, prime, r[N] != 0);
 }
@@ -545,7 +543,7 @@ vli_mont_sqr(u64 *result, const u64 *x, const u64 *prime, const u64 k0) noexcept
 		u64	u = r[0] * k0;
 		vli_umult2<N>(s, prime, u);
 		u = vli_add_to<N + 1>(r, s);
-		vli_rshift1w<N + 1>(r, u);	
+		vli_rshift1w<N + 1>(r, u);
 	}
 	vli_mod<N>(result, r, prime, r[N] != 0);
 }
@@ -556,16 +554,15 @@ static void
 mont_reduction(u64 *result, const u64 *y, const u64 *prime) noexcept
 {
 	u64	s[N + 1];
-	u64	r[N + 1];
+	u64	r[N];
 	vli_set<N>(r, y);
-	r[N] = 0;
 	for (uint i=0; i < N; i++) {
 		u64	u = r[0] * k0;
 		vli_umult2<N>(s, prime, u);
-		u = vli_add_to<N + 1>(r, s);
-		vli_rshift1w<N + 1>(r, u);	
+		s[N] += vli_add_to<N>(r, s);
+		vli_rshift1w<N>(r, s[N]);
 	}
-	vli_mod<N>(result, r, prime, r[N] != 0);
+	vli_mod<N>(result, r, prime);
 }
 
 template<const uint N, const u64 k0> forceinline
@@ -581,7 +578,7 @@ mont_mult(u64 *result, const u64 *x, const u64 *y, const u64 *prime) noexcept
 		u64	u = r[0] * k0;
 		vli_umult2<N>(s, prime, u);
 		u = vli_add_to<N + 1>(r, s);
-		vli_rshift1w<N + 1>(r, u);	
+		vli_rshift1w<N + 1>(r, u);
 	}
 	vli_mod<N>(result, r, prime, r[N] != 0);
 }
@@ -596,17 +593,6 @@ static forceinline void
 btcp_mod(u64 *res, const u64 *product) noexcept
 {
 	u64 c = -secp256k1_p[0];
-#ifdef	ommit
-	u64 t[4 + 1];
-	u64 r[4 * 2];
-
-	vli_set<4 * 2>(r, product);
-	while (!vli_is_zero<4>(r + 4)) {
-		vli_umult2<4>(t, r + 4, c);
-		vli_clear<4>(r + 4);
-		r[4+1] = vli_add_to<4 + 1>(r, t);
-	}
-#else
 	u64 t[4 + 1];
 	u64 r[4 + 2];
 	vli_set<4>(r, product);
@@ -620,7 +606,6 @@ btcp_mod(u64 *res, const u64 *product) noexcept
 		vli_sub<4>(res, r, secp256k1_p);
 		return;
 	}
-#endif
 	auto carry = vli_sub<4>(res, r, secp256k1_p);
 	if (carry) vli_set<4>(res, r);
 }
@@ -630,16 +615,15 @@ forceinline static void
 btc_reduction(u64 *result, const u64 *y) noexcept
 {
 	u64	s[4 + 1];
-	u64	r[4 + 1];
+	u64	r[4];
 	vli_set<4>(r, y);
-	r[4] = 0;
 	for (uint i=0; i < 4; i++) {
 		u64	u = r[0] * secp256k1_p_k0;
 		vli_btc_multP(s, u);
-		u = vli_add_to<4 + 1>(r, s);
-		vli_rshift1w<4 + 1>(r, u);	
+		s[4] += vli_add_to<4>(r, s);
+		vli_rshift1w<4>(r, s[4]);
 	}
-	vli_mod<4>(result, r, secp256k1_p, r[4] != 0);
+	vli_mod<4>(result, r, secp256k1_p);
 }
 
 forceinline static void
@@ -654,7 +638,7 @@ btc_mont_mult(u64 *result, const u64 *x, const u64 *y) noexcept
 		u64	u = r[0] * secp256k1_p_k0;
 		vli_btc_multP(s, u);
 		u = vli_add_to<4 + 1>(r, s);
-		vli_rshift1w<4 + 1>(r, u);	
+		vli_rshift1w<4 + 1>(r, u);
 	}
 	vli_mod<4>(result, r, secp256k1_p, r[4] != 0);
 }
@@ -1180,7 +1164,7 @@ mont_sqr(u64 *result, const u64 *x, const u64 *prime) noexcept
 		u64	u = r[0] * k0;
 		vli_umult2<N>(s, prime, u);
 		u = vli_add_to<N + 1>(r, s);
-		vli_rshift1w<N + 1>(r, u);	
+		vli_rshift1w<N + 1>(r, u);
 	}
 	vli_mod<N>(result, r, prime, r[N] != 0);
 }
@@ -1192,23 +1176,23 @@ mont_sqrN(u64 *result, const u64 *x, const u64 *prime) noexcept
 	u64	r[N * 2];
 	u64	s[N + 1];
 	vli_square<N>(r, x);
-	vli_set<N>(result, r + N);
-	r[N] = 0;
+	// reduction r[0..N-1]
 	for (uint i=0; i < N; i++) {
 		u64	u = r[0] * k0;
 		vli_umult2<N>(s, prime, u);
-		u = vli_add_to<N + 1>(r, s);
-		vli_rshift1w<N + 1>(r, u);	
+		s[N] += vli_add_to<N>(r, s);
+		vli_rshift1w<N>(r, s[N]);
 	}
+	// add r[N...2N-1], then mod P
 #if	__cplusplus >= 201703L && defined(WITH_ASM)
 	if constexpr(N==4) {
-		r[N] += vli4_add_to(r, result);
-		vli4_mod(result, r, prime, r[N] != 0);
+		s[N] = vli4_add_to(r, r + N);
+		vli4_mod(result, r, prime, s[N] != 0);
 	} else
 #endif
 	{
-		r[N] += vli_add_to<N>(r, result);
-		vli_mod<N>(result, r, prime, r[N] != 0);
+		s[N] = vli_add_to<N>(r, r + N);
+		vli_mod<N>(result, r, prime, s[N] != 0);
 	}
 }
 

@@ -1106,7 +1106,8 @@ static void vli_square(u64 *result, const u64 *left) noexcept
  */
 template<uint N> forceinline
 static void
-vli_mod(u64 *result, const u64 *left, const u64 *mod, const bool carry) noexcept
+vli_mod(u64 *result, const u64 *left, const u64 *mod, const bool carry = false)
+noexcept
 {
 	/* result > mod (result = mod + remainder), so subtract mod to
 	 * get remainder.
