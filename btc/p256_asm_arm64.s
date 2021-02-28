@@ -219,49 +219,61 @@ TEXT ·p256FromMont(SB),NOSPLIT,$0
 	LDP	1*16(a_ptr), (acc2, acc3)
 	// Only reduce, no multiplications are needed
 	// First reduction step
-	LSR	$32, acc0, t0
-	LSL	$32, acc0, t1
-	ADDS	acc0, acc1
-	ADCS	$0, acc2
-	ADCS	$0, acc3
-	ADC	$0, acc0
-	SUBS	t1, acc1
-	SBCS	t0, acc2
-	SBCS	t1, acc3
-	SBCS	t0, acc0
+	// t0 = u
+	MUL acc0, const1, t0
+	MUL t0, const0, t1
+	ADDS acc0, t1, acc0
+	UMULH t0, const0, t1
+	ADCS t1, acc1, acc1
+	ADCS $0, acc2, acc2
+	ADCS $0, acc3, acc3
+	ADC $0, t0, acc0
+	SUBS	t0, acc1
+	SBCS	$0, acc2
+	SBCS	$0, acc3
+	SBC	$0, acc0
 	// Second reduction step
-	LSR	$32, acc1, t0
-	LSL	$32, acc1, t1
-	ADDS	acc1, acc2
-	ADCS	$0, acc3
-	ADCS	$0, acc0
-	ADC	$0, acc1
-	SUBS	t1, acc2
-	SBCS	t0, acc3
-	SBCS	t1, acc0
-	SBCS	t0, acc1
+	// t0 = u
+	MUL acc1, const1, t0
+	MUL t0, const0, t1
+	ADDS acc1, t1, acc1
+	UMULH t0, const0, t1
+	ADCS t1, acc2, acc2
+	ADCS $0, acc3, acc3
+	ADCS $0, acc0, acc0
+	ADC $0, t0, acc1
+	SUBS	t0, acc2
+	SBCS	$0, acc3
+	SBCS	$0, acc0
+	SBC		$0, acc1
 	// Third reduction step
-	LSR	$32, acc2, t0
-	LSL	$32, acc2, t1
-	ADDS	acc2, acc3
-	ADCS	$0, acc0
-	ADCS	$0, acc1
-	ADC	$0, acc2
-	SUBS	t1, acc3
-	SBCS	t0, acc0
-	SBCS	t1, acc1
-	SBCS	t0, acc2
+	// t0 = u
+	MUL acc2, const1, t0
+	MUL t0, const0, t1
+	ADDS acc2, t1, acc2
+	UMULH t0, const0, t1
+	ADCS t1, acc3, acc3
+	ADCS $0, acc0, acc0
+	ADCS $0, acc1, acc1
+	ADC $0, t0, acc2
+	SUBS	t0, acc3
+	SBCS	$0, acc0
+	SBCS	$0, acc1
+	SBC		$0, acc2
 	// Last reduction step
-	LSR	$32, acc3, t0
-	LSL	$32, acc3, t1
-	ADDS	acc3, acc0
-	ADCS	$0, acc1
-	ADCS	$0, acc2
-	ADC	$0, acc3
-	SUBS	t1, acc0
-	SBCS	t0, acc1
-	SBCS	t1, acc2
-	SBCS	t0, acc3
+	// t0 = u
+	MUL acc3, const1, t0
+	MUL t0, const0, t1
+	ADDS acc3, t1, acc3
+	UMULH t0, const0, t1
+	ADCS t1, acc0, acc0
+	ADCS $0, acc1, acc1
+	ADCS $0, acc2, acc2
+	ADC $0, t0, acc3
+	SUBS	t0, acc0
+	SBCS	$0, acc1
+	SBCS	$0, acc2
+	SBC		$0, acc3
 
 	MOVD	$-1, t1
 	MOVD	$-1, t2
@@ -882,49 +894,61 @@ TEXT btcSqrInternal<>(SB),NOSPLIT,$0
 	UMULH	x3, x3, t1
 	ADCS	t1, acc7, acc7
 	// First reduction step
-	LSR	$32, acc0, t0
-	LSL	$32, acc0, t1
-	ADDS	acc0, acc1
-	ADCS	$0, acc2
-	ADCS	$0, acc3
-	ADC	$0, acc0
-	SUBS	t1, acc1
-	SBCS	t0, acc2
-	SBCS	t1, acc3
-	SBCS	t0, acc0
+	// t0 = u
+	MUL acc0, const1, t0
+	MUL t0, const0, t1
+	ADDS acc0, t1, acc0
+	UMULH t0, const0, t1
+	ADCS t1, acc1, acc1
+	ADCS $0, acc2, acc2
+	ADCS $0, acc3, acc3
+	ADC $0, t0, acc0
+	SUBS	t0, acc1
+	SBCS	$0, acc2
+	SBCS	$0, acc3
+	SBC		$0, acc0
 	// Second reduction step
-	LSR	$32, acc1, t0
-	LSL	$32, acc1, t1
-	ADDS	acc1, acc2
-	ADCS	$0, acc3
-	ADCS	$0, acc0
-	ADC	$0, acc1
-	SUBS	t1, acc2
-	SBCS	t0, acc3
-	SBCS	t1, acc0
-	SBCS	t0, acc1
+	// t0 = u
+	MUL acc1, const1, t0
+	MUL t0, const0, t1
+	ADDS acc1, t1, acc1
+	UMULH t0, const0, t1
+	ADCS t1, acc2, acc2
+	ADCS $0, acc3, acc3
+	ADCS $0, acc0, acc0
+	ADC $0, t0, acc1
+	SUBS	t0, acc2
+	SBCS	$0, acc3
+	SBCS	$0, acc0
+	SBC		$0, acc1
 	// Third reduction step
-	LSR	$32, acc2, t0
-	LSL	$32, acc2, t1
-	ADDS	acc2, acc3
-	ADCS	$0, acc0
-	ADCS	$0, acc1
-	ADC	$0, acc2
-	SUBS	t1, acc3
-	SBCS	t0, acc0
-	SBCS	t1, acc1
-	SBCS	t0, acc2
+	// t0 = u
+	MUL acc2, const1, t0
+	MUL t0, const0, t1
+	ADDS acc2, t1, acc2
+	UMULH t0, const0, t1
+	ADCS t1, acc3, acc3
+	ADCS $0, acc0, acc0
+	ADCS $0, acc1, acc1
+	ADC $0, t0, acc2
+	SUBS	t0, acc3
+	SBCS	$0, acc0
+	SBCS	$0, acc1
+	SBC		$0, acc2
 	// Last reduction step
-	LSR	$32, acc3, t0
-	LSL	$32, acc3, t1
-	ADDS	acc3, acc0
-	ADCS	$0, acc1
-	ADCS	$0, acc2
-	ADC	$0, acc3
-	SUBS	t1, acc0
-	SBCS	t0, acc1
-	SBCS	t1, acc2
-	SBCS	t0, acc3
+	// t0 = u
+	MUL acc3, const1, t0
+	MUL t0, const0, t1
+	ADDS acc3, t1, acc3
+	UMULH t0, const0, t1
+	ADCS t1, acc0, acc0
+	ADCS $0, acc1, acc1
+	ADCS $0, acc2, acc2
+	ADC $0, t0, acc3
+	SUBS	t0, acc0
+	SBCS	$0, acc1
+	SBCS	$0, acc2
+	SBC		$0, acc3
 	// Add bits [511:256] of the sqr result
 	ADDS	acc4, acc0, acc0
 	ADCS	acc5, acc1, acc1
