@@ -46,21 +46,21 @@
 #define const2 t2
 #define const3 t3
 
-DATA p256const0<>+0x00(SB)/8, $0xffffffff00000000
-DATA p256const1<>+0x00(SB)/8, $0xfffffffeffffffff
-DATA p256ordK0<>+0x00(SB)/8, $0x327f9e8872350975
-DATA p256ord<>+0x00(SB)/8, $0x53bbf40939d54123
-DATA p256ord<>+0x08(SB)/8, $0x7203df6b21c6052b
-DATA p256ord<>+0x10(SB)/8, $0xffffffffffffffff
-DATA p256ord<>+0x18(SB)/8, $0xfffffffeffffffff
-DATA p256one<>+0x00(SB)/8, $0x0000000000000001
-DATA p256one<>+0x08(SB)/8, $0x00000000ffffffff
+DATA p256P0<>+0x00(SB)/8, $0xFFFFFFFEFFFFFC2F
+DATA p256K0<>+0x00(SB)/8, $0xd838091dd2253531
+DATA btcOrdK0<>+0x00(SB)/8, $0x4b0dff665588b13f
+DATA btcOrd<>+0x00(SB)/8, $0xbfd25e8cd0364141
+DATA btcOrd<>+0x08(SB)/8, $0xbaaedce6af48a03b
+DATA btcOrd<>+0x10(SB)/8, $0xFFFFFFFFFFFFFFFE
+DATA btcOrd<>+0x18(SB)/8, $0xffffffffffffffff
+DATA p256one<>+0x00(SB)/8, $0x00000001000003d1
+DATA p256one<>+0x08(SB)/8, $0x0000000000000000
 DATA p256one<>+0x10(SB)/8, $0x0000000000000000
-DATA p256one<>+0x18(SB)/8, $0x0000000100000000
-GLOBL p256const0<>(SB), 8, $8
-GLOBL p256const1<>(SB), 8, $8
-GLOBL p256ordK0<>(SB), 8, $8
-GLOBL p256ord<>(SB), 8, $32
+DATA p256one<>+0x18(SB)/8, $0x0000000000000000
+GLOBL p256P0<>(SB), 8, $8
+GLOBL p256K0<>(SB), 8, $8
+GLOBL btcOrdK0<>(SB), 8, $8
+GLOBL btcOrd<>(SB), 8, $32
 GLOBL p256one<>(SB), 8, $32
 
 /* ---------------------------------------*/
@@ -137,10 +137,10 @@ TEXT ·p256NegCond(SB),NOSPLIT,$0
 	MOVD	cond+24(FP), hlp0
 	MOVD	a_ptr, res_ptr
 	// acc = poly
-	MOVD	$-1, acc0
-	MOVD	p256const0<>(SB), acc1
+	MOVD	p256P0<>(SB), acc0
+	MOVD	$-1, acc1
 	MOVD	$-1, acc2
-	MOVD	p256const1<>(SB), acc3
+	MOVD	$-1, acc3
 	// Load the original value
 	LDP	0*16(a_ptr), (t0, t1)
 	LDP	1*16(a_ptr), (t2, t3)
@@ -167,15 +167,15 @@ TEXT ·p256Sqr(SB),NOSPLIT,$0
 	MOVD	in+24(FP), a_ptr
 	MOVD	n+48(FP), b_ptr
 
-	MOVD	p256const0<>(SB), const0
-	MOVD	p256const1<>(SB), const1
+	MOVD	p256P0<>(SB), const0
+	MOVD	p256K0<>(SB), const1
 
 	LDP	0*16(a_ptr), (x0, x1)
 	LDP	1*16(a_ptr), (x2, x3)
 
 sqrLoop:
 	SUB	$1, b_ptr
-	CALL	sm2SqrInternal<>(SB)
+	CALL	btcSqrInternal<>(SB)
 	MOVD	y0, x0
 	MOVD	y1, x1
 	MOVD	y2, x2
@@ -192,8 +192,8 @@ TEXT ·p256Mul(SB),NOSPLIT,$0
 	MOVD	in1+24(FP), a_ptr
 	MOVD	in2+48(FP), b_ptr
 
-	MOVD	p256const0<>(SB), const0
-	MOVD	p256const1<>(SB), const1
+	MOVD	p256P0<>(SB), const0
+	MOVD	p256K0<>(SB), const1
 
 	LDP	0*16(a_ptr), (x0, x1)
 	LDP	1*16(a_ptr), (x2, x3)
@@ -201,7 +201,7 @@ TEXT ·p256Mul(SB),NOSPLIT,$0
 	LDP	0*16(b_ptr), (y0, y1)
 	LDP	1*16(b_ptr), (y2, y3)
 
-	CALL	sm2MulInternal<>(SB)
+	CALL	btcMulInternal<>(SB)
 
 	STP	(y0, y1), 0*16(res_ptr)
 	STP	(y2, y3), 1*16(res_ptr)
@@ -212,8 +212,8 @@ TEXT ·p256FromMont(SB),NOSPLIT,$0
 	MOVD	res+0(FP), res_ptr
 	MOVD	in+24(FP), a_ptr
 
-	MOVD	p256const0<>(SB), const0
-	MOVD	p256const1<>(SB), const1
+	MOVD	p256P0<>(SB), const0
+	MOVD	p256K0<>(SB), const1
 
 	LDP	0*16(a_ptr), (acc0, acc1)
 	LDP	1*16(a_ptr), (acc2, acc3)
@@ -263,11 +263,13 @@ TEXT ·p256FromMont(SB),NOSPLIT,$0
 	SBCS	t1, acc2
 	SBCS	t0, acc3
 
+	MOVD	$-1, t1
 	MOVD	$-1, t2
-	SUBS	$-1, acc0, t0
-	SBCS	const0, acc1, t1
+	MOVD	$-1, t3
+	SUBS	const0, acc0, t0
+	SBCS	t1, acc1, t1
 	SBCS	t2, acc2, t2
-	SBCS	const1, acc3, t3
+	SBCS	t3, acc3, t3
 
 	CSEL	CS, t0, acc0, acc0
 	CSEL	CS, t1, acc1, acc1
@@ -384,9 +386,9 @@ TEXT ·p256OrdSqr(SB),NOSPLIT,$0
 	MOVD	in+24(FP), a_ptr
 	MOVD	n+48(FP), b_ptr
 
-	MOVD	p256ordK0<>(SB), hlp1
-	LDP	p256ord<>+0x00(SB), (const0, const1)
-	LDP	p256ord<>+0x10(SB), (const2, const3)
+	MOVD	btcOrdK0<>(SB), hlp1
+	LDP	btcOrd<>+0x00(SB), (const0, const1)
+	LDP	btcOrd<>+0x10(SB), (const2, const3)
 
 	LDP	0*16(a_ptr), (x0, x1)
 	LDP	1*16(a_ptr), (x2, x3)
@@ -583,9 +585,9 @@ TEXT ·p256OrdMul(SB),NOSPLIT,$0
 	MOVD	in1+24(FP), a_ptr
 	MOVD	in2+48(FP), b_ptr
 
-	MOVD	p256ordK0<>(SB), hlp1
-	LDP	p256ord<>+0x00(SB), (const0, const1)
-	LDP	p256ord<>+0x10(SB), (const2, const3)
+	MOVD	btcOrdK0<>(SB), hlp1
+	LDP	btcOrd<>+0x00(SB), (const0, const1)
+	LDP	btcOrd<>+0x10(SB), (const2, const3)
 
 	LDP	0*16(a_ptr), (x0, x1)
 	LDP	1*16(a_ptr), (x2, x3)
@@ -798,18 +800,20 @@ TEXT ·p256OrdMul(SB),NOSPLIT,$0
 
 	RET
 /* ---------------------------------------*/
-TEXT sm2SubInternal<>(SB),NOSPLIT,$0
+TEXT btcSubInternal<>(SB),NOSPLIT,$0
 	SUBS	x0, y0, acc0
 	SBCS	x1, y1, acc1
 	SBCS	x2, y2, acc2
 	SBCS	x3, y3, acc3
 	SBC	$0, ZR, t0
 
+	MOVD	$-1, acc5
 	MOVD	$-1, acc6
-	ADDS	$-1, acc0, acc4
-	ADCS	const0, acc1, acc5
+	MOVD	$-1, acc7
+	ADDS	const0, acc0, acc4
+	ADCS	acc5, acc1, acc5
 	ADCS	acc6, acc2, acc6
-	ADC	const1, acc3, acc7
+	ADC	acc7, acc3, acc7
 
 	ANDS	$1, t0
 	CSEL	EQ, acc0, acc4, x0
@@ -819,7 +823,7 @@ TEXT sm2SubInternal<>(SB),NOSPLIT,$0
 
 	RET
 /* ---------------------------------------*/
-TEXT sm2SqrInternal<>(SB),NOSPLIT,$0
+TEXT btcSqrInternal<>(SB),NOSPLIT,$0
 	// x[1:] * x[0]
 	MUL	x0, x1, acc1
 	UMULH	x0, x1, acc2
@@ -928,11 +932,13 @@ TEXT sm2SqrInternal<>(SB),NOSPLIT,$0
 	ADCS	acc7, acc3, acc3
 	ADC	$0, ZR, acc4
 
+	MOVD	$-1, t1
 	MOVD	$-1, t2
-	SUBS	$-1, acc0, t0
-	SBCS	const0, acc1, t1
+	MOVD	$-1, t3
+	SUBS	const0, acc0, t0
+	SBCS	t1, acc1, t1
 	SBCS	t2, acc2, t2
-	SBCS	const1, acc3, t3
+	SBCS	t3, acc3, t3
 	SBCS	$0, acc4, acc4
 
 	CSEL	CS, t0, acc0, y0
@@ -941,7 +947,7 @@ TEXT sm2SqrInternal<>(SB),NOSPLIT,$0
 	CSEL	CS, t3, acc3, y3
 	RET
 /* ---------------------------------------*/
-TEXT sm2MulInternal<>(SB),NOSPLIT,$0
+TEXT btcMulInternal<>(SB),NOSPLIT,$0
 	// y[0] * x
 	MUL	y0, x0, acc0
 	UMULH	y0, x0, acc1
@@ -1075,11 +1081,13 @@ TEXT sm2MulInternal<>(SB),NOSPLIT,$0
 	ADCS	acc7, acc3, acc3
 	ADC	$0, ZR, acc4
 
+	MOVD	$-1, t1
 	MOVD	$-1, t2
-	SUBS	$-1, acc0, t0
-	SBCS	const0, acc1, t1
+	MOVD	$-1, t3
+	SUBS	const0, acc0, t0
+	SBCS	t1, acc1, t1
 	SBCS	t2, acc2, t2
-	SBCS	const1, acc3, t3
+	SBCS	t3, acc3, t3
 	SBCS	$0, acc4, acc4
 
 	CSEL	CS, t0, acc0, y0
@@ -1094,11 +1102,13 @@ TEXT sm2MulInternal<>(SB),NOSPLIT,$0
 	ADCS	y2, y2, x2;    \
 	ADCS	y3, y3, x3;    \
 	ADC	$0, ZR, hlp0;  \
+	MOVD	$-1, t1;	\
 	MOVD	$-1, t2;	\
-	SUBS	$-1, x0, t0;   \
-	SBCS	const0, x1, t1;\
+	MOVD	$-1, t3;	\
+	SUBS	const0, x0, t0;   \
+	SBCS	t1, x1, t1;\
 	SBCS	t2, x2, t2;    \
-	SBCS	const1, x3, t3;\
+	SBCS	t3, x3, t3;\
 	SBCS	$0, hlp0, hlp0;\
 	CSEL	CC, x0, t0, x0;\
 	CSEL	CC, x1, t1, x1;\
@@ -1147,26 +1157,29 @@ TEXT ·p256PointAddAffineAsm(SB),0,$264-96
 	CSEL	EQ, ZR, t0, hlp1
 
 	MOVD	p256const0<>(SB), const0
-	MOVD	p256const1<>(SB), const1
+	//MOVD	p256const1<>(SB), const1
 	EOR	t2<<1, hlp1
 
 	// Negate y2in based on sign
 	LDP	2*16(b_ptr), (y0, y1)
 	LDP	3*16(b_ptr), (y2, y3)
-	MOVD	$-1, acc0
+	MOVD	$-1, acc1
 	MOVD	$-1, acc2
+	MOVD	$-1, acc3
 
-	SUBS	y0, acc0, acc0
-	SBCS	y1, const0, acc1
+	SUBS	y0, const0, acc0
+	SBCS	y1, acc1, acc1
 	SBCS	y2, acc2, acc2
-	SBCS	y3, const1, acc3
+	SBCS	y3, acc3, acc3
 	SBC	$0, ZR, t0
 
+	MOVD	$-1, acc5
 	MOVD	$-1, acc6
-	ADDS	$-1, acc0, acc4
-	ADCS	const0, acc1, acc5
+	MOVD	$-1, acc7
+	ADDS	const0, acc0, acc4
+	ADCS	acc5, acc1, acc5
 	ADCS	acc6, acc2, acc6
-	ADCS	const1, acc3, acc7
+	ADCS	acc7, acc3, acc7
 	ADC	$0, t0, t0
 
 	CMP	$0, t0
@@ -1184,18 +1197,18 @@ TEXT ·p256PointAddAffineAsm(SB),0,$264-96
 	STy(y2in)
 	// Begin point add
 	LDx(z1in)
-	CALL	sm2SqrInternal<>(SB)    // z1ˆ2
+	CALL	btcSqrInternal<>(SB)    // z1ˆ2
 	STy(z1sqr)
 
 	LDx(x2in)
-	CALL	sm2MulInternal<>(SB)    // x2 * z1ˆ2
+	CALL	btcMulInternal<>(SB)    // x2 * z1ˆ2
 
 	LDx(x1in)
-	CALL	sm2SubInternal<>(SB)    // h = u2 - u1
+	CALL	btcSubInternal<>(SB)    // h = u2 - u1
 	STx(h)
 
 	LDy(z1in)
-	CALL	sm2MulInternal<>(SB)    // z3 = h * z1
+	CALL	btcMulInternal<>(SB)    // z3 = h * z1
 
 	LDP	4*16(a_ptr), (acc0, acc1)// iff select[0] == 0, z3 = z1
 	LDP	5*16(a_ptr), (acc2, acc3)
@@ -1217,49 +1230,49 @@ TEXT ·p256PointAddAffineAsm(SB),0,$264-96
 	STP	(y2, y3), 5*16(t0)
 
 	LDy(z1sqr)
-	CALL	sm2MulInternal<>(SB)    // z1 ^ 3
+	CALL	btcMulInternal<>(SB)    // z1 ^ 3
 
 	LDx(y2in)
-	CALL	sm2MulInternal<>(SB)    // s2 = y2 * z1ˆ3
+	CALL	btcMulInternal<>(SB)    // s2 = y2 * z1ˆ3
 	STy(s2)
 
 	LDx(y1in)
-	CALL	sm2SubInternal<>(SB)    // r = s2 - s1
+	CALL	btcSubInternal<>(SB)    // r = s2 - s1
 	STx(r)
 
-	CALL	sm2SqrInternal<>(SB)    // rsqr = rˆ2
+	CALL	btcSqrInternal<>(SB)    // rsqr = rˆ2
 	STy	(rsqr)
 
 	LDx(h)
-	CALL	sm2SqrInternal<>(SB)    // hsqr = hˆ2
+	CALL	btcSqrInternal<>(SB)    // hsqr = hˆ2
 	STy(hsqr)
 
-	CALL	sm2MulInternal<>(SB)    // hcub = hˆ3
+	CALL	btcMulInternal<>(SB)    // hcub = hˆ3
 	STy(hcub)
 
 	LDx(y1in)
-	CALL	sm2MulInternal<>(SB)    // y1 * hˆ3
+	CALL	btcMulInternal<>(SB)    // y1 * hˆ3
 	STy(s2)
 
 	LDP	hsqr(0*8), (x0, x1)
 	LDP	hsqr(2*8), (x2, x3)
 	LDP	0*16(a_ptr), (y0, y1)
 	LDP	1*16(a_ptr), (y2, y3)
-	CALL	sm2MulInternal<>(SB)    // u1 * hˆ2
+	CALL	btcMulInternal<>(SB)    // u1 * hˆ2
 	STP	(y0, y1), h(0*8)
 	STP	(y2, y3), h(2*8)
 
 	p256MulBy2Inline               // u1 * hˆ2 * 2, inline
 
 	LDy(rsqr)
-	CALL	sm2SubInternal<>(SB)    // rˆ2 - u1 * hˆ2 * 2
+	CALL	btcSubInternal<>(SB)    // rˆ2 - u1 * hˆ2 * 2
 
 	MOVD	x0, y0
 	MOVD	x1, y1
 	MOVD	x2, y2
 	MOVD	x3, y3
 	LDx(hcub)
-	CALL	sm2SubInternal<>(SB)
+	CALL	btcSubInternal<>(SB)
 
 	LDP	0*16(a_ptr), (acc0, acc1)
 	LDP	1*16(a_ptr), (acc2, acc3)
@@ -1281,15 +1294,15 @@ TEXT ·p256PointAddAffineAsm(SB),0,$264-96
 
 	LDP	h(0*8), (y0, y1)
 	LDP	h(2*8), (y2, y3)
-	CALL	sm2SubInternal<>(SB)
+	CALL	btcSubInternal<>(SB)
 
 	LDP	r(0*8), (y0, y1)
 	LDP	r(2*8), (y2, y3)
-	CALL	sm2MulInternal<>(SB)
+	CALL	btcMulInternal<>(SB)
 
 	LDP	s2(0*8), (x0, x1)
 	LDP	s2(2*8), (x2, x3)
-	CALL	sm2SubInternal<>(SB)
+	CALL	btcSubInternal<>(SB)
 	LDP	2*16(a_ptr), (acc0, acc1)
 	LDP	3*16(a_ptr), (acc2, acc3)
 	ANDS	$1, hlp1, ZR           // iff select[0] == 0, y3 = y1
@@ -1316,11 +1329,13 @@ TEXT ·p256PointAddAffineAsm(SB),0,$264-96
 	ADCS	y2, x2, x2;    \
 	ADCS	y3, x3, x3;    \
 	ADC	$0, ZR, hlp0;  \
+	MOVD	$-1, t1;	\
 	MOVD	$-1, t2;	\
-	SUBS	$-1, x0, t0;   \
-	SBCS	const0, x1, t1;\
+	MOVD	$-1, t3;	\
+	SUBS	const0, x0, t0;   \
+	SBCS	t1, x1, t1;\
 	SBCS	t2, x2, t2;    \
-	SBCS	const1, x3, t3;\
+	SBCS	t3, x3, t3;\
 	SBCS	$0, hlp0, hlp0;\
 	CSEL	CC, x0, t0, x0;\
 	CSEL	CC, x1, t1, x1;\
@@ -1337,54 +1352,53 @@ TEXT ·p256PointDoubleAsm(SB),NOSPLIT,$136-48
 	MOVD	res+0(FP), res_ptr
 	MOVD	in+24(FP), a_ptr
 
-	MOVD	p256const0<>(SB), const0
-	MOVD	p256const1<>(SB), const1
+	MOVD	p256P0<>(SB), const0
+	//MOVD	p256const1<>(SB), const1
 
 	// Begin point double
 	LDP	4*16(a_ptr), (x0, x1)
 	LDP	5*16(a_ptr), (x2, x3)
-	CALL	sm2SqrInternal<>(SB)
+	CALL	btcSqrInternal<>(SB)
 	STP	(y0, y1), zsqr(0*8)
 	STP	(y2, y3), zsqr(2*8)
 
 	LDP	0*16(a_ptr), (x0, x1)
 	LDP	1*16(a_ptr), (x2, x3)
-	p256AddInline
-	STx(m)
+	CALL	btcSqrInternal<>(SB)
+	STP	(y0, y1), m(0*8)
+	STP	(y2, y3), m(2*8)
 
 	LDx(z1in)
 	LDy(y1in)
-	CALL	sm2MulInternal<>(SB)
+	CALL	btcMulInternal<>(SB)
 	p256MulBy2Inline
 	STx(z3out)
 
-	LDy(x1in)
-	LDx(zsqr)
-	CALL	sm2SubInternal<>(SB)
-	LDy(m)
-	CALL	sm2MulInternal<>(SB)
-
 	// Multiply by 3
+	LDy(m)
 	p256MulBy2Inline
+	LDy(m)
 	p256AddInline
 	STx(m)
 
 	LDy(y1in)
 	p256MulBy2Inline
-	CALL	sm2SqrInternal<>(SB)
+	CALL	btcSqrInternal<>(SB)
 	STy(s)
 	MOVD	y0, x0
 	MOVD	y1, x1
 	MOVD	y2, x2
 	MOVD	y3, x3
-	CALL	sm2SqrInternal<>(SB)
+	CALL	btcSqrInternal<>(SB)
 
 	// Divide by 2
+	MOVD	$-1, t1
 	MOVD	$-1, t2
-	ADDS	$-1, y0, t0
-	ADCS	const0, y1, t1
+	MOVD	$-1, t3
+	ADDS	const0, y0, t0
+	ADCS	t1, y1, t1
 	ADCS	t2, y2, t2
-	ADCS	const1, y3, t3
+	ADCS	t3, y3, t3
 	ADC	$0, ZR, hlp0
 
 	ANDS	$1, y0, ZR
@@ -1402,26 +1416,26 @@ TEXT ·p256PointDoubleAsm(SB),NOSPLIT,$136-48
 
 	LDx(x1in)
 	LDy(s)
-	CALL	sm2MulInternal<>(SB)
+	CALL	btcMulInternal<>(SB)
 	STy(s)
 	p256MulBy2Inline
 	STx(tmp)
 
 	LDx(m)
-	CALL	sm2SqrInternal<>(SB)
+	CALL	btcSqrInternal<>(SB)
 	LDx(tmp)
-	CALL	sm2SubInternal<>(SB)
+	CALL	btcSubInternal<>(SB)
 
 	STx(x3out)
 
 	LDy(s)
-	CALL	sm2SubInternal<>(SB)
+	CALL	btcSubInternal<>(SB)
 
 	LDy(m)
-	CALL	sm2MulInternal<>(SB)
+	CALL	btcMulInternal<>(SB)
 
 	LDx(y3out)
-	CALL	sm2SubInternal<>(SB)
+	CALL	btcSubInternal<>(SB)
 	STx(y3out)
 	RET
 /* ---------------------------------------*/
@@ -1440,31 +1454,30 @@ TEXT ·p256PointAddAsm(SB),0,$392-80
 	MOVD	in1+24(FP), a_ptr
 	MOVD	in2+48(FP), b_ptr
 
-	MOVD	p256const0<>(SB), const0
-	MOVD	p256const1<>(SB), const1
+	MOVD	p256P0<>(SB), const0
+	//MOVD	p256const1<>(SB), const1
 
 	// Begin point add
 	LDx(z2in)
-	CALL	sm2SqrInternal<>(SB)    // z2^2
 	STy(z2sqr)
 
-	CALL	sm2MulInternal<>(SB)    // z2^3
+	CALL	btcMulInternal<>(SB)    // z2^3
 
 	LDx(y1in)
-	CALL	sm2MulInternal<>(SB)    // s1 = z2ˆ3*y1
+	CALL	btcMulInternal<>(SB)    // s1 = z2ˆ3*y1
 	STy(s1)
 
 	LDx(z1in)
-	CALL	sm2SqrInternal<>(SB)    // z1^2
+	CALL	btcSqrInternal<>(SB)    // z1^2
 	STy(z1sqr)
 
-	CALL	sm2MulInternal<>(SB)    // z1^3
+	CALL	btcMulInternal<>(SB)    // z1^3
 
 	LDx(y2in)
-	CALL	sm2MulInternal<>(SB)    // s2 = z1ˆ3*y2
+	CALL	btcMulInternal<>(SB)    // s2 = z1ˆ3*y2
 
 	LDx(s1)
-	CALL	sm2SubInternal<>(SB)    // r = s2 - s1
+	CALL	btcSubInternal<>(SB)    // r = s2 - s1
 	STx(r)
 
 	MOVD	$1, t2
@@ -1474,10 +1487,10 @@ TEXT ·p256PointAddAsm(SB),0,$392-80
 	CMP	$0, t0
 	CSEL	EQ, t2, ZR, hlp1
 
-	EOR	$-1, x0, t0
-	EOR	const0, x1, t1
+	EOR	const0, x0, t0
+	EOR	$-1, x1, t1
 	EOR	$-1, x2, t2
-	EOR	const1, x3, t3
+	EOR	$-1, x3, t3
 
 	ORR	t0, t1, t0
 	ORR	x2, t3, t1
@@ -1487,16 +1500,16 @@ TEXT ·p256PointAddAsm(SB),0,$392-80
 
 	LDx(z2sqr)
 	LDy(x1in)
-	CALL	sm2MulInternal<>(SB)    // u1 = x1 * z2ˆ2
+	CALL	btcMulInternal<>(SB)    // u1 = x1 * z2ˆ2
 	STy(u1)
 
 	LDx(z1sqr)
 	LDy(x2in)
-	CALL	sm2MulInternal<>(SB)    // u2 = x2 * z1ˆ2
+	CALL	btcMulInternal<>(SB)    // u2 = x2 * z1ˆ2
 	STy(u2)
 
 	LDx(u1)
-	CALL	sm2SubInternal<>(SB)    // h = u2 - u1
+	CALL	btcSubInternal<>(SB)    // h = u2 - u1
 	STx(h)
 
 	MOVD	$1, t2
@@ -1506,10 +1519,10 @@ TEXT ·p256PointAddAsm(SB),0,$392-80
 	CMP	$0, t0
 	CSEL	EQ, t2, ZR, hlp0
 
-	EOR	$-1, x0, t0
-	EOR	const0, x1, t1
+	EOR	const0, x0, t0
+	EOR	$-1, x1, t1
 	EOR	$-1, x2, t2
-	EOR	const1, x3, t3
+	EOR	$-1, x3, t3
 
 	ORR	t0, t1, t0
 	ORR	x2, t3, t1
@@ -1520,54 +1533,54 @@ TEXT ·p256PointAddAsm(SB),0,$392-80
 	AND	hlp0, hlp1, hlp1
 
 	LDx(r)
-	CALL	sm2SqrInternal<>(SB)    // rsqr = rˆ2
+	CALL	btcSqrInternal<>(SB)    // rsqr = rˆ2
 	STy(rsqr)
 
 	LDx(h)
-	CALL	sm2SqrInternal<>(SB)    // hsqr = hˆ2
+	CALL	btcSqrInternal<>(SB)    // hsqr = hˆ2
 	STy(hsqr)
 
 	LDx(h)
-	CALL	sm2MulInternal<>(SB)    // hcub = hˆ3
+	CALL	btcMulInternal<>(SB)    // hcub = hˆ3
 	STy(hcub)
 
 	LDx(s1)
-	CALL	sm2MulInternal<>(SB)
+	CALL	btcMulInternal<>(SB)
 	STy(s2)
 
 	LDx(z1in)
 	LDy(z2in)
-	CALL	sm2MulInternal<>(SB)    // z1 * z2
+	CALL	btcMulInternal<>(SB)    // z1 * z2
 	LDx(h)
-	CALL	sm2MulInternal<>(SB)    // z1 * z2 * h
+	CALL	btcMulInternal<>(SB)    // z1 * z2 * h
 	MOVD	res+0(FP), b_ptr
 	STy(z3out)
 
 	LDx(hsqr)
 	LDy(u1)
-	CALL	sm2MulInternal<>(SB)    // hˆ2 * u1
+	CALL	btcMulInternal<>(SB)    // hˆ2 * u1
 	STy(u2)
 
 	p256MulBy2Inline               // u1 * hˆ2 * 2, inline
 	LDy(rsqr)
-	CALL	sm2SubInternal<>(SB)    // rˆ2 - u1 * hˆ2 * 2
+	CALL	btcSubInternal<>(SB)    // rˆ2 - u1 * hˆ2 * 2
 
 	MOVD	x0, y0
 	MOVD	x1, y1
 	MOVD	x2, y2
 	MOVD	x3, y3
 	LDx(hcub)
-	CALL	sm2SubInternal<>(SB)
+	CALL	btcSubInternal<>(SB)
 	STx(x3out)
 
 	LDy(u2)
-	CALL	sm2SubInternal<>(SB)
+	CALL	btcSubInternal<>(SB)
 
 	LDy(r)
-	CALL	sm2MulInternal<>(SB)
+	CALL	btcMulInternal<>(SB)
 
 	LDx(s2)
-	CALL	sm2SubInternal<>(SB)
+	CALL	btcSubInternal<>(SB)
 	STx(y3out)
 
 	MOVD	hlp1, R0
@@ -1581,8 +1594,7 @@ TEXT ·p256Add(SB),NOSPLIT,$0
 	MOVD	in1+24(FP), a_ptr
 	MOVD	in2+48(FP), b_ptr
 
-	MOVD	p256const0<>(SB), const0
-	MOVD	p256const1<>(SB), const1
+	MOVD	p256P0<>(SB), const0
 	LDP	0*16(a_ptr), (x0, x1)
 	LDP	1*16(a_ptr), (x2, x3)
 	LDP	0*16(b_ptr), (y0, y1)
@@ -1603,8 +1615,7 @@ TEXT ·p256Sub(SB),NOSPLIT,$0
 	MOVD	in1+24(FP), b_ptr
 	MOVD	in2+48(FP), a_ptr
 
-	MOVD	p256const0<>(SB), const0
-	MOVD	p256const1<>(SB), const1
+	MOVD	p256P0<>(SB), const0
 	LDP	0*16(a_ptr), (x0, x1)
 	LDP	1*16(a_ptr), (x2, x3)
 	LDP	0*16(b_ptr), (y0, y1)
@@ -1616,11 +1627,13 @@ TEXT ·p256Sub(SB),NOSPLIT,$0
 	SBCS	x3, y3, acc3
 	SBC	$0, ZR, t0
 
+	MOVD	$-1, acc5
 	MOVD	$-1, acc6
-	ADDS	$-1, acc0, acc4
-	ADCS	const0, acc1, acc5
+	MOVD	$-1, acc7
+	ADDS	const0, acc0, acc4
+	ADCS	acc5, acc1, acc5
 	ADCS	acc6, acc2, acc6
-	ADC	const1, acc3, acc7
+	ADC	acc7, acc3, acc7
 
 	ANDS	$1, t0
 	CSEL	EQ, acc0, acc4, x0
