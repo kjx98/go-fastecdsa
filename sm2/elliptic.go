@@ -110,9 +110,10 @@ func Unmarshal(curve Curve, data []byte) (x, y *big.Int) {
 }
 
 var initonce sync.Once
-var	sm2Params = &CurveParams{Name: "SM2"}
+var sm2Params = &CurveParams{Name: "SM2"}
+
 //var secp256k1Params *CurveParams
-var	secp256k1Params = &CurveParams{Name: "BC"}
+var secp256k1Params = &CurveParams{Name: "BC"}
 
 func init() {
 	sm2Params.P, _ = new(big.Int).SetString("FFFFFFFEFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF00000000FFFFFFFFFFFFFFFF", 16)
@@ -138,6 +139,11 @@ func initAll() {
 //
 // The cryptographic operations are implemented using constant-time algorithms.
 func SM2() Curve {
+	initonce.Do(initAll)
+	return pSM2
+}
+
+func SM2asm() p256Curve {
 	initonce.Do(initAll)
 	return pSM2
 }

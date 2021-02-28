@@ -24,7 +24,7 @@ import (
 type (
 	p256Curve struct {
 		*CurveParams
-		pMinusN	*big.Int
+		pMinusN *big.Int
 	}
 
 	p256Point struct {
@@ -61,10 +61,6 @@ func initSM2() {
 	//pSM2.CurveParams = sm2Params
 	n2minus = new(big.Int).Sub(sm2Params.N, two)
 	pSM2.pMinusN = new(big.Int).Sub(pSM2.P, pSM2.N)
-}
-
-func SM2asm() p256Curve {
-	return pSM2
 }
 
 func (curve p256Curve) Params() *CurveParams {
@@ -161,7 +157,9 @@ func fromBig(out []uint64, big *big.Int) {
 	outLen := len(out)
 
 	for i, v := range big.Bits() {
-		if i >= outLen { break }
+		if i >= outLen {
+			break
+		}
 		out[i] = uint64(v)
 	}
 }
@@ -180,7 +178,9 @@ func toBig(x []uint64) *big.Int {
 // to out. If the scalar is equal or greater than the order of the group, it's
 // reduced modulo that order.
 func p256GetScalar(out []uint64, in []byte) {
-	if len(in) > 32 {  in = in[:32] }
+	if len(in) > 32 {
+		in = in[:32]
+	}
 	n := new(big.Int).SetBytes(in)
 
 	if n.Cmp(pSM2.N) >= 0 {
@@ -197,7 +197,7 @@ func maybeReduceModP(in *big.Int) *big.Int {
 	return in.SetBits(in.Bits()[:4])
 }
 
-func (curve p256Curve) combinedMult(bigX, bigY *big.Int, baseScalar, scalar []byte) (*p256Point) {
+func (curve p256Curve) combinedMult(bigX, bigY *big.Int, baseScalar, scalar []byte) *p256Point {
 	scalarReversed := make([]uint64, 4)
 	var r1, r2 p256Point
 	p256GetScalar(scalarReversed, baseScalar)
@@ -261,21 +261,31 @@ func (c p256Curve) Verify(r, s, msg, px, py *big.Int) bool {
 	if r.Sign() <= 0 || s.Sign() <= 0 {
 		return false
 	}
-	if r.Cmp(N) >= 0 || s.Cmp(N) >= 0 { return false }
+	if r.Cmp(N) >= 0 || s.Cmp(N) >= 0 {
+		return false
+	}
 	t := new(big.Int).Add(r, s)
-	if t.Cmp(N) >= 0 { t.Sub(t, N) }
+	if t.Cmp(N) >= 0 {
+		t.Sub(t, N)
+	}
 	if t.Sign() == 0 {
 		return false
 	}
 	pt := c.combinedMult(px, py, s.Bytes(), t.Bytes())
 	x1 := new(big.Int).Sub(r, msg)
-	if x1.Sign() < 0 { x1.Add(x1, N) }
-	var zz	[4]uint64
+	if x1.Sign() < 0 {
+		x1.Add(x1, N)
+	}
+	var zz [4]uint64
 	p256Sqr(zz[:], pt.xyz[8:], 1)
-	if p256ProdEqual(pt.xyz[:4], zz[:], x1) { return true }
+	if p256ProdEqual(pt.xyz[:4], zz[:], x1) {
+		return true
+	}
 	if x1.Cmp(c.pMinusN) < 0 {
 		x1.Add(x1, N)
-		if p256ProdEqual(pt.xyz[:4], zz[:], x1) { return true }
+		if p256ProdEqual(pt.xyz[:4], zz[:], x1) {
+			return true
+		}
 	}
 	return false
 }
@@ -284,11 +294,11 @@ func (c p256Curve) Sign(msg, secret *big.Int) (r, s *big.Int,
 	v uint, err error) {
 	var kB [32]byte
 	N := c.N
-/*
-	if N.Sign() == 0 {
-		return nil, nil, 0, errZeroParam
-	}
-*/
+	/*
+		if N.Sign() == 0 {
+			return nil, nil, 0, errZeroParam
+		}
+	*/
 	dInv := new(big.Int).Add(secret, bigOne)
 	if dInv.ModInverse(dInv, N) == nil {
 		return nil, nil, 0, errZeroParam
@@ -299,17 +309,23 @@ func (c p256Curve) Sign(msg, secret *big.Int) (r, s *big.Int,
 	for {
 		rand.Read(kB[:])
 		k := new(big.Int).SetBytes(kB[:])
-		if k.Cmp(n2minus) >= 0 { k.Sub(k, n2minus) }
+		if k.Cmp(n2minus) >= 0 {
+			k.Sub(k, n2minus)
+		}
 		k.Add(k, bigOne)
 		x1, y1 := c.ScalarBaseMult(k.Bytes())
 		r = new(big.Int).Add(x1, msg)
-		if r.Cmp(N) >= 0 { r.Sub(r, N) }
+		if r.Cmp(N) >= 0 {
+			r.Sub(r, N)
+		}
 		if r.Sign() == 0 {
 			continue
 		}
 		v = y1.Bit(0)
 		k.Add(k, r)
-		if k.Cmp(N) >= 0 { k.Sub(k, N) }
+		if k.Cmp(N) >= 0 {
+			k.Sub(k, N)
+		}
 		if k.Sign() == 0 {
 			continue
 		}
@@ -369,7 +385,9 @@ func (c p256Curve) Recover(r, s, msg *big.Int, v uint) (pubX, pubY *big.Int, err
 		return nil, nil, errParam
 	}
 	u1 := new(big.Int).Add(r, s)
-	if u1.Cmp(c.N) >= 0 { u1.Sub(u1, c.N) }
+	if u1.Cmp(c.N) >= 0 {
+		u1.Sub(u1, c.N)
+	}
 	x1 := new(big.Int).Sub(r, msg)
 	if u1.Sign() == 0 || x1.Sign() == 0 {
 		return nil, nil, errParam
@@ -438,7 +456,7 @@ func (p *p256Point) p256PointToAffine() (x, y *big.Int) {
 // return prod == xp * yp Mod prime p
 //	yp = y convert to montgomery form
 func p256ProdEqual(prod, xp []uint64, y *big.Int) bool {
-	var		yp	[4]uint64
+	var yp [4]uint64
 	fromBig(yp[:], y)
 	p256Mul(yp[:], yp[:], rr)
 	p256Mul(yp[:], xp, yp[:])

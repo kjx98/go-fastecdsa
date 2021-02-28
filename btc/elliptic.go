@@ -147,6 +147,16 @@ func (curve goCurve) IsOnCurve(x, y *big.Int) bool {
 // BTC returns a Curve which implements btc
 //
 // The cryptographic operations are implemented using constant-time algorithms.
+func BTC() Curve {
+	initonce.Do(initAll)
+	return pBTC
+}
+
+func BTCasm() p256Curve {
+	initonce.Do(initAll)
+	return pBTC
+}
+
 func BTCgo() Curve {
 	initonce.Do(initAll)
 	return btcg
@@ -156,11 +166,6 @@ func BTCgo() Curve {
 //
 // The cryptographic operations do not use constant-time algorithms.
 func P256() Curve {
-	initonce.Do(initAll)
-	return goBtcCurve
-}
-
-func BTC() Curve {
 	initonce.Do(initAll)
 	return goBtcCurve
 }

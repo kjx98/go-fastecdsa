@@ -13,6 +13,7 @@ import (
 	"crypto/sha256"
 	"crypto/sha512"
 	"encoding/hex"
+	"gitee.com/jkuang/go-fastecdsa/btc"
 	"gitee.com/jkuang/go-fastecdsa/ecc"
 	"gitee.com/jkuang/go-fastecdsa/sm2"
 	"hash"
@@ -50,7 +51,8 @@ func TestKeyGeneration(t *testing.T) {
 	testKeyGeneration(t, sm2.P256(), "sm2")
 	testKeyGeneration(t, sm2.SM2go(), "sm2go")
 	testKeyGeneration(t, ecc.SM2C(), "sm2c")
-	testKeyGeneration(t, sm2.SM2(), "sm2asm")
+	testKeyGeneration(t, sm2.SM2(), "sm2Asm")
+	testKeyGeneration(t, btc.BTC(), "btcAsm")
 }
 
 func BenchmarkSignP256(b *testing.B) {
@@ -87,6 +89,21 @@ func BenchmarkSignSM2(b *testing.B) {
 func BenchmarkSignSM2C(b *testing.B) {
 	//b.ResetTimer()
 	p256 := ecc.SM2C()
+	hashed := []byte("testing")
+	priv, _ := GenerateKey(p256, rand.Reader)
+
+	//b.ReportAllocs()
+	b.ResetTimer()
+	b.RunParallel(func(pb *testing.PB) {
+		for pb.Next() {
+			_, _, _ = Sign(rand.Reader, priv, hashed)
+		}
+	})
+}
+
+func BenchmarkSignBTC(b *testing.B) {
+	//b.ResetTimer()
+	p256 := btc.BTC()
 	hashed := []byte("testing")
 	priv, _ := GenerateKey(p256, rand.Reader)
 
@@ -148,6 +165,22 @@ func BenchmarkVerifySM2C(b *testing.B) {
 	})
 }
 
+func BenchmarkVerifyBTC(b *testing.B) {
+	//b.ResetTimer()
+	p256 := btc.BTC()
+	hashed := []byte("testing")
+	priv, _ := GenerateKey(p256, rand.Reader)
+	r, s, _ := Sign(rand.Reader, priv, hashed)
+
+	//b.ReportAllocs()
+	b.ResetTimer()
+	b.RunParallel(func(pb *testing.PB) {
+		for pb.Next() {
+			Verify(&priv.PublicKey, hashed, r, s)
+		}
+	})
+}
+
 func BenchmarkRecoverSM2(b *testing.B) {
 	//b.ResetTimer()
 	//p256 := sm2.P256()
@@ -174,6 +207,23 @@ func BenchmarkRecoverSM2(b *testing.B) {
 func BenchmarkRecoverSM2C(b *testing.B) {
 	//b.ResetTimer()
 	p256 := ecc.SM2C()
+	hashed := []byte("testing")
+	e := hashToInt(hashed, p256)
+	priv, _ := GenerateKey(p256, rand.Reader)
+	r, s, v, _ := p256.Sign(e, priv.D)
+
+	//b.ReportAllocs()
+	b.ResetTimer()
+	b.RunParallel(func(pb *testing.PB) {
+		for pb.Next() {
+			p256.Recover(r, s, e, v)
+		}
+	})
+}
+
+func BenchmarkRecoverBTC(b *testing.B) {
+	//b.ResetTimer()
+	p256 := btc.BTCasm()
 	hashed := []byte("testing")
 	e := hashToInt(hashed, p256)
 	priv, _ := GenerateKey(p256, rand.Reader)
@@ -349,6 +399,7 @@ func TestSignAndVerify(t *testing.T) {
 	testSignAndVerify(t, sm2.SM2(), "SM2asm")
 	testSignAndVerify(t, sm2.P256(), "SM2go")
 	testSignAndVerify(t, ecc.SM2C(), "SM2C")
+	testSignAndVerify(t, btc.BTC(), "BTCasm")
 	testSignAndVerify2(t, sm2.SM2(), ecc.SM2C(), "SM2asm vs SM2C")
 	testSignAndVerify2(t, ecc.SM2C(), sm2.SM2(), "SM2C vs SM2asm")
 	// sm2.P256() using ecdsa while sm2.SM2(), ecc.SM2C() using sm2 sign/verify
@@ -356,11 +407,14 @@ func TestSignAndVerify(t *testing.T) {
 	//testSignAndVerify2(t, sm2.P256(), sm2.SM2(), "SM2go vs SM2asm")
 	testSignAndVerify2(t, sm2.SM2go(), sm2.P256(), "SM2p vs SM2go")
 	testSignAndVerify2(t, sm2.P256(), sm2.SM2go(), "SM2go vs SM2p")
+	testSignAndVerify2(t, btc.BTCgo(), btc.BTC(), "BTCgo vs BTCasm")
+	testSignAndVerify2(t, btc.BTC(), btc.BTCgo(), "BTCasm vs BTCgo")
 }
 
 func TestSignAndRecover(t *testing.T) {
 	testSignAndRecover(t, sm2.SM2(), "SM2asm")
 	testSignAndRecover(t, ecc.SM2C(), "SM2C")
+	testSignAndRecover(t, btc.BTC(), "BTCasm")
 	testSignAndRecover2(t, sm2.SM2(), ecc.SM2C(), "SM2asm vs SM2C")
 	testSignAndRecover2(t, ecc.SM2C(), sm2.SM2(), "SM2C vs SM2asm")
 }
