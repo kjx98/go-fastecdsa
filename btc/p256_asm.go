@@ -255,11 +255,22 @@ func (curve p256Curve) ScalarMult(bigX, bigY *big.Int, scalar []byte) (x, y *big
 	return r.p256PointToAffine()
 }
 
+func (curve p256Curve) IsOnCurve(x, y *big.Int) bool {
+	// y² = x³+ b
+	y2 := new(big.Int).Mul(y, y)
+	y2.Mod(y2, curve.P)
+
+	x3 := new(big.Int).Mul(x, x)
+	x3.Mul(x3, x)
+
+	x3.Add(x3, curve.B)
+	x3.Mod(x3, curve.P)
+
+	return x3.Cmp(y2) == 0
+}
+
 func (c p256Curve) Verify(r, s, msg, px, py *big.Int) bool {
 	N := c.N
-	if N.Sign() == 0 {
-		return false
-	}
 	if r.Sign() <= 0 || s.Sign() <= 0 {
 		return false
 	}

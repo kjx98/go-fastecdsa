@@ -189,6 +189,9 @@ func TestPointRecover(t *testing.T) {
 	c := pBTC
 	px, py := c.ScalarBaseMult(d1.Bytes())
 	v := py.Bit(0)
+	if !c.IsOnCurve(px, py) {
+		t.Error("ScalarBaseMult return not on curve")
+	}
 	if py2, err := RecoverPoint(px, v); err != nil {
 		t.Log("Can't recover pointY, error:", err)
 		t.Fail()
@@ -198,6 +201,9 @@ func TestPointRecover(t *testing.T) {
 	}
 	px, py = c.ScalarBaseMult(d2.Bytes())
 	v = py.Bit(0)
+	if !c.IsOnCurve(px, py) {
+		t.Error("ScalarBaseMult return not on curve")
+	}
 	if py2, err := RecoverPoint(px, v); err != nil {
 		t.Log("Can't recover step2 pointY, error:", err)
 		t.Fail()

@@ -26,19 +26,19 @@
 
 DATA p256P0<>+0x00(SB)/8, $0xFFFFFFFEFFFFFC2F
 DATA p256K0<>+0x00(SB)/8, $0xd838091dd2253531
-DATA sm2ordK0<>+0x00(SB)/8, $0x4b0dff665588b13f
-DATA sm2ord<>+0x00(SB)/8, $0xbfd25e8cd0364141
-DATA sm2ord<>+0x08(SB)/8, $0xbaaedce6af48a03b
-DATA sm2ord<>+0x10(SB)/8, $0xFFFFFFFFFFFFFFFE
-DATA sm2ord<>+0x18(SB)/8, $0xffffffffffffffff
+DATA btcOrdK0<>+0x00(SB)/8, $0x4b0dff665588b13f
+DATA btcOrd<>+0x00(SB)/8, $0xbfd25e8cd0364141
+DATA btcOrd<>+0x08(SB)/8, $0xbaaedce6af48a03b
+DATA btcOrd<>+0x10(SB)/8, $0xFFFFFFFFFFFFFFFE
+DATA btcOrd<>+0x18(SB)/8, $0xffffffffffffffff
 DATA p256one<>+0x00(SB)/8, $0x00000001000003d1
 DATA p256one<>+0x08(SB)/8, $0x0000000000000000
 DATA p256one<>+0x10(SB)/8, $0x0000000000000000
 DATA p256one<>+0x18(SB)/8, $0x0000000000000000
 GLOBL p256P0<>(SB), 8, $8
 GLOBL p256K0<>(SB), 8, $8
-GLOBL sm2ordK0<>(SB), 8, $8
-GLOBL sm2ord<>(SB), 8, $32
+GLOBL btcOrdK0<>(SB), 8, $8
+GLOBL btcOrd<>(SB), 8, $32
 GLOBL p256one<>(SB), 8, $32
 
 /* ---------------------------------------*/
@@ -861,16 +861,16 @@ TEXT ·p256OrdMul(SB),NOSPLIT,$0
 	XORQ acc5, acc5
 	// First reduction step
 	MOVQ acc0, AX
-	MULQ sm2ordK0<>(SB)
+	MULQ btcOrdK0<>(SB)
 	MOVQ AX, t0
 
-	MOVQ sm2ord<>+0x00(SB), AX
+	MOVQ btcOrd<>+0x00(SB), AX
 	MULQ t0
 	ADDQ AX, acc0
 	ADCQ $0, DX
 	MOVQ DX, t1
 
-	MOVQ sm2ord<>+0x08(SB), AX
+	MOVQ btcOrd<>+0x08(SB), AX
 	MULQ t0
 	ADDQ t1, acc1
 	ADCQ $0, DX
@@ -878,7 +878,7 @@ TEXT ·p256OrdMul(SB),NOSPLIT,$0
 	ADCQ $0, DX
 	MOVQ DX, t1
 
-	MOVQ sm2ord<>+0x10(SB), AX
+	MOVQ btcOrd<>+0x10(SB), AX
 	MULQ t0
 	ADDQ t1, acc2
 	ADCQ $0, DX
@@ -886,7 +886,7 @@ TEXT ·p256OrdMul(SB),NOSPLIT,$0
 	ADCQ $0, DX
 	MOVQ DX, t1
 
-	MOVQ sm2ord<>+0x18(SB), AX
+	MOVQ btcOrd<>+0x18(SB), AX
 	MULQ t0
 	ADDQ t1, acc3
 	ADCQ $0, DX
@@ -927,16 +927,16 @@ TEXT ·p256OrdMul(SB),NOSPLIT,$0
 	ADCQ $0, acc0
 	// Second reduction step
 	MOVQ acc1, AX
-	MULQ sm2ordK0<>(SB)
+	MULQ btcOrdK0<>(SB)
 	MOVQ AX, t0
 
-	MOVQ sm2ord<>+0x00(SB), AX
+	MOVQ btcOrd<>+0x00(SB), AX
 	MULQ t0
 	ADDQ AX, acc1
 	ADCQ $0, DX
 	MOVQ DX, t1
 
-	MOVQ sm2ord<>+0x08(SB), AX
+	MOVQ btcOrd<>+0x08(SB), AX
 	MULQ t0
 	ADDQ t1, acc2
 	ADCQ $0, DX
@@ -944,7 +944,7 @@ TEXT ·p256OrdMul(SB),NOSPLIT,$0
 	ADCQ $0, DX
 	MOVQ DX, t1
 
-	MOVQ sm2ord<>+0x10(SB), AX
+	MOVQ btcOrd<>+0x10(SB), AX
 	MULQ t0
 	ADDQ t1, acc3
 	ADCQ $0, DX
@@ -952,7 +952,7 @@ TEXT ·p256OrdMul(SB),NOSPLIT,$0
 	ADCQ $0, DX
 	MOVQ DX, t1
 
-	MOVQ sm2ord<>+0x18(SB), AX
+	MOVQ btcOrd<>+0x18(SB), AX
 	MULQ t0
 	ADDQ t1, acc4
 	ADCQ $0, DX
@@ -993,16 +993,16 @@ TEXT ·p256OrdMul(SB),NOSPLIT,$0
 	ADCQ $0, acc1
 	// Third reduction step
 	MOVQ acc2, AX
-	MULQ sm2ordK0<>(SB)
+	MULQ btcOrdK0<>(SB)
 	MOVQ AX, t0
 
-	MOVQ sm2ord<>+0x00(SB), AX
+	MOVQ btcOrd<>+0x00(SB), AX
 	MULQ t0
 	ADDQ AX, acc2
 	ADCQ $0, DX
 	MOVQ DX, t1
 
-	MOVQ sm2ord<>+0x08(SB), AX
+	MOVQ btcOrd<>+0x08(SB), AX
 	MULQ t0
 	ADDQ t1, acc3
 	ADCQ $0, DX
@@ -1010,7 +1010,7 @@ TEXT ·p256OrdMul(SB),NOSPLIT,$0
 	ADCQ $0, DX
 	MOVQ DX, t1
 
-	MOVQ sm2ord<>+0x10(SB), AX
+	MOVQ btcOrd<>+0x10(SB), AX
 	MULQ t0
 	ADDQ t1, acc4
 	ADCQ $0, DX
@@ -1018,7 +1018,7 @@ TEXT ·p256OrdMul(SB),NOSPLIT,$0
 	ADCQ $0, DX
 	MOVQ DX, t1
 
-	MOVQ sm2ord<>+0x18(SB), AX
+	MOVQ btcOrd<>+0x18(SB), AX
 	MULQ t0
 	ADDQ t1, acc5
 	ADCQ $0, DX
@@ -1059,16 +1059,16 @@ TEXT ·p256OrdMul(SB),NOSPLIT,$0
 	ADCQ $0, acc2
 	// Last reduction step
 	MOVQ acc3, AX
-	MULQ sm2ordK0<>(SB)
+	MULQ btcOrdK0<>(SB)
 	MOVQ AX, t0
 
-	MOVQ sm2ord<>+0x00(SB), AX
+	MOVQ btcOrd<>+0x00(SB), AX
 	MULQ t0
 	ADDQ AX, acc3
 	ADCQ $0, DX
 	MOVQ DX, t1
 
-	MOVQ sm2ord<>+0x08(SB), AX
+	MOVQ btcOrd<>+0x08(SB), AX
 	MULQ t0
 	ADDQ t1, acc4
 	ADCQ $0, DX
@@ -1076,7 +1076,7 @@ TEXT ·p256OrdMul(SB),NOSPLIT,$0
 	ADCQ $0, DX
 	MOVQ DX, t1
 
-	MOVQ sm2ord<>+0x10(SB), AX
+	MOVQ btcOrd<>+0x10(SB), AX
 	MULQ t0
 	ADDQ t1, acc5
 	ADCQ $0, DX
@@ -1084,7 +1084,7 @@ TEXT ·p256OrdMul(SB),NOSPLIT,$0
 	ADCQ $0, DX
 	MOVQ DX, t1
 
-	MOVQ sm2ord<>+0x18(SB), AX
+	MOVQ btcOrd<>+0x18(SB), AX
 	MULQ t0
 	ADDQ t1, acc0
 	ADCQ $0, DX
@@ -1097,10 +1097,10 @@ TEXT ·p256OrdMul(SB),NOSPLIT,$0
 	MOVQ acc0, t0
 	MOVQ acc1, t1
 	// Subtract p256
-	SUBQ sm2ord<>+0x00(SB), acc4
-	SBBQ sm2ord<>+0x08(SB) ,acc5
-	SBBQ sm2ord<>+0x10(SB), acc0
-	SBBQ sm2ord<>+0x18(SB), acc1
+	SUBQ btcOrd<>+0x00(SB), acc4
+	SBBQ btcOrd<>+0x08(SB) ,acc5
+	SBBQ btcOrd<>+0x10(SB), acc0
+	SBBQ btcOrd<>+0x18(SB), acc1
 	SBBQ $0, acc2
 
 	CMOVQCS x_ptr, acc4
@@ -1203,16 +1203,16 @@ ordSqrLoop:
 	MOVQ t1, x_ptr
 	// First reduction step
 	MOVQ acc0, AX
-	MULQ sm2ordK0<>(SB)
+	MULQ btcOrdK0<>(SB)
 	MOVQ AX, t0
 
-	MOVQ sm2ord<>+0x00(SB), AX
+	MOVQ btcOrd<>+0x00(SB), AX
 	MULQ t0
 	ADDQ AX, acc0
 	ADCQ $0, DX
 	MOVQ DX, t1
 
-	MOVQ sm2ord<>+0x08(SB), AX
+	MOVQ btcOrd<>+0x08(SB), AX
 	MULQ t0
 	ADDQ t1, acc1
 	ADCQ $0, DX
@@ -1235,16 +1235,16 @@ ordSqrLoop:
 	SBBQ $0, acc0
 	// Second reduction step
 	MOVQ acc1, AX
-	MULQ sm2ordK0<>(SB)
+	MULQ btcOrdK0<>(SB)
 	MOVQ AX, t0
 
-	MOVQ sm2ord<>+0x00(SB), AX
+	MOVQ btcOrd<>+0x00(SB), AX
 	MULQ t0
 	ADDQ AX, acc1
 	ADCQ $0, DX
 	MOVQ DX, t1
 
-	MOVQ sm2ord<>+0x08(SB), AX
+	MOVQ btcOrd<>+0x08(SB), AX
 	MULQ t0
 	ADDQ t1, acc2
 	ADCQ $0, DX
@@ -1267,16 +1267,16 @@ ordSqrLoop:
 	SBBQ $0, acc1
 	// Third reduction step
 	MOVQ acc2, AX
-	MULQ sm2ordK0<>(SB)
+	MULQ btcOrdK0<>(SB)
 	MOVQ AX, t0
 
-	MOVQ sm2ord<>+0x00(SB), AX
+	MOVQ btcOrd<>+0x00(SB), AX
 	MULQ t0
 	ADDQ AX, acc2
 	ADCQ $0, DX
 	MOVQ DX, t1
 
-	MOVQ sm2ord<>+0x08(SB), AX
+	MOVQ btcOrd<>+0x08(SB), AX
 	MULQ t0
 	ADDQ t1, acc3
 	ADCQ $0, DX
@@ -1299,16 +1299,16 @@ ordSqrLoop:
 	SBBQ $0, acc2
 	// Last reduction step
 	MOVQ acc3, AX
-	MULQ sm2ordK0<>(SB)
+	MULQ btcOrdK0<>(SB)
 	MOVQ AX, t0
 
-	MOVQ sm2ord<>+0x00(SB), AX
+	MOVQ btcOrd<>+0x00(SB), AX
 	MULQ t0
 	ADDQ AX, acc3
 	ADCQ $0, DX
 	MOVQ DX, t1
 
-	MOVQ sm2ord<>+0x08(SB), AX
+	MOVQ btcOrd<>+0x08(SB), AX
 	MULQ t0
 	ADDQ t1, acc0
 	ADCQ $0, DX
@@ -1344,10 +1344,10 @@ ordSqrLoop:
 	MOVQ acc2, y_ptr
 	MOVQ acc3, t1
 	// Subtract p256
-	SUBQ sm2ord<>+0x00(SB), acc0
-	SBBQ sm2ord<>+0x08(SB) ,acc1
-	SBBQ sm2ord<>+0x10(SB), acc2
-	SBBQ sm2ord<>+0x18(SB), acc3
+	SUBQ btcOrd<>+0x00(SB), acc0
+	SBBQ btcOrd<>+0x08(SB) ,acc1
+	SBBQ btcOrd<>+0x10(SB), acc2
+	SBBQ btcOrd<>+0x18(SB), acc3
 	SBBQ $0, t0
 
 	CMOVQCS acc4, acc0
@@ -1394,7 +1394,7 @@ ordSqrLoop:
 #define t3 SI
 #define hlp BP
 /* ---------------------------------------*/
-TEXT sm2SubInternal(SB),NOSPLIT,$0
+TEXT btcSubInternal(SB),NOSPLIT,$0
 	XORQ mul0, mul0
 	SUBQ t0, acc4
 	SBBQ t1, acc5
@@ -1420,7 +1420,7 @@ TEXT sm2SubInternal(SB),NOSPLIT,$0
 
 	RET
 /* ---------------------------------------*/
-TEXT sm2MulInternal(SB),NOSPLIT,$0
+TEXT btcMulInternal(SB),NOSPLIT,$0
 	MOVQ acc4, mul0
 	MULQ t0
 	MOVQ mul0, acc0
@@ -1535,40 +1535,39 @@ TEXT sm2MulInternal(SB),NOSPLIT,$0
 	MOVQ mul1, acc7
 	XORQ mul1, mul1
 	// First reduction step
-	MOVQ acc0, mul0
-	MOVQ p256K0<>(SB), t0
-	MULQ t0
-	// t1 = u
-	MOVQ mul0, t1
-	MOVQ p256P0<>(SB), t0
-	MULQ t0
-	ADDQ mul0, acc0
-	MOVQ t1, acc0
-	ADCQ mul1, acc1
+	MOVQ acc0, AX
+	MOVQ p256K0<>(SB), t1
+	MULQ t1
+	// u = AX
+	MOVQ AX, t0
+	MOVQ p256P0<>(SB), t1
+	MULQ t1
+	ADDQ AX, acc0
+	MOVQ t0, acc0
+	ADCQ DX, acc1
 	ADCQ $0, acc2
 	ADCQ $0, acc3
-	ADCQ t1, acc0
-	
-	SUBQ t1, acc1
+	ADCQ $0, acc0
+	SUBQ t0, acc1
 	SBBQ $0, acc2
 	SBBQ $0, acc3
 	SBBQ $0, acc0
 	// Second reduction step
 	MOVQ acc1, mul0
-	MOVQ p256K0<>(SB), t0
-	MULQ t0
-	// t1 = u
-	MOVQ mul0, t1
-	MOVQ p256P0<>(SB), t0
-	MULQ t0
+	MOVQ p256K0<>(SB), t1
+	MULQ t1
+	// t0 = u = AX
+	MOVQ mul0, t0
+	MOVQ p256P0<>(SB), t1
+	MULQ t1
 	ADDQ mul0, acc1
-	MOVQ t1, acc1
+	MOVQ t0, acc1
 	ADCQ mul1, acc2
 	ADCQ $0, acc3
 	ADCQ $0, acc0
-	ADCQ t1, acc1
+	ADCQ $0, acc1
 	
-	SUBQ t1, acc2
+	SUBQ t0, acc2
 	SBBQ $0, acc3
 	SBBQ $0, acc0
 	SBBQ $0, acc1
@@ -1585,7 +1584,7 @@ TEXT sm2MulInternal(SB),NOSPLIT,$0
 	ADCQ mul1, acc3
 	ADCQ $0, acc0
 	ADCQ $0, acc1
-	ADCQ t1, acc2
+	ADCQ $0, acc2
 	
 	SUBQ t1, acc3
 	SBBQ $0, acc0
@@ -1604,19 +1603,19 @@ TEXT sm2MulInternal(SB),NOSPLIT,$0
 	ADCQ mul1, acc0
 	ADCQ $0, acc1
 	ADCQ $0, acc2
-	ADCQ t1, acc3
+	ADCQ $0, acc3
 	
 	SUBQ t1, acc0
 	SBBQ $0, acc1
 	SBBQ $0, acc2
 	SBBQ $0, acc3
-	MOVQ $0, BP
+	MOVQ $0, AX
 	// Add bits [511:256] of the result
 	ADCQ acc0, acc4
 	ADCQ acc1, acc5
 	ADCQ acc2, acc6
 	ADCQ acc3, acc7
-	ADCQ $0, hlp
+	ADCQ $0, AX
 	// Copy result
 	MOVQ acc4, acc0
 	MOVQ acc5, acc1
@@ -1627,7 +1626,7 @@ TEXT sm2MulInternal(SB),NOSPLIT,$0
 	SBBQ $-1 ,acc5
 	SBBQ $-1, acc6
 	SBBQ $-1, acc7
-	SBBQ $0, hlp
+	SBBQ $0, AX
 	// If the result of the subtraction is negative, restore the previous result
 	CMOVQCS acc0, acc4
 	CMOVQCS acc1, acc5
@@ -1636,7 +1635,7 @@ TEXT sm2MulInternal(SB),NOSPLIT,$0
 
 	RET
 /* ---------------------------------------*/
-TEXT sm2SqrInternal(SB),NOSPLIT,$0
+TEXT btcSqrInternal(SB),NOSPLIT,$0
 
 	MOVQ acc4, mul0
 	MULQ acc5
@@ -1718,7 +1717,7 @@ TEXT sm2SqrInternal(SB),NOSPLIT,$0
 	MOVQ p256P0<>(SB), t0
 	MULQ t0
 	ADDQ mul0, acc0
-	MOVQ t1, acc0
+	MOVQ $0, acc0
 	ADCQ mul1, acc1
 	ADCQ $0, acc2
 	ADCQ $0, acc3
@@ -1737,7 +1736,7 @@ TEXT sm2SqrInternal(SB),NOSPLIT,$0
 	MOVQ p256P0<>(SB), t0
 	MULQ t0
 	ADDQ mul0, acc1
-	MOVQ t1, acc1
+	MOVQ $0, acc1
 	ADCQ mul1, acc2
 	ADCQ $0, acc3
 	ADCQ $0, acc0
@@ -1756,7 +1755,7 @@ TEXT sm2SqrInternal(SB),NOSPLIT,$0
 	MOVQ p256P0<>(SB), t0
 	MULQ t0
 	ADDQ mul0, acc2
-	MOVQ t1, acc2
+	MOVQ $0, acc2
 	ADCQ mul1, acc3
 	ADCQ $0, acc0
 	ADCQ $0, acc1
@@ -1775,7 +1774,7 @@ TEXT sm2SqrInternal(SB),NOSPLIT,$0
 	MOVQ p256P0<>(SB), t0
 	MULQ t0
 	ADDQ mul0, acc3
-	MOVQ t1, acc3
+	MOVQ $0, acc3
 	ADCQ mul1, acc0
 	ADCQ $0, acc1
 	ADCQ $0, acc2
@@ -1785,13 +1784,13 @@ TEXT sm2SqrInternal(SB),NOSPLIT,$0
 	SBBQ $0, acc1
 	SBBQ $0, acc2
 	SBBQ $0, acc3
-	MOVQ $0, BP
+	MOVQ $0, AX
 	// Add bits [511:256] of the result
 	ADCQ acc0, t0
 	ADCQ acc1, t1
 	ADCQ acc2, t2
 	ADCQ acc3, t3
-	ADCQ $0, hlp
+	ADCQ $0, AX
 	// Copy result
 	MOVQ t0, acc4
 	MOVQ t1, acc5
@@ -1802,7 +1801,7 @@ TEXT sm2SqrInternal(SB),NOSPLIT,$0
 	SBBQ $-1 ,acc5
 	SBBQ $-1, acc6
 	SBBQ $-1, acc7
-	SBBQ $0, hlp
+	SBBQ $0, AX
 	// If the result of the subtraction is negative, restore the previous result
 	CMOVQCS t0, acc4
 	CMOVQCS t1, acc5
@@ -1955,57 +1954,57 @@ TEXT ·p256PointAddAffineAsm(SB),0,$512-96
 	MOVQ acc3, y2in(8*3)
 	// Begin point add
 	LDacc (z1in)
-	CALL sm2SqrInternal(SB)	// z1ˆ2
+	CALL btcSqrInternal(SB)	// z1ˆ2
 	ST (z1sqr)
 
 	LDt (x2in)
-	CALL sm2MulInternal(SB)	// x2 * z1ˆ2
+	CALL btcMulInternal(SB)	// x2 * z1ˆ2
 
 	LDt (x1in)
-	CALL sm2SubInternal(SB)	// h = u2 - u1
+	CALL btcSubInternal(SB)	// h = u2 - u1
 	ST (h)
 
 	LDt (z1in)
-	CALL sm2MulInternal(SB)	// z3 = h * z1
+	CALL btcMulInternal(SB)	// z3 = h * z1
 	ST (zout)
 
 	LDacc (z1sqr)
-	CALL sm2MulInternal(SB)	// z1ˆ3
+	CALL btcMulInternal(SB)	// z1ˆ3
 
 	LDt (y2in)
-	CALL sm2MulInternal(SB)	// s2 = y2 * z1ˆ3
+	CALL btcMulInternal(SB)	// s2 = y2 * z1ˆ3
 	ST (s2)
 
 	LDt (y1in)
-	CALL sm2SubInternal(SB)	// r = s2 - s1
+	CALL btcSubInternal(SB)	// r = s2 - s1
 	ST (r)
 
-	CALL sm2SqrInternal(SB)	// rsqr = rˆ2
+	CALL btcSqrInternal(SB)	// rsqr = rˆ2
 	ST (rsqr)
 
 	LDacc (h)
-	CALL sm2SqrInternal(SB)	// hsqr = hˆ2
+	CALL btcSqrInternal(SB)	// hsqr = hˆ2
 	ST (hsqr)
 
 	LDt (h)
-	CALL sm2MulInternal(SB)	// hcub = hˆ3
+	CALL btcMulInternal(SB)	// hcub = hˆ3
 	ST (hcub)
 
 	LDt (y1in)
-	CALL sm2MulInternal(SB)	// y1 * hˆ3
+	CALL btcMulInternal(SB)	// y1 * hˆ3
 	ST (s2)
 
 	LDacc (x1in)
 	LDt (hsqr)
-	CALL sm2MulInternal(SB)	// u1 * hˆ2
+	CALL btcMulInternal(SB)	// u1 * hˆ2
 	ST (h)
 
 	p256MulBy2Inline			// u1 * hˆ2 * 2, inline
 	LDacc (rsqr)
-	CALL sm2SubInternal(SB)	// rˆ2 - u1 * hˆ2 * 2
+	CALL btcSubInternal(SB)	// rˆ2 - u1 * hˆ2 * 2
 
 	LDt (hcub)
-	CALL sm2SubInternal(SB)
+	CALL btcSubInternal(SB)
 	ST (xout)
 
 	MOVQ acc4, t0
@@ -2013,13 +2012,13 @@ TEXT ·p256PointAddAffineAsm(SB),0,$512-96
 	MOVQ acc6, t2
 	MOVQ acc7, t3
 	LDacc (h)
-	CALL sm2SubInternal(SB)
+	CALL btcSubInternal(SB)
 
 	LDt (r)
-	CALL sm2MulInternal(SB)
+	CALL btcMulInternal(SB)
 
 	LDt (s2)
-	CALL sm2SubInternal(SB)
+	CALL btcSubInternal(SB)
 	ST (yout)
 	// Load stored values from stack
 	MOVQ rptr, AX
@@ -2136,9 +2135,9 @@ TEXT ·p256PointAddAffineAsm(SB),0,$512-96
 #undef sel_save
 #undef zero_save
 
-// sm2IsZero returns 1 in AX if [acc4..acc7] represents zero and zero
+// btcIsZero returns 1 in AX if [acc4..acc7] represents zero and zero
 // otherwise. It writes to [acc4..acc7], t0 and t1.
-TEXT sm2IsZero(SB),NOSPLIT,$0
+TEXT btcIsZero(SB),NOSPLIT,$0
 	// AX contains a flag that is set if the input is zero.
 	XORQ AX, AX
 	MOVQ $1, t1
@@ -2231,79 +2230,79 @@ TEXT ·p256PointAddAsm(SB),0,$680-80
 	MOVQ AX, rptr
 	// Begin point add
 	LDacc (z2in)
-	CALL sm2SqrInternal(SB)	// z2ˆ2
+	CALL btcSqrInternal(SB)	// z2ˆ2
 	ST (z2sqr)
 	LDt (z2in)
-	CALL sm2MulInternal(SB)	// z2ˆ3
+	CALL btcMulInternal(SB)	// z2ˆ3
 	LDt (y1in)
-	CALL sm2MulInternal(SB)	// s1 = z2ˆ3*y1
+	CALL btcMulInternal(SB)	// s1 = z2ˆ3*y1
 	ST (s1)
 
 	LDacc (z1in)
-	CALL sm2SqrInternal(SB)	// z1ˆ2
+	CALL btcSqrInternal(SB)	// z1ˆ2
 	ST (z1sqr)
 	LDt (z1in)
-	CALL sm2MulInternal(SB)	// z1ˆ3
+	CALL btcMulInternal(SB)	// z1ˆ3
 	LDt (y2in)
-	CALL sm2MulInternal(SB)	// s2 = z1ˆ3*y2
+	CALL btcMulInternal(SB)	// s2 = z1ˆ3*y2
 	ST (s2)
 
 	LDt (s1)
-	CALL sm2SubInternal(SB)	// r = s2 - s1
+	CALL btcSubInternal(SB)	// r = s2 - s1
 	ST (r)
-	CALL sm2IsZero(SB)
+	CALL btcIsZero(SB)
 	MOVQ AX, points_eq
 
 	LDacc (z2sqr)
 	LDt (x1in)
-	CALL sm2MulInternal(SB)	// u1 = x1 * z2ˆ2
+	CALL btcMulInternal(SB)	// u1 = x1 * z2ˆ2
 	ST (u1)
 	LDacc (z1sqr)
 	LDt (x2in)
-	CALL sm2MulInternal(SB)	// u2 = x2 * z1ˆ2
+	CALL btcMulInternal(SB)	// u2 = x2 * z1ˆ2
 	ST (u2)
 
 	LDt (u1)
-	CALL sm2SubInternal(SB)	// h = u2 - u1
+	CALL btcSubInternal(SB)	// h = u2 - u1
 	ST (h)
-	CALL sm2IsZero(SB)
+	CALL btcIsZero(SB)
 	ANDQ points_eq, AX
 	MOVQ AX, points_eq
 
 	LDacc (r)
-	CALL sm2SqrInternal(SB)	// rsqr = rˆ2
+	CALL btcSqrInternal(SB)	// rsqr = rˆ2
 	ST (rsqr)
 
 	LDacc (h)
-	CALL sm2SqrInternal(SB)	// hsqr = hˆ2
+	CALL btcSqrInternal(SB)	// hsqr = hˆ2
 	ST (hsqr)
 
 	LDt (h)
-	CALL sm2MulInternal(SB)	// hcub = hˆ3
+	CALL btcMulInternal(SB)	// hcub = hˆ3
 	ST (hcub)
 
 	LDt (s1)
-	CALL sm2MulInternal(SB)
+	CALL btcMulInternal(SB)
 	ST (s2)
 
 	LDacc (z1in)
 	LDt (z2in)
-	CALL sm2MulInternal(SB)	// z1 * z2
+	CALL btcMulInternal(SB)	// z1 * z2
 	LDt (h)
-	CALL sm2MulInternal(SB)	// z1 * z2 * h
+	CALL btcMulInternal(SB)	// z1 * z2 * h
 	ST (zout)
 
 	LDacc (hsqr)
 	LDt (u1)
-	CALL sm2MulInternal(SB)	// hˆ2 * u1
+	CALL btcMulInternal(SB)	// hˆ2 * u1
 	ST (u2)
 
 	p256MulBy2Inline	// u1 * hˆ2 * 2, inline
 	LDacc (rsqr)
-	CALL sm2SubInternal(SB)	// rˆ2 - u1 * hˆ2 * 2
+	CALL btcSubInternal(SB)	// rˆ2 - u1 * hˆ2 * 2
 
 	LDt (hcub)
-	CALL sm2SubInternal(SB)
+	CALL btcSubInternal(SB)
 	ST (xout)
 
 	MOVQ acc4, t0
@@ -2311,13 +2310,13 @@ TEXT ·p256PointAddAsm(SB),0,$680-80
 	MOVQ acc6, t2
 	MOVQ acc7, t3
 	LDacc (u2)
-	CALL sm2SubInternal(SB)
+	CALL btcSubInternal(SB)
 
 	LDt (r)
-	CALL sm2MulInternal(SB)
+	CALL btcMulInternal(SB)
 
 	LDt (s2)
-	CALL sm2SubInternal(SB)
+	CALL btcSubInternal(SB)
 	ST (yout)
 
 	MOVOU xout(16*0), X0
@@ -2395,7 +2394,7 @@ TEXT ·p256PointDoubleAsm(SB),NOSPLIT,$256-48
 	MOVQ AX, rptr
 	// Begin point double
 	LDacc (z)
-	CALL sm2SqrInternal(SB)
+	CALL btcSqrInternal(SB)
 	ST (zsqr)
 
 	LDt (x)
@@ -2404,7 +2403,7 @@ TEXT ·p256PointDoubleAsm(SB),NOSPLIT,$256-48
 
 	LDacc (z)
 	LDt (y)
-	CALL sm2MulInternal(SB)
+	CALL btcMulInternal(SB)
 	p256MulBy2Inline
 	MOVQ rptr, AX
 	// Store z
@@ -2415,9 +2414,9 @@ TEXT ·p256PointDoubleAsm(SB),NOSPLIT,$256-48
 
 	LDacc (x)
 	LDt (zsqr)
-	CALL sm2SubInternal(SB)
+	CALL btcSubInternal(SB)
 	LDt (m)
-	CALL sm2MulInternal(SB)
+	CALL btcMulInternal(SB)
 	ST (m)
 	// Multiply by 3
 	p256MulBy2Inline
@@ -2428,9 +2427,9 @@ TEXT ·p256PointDoubleAsm(SB),NOSPLIT,$256-48
 	LDacc (y)
 	p256MulBy2Inline
 	t2acc
-	CALL sm2SqrInternal(SB)
+	CALL btcSqrInternal(SB)
 	ST (s)
-	CALL sm2SqrInternal(SB)
+	CALL btcSqrInternal(SB)
 	// Divide by 2
 	XORQ mul0, mul0
 	MOVQ acc4, t0
@@ -2459,15 +2458,15 @@ TEXT ·p256PointDoubleAsm(SB),NOSPLIT,$256-48
 	/////////////////////////
 	LDacc (x)
 	LDt (s)
-	CALL sm2MulInternal(SB)
+	CALL btcMulInternal(SB)
 	ST (s)
 	p256MulBy2Inline
 	STt (tmp)
 
 	LDacc (m)
-	CALL sm2SqrInternal(SB)
+	CALL btcSqrInternal(SB)
 	LDt (tmp)
-	CALL sm2SubInternal(SB)
+	CALL btcSubInternal(SB)
 
 	MOVQ rptr, AX
 	// Store x
@@ -2478,13 +2477,13 @@ TEXT ·p256PointDoubleAsm(SB),NOSPLIT,$256-48
 
 	acc2t
 	LDacc (s)
-	CALL sm2SubInternal(SB)
+	CALL btcSubInternal(SB)
 
 	LDt (m)
-	CALL sm2MulInternal(SB)
+	CALL btcMulInternal(SB)
 
 	LDt (y)
-	CALL sm2SubInternal(SB)
+	CALL btcSubInternal(SB)
 	MOVQ rptr, AX
 	// Store y
 	MOVQ acc4, (16*2 + 8*0)(AX)

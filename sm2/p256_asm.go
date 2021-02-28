@@ -146,11 +146,11 @@ func (curve p256Curve) Inverse(k *big.Int) *big.Int {
 		k = new(big.Int).Neg(k)
 	}
 
-	if k.Cmp(pSM2.N) >= 0 {
+	if k.Cmp(curve.N) >= 0 {
 		// This should never happen.
-		k = new(big.Int).Mod(k, pSM2.N)
+		k = new(big.Int).Mod(k, curve.N)
 	}
-	return new(big.Int).ModInverse(k, curve.CurveParams.N)
+	return new(big.Int).ModInverse(k, curve.N)
 }
 
 // fromBig converts a *big.Int into a format used by this code.
@@ -257,10 +257,7 @@ func (curve p256Curve) ScalarMult(bigX, bigY *big.Int, scalar []byte) (x, y *big
 }
 
 func (c p256Curve) Verify(r, s, msg, px, py *big.Int) bool {
-	N := c.Params().N
-	if N.Sign() == 0 {
-		return false
-	}
+	N := c.N
 	if r.Sign() <= 0 || s.Sign() <= 0 {
 		return false
 	}
@@ -272,12 +269,12 @@ func (c p256Curve) Verify(r, s, msg, px, py *big.Int) bool {
 	}
 	pt := c.combinedMult(px, py, s.Bytes(), t.Bytes())
 	x1 := new(big.Int).Sub(r, msg)
-	if x1.Sign() < 0 { x1.Add(x1, c.N) }
+	if x1.Sign() < 0 { x1.Add(x1, N) }
 	var zz	[4]uint64
 	p256Sqr(zz[:], pt.xyz[8:], 1)
 	if p256ProdEqual(pt.xyz[:4], zz[:], x1) { return true }
 	if x1.Cmp(c.pMinusN) < 0 {
-		x1.Add(x1, c.N)
+		x1.Add(x1, N)
 		if p256ProdEqual(pt.xyz[:4], zz[:], x1) { return true }
 	}
 	return false
@@ -286,10 +283,12 @@ func (c p256Curve) Verify(r, s, msg, px, py *big.Int) bool {
 func (c p256Curve) Sign(msg, secret *big.Int) (r, s *big.Int,
 	v uint, err error) {
 	var kB [32]byte
-	N := c.Params().N
+	N := c.N
+/*
 	if N.Sign() == 0 {
 		return nil, nil, 0, errZeroParam
 	}
+*/
 	dInv := new(big.Int).Add(secret, bigOne)
 	if dInv.ModInverse(dInv, N) == nil {
 		return nil, nil, 0, errZeroParam
