@@ -2384,13 +2384,19 @@ TEXT ·p256PointDoubleAsm(SB),NOSPLIT,$256-48
 	// Store pointer to result
 	MOVQ AX, rptr
 	// Begin point double
-	LDacc (z)
-	CALL btcSqrInternal(SB)
-	ST (zsqr)
+	//LDacc (z)
+	//CALL btcSqrInternal(SB)
+	//ST (zsqr)
 
 	LDacc (x)
 	CALL btcSqrInternal(SB)
 	ST (m)
+	// Multiply by 3
+	//LDacc (m)
+	p256MulBy2Inline
+	LDacc (m)
+	p256AddInline
+	STt (m)
 
 	LDacc (z)
 	LDt (y)
@@ -2403,12 +2409,6 @@ TEXT ·p256PointDoubleAsm(SB),NOSPLIT,$256-48
 	MOVQ t2, (16*4 + 8*2)(AX)
 	MOVQ t3, (16*4 + 8*3)(AX)
 
-	// Multiply by 3
-	LDacc (m)
-	p256MulBy2Inline
-	LDacc (m)
-	p256AddInline
-	STt (m)
 	////////////////////////
 	LDacc (y)
 	p256MulBy2Inline

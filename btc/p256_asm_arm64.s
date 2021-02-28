@@ -1392,16 +1392,22 @@ TEXT ·p256PointDoubleAsm(SB),NOSPLIT,$136-48
 	//MOVD	p256const1<>(SB), const1
 
 	// Begin point double
-	LDP	4*16(a_ptr), (x0, x1)
-	LDP	5*16(a_ptr), (x2, x3)
-	CALL	btcSqrInternal<>(SB)
-	STP	(y0, y1), zsqr(0*8)
-	STP	(y2, y3), zsqr(2*8)
+	//LDP	4*16(a_ptr), (x0, x1)
+	//LDP	5*16(a_ptr), (x2, x3)
+	//CALL	btcSqrInternal<>(SB)
+	//STP	(y0, y1), zsqr(0*8)
+	//STP	(y2, y3), zsqr(2*8)
 
 	LDP	0*16(a_ptr), (x0, x1)
 	LDP	1*16(a_ptr), (x2, x3)
 	CALL	btcSqrInternal<>(SB)
 	STy(m)
+	// Multiply by 3
+	//LDy(m)
+	p256MulBy2Inline
+	LDy(m)
+	p256AddInline
+	STx(m)
 
 	LDx(z1in)
 	LDy(y1in)
@@ -1409,12 +1415,6 @@ TEXT ·p256PointDoubleAsm(SB),NOSPLIT,$136-48
 	p256MulBy2Inline
 	STx(z3out)
 
-	// Multiply by 3
-	LDy(m)
-	p256MulBy2Inline
-	LDy(m)
-	p256AddInline
-	STx(m)
 
 	LDy(y1in)
 	p256MulBy2Inline
