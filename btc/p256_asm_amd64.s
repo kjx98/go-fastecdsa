@@ -1533,79 +1533,74 @@ TEXT btcMulInternal(SB),NOSPLIT,$0
 	ADDQ mul0, acc6
 	ADCQ $0, mul1
 	MOVQ mul1, acc7
-	XORQ mul1, mul1
 	// First reduction step
 	MOVQ acc0, AX
-	MOVQ p256K0<>(SB), t1
-	MULQ t1
+	MOVQ p256K0<>(SB), hlp
+	MULQ hlp
 	// u = AX
-	MOVQ AX, t0
-	MOVQ p256P0<>(SB), t1
-	MULQ t1
+	MOVQ AX, hlp
+	MULQ p256P0<>(SB)
 	ADDQ AX, acc0
-	MOVQ t0, acc0
+	MOVQ hlp, acc0
 	ADCQ DX, acc1
 	ADCQ $0, acc2
 	ADCQ $0, acc3
 	ADCQ $0, acc0
-	SUBQ t0, acc1
+	SUBQ hlp, acc1
 	SBBQ $0, acc2
 	SBBQ $0, acc3
 	SBBQ $0, acc0
 	// Second reduction step
 	MOVQ acc1, mul0
-	MOVQ p256K0<>(SB), t1
-	MULQ t1
-	// t0 = u = AX
-	MOVQ mul0, t0
-	MOVQ p256P0<>(SB), t1
-	MULQ t1
+	MOVQ p256K0<>(SB), hlp
+	MULQ hlp
+	// u = AX
+	MOVQ mul0, hlp
+	MULQ p256P0<>(SB)
 	ADDQ mul0, acc1
-	MOVQ t0, acc1
+	MOVQ hlp, acc1
 	ADCQ mul1, acc2
 	ADCQ $0, acc3
 	ADCQ $0, acc0
 	ADCQ $0, acc1
 	
-	SUBQ t0, acc2
+	SUBQ hlp, acc2
 	SBBQ $0, acc3
 	SBBQ $0, acc0
 	SBBQ $0, acc1
 	// Third reduction step
 	MOVQ acc2, mul0
-	MOVQ p256K0<>(SB), t0
-	MULQ t0
-	// t1 = u
-	MOVQ mul0, t1
-	MOVQ p256P0<>(SB), t0
-	MULQ t0
+	MOVQ p256K0<>(SB), hlp
+	MULQ hlp
+	// u = AX = mul0
+	MOVQ mul0, hlp
+	MULQ p256P0<>(SB)
 	ADDQ mul0, acc2
-	MOVQ t1, acc2
+	MOVQ hlp, acc2
 	ADCQ mul1, acc3
 	ADCQ $0, acc0
 	ADCQ $0, acc1
 	ADCQ $0, acc2
 	
-	SUBQ t1, acc3
+	SUBQ hlp, acc3
 	SBBQ $0, acc0
 	SBBQ $0, acc1
 	SBBQ $0, acc2
 	// Last reduction step
 	MOVQ acc3, mul0
-	MOVQ p256K0<>(SB), t0
-	MULQ t0
-	// t1 = u
-	MOVQ mul0, t1
-	MOVQ p256P0<>(SB), t0
-	MULQ t0
+	MOVQ p256K0<>(SB), hlp
+	MULQ hlp
+	// u = AX
+	MOVQ mul0, hlp
+	MULQ p256P0<>(SB)
 	ADDQ mul0, acc3
-	MOVQ t1, acc3
+	MOVQ hlp, acc3
 	ADCQ mul1, acc0
 	ADCQ $0, acc1
 	ADCQ $0, acc2
 	ADCQ $0, acc3
 	
-	SUBQ t1, acc0
+	SUBQ hlp, acc0
 	SBBQ $0, acc1
 	SBBQ $0, acc2
 	SBBQ $0, acc3
@@ -1710,77 +1705,73 @@ TEXT btcSqrInternal(SB),NOSPLIT,$0
 	XORQ mul1, mul1
 	// First reduction step
 	MOVQ acc0, mul0
-	MOVQ p256K0<>(SB), t0
-	MULQ t0
-	// t1 = u
-	MOVQ mul0, t1
-	MOVQ p256P0<>(SB), t0
-	MULQ t0
+	MOVQ p256K0<>(SB), hlp
+	MULQ hlp
+	// hlp = u
+	MOVQ mul0, hlp
+	MULQ p256P0<>(SB)
 	ADDQ mul0, acc0
 	MOVQ $0, acc0
 	ADCQ mul1, acc1
 	ADCQ $0, acc2
 	ADCQ $0, acc3
-	ADCQ t1, acc0
+	ADCQ hlp, acc0
 	
-	SUBQ t1, acc1
+	SUBQ hlp, acc1
 	SBBQ $0, acc2
 	SBBQ $0, acc3
 	SBBQ $0, acc0
 	// Second reduction step
 	MOVQ acc1, mul0
-	MOVQ p256K0<>(SB), t0
-	MULQ t0
-	// t1 = u
-	MOVQ mul0, t1
-	MOVQ p256P0<>(SB), t0
-	MULQ t0
+	MOVQ p256K0<>(SB), hlp
+	MULQ hlp
+	// hlp = u
+	MOVQ mul0, hlp
+	MULQ p256P0<>(SB)
 	ADDQ mul0, acc1
 	MOVQ $0, acc1
 	ADCQ mul1, acc2
 	ADCQ $0, acc3
 	ADCQ $0, acc0
-	ADCQ t1, acc1
+	ADCQ hlp, acc1
 	
-	SUBQ t1, acc2
+	SUBQ hlp, acc2
 	SBBQ $0, acc3
 	SBBQ $0, acc0
 	SBBQ $0, acc1
 	// Third reduction step
 	MOVQ acc2, mul0
-	MOVQ p256K0<>(SB), t0
-	MULQ t0
-	// t1 = u
-	MOVQ mul0, t1
-	MOVQ p256P0<>(SB), t0
-	MULQ t0
+	MOVQ p256K0<>(SB), hlp
+	MULQ hlp
+	// hlp = u
+	MOVQ mul0, hlp
+	MULQ p256P0<>(SB)
 	ADDQ mul0, acc2
 	MOVQ $0, acc2
 	ADCQ mul1, acc3
 	ADCQ $0, acc0
 	ADCQ $0, acc1
-	ADCQ t1, acc2
+	ADCQ hlp, acc2
 	
-	SUBQ t1, acc3
+	SUBQ hlp, acc3
 	SBBQ $0, acc0
 	SBBQ $0, acc1
 	SBBQ $0, acc2
 	// Last reduction step
 	MOVQ acc3, mul0
-	MOVQ p256K0<>(SB), t0
-	MULQ t0
-	// t1 = u
-	MOVQ mul0, t1
-	MOVQ p256P0<>(SB), t0
-	MULQ t0
+	MOVQ p256K0<>(SB), hlp
+	MULQ hlp
+	// hlp = u
+	MOVQ mul0, hlp
+	MULQ p256P0<>(SB)
 	ADDQ mul0, acc3
 	MOVQ $0, acc3
 	ADCQ mul1, acc0
 	ADCQ $0, acc1
 	ADCQ $0, acc2
-	ADCQ t1, acc3
+	ADCQ hlp, acc3
 	
-	SUBQ t1, acc0
+	SUBQ hlp, acc0
 	SBBQ $0, acc1
 	SBBQ $0, acc2
 	SBBQ $0, acc3
@@ -2397,9 +2388,9 @@ TEXT ·p256PointDoubleAsm(SB),NOSPLIT,$256-48
 	CALL btcSqrInternal(SB)
 	ST (zsqr)
 
-	LDt (x)
-	p256AddInline
-	STt (m)
+	LDacc (x)
+	CALL btcSqrInternal(SB)
+	ST (m)
 
 	LDacc (z)
 	LDt (y)
@@ -2412,13 +2403,8 @@ TEXT ·p256PointDoubleAsm(SB),NOSPLIT,$256-48
 	MOVQ t2, (16*4 + 8*2)(AX)
 	MOVQ t3, (16*4 + 8*3)(AX)
 
-	LDacc (x)
-	LDt (zsqr)
-	CALL btcSubInternal(SB)
-	LDt (m)
-	CALL btcMulInternal(SB)
-	ST (m)
 	// Multiply by 3
+	LDacc (m)
 	p256MulBy2Inline
 	LDacc (m)
 	p256AddInline

@@ -27,6 +27,10 @@ type Curve = elliptic.Curve
 // a generic, non-constant time implementation of Curve.
 type CurveParams = elliptic.CurveParams
 
+type goCurve struct {
+	*CurveParams
+}
+
 // zForAffine returns a Jacobian Z value for the affine point (x, y). If x and
 // y are zero, it assumes that they represent the point at infinity because (0,
 // 0) is not on the any of the curves handled here.
@@ -110,6 +114,7 @@ var initonce sync.Once
 
 //var secp256k1Params *CurveParams
 var secp256k1Params = &CurveParams{Name: "BTC"}
+var goBtcCurve = goCurve{CurveParams: secp256k1Params}
 
 func init() {
 	secp256k1Params.P, _ = new(big.Int).SetString("FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFEFFFFFC2F", 16)
@@ -125,6 +130,20 @@ func initAll() {
 	initBTCgo()
 }
 
+func (curve goCurve) IsOnCurve(x, y *big.Int) bool {
+	// y² = x³ + b
+	y2 := new(big.Int).Mul(y, y)
+	y2.Mod(y2, curve.P)
+
+	x3 := new(big.Int).Mul(x, x)
+	x3.Mul(x3, x)
+
+	x3.Add(x3, curve.B)
+	x3.Mod(x3, curve.P)
+
+	return x3.Cmp(y2) == 0
+}
+
 // BTC returns a Curve which implements btc
 //
 // The cryptographic operations are implemented using constant-time algorithms.
@@ -138,10 +157,10 @@ func BTCgo() Curve {
 // The cryptographic operations do not use constant-time algorithms.
 func P256() Curve {
 	initonce.Do(initAll)
-	return secp256k1Params
+	return goBtcCurve
 }
 
 func BTC() Curve {
 	initonce.Do(initAll)
-	return secp256k1Params
+	return goBtcCurve
 }

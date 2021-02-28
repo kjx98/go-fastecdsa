@@ -286,7 +286,7 @@ func BenchmarkPointRecover(b *testing.B) {
 }
 
 func BenchmarkAsmECMULT(b *testing.B) {
-	Curve := BTC()
+	Curve := BTCasm()
 	goGx := Curve.Params().Gx
 	goGy := Curve.Params().Gy
 
@@ -299,7 +299,7 @@ func BenchmarkAsmECMULT(b *testing.B) {
 }
 
 func BenchmarkAsmECGMULT(b *testing.B) {
-	Curve := BTC()
+	Curve := BTCasm()
 
 	b.ResetTimer()
 	b.RunParallel(func(pb *testing.PB) {
