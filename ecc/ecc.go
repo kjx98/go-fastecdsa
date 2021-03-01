@@ -125,14 +125,3 @@ func vliSM2MultP(u uint64) *big.Int {
 	}
 	return new(big.Int).SetBits(r[:5])
 }
-
-/*
-func vliFromBE64(src []byte) (dest []C.u64) {
-	var res [4]C.u64
-	var ss [32]byte
-	copy(ss[:], src) // process 32 bytes
-	C.vli_from_be64(&res[0], unsafe.Pointer(&ss[0]), 4)
-	dest = res[:]
-	return
-}
-*/

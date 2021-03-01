@@ -1193,7 +1193,7 @@ TEXT ·p256PointAddAffineAsm(SB),0,$264-96
 	CSEL	EQ, ZR, t0, hlp1
 
 	MOVD	p256P0<>(SB), const0
-	//MOVD	p256const1<>(SB), const1
+	MOVD	p256K0<>(SB), const1
 	EOR	t2<<1, hlp1
 
 	// Negate y2in based on sign
@@ -1389,7 +1389,7 @@ TEXT ·p256PointDoubleAsm(SB),NOSPLIT,$136-48
 	MOVD	in+24(FP), a_ptr
 
 	MOVD	p256P0<>(SB), const0
-	//MOVD	p256const1<>(SB), const1
+	MOVD	p256K0<>(SB), const1
 
 	// Begin point double
 	//LDP	4*16(a_ptr), (x0, x1)
@@ -1398,14 +1398,15 @@ TEXT ·p256PointDoubleAsm(SB),NOSPLIT,$136-48
 	//STP	(y0, y1), zsqr(0*8)
 	//STP	(y2, y3), zsqr(2*8)
 
-	LDP	0*16(a_ptr), (x0, x1)
-	LDP	1*16(a_ptr), (x2, x3)
+	//LDP	0*16(a_ptr), (x0, x1)
+	//LDP	1*16(a_ptr), (x2, x3)
+	LDx(x1in)
 	CALL	btcSqrInternal<>(SB)
 	STy(m)
 	// Multiply by 3
 	//LDy(m)
 	p256MulBy2Inline
-	LDy(m)
+	//LDy(m)
 	p256AddInline
 	STx(m)
 
@@ -1414,7 +1415,6 @@ TEXT ·p256PointDoubleAsm(SB),NOSPLIT,$136-48
 	CALL	btcMulInternal<>(SB)
 	p256MulBy2Inline
 	STx(z3out)
-
 
 	LDy(y1in)
 	p256MulBy2Inline
@@ -1490,7 +1490,7 @@ TEXT ·p256PointAddAsm(SB),0,$392-80
 	MOVD	in2+48(FP), b_ptr
 
 	MOVD	p256P0<>(SB), const0
-	//MOVD	p256const1<>(SB), const1
+	MOVD	p256K0<>(SB), const1
 
 	// Begin point add
 	LDx(z2in)

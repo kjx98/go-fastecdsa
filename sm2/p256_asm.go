@@ -18,7 +18,6 @@ import (
 	"errors"
 	"io"
 	"math/big"
-	//"math/rand"
 	"sync"
 )
 
@@ -277,6 +276,7 @@ func (c p256Curve) Verify(r, s, msg, px, py *big.Int) bool {
 	if x1.Sign() < 0 {
 		x1.Add(x1, N)
 	}
+	// zz = pt.z ^2
 	var zz [4]uint64
 	p256Sqr(zz[:], pt.xyz[8:], 1)
 	if p256ProdEqual(pt.xyz[:4], zz[:], x1) {
@@ -295,11 +295,6 @@ func (c p256Curve) Sign(rand io.Reader, msg, secret *big.Int) (r, s *big.Int,
 	v uint, err error) {
 	var kB [32]byte
 	N := c.N
-	/*
-		if N.Sign() == 0 {
-			return nil, nil, 0, errZeroParam
-		}
-	*/
 	dInv := new(big.Int).Add(secret, bigOne)
 	if dInv.ModInverse(dInv, N) == nil {
 		return nil, nil, 0, errZeroParam
@@ -542,20 +537,18 @@ func p256Inverse(out, in []uint64) {
 	p256Mul(out, out, in)
 }
 
-// p256ExpQuadP sets out to in^-1 mod p.
+// p256ExpQuadP sets out to in^quadP mod p.
 func p256ExpQuadP(out, in []uint64) {
-	var stack [8 * 4]uint64
+	var stack [6 * 4]uint64
 	p2 := stack[4*0 : 4*0+4]
 	p4 := stack[4*1 : 4*1+4]
 	p8 := stack[4*2 : 4*2+4]
 	p16 := stack[4*3 : 4*3+4]
 	p32 := stack[4*4 : 4*4+4]
 	p3 := stack[4*5 : 4*5+4]
-	_101 := stack[4*6 : 4*6+4]
 
 	p256Sqr(out, in, 1)
-	p256Mul(p2, out, in)   // 3*p
-	p256Mul(_101, out, p2) // 101 * p
+	p256Mul(p2, out, in) // 3*p
 
 	p256Sqr(out, p2, 1)
 	p256Mul(p3, out, in) // 7*p
@@ -643,9 +636,10 @@ func initTable() {
 	p256Precomputed = new([43][32 * 8]uint64)
 
 	// basePoint in montgomery form
+	// filled later w/ Gx,Gy, MontOne
 	basePoint := []uint64{
-		0x61328990f418029e, 0x3e7981eddca6c050, 0xd6a1ed99ac24c3c3, 0x91167a5ee1c13b05,
-		0xc1354e593c2d0ddd, 0xc1f5e5788d3295fa, 0x8d4cfb066e2a48f8, 0x63cd65d481d735bd,
+		0, 0, 0xd6a1ed99ac24c3c3, 0x91167a5ee1c13b05,
+		0, 0, 0x8d4cfb066e2a48f8, 0x63cd65d481d735bd,
 		0x0000000000000001, 0xffffffff, 0, 0x100000000,
 	}
 	// convert Gx, Gy to montgomery form

@@ -14,7 +14,6 @@ package sm2
 // reverse the transform than to operate in affine coordinates.
 
 import (
-	//"log"
 	"math/big"
 )
 
@@ -27,15 +26,13 @@ type sm2Curve struct {
 	rr *big.Int
 }
 
-var sm2g =sm2Curve{ CurveParams: sm2Params,
+var sm2g = sm2Curve{CurveParams: sm2Params,
 	k0: 1, //0x327f9e8872350975
 }
 var sm2Base *big.Int
-var montOne *big.Int
 
 func initSM2go() {
 	// Use pure Go implementation.
-	//sm2g.CurveParams = sm2Params
 	//sm2g.k0 = 1 //0x327f9e8872350975
 	n512 := new(big.Int).SetUint64(1)
 	sm2Base = new(big.Int).Lsh(n512, 256)
@@ -44,8 +41,6 @@ func initSM2go() {
 	rrBits := []big.Word{0x200000003, 0x2ffffffff, 0x100000001, 0x400000002}
 	sm2g.rr = new(big.Int).SetBits(rrBits)
 	//rrBits = []big.Word{0x00000001, 0xffffffff, 0x00000000, 0x100000000}
-	//montOne = new(big.Int).SetBits(rrBits)
-	montOne = new(big.Int).SetUint64(1)
 	rr := new(big.Int).Mul(sm2g.mu, sm2g.P)
 	if rr.Cmp(n512) >= 0 {
 		panic("mu large not floor")
@@ -179,7 +174,7 @@ func (curve sm2Curve) montModMul(x, y *big.Int) *big.Int {
 	yp := curve.montMul(y, curve.rr)
 	res := curve.montMul(xp, yp)
 	//return curve.montRed(res)
-	return curve.montMul(montOne, res)
+	return curve.montMul(bigOne, res)
 }
 
 func (curve sm2Curve) IsOnCurve(x, y *big.Int) bool {

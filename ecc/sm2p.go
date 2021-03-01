@@ -13,7 +13,6 @@ import "C"
 // cgo CXXFLAGS: -O2 -Wpedantic -Wall -std=gnu++11 -DWITH_SM2_MULTP
 
 import (
-	//"crypto/elliptic"
 	"math/big"
 	"unsafe"
 )

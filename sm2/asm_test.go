@@ -208,7 +208,6 @@ func TestPointRecover(t *testing.T) {
 }
 
 func BenchmarkAsmInverse(b *testing.B) {
-	b.ResetTimer()
 	priv, _ := fastecdsa.GenerateKey(P256(), rand.Reader)
 	var res, yy [4]uint64
 	fromBig(yy[:], priv.PublicKey.X)
@@ -222,57 +221,52 @@ func BenchmarkAsmInverse(b *testing.B) {
 }
 
 func BenchmarkAsmMontModMul(b *testing.B) {
-	b.ResetTimer()
 	c := sm2g
 
 	b.ResetTimer()
 	b.RunParallel(func(pb *testing.PB) {
 		for pb.Next() {
-		_ = asmMontMult(x1, c.rr)
+			_ = asmMontMult(x1, c.rr)
 		}
 	})
 }
 
 func BenchmarkAsmMontSqr(b *testing.B) {
-	b.ResetTimer()
 	var res, xp [4]uint64
 	fromBig(xp[:], x1)
 	p256Mul(res[:], xp[:], rr)
 	b.ResetTimer()
 	b.RunParallel(func(pb *testing.PB) {
 		for pb.Next() {
-		p256Sqr(res[:], res[:], 1)
+			p256Sqr(res[:], res[:], 1)
 		}
 	})
 }
 
 func BenchmarkAsmOrdMul(b *testing.B) {
-	b.ResetTimer()
 	var res, xp [4]uint64
 	fromBig(xp[:], x1)
 	b.ResetTimer()
 	b.RunParallel(func(pb *testing.PB) {
 		for pb.Next() {
-		p256OrdMul(res[:], xp[:], nRR)
+			p256OrdMul(res[:], xp[:], nRR)
 		}
 	})
 }
 
 func BenchmarkAsmOrdSqr(b *testing.B) {
-	b.ResetTimer()
 	var res, xp [4]uint64
 	fromBig(xp[:], x1)
 	p256OrdMul(res[:], xp[:], nRR)
 	b.ResetTimer()
 	b.RunParallel(func(pb *testing.PB) {
 		for pb.Next() {
-		p256OrdSqr(res[:], res[:], 1)
+			p256OrdSqr(res[:], res[:], 1)
 		}
 	})
 }
 
 func BenchmarkPointRecover(b *testing.B) {
-	b.ResetTimer()
 	c := pSM2
 	px, py := c.ScalarBaseMult(d1.Bytes())
 	v := py.Bit(0)
@@ -285,7 +279,6 @@ func BenchmarkPointRecover(b *testing.B) {
 }
 
 func BenchmarkAsmECMULT(b *testing.B) {
-	b.ResetTimer()
 	Curve := SM2()
 	goGx := Curve.Params().Gx
 	goGy := Curve.Params().Gy
@@ -299,7 +292,6 @@ func BenchmarkAsmECMULT(b *testing.B) {
 }
 
 func BenchmarkAsmECGMULT(b *testing.B) {
-	b.ResetTimer()
 	Curve := SM2()
 
 	b.ResetTimer()

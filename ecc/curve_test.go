@@ -326,10 +326,8 @@ func BenchmarkMontMultModP(b *testing.B) {
 }
 
 func BenchmarkECADD(b *testing.B) {
-	b.ResetTimer()
 	curve := sm2c
 
-	b.ResetTimer()
 	b.RunParallel(func(pb *testing.PB) {
 		for pb.Next() {
 			_, _ = curve.Add(x1, y1, x2, y2)
@@ -338,10 +336,8 @@ func BenchmarkECADD(b *testing.B) {
 }
 
 func BenchmarkECADDJac(b *testing.B) {
-	b.ResetTimer()
 	curve := sm2c
 
-	b.ResetTimer()
 	b.RunParallel(func(pb *testing.PB) {
 		for pb.Next() {
 			_, _, _ = curve.addJacobian(x1, y1, bigOne, x2, y2, bigOne)
@@ -350,10 +346,8 @@ func BenchmarkECADDJac(b *testing.B) {
 }
 
 func BenchmarkECDBL(b *testing.B) {
-	b.ResetTimer()
 	curve := sm2c
 
-	b.ResetTimer()
 	b.RunParallel(func(pb *testing.PB) {
 		for pb.Next() {
 			_, _ = curve.Double(x1, y1)
@@ -362,10 +356,8 @@ func BenchmarkECDBL(b *testing.B) {
 }
 
 func BenchmarkECDBLJac(b *testing.B) {
-	b.ResetTimer()
 	curve := sm2c
 
-	b.ResetTimer()
 	b.RunParallel(func(pb *testing.PB) {
 		for pb.Next() {
 			_, _, _ = curve.doubleJacobian(x1, y1, bigOne)
@@ -374,7 +366,6 @@ func BenchmarkECDBLJac(b *testing.B) {
 }
 
 func BenchmarkECMULT(b *testing.B) {
-	b.ResetTimer()
 	curve := sm2c
 	aGx := curve.Params().Gx
 	aGy := curve.Params().Gy
@@ -388,7 +379,6 @@ func BenchmarkECMULT(b *testing.B) {
 }
 
 func BenchmarkECCombinedMULT(b *testing.B) {
-	b.ResetTimer()
 	curve := sm2c
 	aGx := curve.Params().Gx
 	aGy := curve.Params().Gy
@@ -403,10 +393,8 @@ func BenchmarkECCombinedMULT(b *testing.B) {
 }
 
 func BenchmarkECGMULT(b *testing.B) {
-	b.ResetTimer()
 	curve := sm2c
 
-	b.ResetTimer()
 	b.RunParallel(func(pb *testing.PB) {
 		for pb.Next() {
 			_, _ = curve.ScalarBaseMult(d1.Bytes())

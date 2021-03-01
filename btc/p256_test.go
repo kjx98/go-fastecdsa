@@ -1,7 +1,6 @@
 package btc
 
 import (
-	//"crypto/elliptic"
 	"math/big"
 	"testing"
 )

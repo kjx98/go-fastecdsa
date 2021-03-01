@@ -14,7 +14,6 @@ package btc
 // reverse the transform than to operate in affine coordinates.
 
 import (
-	//"log"
 	"math/big"
 )
 
@@ -22,12 +21,10 @@ import (
 // a generic, non-constant time implementation of Curve.
 type btcCurve struct {
 	*CurveParams
-	rr	*big.Int
+	rr *big.Int
 }
 
-var btcg =btcCurve{ CurveParams: secp256k1Params,
-}
-var montOne *big.Int
+var btcg = btcCurve{CurveParams: secp256k1Params}
 
 func initBTCgo() {
 	// Use pure Go implementation.
@@ -36,9 +33,7 @@ func initBTCgo() {
 	n512.Lsh(n512, 512)
 	rrBits := []big.Word{0x7a2000e90a1, 1, 0, 0}
 	btcg.rr = new(big.Int).SetBits(rrBits)
-	montOne = new(big.Int).SetUint64(1)
 }
-
 
 func (curve btcCurve) IsOnCurve(x, y *big.Int) bool {
 	// y² = x³+ b

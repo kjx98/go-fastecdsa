@@ -11,12 +11,11 @@ func TestCalcMu(t *testing.T) {
 	n512 := new(big.Int).Mul(n256, n256)
 
 	cParams := P256().Params()
-	//n := cParams.N
 	p := cParams.P
 
 	mu := CalcMu(p)
 	pmu := new(big.Int).Mul(mu, p)
-	if  pmu.Cmp(n512) >= 0 {
+	if pmu.Cmp(n512) >= 0 {
 		t.Log("p * mu > 2^512")
 		t.Fail()
 	}
@@ -43,7 +42,7 @@ func TestBarrettDiv(t *testing.T) {
 	n64.Lsh(n64, 64)
 	tt1 := fastDivBaseExp(prod, 1)
 	tt2 := new(big.Int).Div(prod, n64)
-	if  tt1.Cmp(tt2) != 0 {
+	if tt1.Cmp(tt2) != 0 {
 		t.Log("fastDivBaseExp diff Div")
 		t.Fail()
 	}
@@ -53,7 +52,7 @@ func TestBarrettDiv(t *testing.T) {
 	t.Logf("mu: %x %x %x %x %x", ww[0], ww[1], ww[2], ww[3], ww[4])
 	q := BarrettDiv(prod, mu)
 	qe := new(big.Int).Div(prod, p)
-	if  dd, err := DiffInt(qe, q); err != nil {
+	if dd, err := DiffInt(qe, q); err != nil {
 		t.Log("Diff error", err)
 		t.Fail()
 	} else if dd < 0 {
@@ -64,9 +63,9 @@ func TestBarrettDiv(t *testing.T) {
 		t.Fail()
 	}
 	prod = prod.Mul(goGy, d1)
-	q =  BarrettDiv(prod, mu)
+	q = BarrettDiv(prod, mu)
 	qe = qe.Div(prod, p)
-	if  dd, err := DiffInt(qe, q); err != nil {
+	if dd, err := DiffInt(qe, q); err != nil {
 		t.Log("Diff error", err)
 		t.Fail()
 	} else if dd < 0 || dd > 2 {

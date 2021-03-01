@@ -227,13 +227,10 @@ func BenchmarkAsmInverse(b *testing.B) {
 }
 
 func BenchmarkAsmMontModMul(b *testing.B) {
-	//c := btcg
-	xp := x1 //toMont(x1)
-
 	b.ResetTimer()
 	b.RunParallel(func(pb *testing.PB) {
 		for pb.Next() {
-			_ = asmMontMult(xp, xp)
+			_ = asmMontMult(x1, y1)
 		}
 	})
 }

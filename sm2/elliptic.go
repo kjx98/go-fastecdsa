@@ -112,7 +112,6 @@ func Unmarshal(curve Curve, data []byte) (x, y *big.Int) {
 var initonce sync.Once
 var sm2Params = &CurveParams{Name: "SM2"}
 
-//var secp256k1Params *CurveParams
 var secp256k1Params = &CurveParams{Name: "BC"}
 
 func init() {

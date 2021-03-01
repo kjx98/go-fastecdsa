@@ -79,20 +79,6 @@ func TestEccMMod(t *testing.T) {
 	mu.Div(mu, p)
 	copy(pb[4:], mu.Bits())
 	t.Logf("P0: %x, P3: %x, Mu0: %x, Mu3: %x", pb[0], pb[3], pb[4], pb[7])
-	/*
-		bMod := vliModMultBarrett(x1, y1, pb)
-		if bMod.Cmp(xyMod) != 0 {
-			t.Logf("big.mulmod diff barrett ModMultBarrett:\n%s vs\n%s\n",
-				xyMod.Text(16), bMod.Text(16))
-			t.Fail()
-		}
-		bMod = vliModMult(x1.Bits(), y1.Bits(), pb)
-		if bMod.Cmp(xyMod) != 0 {
-			t.Logf("big.mulmod diff vliModMult:\n%s vs\n%s\n",
-				xyMod.Text(16), bMod.Text(16))
-			t.Fail()
-		}
-	*/
 }
 
 func TestSM2MultP(t *testing.T) {
@@ -117,14 +103,14 @@ func TestSM2MultP(t *testing.T) {
 		t.Fail()
 	} else {
 		t.Log("polynomial Prime OK")
-/*
-		polyP.Sub(p, bTwo)
-		t.Log("Dump P - 2:")
-		dumpBits(polyP, t)
-		polyP.Sub(sm2.P256().Params().N, bTwo)
-		t.Log("Dump N - 2:")
-		dumpBits(polyP, t)
-*/
+		/*
+			polyP.Sub(p, bTwo)
+			t.Log("Dump P - 2:")
+			dumpBits(polyP, t)
+			polyP.Sub(sm2.P256().Params().N, bTwo)
+			t.Log("Dump N - 2:")
+			dumpBits(polyP, t)
+		*/
 	}
 }
 
@@ -382,49 +368,10 @@ func TestEccInverse(t *testing.T) {
 	}
 }
 
-/*
-func TestBarrettDiv(t *testing.T) {
-	cParams := sm2.P256().Params()
-	prod := new(big.Int).Mul(x1, y1)
-	p := cParams.P
-	mu := new(big.Int).SetUint64(1)
-	mu.Lsh(mu, 512)
-	mu.Div(mu, p)
-	ww := mu.Bits()
-	t.Logf("mu: %x %x %x %x %x", ww[0], ww[1], ww[2], ww[3], ww[4])
-	t.Logf("step1 word len of prod: %d", len(prod.Bits()))
-	q := vliBarrettDiv(prod, ww)
-	qe := new(big.Int).Div(prod, p)
-	if dd, err := sm2.DiffInt(qe, q); err != nil {
-		t.Log("Diff error", err)
-		t.Logf("qe vs q: \n%s\n%s", qe.Text(16), q.Text(16))
-		t.Fail()
-	} else if dd < 0 {
-		t.Log("delta prod/p, q < 0, delta: ", dd)
-		t.Fail()
-	} else if dd > 2 {
-		t.Log("delta > 2, delta: ", dd)
-		t.Fail()
-	}
-	prod = prod.Mul(x2, y2)
-	t.Logf("step2 word len of prod: %d", len(prod.Bits()))
-	q = vliBarrettDiv(prod, ww)
-	qe = qe.Div(prod, p)
-	if dd, err := sm2.DiffInt(qe, q); err != nil {
-		t.Log("Diff error", err)
-		t.Fail()
-	} else if dd < 0 || dd > 2 {
-		t.Log("delta prod/p, q < 0 or > 2, delta: ", dd)
-		t.Fail()
-	}
-}
-*/
-
 func BenchmarkInverse(b *testing.B) {
-	b.StopTimer()
 	p := sm2.P256().Params().P.Bits()
 
-	b.StartTimer()
+	b.ResetTimer()
 	b.RunParallel(func(pb *testing.PB) {
 		for pb.Next() {
 			_ = vliModInv(x1.Bits(), p)
@@ -433,11 +380,10 @@ func BenchmarkInverse(b *testing.B) {
 }
 
 func BenchmarkInverseGo(b *testing.B) {
-	b.StopTimer()
 	p := sm2.P256().Params().P
 
 	inv := new(big.Int)
-	b.StartTimer()
+	b.ResetTimer()
 	b.RunParallel(func(pb *testing.PB) {
 		for pb.Next() {
 			inv.ModInverse(x1, p)
@@ -446,13 +392,12 @@ func BenchmarkInverseGo(b *testing.B) {
 }
 
 func BenchmarkInverseFermat(b *testing.B) {
-	b.StopTimer()
 	p := sm2.P256().Params().P
 	two := big.NewInt(2)
 	nMinus2 := new(big.Int).Sub(p, two)
 
 	inv := new(big.Int)
-	b.StartTimer()
+	b.ResetTimer()
 	b.RunParallel(func(pb *testing.PB) {
 		for pb.Next() {
 			inv.Exp(x1, nMinus2, p)
@@ -461,47 +406,10 @@ func BenchmarkInverseFermat(b *testing.B) {
 	})
 }
 
-/*
-func BenchmarkModMul(b *testing.B) {
-	b.ResetTimer()
-	p := sm2.P256().Params().P
-	pb := make([]big.Word, 9)
-	copy(pb, p.Bits())
-	mu := new(big.Int).SetUint64(1)
-	mu.Lsh(mu, 512)
-	mu.Div(mu, p)
-	copy(pb[4:], mu.Bits())
-	x1B := x1.Bits()
-	y1B := y1.Bits()
-
-	b.ResetTimer()
-	for i := 0; i < b.N; i++ {
-		_ = vliModMult(x1B, y1B, pb)
-	}
-}
-
-func BenchmarkBarrettModMul(b *testing.B) {
-	b.ResetTimer()
-	p := sm2.P256().Params().P
-	pb := make([]big.Word, 9)
-	copy(pb, p.Bits())
-	mu := new(big.Int).SetUint64(1)
-	mu.Lsh(mu, 512)
-	mu.Div(mu, p)
-	copy(pb[4:], mu.Bits())
-
-	b.ResetTimer()
-	for i := 0; i < b.N; i++ {
-		_ = vliModMultBarrett(x1, y1, pb)
-	}
-}
-*/
-
 func BenchmarkMontModMul(b *testing.B) {
-	b.StopTimer()
 	p := sm2.P256().Params().P
 
-	b.StartTimer()
+	b.ResetTimer()
 	b.RunParallel(func(pb *testing.PB) {
 		for pb.Next() {
 			_ = vliModMultMont(x1.Bits(), y1.Bits(), p.Bits(), rr, 1)
@@ -510,10 +418,9 @@ func BenchmarkMontModMul(b *testing.B) {
 }
 
 func BenchmarkMontModSqr(b *testing.B) {
-	b.StopTimer()
 	p := sm2.P256().Params().P
 
-	b.StartTimer()
+	b.ResetTimer()
 	b.RunParallel(func(pb *testing.PB) {
 		for pb.Next() {
 			_ = vliModSqrMont(x1.Bits(), p.Bits(), rr, 1)
@@ -528,7 +435,6 @@ func BenchmarkSM2ModMulP(b *testing.B) {
 }
 
 func BenchmarkMontExpMod(b *testing.B) {
-	b.ResetTimer()
 	p := sm2.P256().Params().P
 
 	b.ResetTimer()
@@ -538,7 +444,6 @@ func BenchmarkMontExpMod(b *testing.B) {
 }
 
 func BenchmarkExpMod(b *testing.B) {
-	b.ResetTimer()
 	p := sm2.P256().Params().P
 	xymod := new(big.Int)
 
