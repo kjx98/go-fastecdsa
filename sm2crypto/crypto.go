@@ -19,7 +19,6 @@ package sm2crypto
 import (
 	"bufio"
 	"crypto/ecdsa"
-	"crypto/elliptic"
 	"crypto/rand"
 	"encoding/hex"
 	"errors"
@@ -30,6 +29,7 @@ import (
 	"math/big"
 	"os"
 
+	"gitee.com/jkuang/go-fastecdsa/sm2"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/common/math"
 	"github.com/ethereum/go-ethereum/rlp"
@@ -46,11 +46,12 @@ const RecoveryIDOffset = 64
 const DigestLength = 32
 
 var (
-	secp256k1N, _  = new(big.Int).SetString("fffffffffffffffffffffffffffffffebaaedce6af48a03bbfd25e8cd0364141", 16)
-	secp256k1halfN = new(big.Int).Div(secp256k1N, big.NewInt(2))
+	sm2N, _  = new(big.Int).SetString("FFFFFFFEFFFFFFFFFFFFFFFFFFFFFFFF7203DF6B21C6052B53BBF40939D54123", 16)
+	// sm2 N1 = N-1
+	sm2N1, _  = new(big.Int).SetString("FFFFFFFEFFFFFFFFFFFFFFFFFFFFFFFF7203DF6B21C6052B53BBF40939D54122", 16)
 )
 
-var errInvalidPubkey = errors.New("invalid secp256k1 public key")
+var errInvalidPubkey = errors.New("invalid sm2 public key")
 
 // KeccakState wraps sha3.state. In addition to the usual hash methods, it also supports
 // Read to get a variable amount of data from the hash state. Read is faster than Sum
@@ -141,7 +142,7 @@ func toECDSA(d []byte, strict bool) (*ecdsa.PrivateKey, error) {
 	priv.D = new(big.Int).SetBytes(d)
 
 	// The priv.D must < N
-	if priv.D.Cmp(secp256k1N) >= 0 {
+	if priv.D.Cmp(sm2N1) >= 0 {
 		return nil, fmt.Errorf("invalid private key, >=N")
 	}
 	// The priv.D must not be zero or negative.
@@ -164,9 +165,9 @@ func FromECDSA(priv *ecdsa.PrivateKey) []byte {
 	return math.PaddedBigBytes(priv.D, priv.Params().BitSize/8)
 }
 
-// UnmarshalPubkey converts bytes to a secp256k1 public key.
+// UnmarshalPubkey converts bytes to a sm2 public key.
 func UnmarshalPubkey(pub []byte) (*ecdsa.PublicKey, error) {
-	x, y := elliptic.Unmarshal(S256(), pub)
+	x, y := sm2.Unmarshal(S256(), pub)
 	if x == nil {
 		return nil, errInvalidPubkey
 	}
@@ -177,10 +178,10 @@ func FromECDSAPub(pub *ecdsa.PublicKey) []byte {
 	if pub == nil || pub.X == nil || pub.Y == nil {
 		return nil
 	}
-	return elliptic.Marshal(S256(), pub.X, pub.Y)
+	return sm2.Marshal(S256(), pub.X, pub.Y)
 }
 
-// HexToECDSA parses a secp256k1 private key.
+// HexToECDSA parses a sm2 private key.
 func HexToECDSA(hexkey string) (*ecdsa.PrivateKey, error) {
 	b, err := hex.DecodeString(hexkey)
 	if byteErr, ok := err.(hex.InvalidByteError); ok {
@@ -191,7 +192,7 @@ func HexToECDSA(hexkey string) (*ecdsa.PrivateKey, error) {
 	return ToECDSA(b)
 }
 
-// LoadECDSA loads a secp256k1 private key from the given file.
+// LoadECDSA loads a sm2 private key from the given file.
 func LoadECDSA(file string) (*ecdsa.PrivateKey, error) {
 	fd, err := os.Open(file)
 	if err != nil {
@@ -246,7 +247,7 @@ func checkKeyFileEnd(r *bufio.Reader) error {
 	}
 }
 
-// SaveECDSA saves a secp256k1 private key to the given file with
+// SaveECDSA saves a sm2 private key to the given file with
 // restrictive permissions. The key data is saved hex-encoded.
 func SaveECDSA(file string, key *ecdsa.PrivateKey) error {
 	k := hex.EncodeToString(FromECDSA(key))
@@ -264,13 +265,8 @@ func ValidateSignatureValues(v byte, r, s *big.Int, homestead bool) bool {
 	if r.Cmp(common.Big1) < 0 || s.Cmp(common.Big1) < 0 {
 		return false
 	}
-	// reject upper range of s values (ECDSA malleability)
-	// see discussion in secp256k1/libsecp256k1/include/secp256k1.h
-	if homestead && s.Cmp(secp256k1halfN) > 0 {
-		return false
-	}
 	// Frontier: allow s to be in full N range
-	return r.Cmp(secp256k1N) < 0 && s.Cmp(secp256k1N) < 0 && (v == 0 || v == 1)
+	return r.Cmp(sm2N) < 0 && s.Cmp(sm2N) < 0 && (v == 0 || v == 1)
 }
 
 func PubkeyToAddress(p ecdsa.PublicKey) common.Address {

@@ -14,7 +14,7 @@
 // You should have received a copy of the GNU Lesser General Public License
 // along with the go-ethereum library. If not, see <http://www.gnu.org/licenses/>.
 
-// +build !amd64,!js,cgo
+// +build !amd64,!arm64,!js,cgo
 
 package sm2crypto
 
@@ -22,14 +22,24 @@ import (
 	"crypto/ecdsa"
 	"crypto/elliptic"
 	"fmt"
+	"math/big"
 
 	"github.com/ethereum/go-ethereum/common/math"
-	"github.com/ethereum/go-ethereum/crypto/secp256k1"
+	"gitee.com/jkuang/go-fastecdsa/ecc"
 )
 
 // Ecrecover returns the uncompressed public key that created the given signature.
 func Ecrecover(hash, sig []byte) ([]byte, error) {
-	return secp256k1.RecoverPubkey(hash, sig)
+	if len(sig) != SignatureLength {
+		return nil, fmt.Errorf("signature length %d error", len(sig))
+	}
+	r := new(big.Int).SetBytes(sig[:32])
+	s := new(big.Int).SetBytes(sig[32:64])
+	v := uint(sig[64])
+	msg := new(big.Int).SetBytes(hash)
+	px, py, err := ecc.SM2C().Recover(r, s, msg, v)
+	if err != nil { return nil, err }
+	return ecc.Marshal(S256(), px, py), nil
 }
 
 // SigToPub returns the public key that created the given signature.
@@ -39,11 +49,11 @@ func SigToPub(hash, sig []byte) (*ecdsa.PublicKey, error) {
 		return nil, err
 	}
 
-	x, y := elliptic.Unmarshal(S256(), s)
+	x, y := ecc.Unmarshal(S256(), s)
 	return &ecdsa.PublicKey{Curve: S256(), X: x, Y: y}, nil
 }
 
-// Sign calculates an ECDSA signature.
+// Sign calculates an SM2 signature.
 //
 // This function is susceptible to chosen plaintext attacks that can leak
 // information about the private key that is used for signing. Callers must
@@ -57,19 +67,38 @@ func Sign(digestHash []byte, prv *ecdsa.PrivateKey) (sig []byte, err error) {
 	}
 	seckey := math.PaddedBigBytes(prv.D, prv.Params().BitSize/8)
 	defer zeroBytes(seckey)
-	return secp256k1.Sign(digestHash, seckey)
+	priv := new(big.Int).SetBytes(seckey)
+	msg := new(big.Int).SetBytes(digestHash)
+	r,s,v, err := ecc.SM2C().Sign(nil, msg, priv)
+	if err != nil { return nil, err }
+	sig = make([]byte, 65)
+	rB := r.Bytes()
+	if len(rB) <= 32 { copy(sig[32-len(rB):32], rB) } else { copy(sig[:32], rB) }
+	rB = s.Bytes()
+	if len(rB) <= 32 { copy(sig[64-len(rB):], rB) } else { copy(sig[32:], rB) }
+	sig[64] = byte(v)
+	return  sig, nil
 }
 
 // VerifySignature checks that the given public key created signature over digest.
 // The public key should be in compressed (33 bytes) or uncompressed (65 bytes) format.
 // The signature should have the 64 byte [R || S] format.
 func VerifySignature(pubkey, digestHash, signature []byte) bool {
-	return secp256k1.VerifySignature(pubkey, digestHash, signature)
+	if len(signature) < 64 { return false }
+	px, py := ecc.Unmarshal(S256(), pubkey)
+	if px == nil || py == nil { return false }
+	r := new(big.Int).SetBytes(signature[:32])
+	s := new(big.Int).SetBytes(signature[32:64])
+	msg := new(big.Int).SetBytes(digestHash)
+	return ecc.SM2C().Verify(r, s, msg, px, py)
 }
 
 // DecompressPubkey parses a public key in the 33-byte compressed format.
 func DecompressPubkey(pubkey []byte) (*ecdsa.PublicKey, error) {
-	x, y := secp256k1.DecompressPubkey(pubkey)
+	if len(pubkey) != 33 {
+		return nil, fmt.Errorf("invalid public key")
+	}
+	x, y := ecc.Unmarshal(S256(), pubkey)
 	if x == nil {
 		return nil, fmt.Errorf("invalid public key")
 	}
@@ -78,10 +107,14 @@ func DecompressPubkey(pubkey []byte) (*ecdsa.PublicKey, error) {
 
 // CompressPubkey encodes a public key to the 33-byte compressed format.
 func CompressPubkey(pubkey *ecdsa.PublicKey) []byte {
-	return secp256k1.CompressPubkey(pubkey.X, pubkey.Y)
+	addr := make([]byte, 33)
+	xb := pubkey.X.Bytes()
+	if len(xb) < 32 { copy(addr[33-len(xb):], xb) } else { copy(addr[1:],  xb) }
+	if pubkey.Y.Bit(0) == 0 { addr[0] = 2 } else { addr[0] = 3 }
+	return addr
 }
 
-// S256 returns an instance of the secp256k1 curve.
+// S256 returns an instance of the sm2 curve.
 func S256() elliptic.Curve {
-	return secp256k1.S256()
+	return ecc.SM2()
 }

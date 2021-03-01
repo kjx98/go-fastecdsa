@@ -14,104 +14,108 @@
 // You should have received a copy of the GNU Lesser General Public License
 // along with the go-ethereum library. If not, see <http://www.gnu.org/licenses/>.
 
-// +build amd64 js !cgo
+// +build amd64 arm64 js !cgo
 
 package sm2crypto
 
 import (
 	"crypto/ecdsa"
 	"crypto/elliptic"
-	"errors"
+	"crypto/rand"
 	"fmt"
 	"math/big"
 
-	"github.com/btcsuite/btcd/btcec"
+	"github.com/ethereum/go-ethereum/common/math"
+	"gitee.com/jkuang/go-fastecdsa/sm2"
 )
 
 // Ecrecover returns the uncompressed public key that created the given signature.
 func Ecrecover(hash, sig []byte) ([]byte, error) {
-	pub, err := SigToPub(hash, sig)
-	if err != nil {
-		return nil, err
+	if len(sig) != SignatureLength {
+		return nil, fmt.Errorf("signature length %d error", len(sig))
 	}
-	bytes := (*btcec.PublicKey)(pub).SerializeUncompressed()
-	return bytes, err
+	r := new(big.Int).SetBytes(sig[:32])
+	s := new(big.Int).SetBytes(sig[32:64])
+	v := uint(sig[64])
+	msg := new(big.Int).SetBytes(hash)
+	px, py, err := sm2.SM2asm().Recover(r, s, msg, v)
+	if err != nil { return nil, err }
+	return sm2.Marshal(S256(), px, py), nil
 }
 
 // SigToPub returns the public key that created the given signature.
 func SigToPub(hash, sig []byte) (*ecdsa.PublicKey, error) {
-	// Convert to btcec input format with 'recovery id' v at the beginning.
-	btcsig := make([]byte, SignatureLength)
-	btcsig[0] = sig[64] + 27
-	copy(btcsig[1:], sig)
-
-	pub, _, err := btcec.RecoverCompact(btcec.S256(), btcsig, hash)
-	return (*ecdsa.PublicKey)(pub), err
-}
-
-// Sign calculates an ECDSA signature.
-//
-// This function is susceptible to chosen plaintext attacks that can leak
-// information about the private key that is used for signing. Callers must
-// be aware that the given hash cannot be chosen by an adversery. Common
-// solution is to hash any input before calculating the signature.
-//
-// The produced signature is in the [R || S || V] format where V is 0 or 1.
-func Sign(hash []byte, prv *ecdsa.PrivateKey) ([]byte, error) {
-	if len(hash) != 32 {
-		return nil, fmt.Errorf("hash is required to be exactly 32 bytes (%d)", len(hash))
-	}
-	if prv.Curve != btcec.S256() {
-		return nil, fmt.Errorf("private key curve is not secp256k1")
-	}
-	sig, err := btcec.SignCompact(btcec.S256(), (*btcec.PrivateKey)(prv), hash, false)
+	s, err := Ecrecover(hash, sig)
 	if err != nil {
 		return nil, err
 	}
-	// Convert to Ethereum signature format with 'recovery id' v at the end.
-	v := sig[0] - 27
-	copy(sig, sig[1:])
-	sig[64] = v
-	return sig, nil
+
+	x, y := sm2.Unmarshal(S256(), s)
+	return &ecdsa.PublicKey{Curve: S256(), X: x, Y: y}, nil
 }
 
-// VerifySignature checks that the given public key created signature over hash.
+// Sign calculates an SM2 signature.
+//
+// This function is susceptible to chosen plaintext attacks that can leak
+// information about the private key that is used for signing. Callers must
+// be aware that the given digest cannot be chosen by an adversery. Common
+// solution is to hash any input before calculating the signature.
+//
+// The produced signature is in the [R || S || V] format where V is 0 or 1.
+func Sign(digestHash []byte, prv *ecdsa.PrivateKey) (sig []byte, err error) {
+	if len(digestHash) != DigestLength {
+		return nil, fmt.Errorf("hash is required to be exactly %d bytes (%d)", DigestLength, len(digestHash))
+	}
+	seckey := math.PaddedBigBytes(prv.D, prv.Params().BitSize/8)
+	defer zeroBytes(seckey)
+	priv := new(big.Int).SetBytes(seckey)
+	msg := new(big.Int).SetBytes(digestHash)
+	r,s,v, err := sm2.SM2asm().Sign(rand.Reader, msg, priv)
+	if err != nil { return nil, err }
+	sig = make([]byte, 65)
+	rB := r.Bytes()
+	if len(rB) <= 32 { copy(sig[32-len(rB):32], rB) } else { copy(sig[:32], rB) }
+	rB = s.Bytes()
+	if len(rB) <= 32 { copy(sig[64-len(rB):], rB) } else { copy(sig[32:], rB) }
+	sig[64] = byte(v)
+	return  sig, nil
+}
+
+// VerifySignature checks that the given public key created signature over digest.
 // The public key should be in compressed (33 bytes) or uncompressed (65 bytes) format.
 // The signature should have the 64 byte [R || S] format.
-func VerifySignature(pubkey, hash, signature []byte) bool {
-	if len(signature) != 64 {
-		return false
-	}
-	sig := &btcec.Signature{R: new(big.Int).SetBytes(signature[:32]), S: new(big.Int).SetBytes(signature[32:])}
-	key, err := btcec.ParsePubKey(pubkey, btcec.S256())
-	if err != nil {
-		return false
-	}
-	// Reject malleable signatures. libsecp256k1 does this check but btcec doesn't.
-	if sig.S.Cmp(secp256k1halfN) > 0 {
-		return false
-	}
-	return sig.Verify(hash, key)
+func VerifySignature(pubkey, digestHash, signature []byte) bool {
+	if len(signature) < 64 { return false }
+	px, py := sm2.Unmarshal(S256(), pubkey)
+	if px == nil || py == nil { return false }
+	r := new(big.Int).SetBytes(signature[:32])
+	s := new(big.Int).SetBytes(signature[32:64])
+	msg := new(big.Int).SetBytes(digestHash)
+	return sm2.SM2asm().Verify(r, s, msg, px, py)
 }
 
 // DecompressPubkey parses a public key in the 33-byte compressed format.
 func DecompressPubkey(pubkey []byte) (*ecdsa.PublicKey, error) {
 	if len(pubkey) != 33 {
-		return nil, errors.New("invalid compressed public key length")
+		return nil, fmt.Errorf("invalid public key")
 	}
-	key, err := btcec.ParsePubKey(pubkey, btcec.S256())
-	if err != nil {
-		return nil, err
+	x, y := sm2.Unmarshal(S256(), pubkey)
+	if x == nil {
+		return nil, fmt.Errorf("invalid public key")
 	}
-	return key.ToECDSA(), nil
+	return &ecdsa.PublicKey{X: x, Y: y, Curve: S256()}, nil
 }
 
 // CompressPubkey encodes a public key to the 33-byte compressed format.
 func CompressPubkey(pubkey *ecdsa.PublicKey) []byte {
-	return (*btcec.PublicKey)(pubkey).SerializeCompressed()
+	addr := make([]byte, 33)
+	xb := pubkey.X.Bytes()
+	if len(xb) < 32 { copy(addr[33-len(xb):], xb) } else { copy(addr[1:],  xb) }
+	if pubkey.Y.Bit(0) == 0 { addr[0] = 2 } else { addr[0] = 3 }
+	return addr
 }
 
-// S256 returns an instance of the secp256k1 curve.
+// S256 returns an instance of the sm2 curve.
 func S256() elliptic.Curve {
-	return btcec.S256()
+	return sm2.SM2()
 }
