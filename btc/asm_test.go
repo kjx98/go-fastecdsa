@@ -214,7 +214,7 @@ func TestPointRecover(t *testing.T) {
 }
 
 func BenchmarkAsmInverse(b *testing.B) {
-	priv, _ := fastecdsa.GenerateKey(P256(), rand.Reader)
+	priv, _ := fastecdsa.GenerateKey(BTC(), rand.Reader)
 	var res, yy [4]uint64
 	fromBig(yy[:], priv.PublicKey.X)
 

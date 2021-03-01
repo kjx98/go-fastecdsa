@@ -147,7 +147,6 @@ func TestBTCAsmGo(t *testing.T) {
 	goCurve := BTCgo()
 	//asm version BTC works
 	asmCurve := BTCasm()
-	//asmCurve := P256()
 	goGx := goCurve.Params().Gx
 	goGy := goCurve.Params().Gy
 	gx, gy := goCurve.ScalarMult(goGx, goGy, d1.Bytes())
@@ -165,7 +164,7 @@ func TestBTCAsmGo(t *testing.T) {
 }
 
 func BenchmarkModMul(b *testing.B) {
-	p := P256().Params().P
+	p := BTC().Params().P
 	res := new(big.Int)
 
 	b.ResetTimer()
@@ -176,7 +175,7 @@ func BenchmarkModMul(b *testing.B) {
 }
 
 func BenchmarkECADD(b *testing.B) {
-	curve := P256()
+	curve := BTC()
 
 	b.ResetTimer()
 	b.RunParallel(func(pb *testing.PB) {
@@ -187,7 +186,7 @@ func BenchmarkECADD(b *testing.B) {
 }
 
 func BenchmarkECDBL(b *testing.B) {
-	curve := P256()
+	curve := BTC()
 
 	b.ResetTimer()
 	b.RunParallel(func(pb *testing.PB) {

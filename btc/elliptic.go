@@ -161,11 +161,3 @@ func BTCgo() Curve {
 	initonce.Do(initAll)
 	return btcg
 }
-
-// P256 returns a Curve which implements btc via elliptic package
-//
-// The cryptographic operations do not use constant-time algorithms.
-func P256() Curve {
-	initonce.Do(initAll)
-	return goBtcCurve
-}
