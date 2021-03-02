@@ -1446,7 +1446,7 @@ sm2p_sqrN(u64 *result, const u64 *x) noexcept
 		"MUL	x21, x7, x7\n"
 		"ADCS	x14, x21, x14\n"
 		"UMULH	x21, x7, x7\n"
-		"ADCS	x15, x21, x15\n"
+		"ADC	x15, x21, x15\n"
 	// First reduction step
 		"MOV	x19, x3\n"
 		"MOV	x3, xzr\n"
@@ -1461,7 +1461,7 @@ sm2p_sqrN(u64 *result, const u64 *x) noexcept
 		"SBCS	x10, x10, x19\n"
 		"SBCS	x11, x11, x21\n"
 		"SBCS	x3, x3, x19\n"
-		"SBCS	x20, x20, xzr\n"
+		"SBC	x20, x20, xzr\n"
 	// Second reduction step
 		"MOV	x19, x9\n"
 		"MOV	x9, xzr\n"
@@ -1476,7 +1476,7 @@ sm2p_sqrN(u64 *result, const u64 *x) noexcept
 		"SBCS	x11, x11, x19\n"
 		"SBCS	x3, x3, x21\n"
 		"SBCS	x9, x9, x19\n"
-		"SBCS	x20, x20, xzr\n"
+		"SBC	x20, x20, xzr\n"
 	// Third reduction step
 		"MOV	x19, x10\n"
 		"MOV	x10, xzr\n"
@@ -1491,7 +1491,7 @@ sm2p_sqrN(u64 *result, const u64 *x) noexcept
 		"SBCS	x3, x3, x19\n"
 		"SBCS	x9, x11, x21\n"
 		"SBCS	x10, x10, x19\n"
-		"SBCS	x20, x20, xzr\n"
+		"SBC	x20, x20, xzr\n"
 	// Last reduction step
 		"MOV	x19, x11\n"
 		"MOV	x11, xzr\n"
@@ -1506,13 +1506,13 @@ sm2p_sqrN(u64 *result, const u64 *x) noexcept
 		"SBCS	x9, x9, x19\n"
 		"SBCS	x10, x10, x21\n"
 		"SBCS	x11, x11, x19\n"
-		"SBCS	x20, x20, xzr\n"
+		"SBC	x20, x20, xzr\n"
 	// Add bits [511:256] of the sqr result
 		"ADDS	x3, x12, x3\n"
 		"ADCS	x9, x13, x9\n"
 		"ADCS	x10, x14, x10\n"
 		"ADCS	x11, x15, x11\n"
-		"ADC	x20, xzr, xzr\n"
+		"ADC	x20, x20, xzr\n"
 
 		"LDP	x4, x5, [%1]\n"
 		"LDP	x6, x7, [%1, 16]\n"
@@ -1522,17 +1522,17 @@ sm2p_sqrN(u64 *result, const u64 *x) noexcept
 		"SBCS	x7, x11, x7\n"
 		"SBCS	x20, x20, xzr\n"
 
-		"CSEL	x4, x4, x3, cc\n"
-		"CSEL	x5, x5, x9, cc\n"
-		"CSEL	x6, x6, x10, cc\n"
-		"CSEL	x7, x7, x11, cc\n"
+		"CSEL	x4, x4, x3, cs\n"
+		"CSEL	x5, x5, x9, cs\n"
+		"CSEL	x6, x6, x10, cs\n"
+		"CSEL	x7, x7, x11, cs\n"
 		"STP	x4, x5, [%0]\n"
 		"STP	x6, x7, [%0, 16]\n"
 		:
 		: "r" (result), "r" (sm2_p), "r" (x0), "r" (x1), "r" (x2),
 		"r" (x3)
-		: "%x3", "%x9", "%x10", "%x11", "%x12", "%x13", "%x14", "%x15",
-		"%x21", "%x19", "%x20", "cc", "memory");
+		: "x3", "x9", "x10", "x11", "x12", "x13", "x14", "x15",
+		"x21", "x19", "x20", "cc", "memory");
 #endif
 #else
 	u64	r[8];

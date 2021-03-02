@@ -1494,6 +1494,7 @@ TEXT ·p256PointAddAsm(SB),0,$392-80
 
 	// Begin point add
 	LDx(z2in)
+	CALL	btcSqrInternal<>(SB)    // z1ˆ2
 	STy(z2sqr)
 
 	CALL	btcMulInternal<>(SB)    // z2^3

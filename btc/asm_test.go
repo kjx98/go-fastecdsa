@@ -222,11 +222,30 @@ func TestPointAdd(t *testing.T) {
 	c := BTCgo()
 	x3, y3 := c.Add(x1, y1, x2, y2)
 	ax3, ay3 := asmPointAdd(x1, y1, x2, y2)
-	if x3.Cmp(ax3) != 0 {
+	if x3.Cmp(ax3) != 0 || y3.Cmp(ay3) != 0 {
 		t.Logf("PointAdd diff\nX3: %s\naX3: %s", x3.Text(16), ax3.Text(16))
+		t.Logf("Y3: %s\naY3: %s", y3.Text(16), ay3.Text(16))
+		t.Fail()
+	}
+}
+
+func TestPointDouble(t *testing.T) {
+	c := BTCgo()
+	x3, y3 := c.Double(x1, y1)
+	ax3, ay3 := asmPointDouble(x1, y1)
+	if x3.Cmp(ax3) != 0 {
+		t.Logf("PointDouble step1 diff\nX3: %s\naX3: %s", x3.Text(16), ax3.Text(16))
 	}
 	if y3.Cmp(ay3) != 0 {
-		t.Logf("PointAdd diff\nY3: %s\naY3: %s", y3.Text(16), ay3.Text(16))
+		t.Logf("PointDouble step1 diff\nY3: %s\naY3: %s", y3.Text(16), ay3.Text(16))
+	}
+	x3, y3 = c.Double(x2, y2)
+	ax3, ay3 = asmPointDouble(x2, y2)
+	if x3.Cmp(ax3) != 0 {
+		t.Logf("PointDouble step2 diff\nX3: %s\naX3: %s", x3.Text(16), ax3.Text(16))
+	}
+	if y3.Cmp(ay3) != 0 {
+		t.Logf("PointDouble step2 diff\nY3: %s\naY3: %s", y3.Text(16), ay3.Text(16))
 	}
 }
 
