@@ -56,6 +56,77 @@ func SM2C() *eccCurve {
 	return &sm2c
 }
 
+// Marshal converts a point into the uncompressed form specified in section 4.3.6 of ANSI X9.62.
+func Marshal(curve Curve, x, y *big.Int) []byte {
+	byteLen := (curve.Params().BitSize + 7) >> 3
+
+	ret := make([]byte, 1+2*byteLen)
+	ret[0] = 4 // uncompressed point
+
+	xBytes := x.Bytes()
+	copy(ret[1+byteLen-len(xBytes):], xBytes)
+	yBytes := y.Bytes()
+	copy(ret[1+2*byteLen-len(yBytes):], yBytes)
+	return ret
+}
+
+// Unmarshal converts a point, serialized by Marshal, into an x, y pair.
+// It is an error if the point is not in uncompressed form or is not on the curve.
+// On error, x = nil.
+func Unmarshal(curve Curve, data []byte) (x, y *big.Int) {
+	byteLen := (curve.Params().BitSize + 7) >> 3
+	if len(data) == 1+byteLen {
+		if data[0] != 0x2 && data[0] != 0x3 {
+			return
+		}
+		p := curve.Params().P
+		x = new(big.Int).SetBytes(data[1:])
+		if x.Cmp(p) >= 0 {
+			return nil, nil
+		}
+		x3 := new(big.Int).Mul(x, x)
+		x3.Mul(x3, x)
+		threeX := new(big.Int).Lsh(x, 1)
+		threeX.Add(threeX, x)
+		x3.Sub(x3, threeX)
+		x3.Add(x3, curve.Params().B)
+		x3.Mod(x3, p)
+		if y = new(big.Int).ModSqrt(x3, p); y == nil {
+			return nil, nil
+		}
+		switch data[0] {
+		case 0x2: // should be even
+			if y.Bit(0) != 0 {
+				y = y.Sub(p, y)
+			}
+		case 0x3: // should be odd
+			if y.Bit(0) == 0 {
+				y = y.Sub(p, y)
+			}
+		}
+		if !curve.IsOnCurve(x, y) {
+			return nil, nil
+		}
+		return
+	}
+	if len(data) != 1+2*byteLen {
+		return
+	}
+	if data[0] != 4 { // uncompressed form
+		return
+	}
+	p := curve.Params().P
+	x = new(big.Int).SetBytes(data[1 : 1+byteLen])
+	y = new(big.Int).SetBytes(data[1+byteLen:])
+	if x.Cmp(p) >= 0 || y.Cmp(p) >= 0 {
+		return nil, nil
+	}
+	if !curve.IsOnCurve(x, y) {
+		return nil, nil
+	}
+	return
+}
+
 func vliModMultMontP(x, y []big.Word) *big.Int {
 	var r [4]big.Word
 	C.mont_sm2_mod_mult_p((*C.u64)(unsafe.Pointer(&r[0])),

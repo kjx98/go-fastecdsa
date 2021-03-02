@@ -30,7 +30,7 @@ import (
 	"github.com/ethereum/go-ethereum/common/hexutil"
 )
 
-var testAddrHex = "970e8128ab834e8eac17ab8e3812f010678cf791"
+var testAddrHex = "3d3bf5e611af72bd80d209be1a16fc733f32fb25"
 var testPrivHex = "289c2857d4598e37fb9647507e47a309d6133539bf21a8b9cb6df88fd5232032"
 
 // These tests are sanity checks.
@@ -76,11 +76,11 @@ func TestUnmarshalPubkey(t *testing.T) {
 	}
 
 	var (
-		enc, _ = hex.DecodeString("04760c4460e5336ac9bbd87952a3c7ec4363fc0a97bd31c86430806e287b437fd1b01abc6e1db640cf3106b520344af1d58b00b57823db3e1407cbc433e1b6d04d")
+		enc, _ = hex.DecodeString("04afe524a88091d6daf7f9188477f6086a3c3c6c2f18c0e55b68e8ded5dbec39ca8d837895a7dc179ef176066831aad5c2af60d71184a4ca536f18b74046a55994")
 		dec    = &ecdsa.PublicKey{
 			Curve: S256(),
-			X:     hexutil.MustDecodeBig("0x760c4460e5336ac9bbd87952a3c7ec4363fc0a97bd31c86430806e287b437fd1"),
-			Y:     hexutil.MustDecodeBig("0xb01abc6e1db640cf3106b520344af1d58b00b57823db3e1407cbc433e1b6d04d"),
+			X:     hexutil.MustDecodeBig("0xafe524a88091d6daf7f9188477f6086a3c3c6c2f18c0e55b68e8ded5dbec39ca"),
+			Y:     hexutil.MustDecodeBig("0x8d837895a7dc179ef176066831aad5c2af60d71184a4ca536f18b74046a55994"),
 		}
 	)
 	key, err = UnmarshalPubkey(enc)
@@ -129,21 +129,6 @@ func TestInvalidSign(t *testing.T) {
 	if _, err := Sign(make([]byte, 33), nil); err == nil {
 		t.Errorf("expected sign with hash 33 byte to error")
 	}
-}
-
-func TestNewContractAddress(t *testing.T) {
-	key, _ := HexToECDSA(testPrivHex)
-	addr := common.HexToAddress(testAddrHex)
-	genAddr := PubkeyToAddress(key.PublicKey)
-	// sanity check before using addr to create contract address
-	checkAddr(t, genAddr, addr)
-
-	caddr0 := CreateAddress(addr, 0)
-	caddr1 := CreateAddress(addr, 1)
-	caddr2 := CreateAddress(addr, 2)
-	checkAddr(t, common.HexToAddress("333c3310824b7c685133f2bedb2ca4b8b4df633d"), caddr0)
-	checkAddr(t, common.HexToAddress("8bda78331c916a08481428e4b07c96d3e916d165"), caddr1)
-	checkAddr(t, common.HexToAddress("c9ddedf451bc62ce88bf9292afb13df35b670699"), caddr2)
 }
 
 func TestLoadECDSA(t *testing.T) {
@@ -274,12 +259,6 @@ func checkhash(t *testing.T, name string, f func([]byte) []byte, msg, exp []byte
 	sum := f(msg)
 	if !bytes.Equal(exp, sum) {
 		t.Fatalf("hash %s mismatch: want: %x have: %x", name, exp, sum)
-	}
-}
-
-func checkAddr(t *testing.T, addr0, addr1 common.Address) {
-	if addr0 != addr1 {
-		t.Fatalf("address mismatch: want: %x have: %x", addr0, addr1)
 	}
 }
 
