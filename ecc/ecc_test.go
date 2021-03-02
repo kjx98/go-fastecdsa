@@ -1,7 +1,7 @@
 package ecc
 
 import (
-	"gitee.com/jkuang/go-fastecdsa/sm2"
+	"github.com/kjx98/go-fastecdsa/sm2"
 	"math/big"
 	"testing"
 )

@@ -1,3 +1,3 @@
-module gitee.com/jkuang/go-fastecdsa
+module github.com/kjx98/go-fastecdsa
 
 go 1.13

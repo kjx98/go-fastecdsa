@@ -4,7 +4,7 @@ package sm2
 
 import (
 	"crypto/rand"
-	"gitee.com/jkuang/go-fastecdsa"
+	"github.com/kjx98/go-fastecdsa"
 	"math/big"
 	"testing"
 )
