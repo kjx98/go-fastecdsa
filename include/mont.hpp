@@ -1380,10 +1380,10 @@ sm2p_sqrN(u64 *result, const u64 *x) noexcept
 		: "rax", "rbx", "rcx", "rdx", "r8", "r9", "r12", "r13", "r10", "r11",
 		"r14", "r15", "cc", "memory");
 #elif	defined(__aarch64__)
-#ifdef	ommit_notwork
+#ifndef	ommit_notwork
 	sm2p_mult(result, x, x);
-	// x0 -- x3   register %%x4 -- %%x7
 #else
+	// x0 -- x3   register %%x4 -- %%x7
 	register u64 x0 asm("x4") = x[0];
 	register u64 x1 asm("x5") = x[1];
 	register u64 x2 asm("x6") = x[2];
