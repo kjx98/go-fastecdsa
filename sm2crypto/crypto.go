@@ -29,9 +29,9 @@ import (
 	"math/big"
 	"os"
 
-	"gitee.com/jkuang/go-fastecdsa/sm2"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/common/math"
+	"github.com/kjx98/go-fastecdsa/sm2"
 	"golang.org/x/crypto/sha3"
 )
 
