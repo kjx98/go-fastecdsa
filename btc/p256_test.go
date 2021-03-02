@@ -13,10 +13,10 @@ var (
 )
 
 func init() {
-	x1, _ = new(big.Int).SetString("afe524a88091d6daf7f9188477f6086a3c3c6c2f18c0e55b68e8ded5dbec39ca", 16)
-	y1, _ = new(big.Int).SetString("8d837895a7dc179ef176066831aad5c2af60d71184a4ca536f18b74046a55994", 16)
-	x2, _ = new(big.Int).SetString("684446fbee5167ef8baaa8adfa83e4606c0a05bb2f2c9125ca9ad478f1770dad", 16)
-	y2, _ = new(big.Int).SetString("c7337843bdb886bff9965b00c6d87aff04f8d6bfa6a6846c0f28e513642bf309", 16)
+	x1, _ = new(big.Int).SetString("50c863125ff4d3f08c4737a67c42c0b6ef61cb3d3b14a8581d577395e53a2afe", 16)
+	y1, _ = new(big.Int).SetString("e002fe07a05c5888c954725f37eb8d492da11bdc5ade24145454139990d622a2", 16)
+	x2, _ = new(big.Int).SetString("89b0075b6bd084f12edf002ef3d4e92a73f3016c7b271930111775507b9156b2", 16)
+	y2, _ = new(big.Int).SetString("59d1590d4ef4cb1c804ccc37e44b6b5bbc5d88d8f358363be76b3910dfc54427", 16)
 	d1, _ = new(big.Int).SetString("44960d13c3ae7889e7fdfc0c48f4ac1da4e68fd3a5be28ad3f53eddad6d9c892", 16)
 	d2, _ = new(big.Int).SetString("b68c5c25852521c647d7d0eddd09494949602ebaa885202a5573bb6ec8c5d96f", 16)
 	n256 = new(big.Int).Lsh(bigOne, 256)
@@ -153,13 +153,23 @@ func TestBTCAsmGo(t *testing.T) {
 	aGx := asmCurve.Params().Gx
 	aGy := asmCurve.Params().Gy
 	ax, ay := asmCurve.ScalarMult(aGx, aGy, d1.Bytes())
-	if ax.Cmp(gx) != 0 {
-		t.Log("mult X diff")
+	if ax.Cmp(gx) != 0 || ay.Cmp(gy) != 0 {
+		t.Log("mult X/Y diff")
+		t.Logf("aX1: %s\naY1: %s\n", ax.Text(16), ay.Text(16))
+		t.Logf("goX1: %s\ngoY1: %s\n", gx.Text(16), gy.Text(16))
 		t.Fail()
+	} else {
+		t.Log("ScalarMult G d1 PASS ✅")
 	}
-	if ay.Cmp(gy) != 0 {
-		t.Log("mult Y diff")
+	gx, gy = goCurve.ScalarMult(goGx, goGy, d2.Bytes())
+	ax, ay = asmCurve.ScalarMult(aGx, aGy, d2.Bytes())
+	if ax.Cmp(gx) != 0 || ay.Cmp(gy) != 0 {
+		t.Log("mult X/Y diff")
+		t.Logf("aX1: %s\naY1: %s\n", ax.Text(16), ay.Text(16))
+		t.Logf("goX1: %s\ngoY1: %s\n", gx.Text(16), gy.Text(16))
 		t.Fail()
+	} else {
+		t.Log("ScalarMult G d2 PASS ✅")
 	}
 }
 

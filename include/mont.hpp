@@ -1380,7 +1380,7 @@ sm2p_sqrN(u64 *result, const u64 *x) noexcept
 		: "rax", "rbx", "rcx", "rdx", "r8", "r9", "r12", "r13", "r10", "r11",
 		"r14", "r15", "cc", "memory");
 #elif	defined(__aarch64__)
-#ifndef	ommit_notwork
+#ifdef	ommit_notwork
 	sm2p_mult(result, x, x);
 	// x0 -- x3   register %%x4 -- %%x7
 #else
@@ -1404,14 +1404,14 @@ sm2p_sqrN(u64 *result, const u64 *x) noexcept
 	// x[2:] * x[1]
 		"MUL	x21, x5, x6\n"
 		"ADDS	x11, x21, x11\n"
-		"UMULH	x19, x5, x6\n"
-		"ADCS	x12, x19, x12\n"
-		"ADC	x13, xzr, x13\n"
+		"UMULH	x21, x5, x6\n"
+		"ADCS	x12, x21, x12\n"
+		"ADC	x13, xzr, xzr\n"
 
 		"MUL	x21, x5, x7\n"
 		"ADDS	x12, x21, x12\n"
-		"UMULH	x19, x5, x7\n"
-		"ADC	x13, x19, x13\n"
+		"UMULH	x21, x5, x7\n"
+		"ADC	x13, x21, x13\n"
 	// x[3] * x[2]
 		"MUL	x21, x6, x7\n"
 		"ADDS	x13, x21, x13\n"
@@ -1435,18 +1435,18 @@ sm2p_sqrN(u64 *result, const u64 *x) noexcept
 
 		"MUL	x21, x5, x5\n"
 		"ADCS	x10, x21, x10\n"
-		"UMULH	x19, x5, x5\n"
-		"ADCS	x11, x19, x11\n"
+		"UMULH	x21, x5, x5\n"
+		"ADCS	x11, x21, x11\n"
 
 		"MUL	x21, x6, x6\n"
 		"ADCS	x12, x21, x12\n"
-		"UMULH	x19, x6, x6\n"
-		"ADCS	x13, x19, x13\n"
+		"UMULH	x21, x6, x6\n"
+		"ADCS	x13, x21, x13\n"
 
 		"MUL	x21, x7, x7\n"
 		"ADCS	x14, x21, x14\n"
-		"UMULH	x19, x7, x7\n"
-		"ADCS	x15, x19, x15\n"
+		"UMULH	x21, x7, x7\n"
+		"ADCS	x15, x21, x15\n"
 	// First reduction step
 		"MOV	x19, x3\n"
 		"MOV	x3, xzr\n"

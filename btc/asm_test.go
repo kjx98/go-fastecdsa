@@ -83,6 +83,33 @@ func asmSqrt(y *big.Int) (rt *big.Int) {
 	return
 }
 
+func asmPointDouble(x1, y1 *big.Int) (x3, y3 *big.Int) {
+	var p, q p256Point
+	fromBig(p.xyz[:4], x1)
+	fromBig(p.xyz[4:8], y1)
+	p256Mul(p.xyz[0:4], p.xyz[0:4], rr)
+	p256Mul(p.xyz[4:8], p.xyz[4:8], rr)
+	copy(p.xyz[8:], p256MontOne)
+	p256PointDoubleAsm(q.xyz[:], p.xyz[:])
+	return q.p256PointToAffine()
+}
+
+func asmPointAdd(x1, y1, x2, y2 *big.Int) (x3, y3 *big.Int) {
+	var p, q, r p256Point
+	fromBig(p.xyz[:4], x1)
+	fromBig(p.xyz[4:8], y1)
+	p256Mul(p.xyz[0:4], p.xyz[0:4], rr)
+	p256Mul(p.xyz[4:8], p.xyz[4:8], rr)
+	copy(p.xyz[8:], p256MontOne)
+	fromBig(q.xyz[:4], x2)
+	fromBig(q.xyz[4:8], y2)
+	p256Mul(q.xyz[0:4], q.xyz[0:4], rr)
+	p256Mul(q.xyz[4:8], q.xyz[4:8], rr)
+	copy(q.xyz[8:], p256MontOne)
+	p256PointAddAsm(r.xyz[:], q.xyz[:], p.xyz[:])
+	return r.p256PointToAffine()
+}
+
 func TestAsmMontMul(t *testing.T) {
 	prod := new(big.Int).Mul(x1, y1)
 	m1 := new(big.Int).Mod(prod, btcg.P)
@@ -112,8 +139,11 @@ func TestAsmMontSqr(t *testing.T) {
 		t.Log("Can't get Sqrt")
 		t.Fail()
 	} else if m3.Cmp(x1) != 0 {
-		t.Logf("ModSqrt step 1 diff:\n%s vs\n%s", x1.Text(16), m3.Text(16))
-		t.Fail()
+		m3.Sub(btcg.P, m3)
+		if m3.Cmp(x1) != 0 {
+			t.Logf("ModSqrt step 1 diff:\n%s vs\n%s", x1.Text(16), m3.Text(16))
+			t.Fail()
+		}
 	}
 	prod = new(big.Int).Mul(x2, x2)
 	m1 = new(big.Int).Mod(prod, btcg.P)
@@ -126,8 +156,11 @@ func TestAsmMontSqr(t *testing.T) {
 		t.Log("Can't get Sqrt")
 		t.Fail()
 	} else if m3.Cmp(x2) != 0 {
-		t.Logf("ModSqrt step 2 diff:\n%s vs\n%s", x1.Text(16), m3.Text(16))
-		t.Fail()
+		m3.Sub(btcg.P, m3)
+		if m3.Cmp(x2) != 0 {
+			t.Logf("ModSqrt step 2 diff:\n%s vs\n%s", x1.Text(16), m3.Text(16))
+			t.Fail()
+		}
 	}
 }
 
@@ -182,6 +215,18 @@ func TestAsmInverse(t *testing.T) {
 	if Rinv.Cmp(RinvA) != 0 {
 		t.Logf("p256Inverse diff:\n%s vs\n%s", Rinv.Text(16), RinvA.Text(16))
 		t.Fail()
+	}
+}
+
+func TestPointAdd(t *testing.T) {
+	c := BTCgo()
+	x3, y3 := c.Add(x1, y1, x2, y2)
+	ax3, ay3 := asmPointAdd(x1, y1, x2, y2)
+	if x3.Cmp(ax3) != 0 {
+		t.Logf("PointAdd diff\nX3: %s\naX3: %s", x3.Text(16), ax3.Text(16))
+	}
+	if y3.Cmp(ay3) != 0 {
+		t.Logf("PointAdd diff\nY3: %s\naY3: %s", y3.Text(16), ay3.Text(16))
 	}
 }
 

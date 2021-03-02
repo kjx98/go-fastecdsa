@@ -203,7 +203,7 @@ func (curve p256Curve) combinedMult(bigX, bigY *big.Int, baseScalar, scalar []by
 	r2IsInfinity := scalarIsZero(scalarReversed)
 	fromBig(r2.xyz[0:4], maybeReduceModP(bigX))
 	fromBig(r2.xyz[4:8], maybeReduceModP(bigY))
-	p256Mul(r2.xyz[0:4], r2.xyz[0:4], rr[:])
+	p256Mul(r2.xyz[0:4], r2.xyz[0:4], rr)
 	p256Mul(r2.xyz[4:8], r2.xyz[4:8], rr[:])
 
 	// This sets r2's Z value to 1, in the Montgomery domain.
@@ -446,12 +446,15 @@ func (p *p256Point) p256PointToAffine() (x, y *big.Int) {
 	p256FromMont(zInvSq, zInvSq)
 	p256FromMont(zInv, zInv)
 
-	xOut := make([]byte, 32)
-	yOut := make([]byte, 32)
-	p256LittleToBig(xOut, zInvSq)
-	p256LittleToBig(yOut, zInv)
+	/*
+		xOut := make([]byte, 32)
+		yOut := make([]byte, 32)
+		p256LittleToBig(xOut, zInvSq)
+		p256LittleToBig(yOut, zInv)
 
-	return new(big.Int).SetBytes(xOut), new(big.Int).SetBytes(yOut)
+		return new(big.Int).SetBytes(xOut), new(big.Int).SetBytes(yOut)
+	*/
+	return toBig(zInvSq), toBig(zInv)
 }
 
 // return prod == xp * yp Mod prime p
